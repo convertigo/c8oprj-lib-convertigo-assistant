@@ -5,6 +5,13 @@
 
 This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
 
+## Symbols
+
+
+| Symbol    | Usage |
+|-----------|-------------------|
+|lib_C8Oforms_AI.GPT.apikey.secret  | the openAI Api Key |
+
 
 
 For more technical informations : [documentation](./project.md)
