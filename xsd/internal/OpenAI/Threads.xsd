@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ConvertigoAssitant_ns="http://www.convertigo.com/convertigo/projects/ConvertigoAssitant" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://www.convertigo.com/convertigo/projects/ConvertigoAssitant">
+    <xsd:element name="OpenAI__Threads" type="ConvertigoAssitant_ns:OpenAI__ThreadsRequestData">
+        <xsd:annotation/>
+    </xsd:element>
+    <xsd:element name="OpenAI__ThreadsResponse">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="response" type="ConvertigoAssitant_ns:OpenAI__ThreadsResponseData"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    <xsd:complexType name="OpenAI__ThreadsResponseType">
+        <xsd:sequence>
+            <xsd:element name="document" type="ConvertigoAssitant_ns:OpenAI__ThreadsResponseData"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI__ThreadsRequestData">
+        <xsd:sequence>
+            <xsd:element name="__body" type="xsd:string">
+                <xsd:annotation/>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_Threads_document_object_idType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_Threads_document_object_objectType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_Threads_document_object_created_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_Threads_document_object_metadataType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="object" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_Threads_document_object_tool_resourcesType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="object" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_Threads_document_objectType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="id" type="ConvertigoAssitant_ns:OpenAI_Threads_document_object_idType"/>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_Threads_document_object_objectType"/>
+            <xsd:element minOccurs="0" name="created_at" type="ConvertigoAssitant_ns:OpenAI_Threads_document_object_created_atType"/>
+            <xsd:element minOccurs="0" name="metadata" type="ConvertigoAssitant_ns:OpenAI_Threads_document_object_metadataType"/>
+            <xsd:element minOccurs="0" name="tool_resources" type="ConvertigoAssitant_ns:OpenAI_Threads_document_object_tool_resourcesType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI__ThreadsResponseData">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_Threads_document_objectType"/>
+            <xsd:element minOccurs="0" name="error" type="ConvertigoAssitant_ns:ConvertigoError"/>
+        </xsd:sequence>
+        <xsd:attribute name="connector" type="xsd:string"/>
+        <xsd:attribute name="context" type="xsd:string"/>
+        <xsd:attribute name="contextId" type="xsd:string"/>
+        <xsd:attribute name="fromStub" type="xsd:boolean"/>
+        <xsd:attribute name="fromcache" type="xsd:boolean"/>
+        <xsd:attribute name="generated" type="xsd:string"/>
+        <xsd:attribute name="project" type="xsd:string"/>
+        <xsd:attribute name="sequence" type="xsd:string"/>
+        <xsd:attribute name="signature" type="xsd:long"/>
+        <xsd:attribute name="transaction" type="xsd:string"/>
+        <xsd:attribute name="version" type="xsd:string"/>
+        <xsd:attribute name="screenclass" type="xsd:string"/>
+        <xsd:attribute name="userReference" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="ConvertigoErrorContextVariable">
+        <xsd:attribute name="name" type="xsd:string"/>
+        <xsd:attribute name="value" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="ConvertigoErrorContext">
+        <xsd:sequence>
+            <xsd:element maxOccurs="unbounded" minOccurs="0" name="variable" type="ConvertigoAssitant_ns:ConvertigoErrorContextVariable"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="ConvertigoError">
+        <xsd:sequence minOccurs="0">
+            <xsd:element name="code" type="xsd:integer"/>
+            <xsd:element name="message" type="xsd:string"/>
+            <xsd:element name="details" type="xsd:string"/>
+            <xsd:element name="context" type="ConvertigoAssitant_ns:ConvertigoErrorContext"/>
+            <xsd:element name="exception" type="xsd:string"/>
+            <xsd:element name="stacktrace" type="xsd:string"/>
+        </xsd:sequence>
+        <xsd:attribute name="project" type="xsd:string"/>
+        <xsd:attribute name="connector" type="xsd:string"/>
+        <xsd:attribute name="transaction" type="xsd:string"/>
+        <xsd:attribute name="sequence" type="xsd:string"/>
+        <xsd:attribute name="type">
+            <xsd:simpleType>
+                <xsd:restriction base="xsd:string">
+                    <xsd:enumeration value="c8o"/>
+                    <xsd:enumeration value="project"/>
+                </xsd:restriction>
+            </xsd:simpleType>
+        </xsd:attribute>
+    </xsd:complexType>
+</xsd:schema>

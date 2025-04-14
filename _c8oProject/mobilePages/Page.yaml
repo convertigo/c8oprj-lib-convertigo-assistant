@@ -40,7 +40,7 @@ title: First page
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:Page
+            - MobileSmartSourceType: plain:Convertigo AI Assistant
     ↓ButtonSet2 [ngx.components.UIDynamicElement-1588170811054]: 
       beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
       tagName: ion-buttons
@@ -48,38 +48,272 @@ title: First page
         beanData: '{"ionBean":"Button"}'
         tagName: ion-button
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: '{"ionBean":"Icon","IconName":"plain:ellipsis-vertical"}'
+          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''refresh''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
 ↓Content [ngx.components.UIDynamicElement-1489674805352]: 
   beanData: '{"ionBean":"Content"}'
   comment: Page content
   tagName: ion-content
-↓Footer [ngx.components.UIDynamicElement-1491634242460]: 
-  beanData: '{"ionBean":"Footer"}'
-  comment: Page footer
-  tagName: ion-footer
-  ↓ToolBar [ngx.components.UIDynamicElement-1491634317538]: 
-    beanData: '{"ionBean":"ToolBar"}'
-    tagName: ion-toolbar
-    ↓ButtonSet [ngx.components.UIDynamicElement-1588170246138]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:start"}'
-      tagName: ion-buttons
-      ↓Button1 [ngx.components.UIDynamicElement-1491634332730]: 
-        beanData: '{"ionBean":"Button"}'
-        tagName: ion-button
-        ↓Text [ngx.components.UIText-1491634340354]: 
-          textValue: 
+  ↓Directive [ngx.components.UIControlDirective-1744304206972]: 
+    directiveItemName: item
+    directiveSource: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
+    ↓Directive [ngx.components.UIControlDirective-1744304530882]: 
+      directiveName: If
+      directiveSource: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:item.type == 'user'
+      ↓UseSharedComponent [ngx.components.UIUseShared-1744217966996]: 
+        sharedcomponent: ConvertigoAssitant.Application.NgxApp.UserMessage
+        ↓Text [ngx.components.UIUseVariable-1744268806308]: 
+          varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Action 1
-    ↓ButtonSet1 [ngx.components.UIDynamicElement-1588170269871]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
-      tagName: ion-buttons
-      ↓Button2 [ngx.components.UIDynamicElement-1491634376874]: 
-        beanData: '{"ionBean":"Button"}'
-        tagName: ion-button
-        ↓Text [ngx.components.UIText-1491634383107]: 
-          textValue: 
+              - MobileSmartSourceType: script:item.msg
+    ↓Directive1 [ngx.components.UIControlDirective-1744304686133]: 
+      directiveName: If
+      directiveSource: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:item.type == 'assistant'
+      ↓UseSharedComponent2 [ngx.components.UIUseShared-1744220230909]: 
+        sharedcomponent: ConvertigoAssitant.Application.NgxApp.AssitantMessage
+        ↓Text [ngx.components.UIUseVariable-1744268888866]: 
+          varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Action 2
+              - MobileSmartSourceType: script:item.msg
+  ↓Div [ngx.components.UIDynamicElement-1744618081942]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓FormatLayout [ngx.components.UIDynamicAttr-1744618012537]: 
+      beanData: |
+        '{
+         "ionBean": "FormatLayout",
+         "TextAlignment": "plain:ion-text-center",
+         "FlexContainerAlignment": "plain:ion-justify-content-center"
+        }'
+      selfClose: false
+    ↓Directive [ngx.components.UIControlDirective-1744618134767]: 
+      directiveName: If
+      directiveSource: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
+      ↓Spinner [ngx.components.UIDynamicElement-1744617959635]: 
+        beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
+        tagName: ion-spinner
+  ↓UseSharedComponent1 [ngx.components.UIUseShared-1744218422659]: 
+    sharedcomponent: ConvertigoAssitant.Application.NgxApp.ChatQuestion
+    ↓Question [ngx.components.UIUseVariable-1744269087882]: 
+      binding: twoWayBinding
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"local.Question","useCustom":true}}
+    ↓Event [ngx.components.UIControlEvent-1744270055332]: 
+      attrName: (RunQuestion)
+      eventName: RunQuestion
+      ↓SetLocal [ngx.components.UIDynamicAction-1744618249134]: 
+        beanData: |
+          '{
+           "ionBean": "SetLocalAction",
+           "Property": "plain:spinner",
+           "Value": "script:true"
+          }'
+      ↓CallSequence [ngx.components.UIDynamicAction-1744303020066]: 
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:ConvertigoAssitant.SendMessage",
+           "noLoading": "plain:true"
+          }'
+        ↓Question [ngx.components.UIControlVariable-1744303042867]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"","useCustom":false}}
+        ↓threadid [ngx.components.UIControlVariable-1744303042869]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+        ↓SetLocal [ngx.components.UIDynamicAction-1744389890574]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:RunID",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssitant.SendMessage\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
+          ↓AddUserMessage [ngx.components.UICustomAction-1744303968431]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                    		this.local.Messages.push({
+                    			msg : vars.message,
+                    			type: "user"
+                    		});
+                    		this.local.Question = ""
+                    		resolve();
+                    '
+            ↓message [ngx.components.UIControlVariable-1744303993408]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"","useCustom":false}}
+            ↓CallSequence [ngx.components.UIDynamicAction-1744304922528]: 
+              beanData: |
+                '{
+                 "ionBean": "CallSequenceAction",
+                 "requestable": "plain:ConvertigoAssitant.ReadResponse",
+                 "noLoading": "plain:true"
+                }'
+              ↓threadid [ngx.components.UIControlVariable-1744304935625]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+              ↓PublishEvent [ngx.components.UIDynamicAction-1744356938388]: 
+                beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+              ↓runid [ngx.components.UIControlVariable-1744389957301]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+  ↓H1 [ngx.components.UIDynamicElement-1744269636863]: 
+    beanData: '{"ionBean":"Heading1"}'
+    tagName: h1
+    ↓Text [ngx.components.UIText-1744269636862]: 
+      textValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"","useCustom":false}}
+  ↓H2 [ngx.components.UIDynamicElement-1744302986780]: 
+    beanData: '{"ionBean":"Heading1"}'
+    tagName: h1
+    ↓Text [ngx.components.UIText-1744302986783]: 
+      textValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+↓PageEvent [ngx.components.UIPageEvent-1744269061199]: 
+  ↓SetLocal [ngx.components.UIDynamicAction-1744269068118]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:Question",
+       "Value": "script:''''"
+      }'
+    ↓CallSequence [ngx.components.UIDynamicAction-1744302843894]: 
+      beanData: |
+        '{
+         "ionBean": "CallSequenceAction",
+         "requestable": "plain:ConvertigoAssitant.CreateConversation",
+         "noLoading": "plain:true"
+        }'
+      ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
+        beanData: |
+          '{
+           "ionBean": "SetLocalAction",
+           "Property": "plain:Conversation",
+           "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssitant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+          }'
+  ↓RunID [ngx.components.UIDynamicAction-1744389840276]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:RunID",
+       "Value": "script:''''"
+      }'
+  ↓Messages [ngx.components.UIDynamicAction-1744303349897]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:Messages",
+       "Value": "script:[]"
+      }'
+↓Subscribe_Handler [ngx.components.UIEventSubscriber-1744356866759]: 
+  topic: AssistantResponse
+  ↓AddAssitantMessages [ngx.components.UICustomAction-1744304995983]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		
+            		
+            		// iterate over all the vars.response and push them to the local messages
+            		if (vars.response == null) {
+            			resolve();
+            			return;
+            		}
+            		
+            		page.c8o.log.warn("==== vars.response" + JSON.stringify(vars.response));
+            		
+            		for (let i = 0; i < vars.response.length; i++) {
+            			if (vars.response[i].role == "assistant" && vars.response[i].text != null && vars.response[i].text != "") {
+            				// check if the message is already in the local messages
+            				let found = false;
+            				for (let j = 0; j < page.local.Messages.length; j++) {
+            					if (page.local.Messages[j].id == vars.response[i].id) {
+            						found = true;
+            					}
+            				}
+            
+            				// if found, do nothing
+            				if (found) {
+            					continue;
+            				}
+            									
+            				let msg = {
+            					type: "assistant",
+            					msg: vars.response[i].text,
+            					id: vars.response[i].id,
+            				}
+            				page.local.Messages.push(msg)
+            			}
+            		}
+            		
+            		resolve();
+            '
+    ↓response [ngx.components.UIControlVariable-1744305017904]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssitant","input":"","model":{"data":[{"sequence":"ConvertigoAssitant.ReadResponse","marker":""}],"path":"?.Message","prefix":"","suffix":"","custom":"","useCustom":false}}
+    ↓IfElse [ngx.components.UIDynamicIf-1744357030892]: 
+      beanData: '{"ionBean":"IfElseAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssitant.ReadResponse\",\"marker\":\"\"}],\"path\":\"?.status\",\"prefix\":\"\",\"suffix\":\" != ''completed''\",\"custom\":\"\",\"useCustom\":false}}"}'
+      ↓CallSequence [ngx.components.UIDynamicAction-1744367857710]: 
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:ConvertigoAssitant.ReadResponse",
+           "noLoading": "plain:true"
+          }'
+        ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+        ↓PublishEvent [ngx.components.UIDynamicAction-1744367857716]: 
+          beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+        ↓runid [ngx.components.UIControlVariable-1744389800542]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+      ↓Else_Handler [ngx.components.UIActionElseEvent-1744618173305]: 
+        ↓SetLocal [ngx.components.UIDynamicAction-1744618189222]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:spinner",
+             "Value": "script:false"
+            }'

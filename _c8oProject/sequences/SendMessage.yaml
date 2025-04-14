@@ -1,0 +1,123 @@
+↓Message [steps.JsonObjectStep-1744201795804]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Message
+  output: false
+  ↓role [steps.JsonFieldStep-1744201795807]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: role
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: user
+  ↓content1 [steps.JsonArrayStep-1744201795810]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: content
+    ↓object [steps.JsonObjectStep-1744205789705]: 
+      ↓content [steps.JsonFieldStep-1744201795813]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: text
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: Question
+      ↓type [steps.JsonFieldStep-1744201795816]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: type
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: text
+↓Call_Transaction1 [steps.TransactionStep-1744201808156]: 
+  sourceTransaction: ConvertigoAssitant.OpenAI.Message
+  ↓__body [variables.StepVariable-1744201808159]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744201795804
+          - java.lang.String: 
+            - ↑value: ./*
+    value: |
+      '{
+      	role : "user";
+      	content : "Can you provide a summary of the latest news in technology?"	
+      }
+      '
+  ↓threadid [variables.StepVariable-1744201808162]: 
+↓Run [steps.JsonObjectStep-1744206596308]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Run
+  output: false
+  ↓assitant_id [steps.JsonFieldStep-1744206596311]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: assistant_id
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: asst_BHpTrHeKI2X8EtWIaokJ8TiP
+↓Call_Transaction2 [steps.TransactionStep-1744206601138]: 
+  sourceTransaction: ConvertigoAssitant.OpenAI.Run
+  ↓__body [variables.StepVariable-1744206601141]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744206596308
+          - java.lang.String: 
+            - ↑value: ./*
+    value: '{}'
+  ↓threadid [variables.StepVariable-1744206601144]: 
+↓Copy [steps.XMLCopyStep-1744389695645]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1744206601138
+        - java.lang.String: 
+          - ↑value: ./document/object/*
+↓Question [variables.RequestableVariable-1744201780525]: 
+↓threadid [variables.RequestableVariable-1744201831244]: 
+↓TestOK [core.TestCase]: 
+  ↓Question [variables.TestCaseVariable-1744201869454]: 
+    value: Can you add nice CSS to present this with some color gradients,  glossy effects and modern UI ? 
+  ↓threadid [variables.TestCaseVariable-1744201869456]: 
+    value: thread_cDTR5P2IM1QO1fh0xNfu7VsU

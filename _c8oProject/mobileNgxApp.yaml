@@ -64,6 +64,10 @@ componentScriptContent:
         '
 tplProjectName: mobilebuilder_tpl_8_3_0_ngx
 ↓Menu [ngx.components.UIDynamicMenu-1500890597895]: 🗏 mobileMenus/Menu.yaml
+↓ChatQuestion [ngx.components.UISharedRegularComponent-1744217927346]: 🗏 mobileSharedComponents/ChatQuestion.yaml
+↓UserMessage [ngx.components.UISharedRegularComponent-1744218374521]: 🗏 mobileSharedComponents/UserMessage.yaml
+↓AssitantMessage [ngx.components.UISharedRegularComponent-1744220193433]: 🗏 mobileSharedComponents/AssitantMessage.yaml
+↓Markdown [ngx.components.UISharedRegularComponent-1744618692303]: 🗏 mobileSharedComponents/Markdown.yaml
 ↓Page [ngx.components.PageComponent-1500538678074]: 🗏 mobilePages/Page.yaml
 ↓Style [ngx.components.UIStyle-1491635462437]: 
   comment: You can add some global application styles here
@@ -451,3 +455,128 @@ tplProjectName: mobilebuilder_tpl_8_3_0_ngx
           /** Ionic CSS Variables **/
           
           
+↓AssitantStyle [ngx.components.UIStyle-1744217878624]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.ask-question-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            width: 100%;
+          }
+          
+          .ask-question-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            background-color: white;
+            border-radius: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 10px 16px;
+            gap: 10px;
+            max-width: 900px;
+            width: 100%;
+          }
+          
+          .icon-plus {
+            font-size: 20px;
+            color: #888;
+          }
+          
+          .question-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            padding-left: 8px;
+            min-width: 160px;
+          }
+          
+          .button-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+          }
+          
+          .chip-button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #f4f4f4;
+            border: none;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 14px;
+            cursor: pointer;
+          
+            ion-icon {
+              font-size: 16px;
+            }
+          
+            &:hover {
+              background-color: #e6e6e6;
+            }
+          }
+          
+          .mic-button {
+            background-color: #000;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          
+            ion-icon {
+              font-size: 18px;
+            }
+          
+            &:hover {
+              background-color: #222;
+            }
+          }
+          
+          .user-message-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            margin: 6px 0;
+          }
+          
+          .user-message-bubble {
+            background-color: #f1f1f1;
+            color: #000;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 80%;
+            display: inline-block;
+          }
+          
+          
+          .assistant-message-wrapper {
+            display: flex;
+            justify-content: flex-start;
+            width: 100%;
+            margin: 6px 0;
+          }
+          
+          .assistant-message-bubble {
+            background-color: #f4f4f4;
+            color: #000;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 80%;
+            display: inline-block;
+          }
+          
+          '
