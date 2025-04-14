@@ -3,7 +3,8 @@
 
 # ConvertigoAssitant
 
-Convertigo NGX builder Project
+This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
+
 
 
 For more technical informations : [documentation](./project.md)
@@ -32,13 +33,13 @@ For more technical informations : [documentation](./project.md)
      <tr><td>To contribute</td><td>
 
      ```
-     ConvertigoAssitant=/Users/olivierpicciotto/C8oBilling/ConvertigoAssitant/.git:branch=master
+     ConvertigoAssitant=https://github.com/convertigo/c8oprj-convertigo-assitant.git:branch=master
      ```
      </td></tr>
      <tr><td>To simply use</td><td>
 
      ```
-     ConvertigoAssitant=/Users/olivierpicciotto/C8oBilling/ConvertigoAssitant//archive/master.zip
+     ConvertigoAssitant=https://github.com/convertigo/c8oprj-convertigo-assitant/archive/master.zip
      ```
      </td></tr>
     </table>
