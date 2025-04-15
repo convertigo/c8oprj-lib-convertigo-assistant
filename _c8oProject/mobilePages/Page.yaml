@@ -40,7 +40,17 @@ title: First page
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:Convertigo AI Assistant
+            - MobileSmartSourceType: plain:Convertigo AI assistant  (
+      ↓Text1 [ngx.components.UIText-1744701439953]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+      ↓Text2 [ngx.components.UIText-1744701456174]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:)
     ↓ButtonSet2 [ngx.components.UIDynamicElement-1588170811054]: 
       beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
       tagName: ion-buttons
@@ -50,6 +60,42 @@ title: First page
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
           beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''refresh''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
+        ↓Event [ngx.components.UIControlEvent-1744701589852]: 
+          ↓SetLocal [ngx.components.UIDynamicAction-1744701686197]: 
+            beanData: |
+              '{
+               "ionBean": "SetLocalAction",
+               "Property": "plain:Question",
+               "Value": "script:''''"
+              }'
+            ↓CallSequence [ngx.components.UIDynamicAction-1744701686200]: 
+              beanData: |
+                '{
+                 "ionBean": "CallSequenceAction",
+                 "requestable": "plain:ConvertigoAssitant.CreateConversation",
+                 "noLoading": "plain:true"
+                }'
+              ↓SetLocal [ngx.components.UIDynamicAction-1744701686203]: 
+                beanData: |
+                  '{
+                   "ionBean": "SetLocalAction",
+                   "Property": "plain:Conversation",
+                   "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssitant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                  }'
+          ↓RunID [ngx.components.UIDynamicAction-1744701686206]: 
+            beanData: |
+              '{
+               "ionBean": "SetLocalAction",
+               "Property": "plain:RunID",
+               "Value": "script:''''"
+              }'
+          ↓Messages [ngx.components.UIDynamicAction-1744701686209]: 
+            beanData: |
+              '{
+               "ionBean": "SetLocalAction",
+               "Property": "plain:Messages",
+               "Value": "script:[]"
+              }'
 ↓Content [ngx.components.UIDynamicElement-1489674805352]: 
   beanData: '{"ionBean":"Content"}'
   comment: Page content
@@ -188,6 +234,7 @@ title: First page
                     - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
   ↓H1 [ngx.components.UIDynamicElement-1744269636863]: 
     beanData: '{"ionBean":"Heading1"}'
+    isEnabled: false
     tagName: h1
     ↓Text [ngx.components.UIText-1744269636862]: 
       textValue: 
@@ -196,6 +243,7 @@ title: First page
           - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssitant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"","useCustom":false}}
   ↓H2 [ngx.components.UIDynamicElement-1744302986780]: 
     beanData: '{"ionBean":"Heading1"}'
+    isEnabled: false
     tagName: h1
     ↓Text [ngx.components.UIText-1744302986783]: 
       textValue: 
@@ -255,7 +303,7 @@ title: First page
             			return;
             		}
             		
-            		page.c8o.log.warn("==== vars.response" + JSON.stringify(vars.response));
+            		page.c8o.log.debug("==== vars.response" + JSON.stringify(vars.response));
             		
             		for (let i = 0; i < vars.response.length; i++) {
             			if (vars.response[i].role == "assistant" && vars.response[i].text != null && vars.response[i].text != "") {
