@@ -295,7 +295,23 @@ title: First page
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
             '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		let blocks = null;		
             		
+            		function parseAndExtractCodeBlocks(content) {
+            			// Regex to match ### filename followed by a code block
+            			const regex = /### (.+?)\n+```(?:[\w]*)\n([\s\S]*?)```/g;
+            
+            			const extracted = {};
+            			let match;
+            
+            			while ((match = regex.exec(content)) !== null) {
+            			  const filename = match[1].trim();
+            			  const code = match[2].trim();
+            			  extracted[filename] = code;
+            			}
+            			page.c8o.log.debug("extracted code blocks" + JSON.stringify(extracted));
+            			return extracted
+            		}
             		
             		// iterate over all the vars.response and push them to the local messages
             		if (vars.response == null) {
@@ -326,10 +342,11 @@ title: First page
             					id: vars.response[i].id,
             				}
             				page.local.Messages.push(msg)
+            				blocks = parseAndExtractCodeBlocks(msg.msg);
             			}
             		}
             		
-            		resolve();
+            		resolve(blocks);
             '
     ↓response [ngx.components.UIControlVariable-1744305017904]: 
       varValue: 
@@ -364,4 +381,11 @@ title: First page
              "ionBean": "SetLocalAction",
              "Property": "plain:spinner",
              "Value": "script:false"
+            }'
+        ↓Log [ngx.components.UIDynamicAction-1744718216788]: 
+          beanData: |
+            '{
+             "ionBean": "LogAction",
+             "message": "source:{\"filter\":\"Action\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"priority\":1744304995983,\"rootEvent\":false,\"pageLocals\":false},{\"priority\":1744356866759,\"rootEvent\":true,\"pageLocals\":false}],\"path\":\"?.out\",\"prefix\":\"JSON.stringify(\",\"suffix\":\")\",\"custom\":\"\",\"useCustom\":false}}",
+             "level": "plain:warn"
             }'

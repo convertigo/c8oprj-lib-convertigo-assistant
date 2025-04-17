@@ -1,38 +1,56 @@
 ↓Call_Transaction3 [steps.TransactionStep-1744206363463]: 
   sourceTransaction: ConvertigoAssitant.OpenAI.CheckMessages
   ↓threadid [variables.StepVariable-1744206363466]: 
-↓Iterator [steps.IteratorStep-1744217119885]: 
-  sourceDefinition: 
+↓message [steps.JsonArrayStep-1744736404624]: 
+  key: 
     - xmlizable: 
-      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-      - com.twinsoft.convertigo.beans.common.XMLVector: 
-        - java.lang.String: 
-          - ↑value: 1744206363463
-        - java.lang.String: 
-          - ↑value: ./document/object/data/object
-  ↓Message [steps.JsonObjectStep-1744217119892]: 
-    key: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Message
+  ↓Iterator [steps.IteratorStep-1744217119885]: 
+    sourceDefinition: 
       - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-        - SmartType: 
-          - ↑mode: PLAIN
-          - →→: Message
-    ↓Iterator [steps.IteratorStep-1744217119895]: 
-      sourceDefinition: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-          - com.twinsoft.convertigo.beans.common.XMLVector: 
-            - java.lang.String: 
-              - ↑value: 1744217119885
-            - java.lang.String: 
-              - ↑value: ./content/object
-      ↓field [steps.JsonFieldStep-1744217119898]: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744206363463
+          - java.lang.String: 
+            - ↑value: ./document/object/data/object
+    ↓Message [steps.JsonObjectStep-1744217119892]: 
+      ↓Iterator [steps.IteratorStep-1744217119895]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1744217119885
+              - java.lang.String: 
+                - ↑value: ./content/object
+        ↓field [steps.JsonFieldStep-1744217119898]: 
+          key: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: PLAIN
+                - →→: text
+          value: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: SOURCE
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1744217119895
+                  - java.lang.String: 
+                    - ↑value: ./text/value/text()
+      ↓role [steps.JsonFieldStep-1744217497157]: 
         key: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
             - SmartType: 
               - ↑mode: PLAIN
-              - →→: text
+              - →→: role
         value: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
@@ -40,43 +58,26 @@
               - ↑mode: SOURCE
               - com.twinsoft.convertigo.beans.common.XMLVector: 
                 - java.lang.String: 
-                  - ↑value: 1744217119895
+                  - ↑value: 1744217119885
                 - java.lang.String: 
-                  - ↑value: ./text/value/text()
-    ↓role [steps.JsonFieldStep-1744217497157]: 
-      key: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-          - SmartType: 
-            - ↑mode: PLAIN
-            - →→: role
-      value: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-          - SmartType: 
-            - ↑mode: SOURCE
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1744217119885
-              - java.lang.String: 
-                - ↑value: ./role/text()
-    ↓field1 [steps.JsonFieldStep-1744631449896]: 
-      key: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-          - SmartType: 
-            - ↑mode: PLAIN
-            - →→: id
-      value: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-          - SmartType: 
-            - ↑mode: SOURCE
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1744217119885
-              - java.lang.String: 
-                - ↑value: ./id/text()
+                  - ↑value: ./role/text()
+      ↓field1 [steps.JsonFieldStep-1744631449896]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: id
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: SOURCE
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1744217119885
+                - java.lang.String: 
+                  - ↑value: ./id/text()
 ↓Call_Transaction [steps.TransactionStep-1744389507990]: 
   sourceTransaction: ConvertigoAssitant.OpenAI.GetRunStatus
   ↓threadid [variables.StepVariable-1744389521095]: 
@@ -98,6 +99,65 @@
             - ↑value: 1744389507990
           - java.lang.String: 
             - ↑value: ./document/object/status/text()
+↓jStatus [steps.SimpleSourceStep-1744822802324]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1744389507990
+        - java.lang.String: 
+          - ↑value: ./document/object/status/text()
+  variableName: jStatus
+↓jIfThenElse [steps.IfThenElseStep-1744822843512]: 
+  condition: jStatus == 'completed'
+  ↓jThen [steps.ThenStep-1744822845331]: 
+    ↓Messages [steps.JsonSourceStep-1744736733823]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1744736404624
+            - java.lang.String: 
+              - ↑value: .
+      variableName: Messages
+    ↓ExtractCodeBlocks [steps.SimpleStep-1744736763321]: 
+      expression: |
+        '// Regex to match ### filename followed by a code block
+        
+        function extractJSONFromMarkdown(md) {
+          const jsonCodeBlockRegex = /```json\s*([\s\S]*?)\s*```/i;
+          const match = md.match(jsonCodeBlockRegex);
+          
+          if (match && match[1]) {
+            try {
+              const jsonString = match[1];
+              const parsed = JSON.parse(jsonString);
+              return parsed;
+            } catch (err) {
+              log.error("Failed to parse JSON:", err.message);
+            }
+          } else {
+            log.error("No JSON code block found.");
+          }
+          return null;
+        }
+        
+        
+        for (let i = 0; i < Messages.length; i++) {
+        	if (Messages[i].role == "assistant" && Messages[i].text != null && Messages[i].text != "") {
+        		msg = {
+        			type: "assistant",
+        			text: Messages[i].text,
+        			id: Messages[i].id,
+        		}
+        		blocks = extractJSONFromMarkdown(msg.text);
+        		log.warn(JSON.stringify(blocks));
+        	}
+        }
+        '
+  ↓jElse [steps.ElseStep-1744822845333]: 
 ↓threadid [variables.RequestableVariable-1744206384502]: 
 ↓runid [variables.RequestableVariable-1744389554413]: 
 ↓TestOK [core.TestCase]: 
