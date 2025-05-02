@@ -389,3 +389,27 @@ title: First page
              "message": "source:{\"filter\":\"Action\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"priority\":1744304995983,\"rootEvent\":false,\"pageLocals\":false},{\"priority\":1744356866759,\"rootEvent\":true,\"pageLocals\":false}],\"path\":\"?.out\",\"prefix\":\"JSON.stringify(\",\"suffix\":\")\",\"custom\":\"\",\"useCustom\":false}}",
              "level": "plain:warn"
             }'
+        ↓If [ngx.components.UIDynamicAction-1745855253935]: 
+          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssitant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssitant.ReadResponse\",\"marker\":\"\"}],\"path\":\"?.clipboardxml\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          ↓AddAssistantMessage [ngx.components.UICustomAction-1745855317446]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    '		if (vars.clipboard != null) {
+                    			//console.log("clipboard", vars.clipboard);
+                    			let msg = {
+                    				type: "assistant",
+                    				msg: "```\n" + vars.clipboard + "\n```",
+                    				id: -1,
+                    			}
+                    			page.local.Messages.push(msg)		
+                    		}
+                    		resolve();
+                    '
+            ↓clipboard [ngx.components.UIControlVariable-1745855405054]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssitant","input":"","model":{"data":[{"sequence":"ConvertigoAssitant.ReadResponse","marker":""}],"path":"?.clipboardxml","prefix":"","suffix":"","custom":"","useCustom":false}}
