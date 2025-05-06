@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document connector="OpenAI" fromcache="false" generated="Thu Apr 17 16:34:24 CEST 2025" project="ConvertigoAssitant" sequence="" transaction="CheckMessages">
+    <object type="object">
+        <object type="string">list</object>
+        <data length="2" type="array">
+            <object type="object">
+                <id type="string">msg_LdxnWEQSQA8BQXMAFLcv8GKb</id>
+                <object type="string">thread.message</object>
+                <created_at type="integer">1745935642</created_at>
+                <assistant_id type="string">asst_iLSiB5Gu0EkkJArAwuC6aET3</assistant_id>
+                <thread_id type="string">thread_pydkxTR5arpiD4jC1xw6omY4</thread_id>
+                <run_id type="string">run_O26Hnom1NEYUAuPxBR713Huo</run_id>
+                <role type="string">assistant</role>
+                <content length="1" type="array">
+                    <object type="object">
+                        <type type="string">text</type>
+                        <text type="object">
+                            <value type="string">```json
+{
+  "XHTML": "&lt;ion-content&gt;\n  &lt;ion-grid&gt;\n    &lt;ion-row&gt;\n      &lt;ion-col *ngFor=\"let header of this?.tableHeaders\"&gt;\n        {{header}}\n      &lt;/ion-col&gt;\n    &lt;/ion-row&gt;\n    &lt;ng-container *ngFor=\"let item of this?.jsonData\"&gt;\n      &lt;ion-row&gt;\n        &lt;ion-col *ngFor=\"let key of this?.tableHeaders\"&gt;\n          {{item[key]}}\n        &lt;/ion-col&gt;\n      &lt;/ion-row&gt;\n    &lt;/ng-container&gt;\n  &lt;/ion-grid&gt;\n&lt;/ion-content&gt;",
+  "typescript": "import { Component } from '@angular/core';\n\n@Component({\n  selector: 'app-json-table',\n  templateUrl: './json-table.component.html',\n  styleUrls: ['./json-table.component.scss'],\n})\nexport class JsonTableComponent {\n  /*Begin_c8o_CompDeclaration*/\n  jsonData: any[] = [];\n  tableHeaders: string[] = [];\n  /*End_c8o_CompDeclaration*/\n\n  /*Begin_c8o_CompConstructor*/\n  constructor() {\n    // Example JSON data\n    this.jsonData = [\n      { id: 1, name: 'Alice', age: 30 },\n      { id: 2, name: 'Bob', age: 25 },\n      { id: 3, name: 'Charlie', age: 35 }\n    ];\n    if (this.jsonData.length &gt; 0) {\n      this.tableHeaders = Object.keys(this.jsonData[0]);\n    }\n  }\n  /*End_c8o_CompConstructor*/\n\n  /*Begin_c8o_CompFunction*/\n  // Additional methods can be added here if needed\n  /*End_c8o_CompFunction*/\n}\n",
+  "css": "ion-grid {\n  width: 100%;\n}\n\nion-row {\n  border-bottom: 1px solid #ccc;\n  padding: 8px 0;\n}\n\nion-col {\n  font-size: 14px;\n  font-weight: 500;\n  padding: 0 8px;\n}\n\nion-row:first-child {\n  font-weight: bold;\n  background-color: #f0f0f0;\n}\n",
+  "variables": {
+    "jsonData": [
+      { "id": 1, "name": "Alice", "age": 30 },
+      { "id": 2, "name": "Bob", "age": 25 },
+      { "id": 3, "name": "Charlie", "age": 35 }
+    ],
+    "tableHeaders": ["id", "name", "age"]
+  },
+  "explanation": "Le composant Angular Ionic affichera les données JSON dans un tableau utilisant ion-grid, ion-row, et ion-col d'Ionic. Les en-têtes du tableau sont générés dynamiquement à partir des clés du premier objet JSON. Chaque ligne du tableau affiche les valeurs correspondantes. Le CSS stylise le tableau pour une meilleure lisibilité."
+}
+```</value>
+                            <annotations length="0" type="array"/>
+                        </text>
+                    </object>
+                </content>
+                <attachments length="0" type="array"/>
+                <metadata type="object"/>
+            </object>
+            <object type="object">
+                <id type="string">msg_cSauQuvn4a1gWZqXpFq3R4KF</id>
+                <object type="string">thread.message</object>
+                <created_at type="integer">1745935640</created_at>
+                <assistant_id type="null"/>
+                <thread_id type="string">thread_pydkxTR5arpiD4jC1xw6omY4</thread_id>
+                <run_id type="null"/>
+                <role type="string">user</role>
+                <content length="1" type="array">
+                    <object type="object">
+                        <type type="string">text</type>
+                        <text type="object">
+                            <value type="string">créer un composant capable d'afficher dans un tableau des données issues d'une structure json</value>
+                            <annotations length="0" type="array"/>
+                        </text>
+                    </object>
+                </content>
+                <attachments length="0" type="array"/>
+                <metadata type="object"/>
+            </object>
+        </data>
+        <first_id type="string">msg_LdxnWEQSQA8BQXMAFLcv8GKb</first_id>
+        <last_id type="string">msg_cSauQuvn4a1gWZqXpFq3R4KF</last_id>
+        <has_more type="boolean">false</has_more>
+    </object>
+</document>

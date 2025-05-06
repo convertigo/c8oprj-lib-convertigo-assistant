@@ -171,6 +171,8 @@
         	  try {
         		  jsonOb = findMatchingObject(JSON.parse(md));
         	  } catch (e) {
+        		  log.error("Failed to parse JSON: "+ e.message);
+        		  
         		  const jsonCodeBlockRegex = /```json\s*([\s\S]*?)\s*```/gi;
         		  const matches = md.matchAll(jsonCodeBlockRegex);
         		  if (matches) {
@@ -206,6 +208,9 @@
         				  if (tag == map.get(key).getTag()) {
         				  	  //log.warn(key);
         					  beanKey = key;
+        					  if ("FSImage" == beanKey) {
+        						  beanKey = "Image";
+        					  }
         					  break;
         				  }
         				}
@@ -248,10 +253,10 @@
         								if (akey.startsWith("[") && akey.endsWith("]")) {
         									mode = MobileSmartSourceType.Mode.SCRIPT;
         								}
-        								/*if (text.startsWith("{{") && text.endsWith("}}")) {
+        								if (value.startsWith("{{") && value.endsWith("}}")) {
         									mode = MobileSmartSourceType.Mode.SCRIPT;
-        									text = text.replace("{{","").replace("}}","").trim();
-        								}*/
+        									value = value.replace("{{","").replace("}}","").trim();
+        								}
         								
         								var msst = new MobileSmartSourceType();
         								msst.setMode(mode);
@@ -275,6 +280,41 @@
         			log.error("Failed to setBeanProperty: "+ e.message);
         		}
         		return bRet;
+        	}
+        	
+        	function parseText(template) {
+        	  const regex = /\{\{\s*(.*?)\s*\}\}/g;
+        	  let result = [];
+        	  let lastIndex = 0;
+        	
+        	  let match;
+        	  while ((match = regex.exec(template)) !== null) {
+        	    // Texte statique avant l''expression
+        	    if (match.index > lastIndex) {
+        	      result.push({
+        	        type: ''text'',
+        	        value: template.slice(lastIndex, match.index)
+        	      });
+        	    }
+        	
+        	    // Expression
+        	    result.push({
+        	      type: ''expression'',
+        	      value: match[1]
+        	    });
+        	
+        	    lastIndex = regex.lastIndex;
+        	  }
+        	
+        	  // Texte statique restant après la dernière expression
+        	  if (lastIndex < template.length) {
+        	    result.push({
+        	      type: ''text'',
+        	      value: template.slice(lastIndex)
+        	    });
+        	  }
+        	
+        	  return result;
         	}
         	
         	function createBeans(e, parent) {
@@ -306,10 +346,6 @@
         						if (akey.startsWith("[") && akey.endsWith("]")) {
         							mode = MobileSmartSourceType.Mode.SCRIPT;
         						}
-        						/*if (value.startsWith("{{") && value.endsWith("}}")) {
-        							mode = MobileSmartSourceType.Mode.SCRIPT;
-        							value = value.replace("{{","").replace("}}","").trim();
-        						}*/
         						var msst = new MobileSmartSourceType();
         						msst.setMode(mode);
         						msst.setSmartValue(value);
@@ -324,19 +360,18 @@
         			if (e.hasText() && dbo != null) {
         				e.textNodes().forEach((node) => {
         					if (!node.isBlank()) {
-        						var mode = MobileSmartSourceType.Mode.PLAIN;
         						var text = node.text().trim().trimEnd();
-        						if (text.startsWith("{{") && text.endsWith("}}")) {
-        							mode = MobileSmartSourceType.Mode.SCRIPT;
-        							text = text.replace("{{","").replace("}}","").trim();
-        						}
-        						var msst = new MobileSmartSourceType();
-        						msst.setMode(mode);
-        						msst.setSmartValue(text);
-        						
-        						var dbo_text = cm.createBean(cm.getComponentByName("UIText"));
-        						dbo_text.setTextSmartType(msst);
-        						dbo.add(dbo_text);
+        						var parsed = parseText(text);
+        						parsed.forEach(item => {
+        						  var value = item.value;
+        						  var mode = item.type == ''text'' ? MobileSmartSourceType.Mode.PLAIN : MobileSmartSourceType.Mode.SCRIPT;
+        						  var msst = new MobileSmartSourceType();
+        						  msst.setMode(mode);
+        						  msst.setSmartValue(value);
+        						  var dbo_text = cm.createBean(cm.getComponentByName("UIText"));
+        						  dbo_text.setTextSmartType(msst);
+        						  dbo.add(dbo_text);
+        						});						
         					}
         				});
         			}
@@ -353,6 +388,17 @@
         	}
         	
         	function getComponentFromMessages(Messages) {
+        	const start = Date.now();
+        	var scriptContent = `
+        	/*Begin_c8o_CompImport*/
+        	/*End_c8o_CompImport*/
+        	/*Begin_c8o_CompDeclaration*/
+        	/*End_c8o_CompDeclaration*/
+        	/*Begin_c8o_CompConstructor*/
+        	/*End_c8o_CompConstructor*/
+        	/*Begin_c8o_CompFunction*/
+        	/*End_c8o_CompFunction*/
+        	`;
         		var clipboard = new Clipboard();
         		for (let i = 0; i < Messages.length; i++) {
         			let message = Messages[i];
@@ -362,6 +408,7 @@
         					text: message.text,
         					id: message.id,
         				}
+        				log.warn("Extract JSON from:\n"+ msg.text);
         				let jsonOb = extractJSONFromMarkdown(msg.text);
         				if (jsonOb != null) {
         					log.warn("JSON block: "+ JSON.stringify(jsonOb));
@@ -373,8 +420,8 @@
         							try {
         								//log.warn("XHTML:\n"+ jsonOb.XHTML);
         								var parser = Parser.htmlParser();
-        								parser.settings(new ParseSettings(true, true)); //!!!!!!!!!!
-        								var doc = Jsoup.parse("<body>"+jsonOb.XHTML+"</body>", "", parser); //var doc = Jsoup.parseBodyFragment(""+jsonOb.XHTML);
+        								parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
+        								var doc = Jsoup.parse("<body>"+jsonOb.XHTML+"</body>", "", parser);
         								doc.body().children().forEach((child) => {
         									createBeans(child, comp);
         								});
@@ -412,17 +459,69 @@
         								log.error("Failed to handle variables: "+ e.message);
         							}
         							
-        							// Add comp functions from ''typescript''
+        							// Add typescript form ''typescript''
         							try {
-        								//log.warn("typescript:\n"+ jsonOb.typescript);
-        								var cts = comp.getScriptContent().getString();
-        								var tplMarker = NgxBuilder.getMarker(cts, "CompFunction");
-        								var ts = jsonOb.typescript;
-        								var customMarker = NgxBuilder.getMarker(ts, "CompFunction");							
-        								cts = cts.replace(tplMarker, customMarker);
-        								comp.setScriptContent(new FormatedContent(cts));
-        							} catch(e) {
-        								log.error("Failed to handle typescript: "+ e.message);
+        								log.warn("comp scriptContent:\n"+ scriptContent);
+        								
+        								// get imports
+        								try {
+        									var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
+        									var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
+        									scriptContent = scriptContent.replace(importMarker, customIMarker);
+        								} catch(e) {
+        									log.error("Failed to handle typescript imports: "+ e.message);
+        								}
+        								
+        								// get constructor
+        								try {
+        									var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
+        									var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
+        									//log.warn("customCMarker:\n"+ customCMarker);
+        									/*var lines = customCMarker.split(''\\R'');
+        									var len = lines.length;
+        									for (let i = 0; i < len; i++) {
+        										var line = lines[i];
+        										if (i == 1 || i == len-2) {
+        											customCMarker = customCMarker.replace(line, "//"+ line);
+        										}
+        									}*/
+        									//log.warn("customCMarker:\n"+ customCMarker);		
+        									scriptContent = scriptContent.replace(constructorMarker, customCMarker);
+        								} catch(e) {
+        									log.error("Failed to handle typescript constructor: "+ e.message);
+        								}
+        								
+        								// get declarations
+        								try {
+        									var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
+        									var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
+        									/*var lines = customDMarker.split(''\\R'');
+        									for (var line of lines) {
+        										for (let key in jsonOb.variables) {
+        											var re = new RegExp(key+"\\b");
+        											if (line.search(re) != -1) {
+        												customDMarker = customDMarker.replace(line, "//"+ line);
+        											}
+        										}
+        									}*/				
+        									scriptContent = scriptContent.replace(delarationMarker, customDMarker);
+        								} catch(e) {
+        									log.error("Failed to handle typescript declarations: "+ e.message);
+        								}
+        								
+        								// get functions
+        								try {
+        									var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
+        									var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
+        									scriptContent = scriptContent.replace(functionMarker, customFMarker);
+        								} catch(e) {
+        									log.error("Failed to handle typescript functions: "+ e.message);
+        								}
+        							
+        								comp.setScriptContent(new FormatedContent(scriptContent));
+        								log.warn("comp scriptContent:\n"+ comp.getScriptContent().getString());
+        							} catch (e) {
+        								log.error("Failed to set typescript content: "+ e.message);
         							}
         							
         							clipboard.add(comp);
@@ -430,16 +529,19 @@
         					} catch (e) {
         						log.error("Failed to handle Messages: "+ e.message);
         					}
+        				} else {
+        					log.error("Failed to retrieve Json");
         				}
         			}
         		}
         		var xml = clipboard.toXml();
-        		//log.warn("xml:\n"+ xml);
+        		const end = Date.now();
+        		log.warn("Clipboard generated in "+ Math.floor(end - start) + " ms");
+        		log.warn("Clipboard xml:\n"+ xml);
         		return xml;
         	}
         	
         	ClipboardXml = getComponentFromMessages(Messages);
-        	log.warn("xml:\n"+ ClipboardXml);
         }
         '
     ↓clipboardxml [steps.JsonFieldStep-1745337995426]: 
