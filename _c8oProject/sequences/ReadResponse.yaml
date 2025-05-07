@@ -416,6 +416,8 @@
         						var cm = ComponentManager.of(context.project);
         						var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
         						if (comp != null) {
+        							comp.setComment("-- AI genrated: "+ threadid);
+        							
         							// Add dbos from ''XHTML''
         							try {
         								//log.warn("XHTML:\n"+ jsonOb.XHTML);
@@ -525,6 +527,7 @@
         							}
         							
         							clipboard.add(comp);
+        							break; // keep only last from thread !!!
         						}
         					} catch (e) {
         						log.error("Failed to handle Messages: "+ e.message);
