@@ -146,6 +146,7 @@
       expression: |
         'with (new JavaImporter(
         	com.twinsoft.convertigo.beans.common.FormatedContent,
+        	com.twinsoft.convertigo.beans.common.XMLVector,
         	com.twinsoft.convertigo.beans.ngx.components.dynamic.IonBean,
         	com.twinsoft.convertigo.beans.ngx.components.dynamic.ComponentManager,
         	com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType.Mode,
@@ -244,7 +245,7 @@
         							var pname = property.getName();
         							var pattr = property.getAttr();
         							pattr = pattr == "" ? pname : pattr;
-        							if (akey == pattr && akey !== "class") {
+        							if ((akey == pattr || akey == "["+pattr+"]" ) && akey !== "class") {
         								log.warn("5- setBeanProperty for: " + akey + ", prop:"+ property);
         								
         								var value = aval.trim();
@@ -316,7 +317,46 @@
         	
         	  return result;
         	}
-        	
+        
+        	function extractConstructorParamsMapFromText(sourceCode) {
+        	    const paramMap = new Map();
+        		log.warn("sourceCode\n"+sourceCode);
+        		
+        		try {
+        		    // Match constructor content
+        		    const constructorRegex = /constructor\s*\(([\s\S]*?)\)\s*{/;
+        		    const match = constructorRegex.exec(sourceCode);
+        		
+        		    if (!match) {
+        				log.warn("sourceCode no match");
+        		        return paramMap;
+        		    }
+        		
+        		    const paramsString = match[1].trim();
+        			log.warn("paramsString\n"+paramsString);
+        			
+        			const params = paramsString.split(",");
+        			log.warn("params\n"+params);
+        			
+        		    // Regex for name and type
+        		    const paramRegex = /(?:public|private|protected)?\s*([\w$]+)\s*:\s*([\w$.<>\[\], \t]+)\s*/;
+        		
+        		    for (var param of params) {
+        		        const paramMatch = paramRegex.exec(param);
+        		        if (paramMatch) {
+        		            var name = paramMatch[1];
+        		            var type = paramMatch[2].trim();
+        		            paramMap.set(name, type);
+        		        }
+        		    }
+        		    log.warn("paramMap\n"+ JSON.stringify(Object.fromEntries(paramMap)));
+        		    
+        		} catch (e) {
+        			log.error("Failed to extractConstructorParamsMapFromText: "+ e.message);
+        		}
+        	    return paramMap;
+        	}
+        		
         	function createBeans(e, parent) {
         		try {
         			var dbo = null;
@@ -416,7 +456,59 @@
         						var cm = ComponentManager.of(context.project);
         						var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
         						if (comp != null) {
-        							comp.setComment("-- AI genrated: "+ threadid);
+        							comp.setComment("-- AI generated: "+ threadid);
+        							
+        							// add compAfterViewInit event with a CustomAction
+        							try {
+        								var evt = cm.createBean(cm.getComponentByName("UISharedComponentEvent"));
+        								var action = cm.createBean(cm.getComponentByName("UICustomAction"));
+        								
+        								// setPageTsImports from comp-imports 
+        								var lmti = new XMLVector(action.getPageTsImports());
+        								for (let key in jsonOb["comp-imports"]) {
+        									var value = jsonOb["comp-imports"][key];
+        									var xmlv = new XMLVector();
+        									xmlv.add("{ "+key+ " }");
+        									xmlv.add(""+value);
+        									lmti.add(xmlv);
+        								}
+        								action.setPageTsImports(lmti);
+        
+        								// setLocalModuleTsImports from module-imports 
+        								var lmti = new XMLVector(action.getLocalModuleTsImports());
+        								for (let key in jsonOb["module-imports"]) {
+        									var value = jsonOb["module-imports"][key];
+        									var xmlv = new XMLVector();
+        									xmlv.add("{ "+key+ " }");
+        									xmlv.add(""+value);
+        									lmti.add(xmlv);
+        								}
+        								action.setLocalModuleTsImports(lmti);
+        								
+        								// setLocalModuleNgImports from module-ngmodules 
+        								var lmngi = new XMLVector(action.getLocalModuleNgImports());
+        								jsonOb["module-ngmodules"].forEach((value) => {
+        									var xmlv = new XMLVector();
+        									xmlv.add(value);
+        									lmngi.add(xmlv);
+        								});
+        								action.setLocalModuleNgImports(lmngi);
+        								
+        								// setLocalModuleNgProviders from module-ngproviders 
+        								var lmngp = new XMLVector(action.getLocalModuleNgProviders());
+        								jsonOb["module-ngproviders"].forEach((value) => {
+        									var xmlv = new XMLVector();
+        									xmlv.add(value);
+        									lmngp.add(xmlv);
+        								});
+        								action.setLocalModuleNgProviders(lmngp);
+        								
+        								action.setName("install");
+        								evt.add(action);
+        								comp.add(evt);
+        							} catch (e) {
+        								log.error("Failed to handle style: "+ e.message);
+        							}
         							
         							// Add dbos from ''XHTML''
         							try {
@@ -465,61 +557,34 @@
         							try {
         								log.warn("comp scriptContent:\n"+ scriptContent);
         								
-        								// get imports
         								try {
         									var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
-        									var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
-        									scriptContent = scriptContent.replace(importMarker, customIMarker);
-        								} catch(e) {
-        									log.error("Failed to handle typescript imports: "+ e.message);
-        								}
-        								
-        								// get constructor
-        								try {
         									var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
-        									var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
-        									//log.warn("customCMarker:\n"+ customCMarker);
-        									/*var lines = customCMarker.split(''\\R'');
-        									var len = lines.length;
-        									for (let i = 0; i < len; i++) {
-        										var line = lines[i];
-        										if (i == 1 || i == len-2) {
-        											customCMarker = customCMarker.replace(line, "//"+ line);
-        										}
-        									}*/
-        									//log.warn("customCMarker:\n"+ customCMarker);		
-        									scriptContent = scriptContent.replace(constructorMarker, customCMarker);
-        								} catch(e) {
-        									log.error("Failed to handle typescript constructor: "+ e.message);
-        								}
-        								
-        								// get declarations
-        								try {
         									var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
-        									var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
-        									/*var lines = customDMarker.split(''\\R'');
-        									for (var line of lines) {
-        										for (let key in jsonOb.variables) {
-        											var re = new RegExp(key+"\\b");
-        											if (line.search(re) != -1) {
-        												customDMarker = customDMarker.replace(line, "//"+ line);
-        											}
-        										}
-        									}*/				
-        									scriptContent = scriptContent.replace(delarationMarker, customDMarker);
-        								} catch(e) {
-        									log.error("Failed to handle typescript declarations: "+ e.message);
-        								}
-        								
-        								// get functions
-        								try {
         									var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
+        									
+        									var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
+        									var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
+        									var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
         									var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
+        									
+        									var s1 = "/*End_c8o_CompDeclaration*/";
+        									var s2 = "/*End_c8o_CompConstructor*/";
+        									var params = extractConstructorParamsMapFromText(jsonOb.typescript);
+        									params.forEach((value, key) => {
+        										customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
+        										customCMarker = customCMarker.replace(s2, "this."+key+" = this.getInstance("+ value + ");\n"+s2);
+        									});
+        									
+        									scriptContent = scriptContent.replace(importMarker, customIMarker);
+        									scriptContent = scriptContent.replace(constructorMarker, customCMarker);
+        									scriptContent = scriptContent.replace(delarationMarker, customDMarker);
         									scriptContent = scriptContent.replace(functionMarker, customFMarker);
+        									
         								} catch(e) {
-        									log.error("Failed to handle typescript functions: "+ e.message);
+        									log.error("Failed to handle typescript : "+ e.message);
         								}
-        							
+        															
         								comp.setScriptContent(new FormatedContent(scriptContent));
         								log.warn("comp scriptContent:\n"+ comp.getScriptContent().getString());
         							} catch (e) {
