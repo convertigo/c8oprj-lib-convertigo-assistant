@@ -1,7 +1,7 @@
 
 
 
-# ConvertigoAssitant
+# ConvertigoAssistant
 
 This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
 
@@ -40,17 +40,17 @@ For more technical informations : [documentation](./project.md)
      <tr><td>To contribute</td><td>
 
      ```
-     ConvertigoAssitant=https://github.com/convertigo/c8oprj-convertigo-assitant.git:branch=master
+     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assitant.git:branch=master
      ```
      </td></tr>
      <tr><td>To simply use</td><td>
 
      ```
-     ConvertigoAssitant=https://github.com/convertigo/c8oprj-convertigo-assitant/archive/master.zip
+     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assitant/archive/master.zip
      ```
      </td></tr>
     </table>
-3. Click the `Finish` button. This will automatically import the __ConvertigoAssitant__ project
+3. Click the `Finish` button. This will automatically import the __ConvertigoAssistant__ project
 
 
 ## Mobile Application
