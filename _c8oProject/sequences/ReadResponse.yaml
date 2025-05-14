@@ -440,6 +440,7 @@
         	/*End_c8o_CompFunction*/
         	`;
         		var clipboard = new Clipboard();
+        		var explanation = "";
         		for (let i = 0; i < Messages.length; i++) {
         			let message = Messages[i];
         			if (message.role == "assistant" && message.text != null && message.text != "") {
@@ -453,6 +454,8 @@
         				if (jsonOb != null) {
         					log.warn("JSON block: "+ JSON.stringify(jsonOb));
         					try {
+        						explanation = jsonOb.explanation;
+        						
         						var cm = ComponentManager.of(context.project);
         						var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
         						if (comp != null) {
@@ -603,28 +606,56 @@
         			}
         		}
         		var xml = clipboard.toXml();
-        		const end = Date.now();
-        		log.warn("Clipboard generated in "+ Math.floor(end - start) + " ms");
-        		log.warn("Clipboard xml:\n"+ xml);
-        		return xml;
+        		//const end = Date.now();
+        		//log.warn("Clipboard generated in "+ Math.floor(end - start) + " ms");
+        		//log.warn("Clipboard xml:\n"+ xml);
+        		
+        		var jsonAData = {
+        			"clipboard": xml,
+        			"explanation": explanation
+        		};
+        		
+        		return jsonAData;
         	}
         	
-        	ClipboardXml = getComponentFromMessages(Messages);
+        	 var jsonAData = getComponentFromMessages(Messages);
+        	 AIClipboard = jsonAData.clipboard;
+        	 AIExplanation = jsonAData.explanation;
         }
         '
-    ↓clipboardxml [steps.JsonFieldStep-1745337995426]: 
+    ↓object [steps.JsonObjectStep-1747227848030]: 
       key: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
           - SmartType: 
             - ↑mode: PLAIN
-            - →→: clipboardxml
-      value: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-          - SmartType: 
-            - ↑mode: JS
-            - →→: ClipboardXml
+            - →→: AIData
+      ↓clipboardxml [steps.JsonFieldStep-1747227976746]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: clipboard
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIClipboard
+      ↓clipboardxml1 [steps.JsonFieldStep-1747228971470]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: explanation
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIExplanation
   ↓jElse [steps.ElseStep-1744822845333]: 
 ↓fromStub [variables.RequestableVariable-1744901364156]: 
   value: false
