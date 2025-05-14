@@ -40,13 +40,13 @@ For more technical informations : [documentation](./project.md)
      <tr><td>To contribute</td><td>
 
      ```
-     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assitant.git:branch=master
+     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assistant.git:branch=master
      ```
      </td></tr>
      <tr><td>To simply use</td><td>
 
      ```
-     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assitant/archive/master.zip
+     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assistant/archive/master.zip
      ```
      </td></tr>
     </table>

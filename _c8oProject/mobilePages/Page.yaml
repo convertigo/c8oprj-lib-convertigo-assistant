@@ -404,7 +404,11 @@ title: First page
                     				msg: "```\n" + vars.clipboard + "\n```",
                     				id: -1,
                     			}
-                    			page.local.Messages.push(msg)		
+                    			page.local.Messages.push(msg);
+                    			window[''sendToHost'']({
+                    				type: "create",
+                    				clipboard: vars.clipboard
+                    			});
                     		}
                     		resolve();
                     '

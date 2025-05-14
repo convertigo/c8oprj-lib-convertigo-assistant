@@ -580,3 +580,46 @@ tplProjectName: mobilebuilder_tpl_8_3_0_ngx
           }
           
           '
+↓AppEvent [ngx.components.UIAppEvent-1747213310646]: 
+  appEvent: onAppInit
+  ↓HandlePostMessage [ngx.components.UICustomAction-1747213325348]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		
+            
+            		if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
+            			page.global.studio = true;
+            		}
+            		
+            		window[''sendToHost''] = (message) => {
+            			if (page.global.studio) {
+            				window[''java''].receiveFromJS(JSON.stringify(message));
+            			} else if (window.parent && window != window.parent) {
+            				window.parent.postMessage(message, ''*'');
+            			}
+            		};
+            		
+            		window[''setupMessageListener''] = (callback) => {
+            			if (page.global.studio) {
+            				window[''receiveFromJava''] = function(msg) {
+            					callback(msg);
+            				};
+            			} else {
+            				window.addEventListener(''message'', (event) => {
+            					callback(event.data);
+            				});
+            			}
+            		};
+            		
+            		window[''setupMessageListener'']((msg) => {
+            			if (msg.type == ''init'') {
+            				page.global.studio = true;
+            			}
+            		});
+            		
+            		resolve();
+            '
