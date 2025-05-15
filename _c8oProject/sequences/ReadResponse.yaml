@@ -200,7 +200,6 @@
         	}
         	
         	function getBeanKey(tag) {
-        		var cm = ComponentManager.of(context.project);
         		var beanKey = undefined;
         		if (cm != null) {
         			try {
@@ -226,7 +225,6 @@
         		var bRet = false;
         		try {
         			if (dbo != null) {
-        				var cm = ComponentManager.of(context.project);
         				var akey = ""+a.getKey();
         				var aval = ""+a.getValue();
         				//log.warn("1- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
@@ -359,12 +357,7 @@
         		
         	function createBeans(e, parent) {
         		try {
-        			var dbo = null;
-        			var cm = ComponentManager.of(context.project);
-        			try {
-        				log.warn("Using template "+ cm.getTemplateProjectName());
-        			} catch(e) {}
-        			
+        			var dbo = null;			
         			var tag = e.nodeName();
         			var key = getBeanKey(tag);
         			//log.warn("createBeans for "+ e.nodeName());
@@ -460,7 +453,6 @@
         					try {
         						explanation = jsonOb.explanation;
         						
-        						var cm = ComponentManager.of(context.project);
         						var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
         						if (comp != null) {
         							comp.setComment("-- AI generated: "+ threadid);
@@ -621,10 +613,21 @@
         		
         		return jsonAData;
         	}
+        
+        	var tpl_projectname = "mobilebuilder_tpl_8_3_0_ngx";
+        	try {
+        		tpl_projectname = context.project.getMobileApplication().getApplicationComponent().getTplProjectName();
+        	} catch (e) {
+        		log.error("Failed to retrieve tpl_projectname : "+ e.message);
+        	}
         	
-        	 var jsonAData = getComponentFromMessages(Messages);
-        	 AIClipboard = jsonAData.clipboard;
-        	 AIExplanation = jsonAData.explanation;
+        	//var cm = ComponentManager.of(context.project); // doesn''t work on server
+        	var cm = ComponentManager.of(tpl_projectname);
+        	log.warn("Using template "+ cm.getTemplateProjectName());
+        	
+        	var jsonAData = getComponentFromMessages(Messages);
+        	AIClipboard = jsonAData.clipboard;
+        	AIExplanation = jsonAData.explanation;
         }
         '
     ↓object [steps.JsonObjectStep-1747227848030]: 
