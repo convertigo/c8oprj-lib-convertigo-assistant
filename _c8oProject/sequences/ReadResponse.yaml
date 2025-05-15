@@ -203,7 +203,6 @@
         		var cm = ComponentManager.of(context.project);
         		var beanKey = undefined;
         		if (cm != null) {
-        			log.info("Using template "+ cm.getTemplateProjectName());
         			try {
         				var map = cm.getIonBeans();
         				for (let key of map.keySet()) {
@@ -362,6 +361,10 @@
         		try {
         			var dbo = null;
         			var cm = ComponentManager.of(context.project);
+        			try {
+        				log.warn("Using template "+ cm.getTemplateProjectName());
+        			} catch(e) {}
+        			
         			var tag = e.nodeName();
         			var key = getBeanKey(tag);
         			//log.warn("createBeans for "+ e.nodeName());
