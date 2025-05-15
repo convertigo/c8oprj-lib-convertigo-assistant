@@ -1,17 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?><xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ConvertigoAssitant_ns="http://www.convertigo.com/convertigo/projects/ConvertigoAssitant" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://www.convertigo.com/convertigo/projects/ConvertigoAssitant">
-    <xsd:element name="OpenAI__CheckMessages" type="ConvertigoAssitant_ns:OpenAI__CheckMessagesRequestData">
+<?xml version="1.0" encoding="UTF-8"?><xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ConvertigoAssistant_ns="http://www.convertigo.com/convertigo/projects/ConvertigoAssistant" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://www.convertigo.com/convertigo/projects/ConvertigoAssistant">
+    <xsd:element name="OpenAI__CheckMessages" type="ConvertigoAssistant_ns:OpenAI__CheckMessagesRequestData">
         <xsd:annotation/>
     </xsd:element>
     <xsd:element name="OpenAI__CheckMessagesResponse">
         <xsd:complexType>
             <xsd:sequence>
-                <xsd:element name="response" type="ConvertigoAssitant_ns:OpenAI__CheckMessagesResponseData"/>
+                <xsd:element name="response" type="ConvertigoAssistant_ns:OpenAI__CheckMessagesResponseData"/>
             </xsd:sequence>
         </xsd:complexType>
     </xsd:element>
     <xsd:complexType name="OpenAI__CheckMessagesResponseType">
         <xsd:sequence>
-            <xsd:element name="document" type="ConvertigoAssitant_ns:OpenAI__CheckMessagesResponseData"/>
+            <xsd:element name="document" type="ConvertigoAssistant_ns:OpenAI__CheckMessagesResponseData"/>
         </xsd:sequence>
     </xsd:complexType>
     <xsd:complexType name="OpenAI__CheckMessagesRequestData">
@@ -101,21 +101,21 @@
     </xsd:complexType>
     <xsd:complexType name="OpenAI_CheckMessages_document_object_data_object_content_object_textType">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="value" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_text_valueType"/>
-            <xsd:element minOccurs="0" name="annotations" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_text_annotationsType"/>
+            <xsd:element minOccurs="0" name="value" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_text_valueType"/>
+            <xsd:element minOccurs="0" name="annotations" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_text_annotationsType"/>
         </xsd:sequence>
         <xsd:attribute default="object" name="type" type="xsd:string"/>
     </xsd:complexType>
     <xsd:complexType name="OpenAI_CheckMessages_document_object_data_object_content_objectType">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="type" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_typeType"/>
-            <xsd:element minOccurs="0" name="text" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_textType"/>
+            <xsd:element minOccurs="0" name="type" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_typeType"/>
+            <xsd:element minOccurs="0" name="text" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_content_object_textType"/>
         </xsd:sequence>
         <xsd:attribute default="object" name="type" type="xsd:string"/>
     </xsd:complexType>
     <xsd:complexType name="OpenAI_CheckMessages_document_object_data_object_contentType">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_content_objectType"/>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_content_objectType"/>
         </xsd:sequence>
         <xsd:attribute name="length" type="xsd:byte"/>
         <xsd:attribute default="array" name="type" type="xsd:string"/>
@@ -137,22 +137,22 @@
     </xsd:complexType>
     <xsd:complexType name="OpenAI_CheckMessages_document_object_data_objectType">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="id" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_idType"/>
-            <xsd:element minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_objectType"/>
-            <xsd:element minOccurs="0" name="created_at" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_created_atType"/>
-            <xsd:element minOccurs="0" name="assistant_id" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_assistant_idType"/>
-            <xsd:element minOccurs="0" name="thread_id" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_thread_idType"/>
-            <xsd:element minOccurs="0" name="run_id" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_run_idType"/>
-            <xsd:element minOccurs="0" name="role" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_roleType"/>
-            <xsd:element minOccurs="0" name="content" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_contentType"/>
-            <xsd:element minOccurs="0" name="attachments" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_attachmentsType"/>
-            <xsd:element minOccurs="0" name="metadata" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_object_metadataType"/>
+            <xsd:element minOccurs="0" name="id" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_idType"/>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_objectType"/>
+            <xsd:element minOccurs="0" name="created_at" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_created_atType"/>
+            <xsd:element minOccurs="0" name="assistant_id" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_assistant_idType"/>
+            <xsd:element minOccurs="0" name="thread_id" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_thread_idType"/>
+            <xsd:element minOccurs="0" name="run_id" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_run_idType"/>
+            <xsd:element minOccurs="0" name="role" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_roleType"/>
+            <xsd:element minOccurs="0" name="content" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_contentType"/>
+            <xsd:element minOccurs="0" name="attachments" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_attachmentsType"/>
+            <xsd:element minOccurs="0" name="metadata" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_object_metadataType"/>
         </xsd:sequence>
         <xsd:attribute default="object" name="type" type="xsd:string"/>
     </xsd:complexType>
     <xsd:complexType name="OpenAI_CheckMessages_document_object_dataType">
         <xsd:sequence>
-            <xsd:element maxOccurs="unbounded" minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_data_objectType"/>
+            <xsd:element maxOccurs="unbounded" minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_data_objectType"/>
         </xsd:sequence>
         <xsd:attribute name="length" type="xsd:byte"/>
         <xsd:attribute default="array" name="type" type="xsd:string"/>
@@ -180,18 +180,18 @@
     </xsd:complexType>
     <xsd:complexType name="OpenAI_CheckMessages_document_objectType">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_objectType"/>
-            <xsd:element minOccurs="0" name="data" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_dataType"/>
-            <xsd:element minOccurs="0" name="first_id" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_first_idType"/>
-            <xsd:element minOccurs="0" name="last_id" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_last_idType"/>
-            <xsd:element minOccurs="0" name="has_more" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_object_has_moreType"/>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_objectType"/>
+            <xsd:element minOccurs="0" name="data" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_dataType"/>
+            <xsd:element minOccurs="0" name="first_id" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_first_idType"/>
+            <xsd:element minOccurs="0" name="last_id" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_last_idType"/>
+            <xsd:element minOccurs="0" name="has_more" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_object_has_moreType"/>
         </xsd:sequence>
         <xsd:attribute default="object" name="type" type="xsd:string"/>
     </xsd:complexType>
     <xsd:complexType name="OpenAI__CheckMessagesResponseData">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="object" type="ConvertigoAssitant_ns:OpenAI_CheckMessages_document_objectType"/>
-            <xsd:element minOccurs="0" name="error" type="ConvertigoAssitant_ns:ConvertigoError"/>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_CheckMessages_document_objectType"/>
+            <xsd:element minOccurs="0" name="error" type="ConvertigoAssistant_ns:ConvertigoError"/>
         </xsd:sequence>
         <xsd:attribute name="connector" type="xsd:string"/>
         <xsd:attribute name="context" type="xsd:string"/>
@@ -213,7 +213,7 @@
     </xsd:complexType>
     <xsd:complexType name="ConvertigoErrorContext">
         <xsd:sequence>
-            <xsd:element maxOccurs="unbounded" minOccurs="0" name="variable" type="ConvertigoAssitant_ns:ConvertigoErrorContextVariable"/>
+            <xsd:element maxOccurs="unbounded" minOccurs="0" name="variable" type="ConvertigoAssistant_ns:ConvertigoErrorContextVariable"/>
         </xsd:sequence>
     </xsd:complexType>
     <xsd:complexType name="ConvertigoError">
@@ -221,7 +221,7 @@
             <xsd:element name="code" type="xsd:integer"/>
             <xsd:element name="message" type="xsd:string"/>
             <xsd:element name="details" type="xsd:string"/>
-            <xsd:element name="context" type="ConvertigoAssitant_ns:ConvertigoErrorContext"/>
+            <xsd:element name="context" type="ConvertigoAssistant_ns:ConvertigoErrorContext"/>
             <xsd:element name="exception" type="xsd:string"/>
             <xsd:element name="stacktrace" type="xsd:string"/>
         </xsd:sequence>
