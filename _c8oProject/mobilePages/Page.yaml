@@ -405,9 +405,11 @@ title: First page
                     				id: -1,
                     			}
                     			page.local.Messages.push(msg);
+                    			
                     			window[''sendToHost'']({
-                    				type: "create",
-                    				clipboard: vars.data.clipboard
+                    				type: vars.data.type,
+                    				clipboard: vars.data.clipboard,
+                    				threadid: vars.data.threadid
                     			});
                     		}
                     		resolve();

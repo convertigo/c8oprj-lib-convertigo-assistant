@@ -438,176 +438,192 @@
         	`;
         		var clipboard = new Clipboard();
         		var explanation = "";
+        		var dataType = "create";
+        		var data = [];
+        		var cpt = 0;
+        		
         		for (let i = 0; i < Messages.length; i++) {
         			let message = Messages[i];
         			if (message.role == "assistant" && message.text != null && message.text != "") {
-        				msg = {
-        					type: "assistant",
-        					text: message.text,
-        					id: message.id,
-        				}
-        				log.warn("Extract JSON from:\n"+ msg.text);
-        				let jsonOb = extractJSONFromMarkdown(msg.text);
-        				if (jsonOb != null) {
-        					log.warn("JSON block: "+ JSON.stringify(jsonOb));
-        					try {
-        						explanation = jsonOb.explanation;
-        						
-        						var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
-        						if (comp != null) {
-        							comp.setComment("-- AI generated: "+ threadid);
-        							
-        							// add compAfterViewInit event with a CustomAction
-        							try {
-        								var evt = cm.createBean(cm.getComponentByName("UISharedComponentEvent"));
-        								var action = cm.createBean(cm.getComponentByName("UICustomAction"));
-        								
-        								// setPageTsImports from comp-imports 
-        								var lmti = new XMLVector(action.getPageTsImports());
-        								for (let key in jsonOb["comp-imports"]) {
-        									var value = jsonOb["comp-imports"][key];
-        									var xmlv = new XMLVector();
-        									xmlv.add("{ "+key+ " }");
-        									xmlv.add(""+value);
-        									lmti.add(xmlv);
-        								}
-        								action.setPageTsImports(lmti);
-        
-        								// setLocalModuleTsImports from module-imports 
-        								var lmti = new XMLVector(action.getLocalModuleTsImports());
-        								for (let key in jsonOb["module-imports"]) {
-        									var value = jsonOb["module-imports"][key];
-        									var xmlv = new XMLVector();
-        									xmlv.add("{ "+key+ " }");
-        									xmlv.add(""+value);
-        									lmti.add(xmlv);
-        								}
-        								action.setLocalModuleTsImports(lmti);
-        								
-        								// setLocalModuleNgImports from module-ngmodules 
-        								var lmngi = new XMLVector(action.getLocalModuleNgImports());
-        								jsonOb["module-ngmodules"].forEach((value) => {
-        									var xmlv = new XMLVector();
-        									xmlv.add(value);
-        									lmngi.add(xmlv);
-        								});
-        								action.setLocalModuleNgImports(lmngi);
-        								
-        								// setLocalModuleNgProviders from module-ngproviders 
-        								var lmngp = new XMLVector(action.getLocalModuleNgProviders());
-        								jsonOb["module-ngproviders"].forEach((value) => {
-        									var xmlv = new XMLVector();
-        									xmlv.add(value);
-        									lmngp.add(xmlv);
-        								});
-        								action.setLocalModuleNgProviders(lmngp);
-        								
-        								action.setName("install");
-        								evt.add(action);
-        								comp.add(evt);
-        							} catch (e) {
-        								log.error("Failed to handle style: "+ e.message);
-        							}
-        							
-        							// Add dbos from ''XHTML''
-        							try {
-        								//log.warn("XHTML:\n"+ jsonOb.XHTML);
-        								var parser = Parser.htmlParser();
-        								parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
-        								var doc = Jsoup.parse("<body>"+jsonOb.XHTML+"</body>", "", parser);
-        								doc.body().children().forEach((child) => {
-        									createBeans(child, comp);
-        								});
-        							} catch(e) {
-        								log.error("Failed to handle dbos: "+ e.message);
-        							}
-        							
-        							// Add style from ''css''
-        							try {
-        								//log.warn("css:\n"+ jsonOb.css);
-        								var uis = cm.createBean(cm.getComponentByName("UIStyle"));
-        								uis.setStyleContent(new FormatedContent(jsonOb.css));
-        								comp.add(uis);
-        							} catch (e) {
-        								log.error("Failed to handle style: "+ e.message);
-        							}
-        							
-        							// Add variables from ''variables''
-        							try {
-        								//log.warn("variables:\n"+ jsonOb.variables);
-        								for (let key in jsonOb.variables) {
-        									var value = jsonOb.variables[key];
-        									var variable = cm.createBean(cm.getComponentByName("UICompVariable"));
-        									variable.setName(key);
-        									if ("string" == typeof value) {
-        										variable.setVariableValue("''"+ value.replace(/''/g, "\\\\''") +"''");
-        									} else if ("object" == typeof value) {
-        										variable.setVariableValue(JSON.stringify(value).replace(/"/g, ''\\"''));
-        									} else {
-        										variable.setVariableValue(""+value);
-        									}
-        									comp.add(variable);
-        								}
-        							} catch(e) {
-        								log.error("Failed to handle variables: "+ e.message);
-        							}
-        							
-        							// Add typescript form ''typescript''
-        							try {
-        								log.warn("comp scriptContent:\n"+ scriptContent);
-        								
-        								try {
-        									var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
-        									var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
-        									var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
-        									var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
-        									
-        									var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
-        									var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
-        									var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
-        									var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
-        									
-        									var s1 = "/*End_c8o_CompDeclaration*/";
-        									var s2 = "/*End_c8o_CompConstructor*/";
-        									var params = extractConstructorParamsMapFromText(jsonOb.typescript);
-        									params.forEach((value, key) => {
-        										customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
-        										customCMarker = customCMarker.replace(s2, "this."+key+" = this.getInstance("+ value + ");\n"+s2);
-        									});
-        									
-        									scriptContent = scriptContent.replace(importMarker, customIMarker);
-        									scriptContent = scriptContent.replace(constructorMarker, customCMarker);
-        									scriptContent = scriptContent.replace(delarationMarker, customDMarker);
-        									scriptContent = scriptContent.replace(functionMarker, customFMarker);
-        									
-        								} catch(e) {
-        									log.error("Failed to handle typescript : "+ e.message);
-        								}
-        															
-        								comp.setScriptContent(new FormatedContent(scriptContent));
-        								log.warn("comp scriptContent:\n"+ comp.getScriptContent().getString());
-        							} catch (e) {
-        								log.error("Failed to set typescript content: "+ e.message);
-        							}
-        							
-        							clipboard.add(comp);
-        							break; // keep only last from thread !!!
-        						}
-        					} catch (e) {
-        						log.error("Failed to handle Messages: "+ e.message);
+        				//log.warn("Extract JSON from message "+ message.id +":\n"+ message.text);
+        				log.warn("Extract JSON from message "+ message.id);
+        				try {
+        					let jsonOb = extractJSONFromMarkdown(message.text);
+        					if (jsonOb != null) {
+        						data.push(jsonOb);
         					}
-        				} else {
-        					log.error("Failed to retrieve Json");
+        				} catch (e) {
+        					log.error("Failed to handle message "+ message.id +": "+ e.message);
         				}
         			}
         		}
+        		
+        		if (data.length > 0) {
+        			let jsonOb = data.shift();
+        			if (jsonOb != null) {
+        				//log.warn("JSON block: "+ JSON.stringify(jsonOb));
+        				dataType = data.length == 0 ? "create":"edit";
+        				
+        				try {
+        					var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
+        					if (comp != null) {
+        						explanation = jsonOb.explanation;
+        						comp.setComment("-- AI generated: "+ threadid);
+        						
+        						// add compAfterViewInit event with a CustomAction
+        						try {
+        							var evt = cm.createBean(cm.getComponentByName("UISharedComponentEvent"));
+        							var action = cm.createBean(cm.getComponentByName("UICustomAction"));
+        							
+        							// setPageTsImports from comp-imports 
+        							var lmti = new XMLVector(action.getPageTsImports());
+        							for (let key in jsonOb["comp-imports"]) {
+        								var value = jsonOb["comp-imports"][key];
+        								var xmlv = new XMLVector();
+        								xmlv.add("{ "+key+ " }");
+        								xmlv.add(""+value);
+        								lmti.add(xmlv);
+        							}
+        							action.setPageTsImports(lmti);
+        
+        							// setLocalModuleTsImports from module-imports 
+        							var lmti = new XMLVector(action.getLocalModuleTsImports());
+        							for (let key in jsonOb["module-imports"]) {
+        								var value = jsonOb["module-imports"][key];
+        								var xmlv = new XMLVector();
+        								xmlv.add("{ "+key+ " }");
+        								xmlv.add(""+value);
+        								lmti.add(xmlv);
+        							}
+        							action.setLocalModuleTsImports(lmti);
+        							
+        							// setLocalModuleNgImports from module-ngmodules 
+        							var lmngi = new XMLVector(action.getLocalModuleNgImports());
+        							jsonOb["module-ngmodules"].forEach((value) => {
+        								var xmlv = new XMLVector();
+        								xmlv.add(value);
+        								lmngi.add(xmlv);
+        							});
+        							action.setLocalModuleNgImports(lmngi);
+        							
+        							// setLocalModuleNgProviders from module-ngproviders 
+        							var lmngp = new XMLVector(action.getLocalModuleNgProviders());
+        							jsonOb["module-ngproviders"].forEach((value) => {
+        								var xmlv = new XMLVector();
+        								xmlv.add(value);
+        								lmngp.add(xmlv);
+        							});
+        							action.setLocalModuleNgProviders(lmngp);
+        							
+        							action.setName("install");
+        							evt.add(action);
+        							comp.add(evt);
+        						} catch (e) {
+        							log.error("Failed to handle style: "+ e.message);
+        						}
+        						
+        						// Add dbos from ''XHTML''
+        						try {
+        							//log.warn("XHTML:\n"+ jsonOb.XHTML);
+        							var parser = Parser.htmlParser();
+        							parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
+        							var doc = Jsoup.parse("<body>"+jsonOb.XHTML+"</body>", "", parser);
+        							doc.body().children().forEach((child) => {
+        								createBeans(child, comp);
+        							});
+        						} catch(e) {
+        							log.error("Failed to handle dbos: "+ e.message);
+        						}
+        						
+        						// Add style from ''css''
+        						try {
+        							//log.warn("css:\n"+ jsonOb.css);
+        							var uis = cm.createBean(cm.getComponentByName("UIStyle"));
+        							uis.setStyleContent(new FormatedContent(jsonOb.css));
+        							comp.add(uis);
+        						} catch (e) {
+        							log.error("Failed to handle style: "+ e.message);
+        						}
+        						
+        						// Add variables from ''variables''
+        						try {
+        							//log.warn("variables:\n"+ jsonOb.variables);
+        							for (let key in jsonOb.variables) {
+        								var value = jsonOb.variables[key];
+        								var variable = cm.createBean(cm.getComponentByName("UICompVariable"));
+        								variable.setName(key);
+        								if ("string" == typeof value) {
+        									variable.setVariableValue("''"+ value.replace(/''/g, "\\\\''") +"''");
+        								} else if ("object" == typeof value) {
+        									variable.setVariableValue(JSON.stringify(value).replace(/"/g, ''\\"''));
+        								} else {
+        									variable.setVariableValue(""+value);
+        								}
+        								comp.add(variable);
+        							}
+        						} catch(e) {
+        							log.error("Failed to handle variables: "+ e.message);
+        						}
+        						
+        						// Add typescript form ''typescript''
+        						try {
+        							log.warn("comp scriptContent:\n"+ scriptContent);
+        							
+        							try {
+        								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
+        								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
+        								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
+        								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
+        								
+        								var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
+        								var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
+        								var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
+        								var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
+        								
+        								var s1 = "/*End_c8o_CompDeclaration*/";
+        								var s2 = "/*End_c8o_CompConstructor*/";
+        								var params = extractConstructorParamsMapFromText(jsonOb.typescript);
+        								params.forEach((value, key) => {
+        									customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
+        									customCMarker = customCMarker.replace(s2, "this."+key+" = this.getInstance("+ value + ");\n"+s2);
+        								});
+        								
+        								scriptContent = scriptContent.replace(importMarker, customIMarker);
+        								scriptContent = scriptContent.replace(constructorMarker, customCMarker);
+        								scriptContent = scriptContent.replace(delarationMarker, customDMarker);
+        								scriptContent = scriptContent.replace(functionMarker, customFMarker);
+        								
+        							} catch(e) {
+        								log.error("Failed to handle typescript : "+ e.message);
+        							}
+        														
+        							comp.setScriptContent(new FormatedContent(scriptContent));
+        							log.warn("comp scriptContent:\n"+ comp.getScriptContent().getString());
+        						} catch (e) {
+        							log.error("Failed to set typescript content: "+ e.message);
+        						}
+        						
+        						clipboard.add(comp);
+        					}
+        				} catch (e) {
+        					log.error("Failed to create component: "+ e.message);
+        				}
+        			} else {
+        				log.error("Failed to retrieve Json");
+        			}
+        		} else {
+        			log.error("No valid message");
+        		}
+        				
         		var xml = clipboard.toXml();
         		//const end = Date.now();
         		//log.warn("Clipboard generated in "+ Math.floor(end - start) + " ms");
         		//log.warn("Clipboard xml:\n"+ xml);
         		
         		var jsonAData = {
+        			"type": dataType,
         			"clipboard": xml,
+        			"threadid": threadid,
         			"explanation": explanation
         		};
         		
@@ -620,9 +636,9 @@
         		cm = ComponentManager.of("mobilebuilder_tpl_8_3_0_ngx");
         	}
         	
-        	var jsonAData = getComponentFromMessages(Messages);
-        	AIClipboard = jsonAData.clipboard;
-        	AIExplanation = jsonAData.explanation;
+        	AIData = getComponentFromMessages(Messages);
+        	//AIClipboard = jsonAData.clipboard;
+        	//AIExplanation = jsonAData.explanation;
         }
         '
     ↓object [steps.JsonObjectStep-1747227848030]: 
@@ -632,7 +648,20 @@
           - SmartType: 
             - ↑mode: PLAIN
             - →→: AIData
-      ↓clipboardxml [steps.JsonFieldStep-1747227976746]: 
+      ↓type [steps.JsonFieldStep-1747389003582]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: type
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.type
+      ↓clipboard [steps.JsonFieldStep-1747227976746]: 
         key: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
@@ -644,8 +673,8 @@
             - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
             - SmartType: 
               - ↑mode: JS
-              - →→: AIClipboard
-      ↓clipboardxml1 [steps.JsonFieldStep-1747228971470]: 
+              - →→: AIData.clipboard
+      ↓explanation [steps.JsonFieldStep-1747228971470]: 
         key: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
@@ -657,7 +686,20 @@
             - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
             - SmartType: 
               - ↑mode: JS
-              - →→: AIExplanation
+              - →→: AIData.explanation
+      ↓threadid [steps.JsonFieldStep-1747386452769]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: threadid
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.threadid
   ↓jElse [steps.ElseStep-1744822845333]: 
 ↓fromStub [variables.RequestableVariable-1744901364156]: 
   value: false
