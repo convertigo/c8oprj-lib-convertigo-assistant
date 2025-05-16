@@ -614,16 +614,11 @@
         		return jsonAData;
         	}
         
-        	var tpl_projectname = "mobilebuilder_tpl_8_3_0_ngx";
-        	try {
-        		tpl_projectname = context.project.getMobileApplication().getApplicationComponent().getTplProjectName();
-        	} catch (e) {
-        		log.error("Failed to retrieve tpl_projectname : "+ e.message);
+        	var cm = ComponentManager.of(context.project);
+        	if (cm.getTemplateProjectName() == "Java@Ngx") {
+        		log.warn("Failed to retrieve TPL associated with assistant project. Will use mobilebuilder_tpl_8_3_0_ngx");
+        		cm = ComponentManager.of("mobilebuilder_tpl_8_3_0_ngx");
         	}
-        	
-        	//var cm = ComponentManager.of(context.project); // doesn''t work on server
-        	var cm = ComponentManager.of(tpl_projectname);
-        	log.warn("Using template "+ cm.getTemplateProjectName());
         	
         	var jsonAData = getComponentFromMessages(Messages);
         	AIClipboard = jsonAData.clipboard;
