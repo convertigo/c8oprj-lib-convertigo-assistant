@@ -429,10 +429,14 @@
         	var scriptContent = `
         	/*Begin_c8o_CompImport*/
         	/*End_c8o_CompImport*/
+        	/*Begin_c8o_OuputDeclaration*/
+        	/*End_c8o_OuputDeclaration*/
         	/*Begin_c8o_CompDeclaration*/
         	/*End_c8o_CompDeclaration*/
         	/*Begin_c8o_CompConstructor*/
         	/*End_c8o_CompConstructor*/
+        	/*Begin_c8o_CompChanges*/
+        	/*End_c8o_CompChanges*/
         	/*Begin_c8o_CompFunction*/
         	/*End_c8o_CompFunction*/
         	`;
@@ -555,7 +559,7 @@
         								if ("string" == typeof value) {
         									variable.setVariableValue("''"+ value.replace(/''/g, "\\\\''") +"''");
         								} else if ("object" == typeof value) {
-        									variable.setVariableValue(JSON.stringify(value).replace(/"/g, ''\\"''));
+        									variable.setVariableValue(JSON.stringify(value));
         								} else {
         									variable.setVariableValue(""+value);
         								}
@@ -567,21 +571,34 @@
         						
         						// Add typescript form ''typescript''
         						try {
-        							log.warn("comp scriptContent:\n"+ scriptContent);
+        							//log.warn("comp scriptContent:\n"+ scriptContent);
         							
         							try {
         								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
+        								var outputMarker = NgxBuilder.getMarker(scriptContent, "OuputDeclaration");
         								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
         								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
+        								var ngChangesMarker = NgxBuilder.getMarker(scriptContent, "CompChanges");
         								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
         								
         								var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
+        								var customOMarker = NgxBuilder.getMarker(jsonOb.typescript, "OuputDeclaration");
         								var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
         								var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
+        								var customNgCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompChanges");
         								var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
+        								
         								
         								var s1 = "/*End_c8o_CompDeclaration*/";
         								var s2 = "/*End_c8o_CompConstructor*/";
+        
+        								
+        								var bo = (""+customOMarker).split(/\r?\n/);
+        								bo.forEach((line) => {
+        									if (line.indexOf("@Output()") != -1) {
+        										customDMarker = customDMarker.replace(s1, line + "\n"+s1);
+        									}
+        								});
         								var params = extractConstructorParamsMapFromText(jsonOb.typescript);
         								params.forEach((value, key) => {
         									customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
@@ -591,6 +608,7 @@
         								scriptContent = scriptContent.replace(importMarker, customIMarker);
         								scriptContent = scriptContent.replace(constructorMarker, customCMarker);
         								scriptContent = scriptContent.replace(delarationMarker, customDMarker);
+        								scriptContent = scriptContent.replace(ngChangesMarker, customNgCMarker);
         								scriptContent = scriptContent.replace(functionMarker, customFMarker);
         								
         							} catch(e) {
