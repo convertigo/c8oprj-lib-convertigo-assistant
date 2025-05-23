@@ -316,6 +316,27 @@
         	  return result;
         	}
         
+        	function extractComponentNameFromText(sourceCode) {
+        		var name = undefined;
+        		log.warn("sourceCode\n"+sourceCode);
+        		
+        		try {
+        		    const regex = /export\s*class\s*([\w$]+)\s*implements/;
+        		    const match = regex.exec(sourceCode);
+        
+        		    if (!match) {
+        				log.warn("sourceCode no match for name");
+        		        return name;
+        		    }
+        
+        		    name = match[1].trim();
+        			log.warn("component name\n"+name);
+        		} catch (e) {
+        			log.error("Failed to extractComponentNameFromText: "+ e.message);
+        		}
+        		return name;
+        	}
+        	
         	function extractConstructorParamsMapFromText(sourceCode) {
         	    const paramMap = new Map();
         		log.warn("sourceCode\n"+sourceCode);
@@ -326,7 +347,7 @@
         		    const match = constructorRegex.exec(sourceCode);
         		
         		    if (!match) {
-        				log.warn("sourceCode no match");
+        				log.warn("sourceCode no match for constructor");
         		        return paramMap;
         		    }
         		
@@ -474,6 +495,14 @@
         						explanation = jsonOb.explanation;
         						comp.setComment("-- AI generated: "+ threadid);
         						
+								// extract and set name
+        						try {
+        							var name = extractComponentNameFromText(jsonOb.typescript);
+        							if (name != undefined) {
+        								comp.setName(name);
+        							}
+        						} catch (e) {}
+        						
         						// add compAfterViewInit event with a CustomAction
         						try {
         							var evt = cm.createBean(cm.getComponentByName("UISharedComponentEvent"));
@@ -596,7 +625,20 @@
         								var bo = (""+customOMarker).split(/\r?\n/);
         								bo.forEach((line) => {
         									if (line.indexOf("@Output()") != -1) {
-        										customDMarker = customDMarker.replace(s1, line + "\n"+s1);
+        										var done = false;
+        										try {
+        											var idx = line.indexOf(":");
+        											if (idx != -1) {
+        												var evtname = line.substring(0,idx).replace("@Output()","").trim();
+        												var evt = cm.createBean(cm.getComponentByName("UICompEvent"));
+        												evt.setName(evtname);
+        												comp.add(evt);
+        												done = true;
+        											}
+        										} catch (e) {}
+        										if (!done) {
+        											customDMarker = customDMarker.replace(s1, line + "\n"+s1);
+        										}
         									}
         								});
         								var params = extractConstructorParamsMapFromText(jsonOb.typescript);
