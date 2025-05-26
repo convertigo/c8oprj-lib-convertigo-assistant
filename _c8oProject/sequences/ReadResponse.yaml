@@ -358,10 +358,11 @@
         			log.warn("params\n"+params);
         			
         		    // Regex for name and type
-        		    const paramRegex = /(?:public|private|protected)?\s*([\w$]+)\s*:\s*([\w$.<>\[\], \t]+)\s*/;
+        		    const paramRegex = /\s*(?:public|private|protected)?\s*([\w$]+)\s*:\s*([\w$.<>\[\], \t]+)\s*/;
         		
         		    for (var param of params) {
-        		        const paramMatch = paramRegex.exec(param);
+        				//log.warn("param i\n"+param);
+        		        var paramMatch = paramRegex.exec(param);
         		        if (paramMatch) {
         		            var name = paramMatch[1];
         		            var type = paramMatch[2].trim();
@@ -644,7 +645,7 @@
         								var params = extractConstructorParamsMapFromText(jsonOb.typescript);
         								params.forEach((value, key) => {
         									customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
-        									customCMarker = customCMarker.replace(s2, "this."+key+" = this.getInstance("+ value + ");\n"+s2);
+        									customCMarker = customCMarker.replace(s2, "this."+key+" = this.injector.get("+ value + ");\n"+s2);
         								});
         								
         								scriptContent = scriptContent.replace(importMarker, customIMarker);
