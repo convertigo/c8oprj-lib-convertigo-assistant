@@ -634,7 +634,9 @@
         
         								
         								var bo = (""+customOMarker).split(/\r?\n/);
+        								log.warn("output bo: "+ bo);
         								bo.forEach((line) => {
+        									log.warn("output marker: "+ line);
         									if (line.indexOf("@Output()") != -1) {
         										var done = false;
         										try {
@@ -644,11 +646,13 @@
         												var evt = cm.createBean(cm.getComponentByName("UICompEvent"));
         												evt.setName(evtname);
         												comp.add(evt);
+        												log.warn("output marker: bean added");
         												done = true;
         											}
         										} catch (e) {}
         										if (!done) {
         											customDMarker = customDMarker.replace(s1, line + "\n"+s1);
+        											log.warn("output marker: line added");
         										}
         									}
         								});
