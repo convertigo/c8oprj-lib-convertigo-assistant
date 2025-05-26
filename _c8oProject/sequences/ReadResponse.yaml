@@ -586,8 +586,18 @@
         								var value = jsonOb.variables[key];
         								var variable = cm.createBean(cm.getComponentByName("UICompVariable"));
         								variable.setName(key);
+        								//log.warn("input variable "+ key +"["+ typeof value +"]: "+ value);
         								if ("string" == typeof value) {
-        									variable.setVariableValue("''"+ value.replace(/''/g, "\\\\''") +"''");
+        									var job = null;
+        									try {
+        										job = JSON.parse(value)
+        									} catch(e) {}
+        									if (job != null) {
+        										variable.setVariableValue(""+value);
+        									} else {
+        										variable.setVariableValue("''"+ value.replace(/''/g, "\\''") +"''");
+        									}
+        									
         								} else if ("object" == typeof value) {
         									variable.setVariableValue(JSON.stringify(value));
         								} else {
