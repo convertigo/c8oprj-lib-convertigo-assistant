@@ -376,7 +376,12 @@
         		}
         	    return paramMap;
         	}
-        		
+        	
+        	function isSelfClosingTag(tag) {
+        		var tags = ["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"];
+        		return tags.includes(tag.trim());
+        	}
+        	
         	function createBeans(e, parent) {
         		try {
         			var dbo = null;			
@@ -386,6 +391,9 @@
         			if (key == undefined) {
         				dbo = cm.createBean(cm.getComponentByName("UIElement"));
         				dbo.setTagName(tag);
+        				if (isSelfClosingTag(""+tag)) {
+        					dbo.setSelfClose(true);
+        				}
         				//log.warn("Dbo created with Tag "+ tag);
         			} else {
         				dbo = cm.createBean(cm.getComponentByName(key));
@@ -609,20 +617,29 @@
         							log.error("Failed to handle variables: "+ e.message);
         						}
         						
+        						// Add event emitters
+        						try {
+        							jsonOb["emitters"].forEach((evtname) => {
+        								var evt = cm.createBean(cm.getComponentByName("UICompEvent"));
+        								evt.setName(evtname);
+        								comp.add(evt);
+        							});
+        						} catch(e) {
+        							log.error("Failed to handle event emitters: "+ e.message);
+        						}
+        						
         						// Add typescript form ''typescript''
         						try {
         							//log.warn("comp scriptContent:\n"+ scriptContent);
         							
         							try {
         								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
-        								var outputMarker = NgxBuilder.getMarker(scriptContent, "OuputDeclaration");
         								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
         								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
         								var ngChangesMarker = NgxBuilder.getMarker(scriptContent, "CompChanges");
         								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
         								
         								var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
-        								var customOMarker = NgxBuilder.getMarker(jsonOb.typescript, "OuputDeclaration");
         								var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
         								var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
         								var customNgCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompChanges");
@@ -631,31 +648,6 @@
         								
         								var s1 = "/*End_c8o_CompDeclaration*/";
         								var s2 = "/*End_c8o_CompConstructor*/";
-        
-        								
-        								var bo = (""+customOMarker).split(/\r?\n/);
-        								log.warn("output bo: "+ bo);
-        								bo.forEach((line) => {
-        									log.warn("output marker: "+ line);
-        									if (line.indexOf("@Output()") != -1) {
-        										var done = false;
-        										try {
-        											var idx = line.indexOf(":");
-        											if (idx != -1) {
-        												var evtname = line.substring(0,idx).replace("@Output()","").trim();
-        												var evt = cm.createBean(cm.getComponentByName("UICompEvent"));
-        												evt.setName(evtname);
-        												comp.add(evt);
-        												log.warn("output marker: bean added");
-        												done = true;
-        											}
-        										} catch (e) {}
-        										if (!done) {
-        											customDMarker = customDMarker.replace(s1, line + "\n"+s1);
-        											log.warn("output marker: line added");
-        										}
-        									}
-        								});
         								var params = extractConstructorParamsMapFromText(jsonOb.typescript);
         								params.forEach((value, key) => {
         									customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
@@ -693,7 +685,7 @@
         		var xml = clipboard.toXml();
         		//const end = Date.now();
         		//log.warn("Clipboard generated in "+ Math.floor(end - start) + " ms");
-        		//log.warn("Clipboard xml:\n"+ xml);
+        		log.warn("Clipboard xml:\n"+ xml);
         		
         		var jsonAData = {
         			"type": dataType,
@@ -712,8 +704,6 @@
         	}
         	
         	AIData = getComponentFromMessages(Messages);
-        	//AIClipboard = jsonAData.clipboard;
-        	//AIExplanation = jsonAData.explanation;
         }
         '
     ↓object [steps.JsonObjectStep-1747227848030]: 
