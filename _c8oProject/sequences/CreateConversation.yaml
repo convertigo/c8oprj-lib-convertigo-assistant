@@ -1,13 +1,30 @@
-↓Call_Transaction [steps.TransactionStep-1744201674481]: 
-  sourceTransaction: ConvertigoAssistant.OpenAI.Threads
-  ↓__body [variables.StepVariable-1744201674484]: 
-    value: '{}'
-↓Copy [steps.XMLCopyStep-1744201698334]: 
-  sourceDefinition: 
-    - xmlizable: 
-      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-      - com.twinsoft.convertigo.beans.common.XMLVector: 
-        - java.lang.String: 
-          - ↑value: 1744201674481
-        - java.lang.String: 
-          - ↑value: ./document/object/*
+↓jIfThenElse [steps.IfThenElseStep-1748450886240]: 
+  condition: threadid == null
+  ↓jThen [steps.ThenStep-1748450887723]: 
+    ↓Call_Transaction [steps.TransactionStep-1744201674481]: 
+      sourceTransaction: ConvertigoAssistant.OpenAI.Threads
+      ↓__body [variables.StepVariable-1744201674484]: 
+        value: '{}'
+    ↓Copy [steps.XMLCopyStep-1744201698334]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1744201674481
+            - java.lang.String: 
+              - ↑value: ./document/object/*
+  ↓jElse [steps.ElseStep-1748450887725]: 
+    ↓Call_Transaction [steps.TransactionStep-1748451097185]: 
+      sourceTransaction: ConvertigoAssistant.OpenAI.GetThread
+      ↓threadid [variables.StepVariable-1748451097187]: 
+    ↓Copy [steps.XMLCopyStep-1748451134792]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1748451097185
+            - java.lang.String: 
+              - ↑value: .//document/object/*
+↓threadid [variables.RequestableVariable-1748450588626]: 

@@ -6,16 +6,29 @@ scriptContent:
     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
     - com.twinsoft.convertigo.beans.common.FormatedContent: 
       →: |
-        /*Begin_c8o_PageImport*/
+        '/*Begin_c8o_PageImport*/
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageFunction*/
+        	public getLocalThreadId() {
+        		let threadid = null;
+        		this.c8o.log.warn("[Assistant] navParams: "+ JSON.stringify(this.navParams));
+        		console.log("[Assistant] navParams ", this.navParams);
+        		try {
+        			if (this.navParams.data["threadid"]) {
+        				threadid = this.navParams.data["threadid"];
+        			}
+        		} catch (e) {}
+        		this.c8o.log.warn("[Assistant] loading with threadid: "+ threadid);
+        		this.log("[Assistant] loading with threadid: "+ threadid);
+        		return threadid;
+        	}
         	/*End_c8o_PageFunction*/
-        
-segment: path-to-xfirst
+        '
+segment: path-to-xfirst/:threadid
 title: First page
 ↓Header [ngx.components.UIDynamicElement-1491634212350]: 
   beanData: '{"ionBean":"Header"}'
@@ -272,6 +285,11 @@ title: First page
            "Property": "plain:Conversation",
            "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
           }'
+      ↓threadid [ngx.components.UIControlVariable-1748451291690]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getLocalThreadId()
   ↓RunID [ngx.components.UIDynamicAction-1744389840276]: 
     beanData: |
       '{
