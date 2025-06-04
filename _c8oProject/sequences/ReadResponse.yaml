@@ -465,8 +465,22 @@
         	/*End_c8o_CompDeclaration*/
         	/*Begin_c8o_CompConstructor*/
         	/*End_c8o_CompConstructor*/
+        	/*Begin_c8o_CompInitialization*/
+        	/*End_c8o_CompInitialization*/
+        	/*Begin_c8o_CompFinalization*/
+        	/*End_c8o_CompFinalization*/
         	/*Begin_c8o_CompChanges*/
         	/*End_c8o_CompChanges*/
+        	/*Begin_c8o_CompDoCheck*/
+        	/*End_c8o_CompDoCheck*/
+        	/*Begin_c8o_CompAfterContentInit*/
+        	/*End_c8o_CompAfterContentInit*/
+        	/*Begin_c8o_CompAfterContentChecked*/
+        	/*End_c8o_CompAfterContentChecked*/
+        	/*Begin_c8o_CompAfterViewInit*/
+        	/*End_c8o_CompAfterViewInit*/
+        	/*Begin_c8o_CompAfterViewChecked*/
+        	/*End_c8o_CompAfterViewChecked*/
         	/*Begin_c8o_CompFunction*/
         	/*End_c8o_CompFunction*/
         	`;
@@ -636,13 +650,27 @@
         								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
         								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
         								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
+        								var initMarker = NgxBuilder.getMarker(scriptContent, "CompInitialization");
+        								var destroyMarker = NgxBuilder.getMarker(scriptContent, "CompFinalization");
         								var ngChangesMarker = NgxBuilder.getMarker(scriptContent, "CompChanges");
+        								var ngDoCheckMarker = NgxBuilder.getMarker(scriptContent, "CompDoCheck");
+        								var ngAfterContentInitMarker = NgxBuilder.getMarker(scriptContent, "CompAfterContentInit");
+        								var ngAfterContentCheckedMarker = NgxBuilder.getMarker(scriptContent, "CompAfterContentChecked");
+        								var ngAfterViewInitMarker = NgxBuilder.getMarker(scriptContent, "CompAfterViewInit");
+        								var ngAfterViewCheckedMarker = NgxBuilder.getMarker(scriptContent, "CompAfterViewChecked");
         								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
         								
         								var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
         								var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
         								var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
+        								var customInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompInitialization");
+        								var customDestroyMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFinalization");
         								var customNgCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompChanges");
+        								var customNgDoCheckMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDoCheck");
+        								var customNgAfterContentInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentInit");
+        								var customNgAfterContentCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentChecked");
+        								var customNgAfterViewInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewInit");
+        								var customNgAfterViewCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewChecked");
         								var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
         								
         								
@@ -657,7 +685,14 @@
         								scriptContent = scriptContent.replace(importMarker, customIMarker);
         								scriptContent = scriptContent.replace(constructorMarker, customCMarker);
         								scriptContent = scriptContent.replace(delarationMarker, customDMarker);
+        								scriptContent = scriptContent.replace(initMarker, customInitMarker);
+        								scriptContent = scriptContent.replace(destroyMarker, customDestroyMarker);
         								scriptContent = scriptContent.replace(ngChangesMarker, customNgCMarker);
+        								scriptContent = scriptContent.replace(ngDoCheckMarker, customNgDoCheckMarker);
+        								scriptContent = scriptContent.replace(ngAfterContentInitMarker, customNgAfterContentInitMarker);
+        								scriptContent = scriptContent.replace(ngAfterContentCheckedMarker, customNgAfterContentCheckedMarker);
+        								scriptContent = scriptContent.replace(ngAfterViewInitMarker, customNgAfterViewInitMarker);
+        								scriptContent = scriptContent.replace(ngAfterViewCheckedMarker, customNgAfterViewCheckedMarker);
         								scriptContent = scriptContent.replace(functionMarker, customFMarker);
         								
         							} catch(e) {
