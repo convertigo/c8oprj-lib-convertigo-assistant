@@ -1,3 +1,4 @@
+responseTimeout: 120
 ↓inputVars [steps.InputVariablesStep-1744901534491]: 
   output: true
 ↓Call_Transaction3 [steps.TransactionStep-1744206363463]: 
@@ -671,8 +672,13 @@
         								var customNgAfterContentCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentChecked");
         								var customNgAfterViewInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewInit");
         								var customNgAfterViewCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewChecked");
-        								var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
-        								
+        								//var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
+        								var customFMarker = "/*Begin_c8o_CompFunction*/\n";
+        								for (let key in jsonOb.functions) {
+        									var code = jsonOb.functions[key];
+        									customFMarker += code + "\n";
+        								}
+        								customFMarker += "/*End_c8o_CompFunction*/\n";
         								
         								var s1 = "/*End_c8o_CompDeclaration*/";
         								var s2 = "/*End_c8o_CompConstructor*/";
