@@ -326,7 +326,7 @@ responseTimeout: 120
         		    const match = regex.exec(sourceCode);
         
         		    if (!match) {
-        				log.warn("sourceCode no match for name");
+        				log.warn("no match for comp name");
         		        return name;
         		    }
         
@@ -340,7 +340,7 @@ responseTimeout: 120
         	
         	function extractConstructorParamsMapFromText(sourceCode) {
         	    const paramMap = new Map();
-        		log.warn("sourceCode\n"+sourceCode);
+        		log.warn("constructor code\n"+sourceCode);
         		
         		try {
         		    // Match constructor content
@@ -348,7 +348,7 @@ responseTimeout: 120
         		    const match = constructorRegex.exec(sourceCode);
         		
         		    if (!match) {
-        				log.warn("sourceCode no match for constructor");
+        				log.warn("no match for constructor");
         		        return paramMap;
         		    }
         		
@@ -453,6 +453,17 @@ responseTimeout: 120
         			log.error("Failed to createBeans: "+ e.message);
         		}
         		return null;
+        	}
+        	
+        	function getInnerCode(method) {
+        		try {
+        			if (method != null) {
+        				return method.substring(method.indexOf(''{'')+1,method.lastIndexOf(''}''));
+        			}
+        		} catch (e) {
+        			log.error("Failed to getInnerCode: "+ e.message);
+        		}
+        		return "";
         	}
         	
         	function getComponentFromMessages(Messages) {
@@ -643,14 +654,14 @@ responseTimeout: 120
         							log.error("Failed to handle event emitters: "+ e.message);
         						}
         						
-        						// Add typescript form ''typescript''
+        						// Add others (interfaces, declarations, methods...)
         						try {
         							//log.warn("comp scriptContent:\n"+ scriptContent);
         							
         							try {
         								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
-        								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
         								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
+        								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
         								var initMarker = NgxBuilder.getMarker(scriptContent, "CompInitialization");
         								var destroyMarker = NgxBuilder.getMarker(scriptContent, "CompFinalization");
         								var ngChangesMarker = NgxBuilder.getMarker(scriptContent, "CompChanges");
@@ -661,32 +672,102 @@ responseTimeout: 120
         								var ngAfterViewCheckedMarker = NgxBuilder.getMarker(scriptContent, "CompAfterViewChecked");
         								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
         								
-        								var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
-        								var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
-        								var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
-        								var customInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompInitialization");
-        								var customDestroyMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFinalization");
-        								var customNgCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompChanges");
-        								var customNgDoCheckMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDoCheck");
-        								var customNgAfterContentInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentInit");
-        								var customNgAfterContentCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentChecked");
-        								var customNgAfterViewInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewInit");
-        								var customNgAfterViewCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewChecked");
+        								//var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
+        								var customIMarker = "/*Begin_c8o_CompImport*/\n";
+        								for (let key in jsonOb.interfaces) {
+        									customIMarker += jsonOb.interfaces[key] + "\n";
+        								}
+        								customIMarker += "/*End_c8o_CompImport*/\n";
+        								
+        								//var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
+        								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
+        								jsonOb["declarations"].forEach((line) => {
+        									customDMarker += line + "\n";
+        								});
+        								customDMarker += "/*End_c8o_CompDeclaration*/\n";
+        
+        								//var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
+        								var customCMarker = "/*Begin_c8o_CompConstructor*/\n";
+        								if (jsonOb.constructor != null) {
+        									customCMarker += getInnerCode(jsonOb.constructor) + "\n";
+        								}
+        								customCMarker += "/*End_c8o_CompConstructor*/\n";
+        								
+        								//var customInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompInitialization");
+        								var customInitMarker = "/*Begin_c8o_CompInitialization*/\n";
+        								if (jsonOb.ngOnInit != null) {
+        									customInitMarker += getInnerCode(jsonOb.ngOnInit) + "\n";
+        								}
+        								customInitMarker += "/*End_c8o_CompInitialization*/\n";
+        								
+        								//var customDestroyMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFinalization");
+        								var customDestroyMarker = "/*Begin_c8o_CompFinalization*/\n";
+        								if (jsonOb.ngOnDestroy != null) {
+        									customDestroyMarker += getInnerCode(jsonOb.ngOnDestroy) + "\n";
+        								}
+        								customDestroyMarker += "/*End_c8o_CompFinalization*/\n";
+        								
+        								//var customNgCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompChanges");
+        								var customNgCMarker = "/*Begin_c8o_CompChanges*/\n";
+        								if (jsonOb.ngOnChanges != null) {
+        									customNgCMarker += getInnerCode(jsonOb.ngOnChanges) + "\n";
+        								}
+        								customNgCMarker += "/*End_c8o_CompChanges*/\n";
+        								
+        								//var customNgDoCheckMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDoCheck");
+        								var customNgDoCheckMarker = "/*Begin_c8o_CompDoCheck*/\n";
+        								if (jsonOb.ngDoCheck != null) {
+        									customNgDoCheckMarker += getInnerCode(jsonOb.ngDoCheck) + "\n";
+        								}
+        								customNgDoCheckMarker += "/*End_c8o_CompDoCheck*/\n";
+        								
+        								//var customNgAfterContentInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentInit");
+        								var customNgAfterContentInitMarker = "/*Begin_c8o_CompAfterContentInit*/\n";
+        								if (jsonOb.ngAfterContentInit != null) {
+        									customNgAfterContentInitMarker += getInnerCode(jsonOb.ngAfterContentInit) + "\n";
+        								}
+        								customNgAfterContentInitMarker += "/*End_c8o_CompAfterContentInit*/\n";
+        								
+        								//var customNgAfterContentCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentChecked");
+        								var customNgAfterContentCheckedMarker = "/*Begin_c8o_CompAfterContentChecked*/\n";
+        								if (jsonOb.ngAfterContentChecked != null) {
+        									customNgAfterContentCheckedMarker += getInnerCode(jsonOb.ngAfterContentChecked) + "\n";
+        								}
+        								customNgAfterContentCheckedMarker += "/*End_c8o_CompAfterContentChecked*/\n";
+        								
+        								//var customNgAfterViewInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewInit");
+        								var customNgAfterViewInitMarker = "/*Begin_c8o_CompAfterViewInit*/\n";
+        								if (jsonOb.ngAfterViewInit != null) {
+        									customNgAfterViewInitMarker += getInnerCode(jsonOb.ngAfterViewInit) + "\n";
+        								}
+        								customNgAfterViewInitMarker += "/*End_c8o_CompAfterViewInit*/\n";
+        								
+        								//var customNgAfterViewCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewChecked");
+        								var customNgAfterViewCheckedMarker = "/*Begin_c8o_CompAfterViewChecked*/\n";
+        								if (jsonOb.ngAfterViewChecked != null) {
+        									customNgAfterViewCheckedMarker += getInnerCode(jsonOb.ngAfterViewChecked) + "\n";
+        								}
+        								customNgAfterViewCheckedMarker += "/*End_c8o_CompAfterViewChecked*/\n";
+        								
         								//var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
         								var customFMarker = "/*Begin_c8o_CompFunction*/\n";
         								for (let key in jsonOb.functions) {
-        									var code = jsonOb.functions[key];
-        									customFMarker += code + "\n";
+        									if (!key.startsWith("ng")) {
+        										customFMarker += jsonOb.functions[key] + "\n";
+        									}
         								}
         								customFMarker += "/*End_c8o_CompFunction*/\n";
         								
         								var s1 = "/*End_c8o_CompDeclaration*/";
         								var s2 = "/*End_c8o_CompConstructor*/";
-        								var params = extractConstructorParamsMapFromText(jsonOb.typescript);
-        								params.forEach((value, key) => {
-        									customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
-        									customCMarker = customCMarker.replace(s2, "this."+key+" = this.injector.get("+ value + ");\n"+s2);
-        								});
+        								if (jsonOb.constructor != null) {
+        									//var params = extractConstructorParamsMapFromText(jsonOb.typescript);
+        									var params = extractConstructorParamsMapFromText(jsonOb.constructor);
+        									params.forEach((value, key) => {
+        										customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
+        										customCMarker = customCMarker.replace(s2, "this."+key+" = this.injector.get("+ value + ");\n"+s2);
+        									});
+        								}
         								
         								scriptContent = scriptContent.replace(importMarker, customIMarker);
         								scriptContent = scriptContent.replace(constructorMarker, customCMarker);
@@ -702,7 +783,7 @@ responseTimeout: 120
         								scriptContent = scriptContent.replace(functionMarker, customFMarker);
         								
         							} catch(e) {
-        								log.error("Failed to handle typescript : "+ e.message);
+        								log.error("Failed to handle markers : "+ e.message);
         							}
         														
         							comp.setScriptContent(new FormatedContent(scriptContent));
