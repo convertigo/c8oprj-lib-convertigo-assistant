@@ -179,12 +179,12 @@ responseTimeout: 120
         		  const matches = md.matchAll(jsonCodeBlockRegex);
         		  if (matches) {
         			  for (var match of matches) {
-        				  log.warn("MATCH: "+ match[0]);
+        				  //log.warn("MATCH: "+ match[0]);
         				  try {
         				      let parsed = JSON.parse(match[1]);
-        				      log.warn("JSON: "+ match[1]);
-        				      log.warn("JSON p: "+ JSON.stringify(parsed));
-        				      log.warn("JSON css: "+ parsed.css);
+        				      //log.warn("JSON: "+ match[1]);
+        				      //log.warn("JSON p: "+ JSON.stringify(parsed));
+        				      //log.warn("JSON css: "+ parsed.css);
         					  jsonOb = findMatchingObject(parsed);
         					  if (jsonOb != null) {
         						  break;
@@ -245,7 +245,7 @@ responseTimeout: 120
         							var pattr = property.getAttr();
         							pattr = pattr == "" ? pname : pattr;
         							if ((akey == pattr || akey == "["+pattr+"]" ) && akey !== "class") {
-        								log.warn("5- setBeanProperty for: " + akey + ", prop:"+ property);
+        								//log.warn("5- setBeanProperty for: " + akey + ", prop:"+ property);
         								
         								var value = aval.trim();
         								
@@ -272,7 +272,7 @@ responseTimeout: 120
         						dbo.saveBean();
         					}
         				} else {
-        					log.warn("2- setBeanProperty UIDynamicElement: false");
+        					//log.warn("2- setBeanProperty UIDynamicElement: false");
         					//....
         				}
         			}
@@ -317,30 +317,9 @@ responseTimeout: 120
         	  return result;
         	}
         
-        	function extractComponentNameFromText(sourceCode) {
-        		var name = undefined;
-        		log.warn("sourceCode\n"+sourceCode);
-        		
-        		try {
-        		    const regex = /export\s*class\s*([\w$]+)\s*implements/;
-        		    const match = regex.exec(sourceCode);
-        
-        		    if (!match) {
-        				log.warn("no match for comp name");
-        		        return name;
-        		    }
-        
-        		    name = match[1].trim();
-        			log.warn("component name\n"+name);
-        		} catch (e) {
-        			log.error("Failed to extractComponentNameFromText: "+ e.message);
-        		}
-        		return name;
-        	}
-        	
         	function extractConstructorParamsMapFromText(sourceCode) {
         	    const paramMap = new Map();
-        		log.warn("constructor code\n"+sourceCode);
+        		//log.warn("constructor code\n"+sourceCode);
         		
         		try {
         		    // Match constructor content
@@ -353,10 +332,10 @@ responseTimeout: 120
         		    }
         		
         		    const paramsString = match[1].trim();
-        			log.warn("paramsString\n"+paramsString);
+        			//log.warn("paramsString\n"+paramsString);
         			
         			const params = paramsString.split(",");
-        			log.warn("params\n"+params);
+        			//log.warn("params\n"+params);
         			
         		    // Regex for name and type
         		    const paramRegex = /\s*(?:public|private|protected)?\s*([\w$]+)\s*:\s*([\w$.<>\[\], \t]+)\s*/;
@@ -370,7 +349,7 @@ responseTimeout: 120
         		            paramMap.set(name, type);
         		        }
         		    }
-        		    log.warn("paramMap\n"+ JSON.stringify(Object.fromEntries(paramMap)));
+        		    //log.warn("paramMap\n"+ JSON.stringify(Object.fromEntries(paramMap)));
         		    
         		} catch (e) {
         			log.error("Failed to extractConstructorParamsMapFromText: "+ e.message);
@@ -465,7 +444,7 @@ responseTimeout: 120
         		}
         		return "";
         	}
-        	
+        
         	function getComponentFromMessages(Messages) {
         	const start = Date.now();
         	var scriptContent = `
@@ -521,7 +500,7 @@ responseTimeout: 120
         		if (data.length > 0) {
         			let jsonOb = data.shift();
         			if (jsonOb != null) {
-        				//log.warn("JSON block: "+ JSON.stringify(jsonOb));
+        				log.warn("JSONResponse:\n"+ JSON.stringify(jsonOb));
         				dataType = data.length == 0 ? "create":"edit";
         				
         				try {
@@ -532,7 +511,7 @@ responseTimeout: 120
         						
         						// extract and set name
         						try {
-        							var name = extractComponentNameFromText(jsonOb.typescript);
+        							var name = jsonOb.name;
         							if (name != undefined) {
         								comp.setName(name);
         							}
@@ -615,29 +594,18 @@ responseTimeout: 120
         						
         						// Add variables from ''variables''
         						try {
-        							//log.warn("variables:\n"+ jsonOb.variables);
-        							for (let key in jsonOb.variables) {
-        								var value = jsonOb.variables[key];
-        								var variable = cm.createBean(cm.getComponentByName("UICompVariable"));
-        								variable.setName(key);
-        								//log.warn("input variable "+ key +"["+ typeof value +"]: "+ value);
-        								if ("string" == typeof value) {
-        									var job = null;
-        									try {
-        										job = JSON.parse(value)
-        									} catch(e) {}
-        									if (job != null) {
-        										variable.setVariableValue(""+value);
-        									} else {
-        										variable.setVariableValue("''"+ value.replace(/''/g, "\\''") +"''");
-        									}
-        									
-        								} else if ("object" == typeof value) {
-        									variable.setVariableValue(JSON.stringify(value));
+        							//log.warn("variables:\n"+ jsonOb.variablesB);
+        							for (let key in jsonOb.variablesB) {
+        								var variable = jsonOb.variablesB[key];
+        								var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
+        								uicv.setName(key);
+        								//log.warn("input variable "+ key +"["+ typeof variable.type +"]: "+ variable.value);
+        								if ("string" == variable.type) {
+        									uicv.setVariableValue("''"+ new String(variable.value).replace(/''/g, "\\''") +"''");
         								} else {
-        									variable.setVariableValue(""+value);
+        									uicv.setVariableValue(JSON.stringify(variable.value));
         								}
-        								comp.add(variable);
+        								comp.add(uicv);
         							}
         						} catch(e) {
         							log.error("Failed to handle variables: "+ e.message);
