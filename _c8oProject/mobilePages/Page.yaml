@@ -165,6 +165,22 @@ title: First page
       ↓Spinner [ngx.components.UIDynamicElement-1744617959635]: 
         beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
         tagName: ion-spinner
+      ↓H1 [ngx.components.UIDynamicElement-1749315886819]: 
+        beanData: '{"ionBean":"Heading1"}'
+        tagName: h1
+        ↓Text [ngx.components.UIText-1749315886818]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Buffer","prefix":"","suffix":"?.size","custom":"","useCustom":false}}
+      ↓Paragraph [ngx.components.UIDynamicElement-1749375393092]: 
+        beanData: '{"ionBean":"Paragraph"}'
+        tagName: p
+        ↓Text [ngx.components.UIText-1749375393091]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Buffer","prefix":"","suffix":"?.content","custom":"","useCustom":false}}
   ↓UseSharedComponent1 [ngx.components.UIUseShared-1744218422659]: 
     sharedcomponent: ConvertigoAssistant.Application.NgxApp.ChatQuestion
     ↓Question [ngx.components.UIUseVariable-1744269087882]: 
@@ -183,6 +199,32 @@ title: First page
            "Property": "plain:spinner",
            "Value": "script:true"
           }'
+      ↓StartMonitorProgress [ngx.components.UICustomAsyncAction-1749359467426]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                '		try {
+                			page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                			
+                			// call every second the GetTokenBuffer sequence
+                			let intId = window.setInterval(() => {
+                				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
+                					"__context": "byside"
+                				}).async().then((r) => {
+                					var buffer = JSON.parse(r.C8OAiAssistantBuffer);
+                					page.local.Buffer = buffer;
+                					page.local.Buffer.intId = intId
+                				})
+                			}, 1000);
+                			
+                		} catch (e) {
+                		
+                		} finally {
+                			return;
+                		}
+                '
       ↓CallSequence [ngx.components.UIDynamicAction-1744303020066]: 
         beanData: |
           '{
@@ -218,6 +260,8 @@ title: First page
                     			msg : vars.message,
                     			type: "user"
                     		});
+                    		
+                    		
                     		this.local.Question = ""
                     		resolve();
                     '
@@ -303,6 +347,13 @@ title: First page
        "ionBean": "SetLocalAction",
        "Property": "plain:Messages",
        "Value": "script:[]"
+      }'
+  ↓Buffer [ngx.components.UIDynamicAction-1749374659836]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:Buffer",
+       "Value": "script:{}"
       }'
 ↓Subscribe_Handler [ngx.components.UIEventSubscriber-1744356866759]: 
   topic: AssistantResponse
@@ -400,6 +451,16 @@ title: First page
              "Property": "plain:spinner",
              "Value": "script:false"
             }'
+        ↓StopMonitorProgress [ngx.components.UICustomAction-1749377229589]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                  		window.clearInterval(page.local.Buffer.intId);
+                  		resolve();
+                  '
         ↓Log [ngx.components.UIDynamicAction-1744718216788]: 
           beanData: |
             '{

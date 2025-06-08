@@ -72,63 +72,96 @@ responseTimeout: 300
       }
       '
   ↓threadid [variables.StepVariable-1744201808162]: 
-↓Run [steps.JsonObjectStep-1744206596308]: 
+↓StreamRun [steps.SimpleStep-1749283782808]: 
+  expression: |
+    '// Required Java classes
+    // log.warn("Starting stream read"); // Log the received line)
+    
+    var URL = java.net.URL;
+    var HttpsURLConnection = java.net.HttpURLConnection;
+    var InputStreamReader = java.io.InputStreamReader;
+    var BufferedReader = java.io.BufferedReader;
+    
+    // Set your API key and thread/run info
+    var apiKey = "${lib_C8Oforms_AI.GPT.apikey.secret}";
+    var url = new URL("https://api.openai.com/v1/threads/" + threadid + "/runs");
+    
+    var conn = url.openConnection();
+    conn.setRequestMethod("POST");
+    conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+    conn.setRequestProperty("OpenAI-Beta", "assistants=v2");
+    conn.setRequestProperty("Content-Type", "application/json");
+    conn.setRequestProperty("Accept", "text/event-stream");
+    conn.setDoOutput(true);
+    
+    // Enable streaming mode
+    var payload = JSON.stringify({
+      assistant_id: "asst_iLSiB5Gu0EkkJArAwuC6aET3",
+      stream: true
+    });
+    
+    
+    // log.warn("About to call API with apiKey: " + apiKey + " and URL: " + url); 
+    
+    var out = new java.io.OutputStreamWriter(conn.getOutputStream());
+    out.write(payload);
+    out.close();
+    
+    
+    const buffSize = 50;
+    buffer = {
+    	"size" : 0,
+    	"content": ""
+    };
+    context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+    
+    
+    // Read streaming response
+    var reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+    var line;
+    
+    while ((line = reader.readLine()) !== null) {
+    //	log.warn("Received line: " + line); // Log the received line)
+    	if (line.trim() === "") {
+    		continue; // Skip empty lines
+    	}
+    	if (line.startsWith("data: ")) {
+    		var data = line.substring(6).trim(); // Remove "data: " prefix
+    		try {
+    			var response = JSON.parse(data);
+    			var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
+    			
+    			buffer.content += response.delta.content[0].text.value;
+    			buffer.size += buffer.content.length;
+    			
+    			if (buffer.content.length > buffSize) {
+    				buffer.content = buffer.content.substring(buffer.content.length - buffSize);
+    			}
+    			log.debug(JSON.stringify(buffer)); // Log the delta content])
+    			context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+    			
+    		} catch (e) {
+    			// log.error("Error parsing JSON: " + e.message);
+    		}
+    	}
+    }
+    
+    reader.close();
+    // log.warn("Finished stream read"); // Log the received line)
+    '
+↓id [steps.JsonFieldStep-1749290655104]: 
   key: 
     - xmlizable: 
       - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
       - SmartType: 
         - ↑mode: PLAIN
-        - →→: Run
-  output: false
-  ↓assitant_id [steps.JsonFieldStep-1744206596311]: 
-    key: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-        - SmartType: 
-          - ↑mode: PLAIN
-          - →→: assistant_id
-    value: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-        - SmartType: 
-          - ↑mode: PLAIN
-          - →→: asst_iLSiB5Gu0EkkJArAwuC6aET3
-  ↓stream [steps.JsonFieldStep-1748350884149]: 
-    key: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-        - SmartType: 
-          - ↑mode: PLAIN
-          - →→: stream
-    type: bool
-    value: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-        - SmartType: 
-          - ↑mode: PLAIN
-          - →→: true
-↓Call_Transaction2 [steps.TransactionStep-1744206601138]: 
-  sourceTransaction: ConvertigoAssistant.OpenAI.Run
-  ↓__body [variables.StepVariable-1744206601141]: 
-    sourceDefinition: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-        - com.twinsoft.convertigo.beans.common.XMLVector: 
-          - java.lang.String: 
-            - ↑value: 1744206596308
-          - java.lang.String: 
-            - ↑value: ./*
-    value: '{}'
-  ↓threadid [variables.StepVariable-1744206601144]: 
-↓Copy [steps.XMLCopyStep-1744389695645]: 
-  sourceDefinition: 
+        - →→: id
+  value: 
     - xmlizable: 
-      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-      - com.twinsoft.convertigo.beans.common.XMLVector: 
-        - java.lang.String: 
-          - ↑value: 1744206601138
-        - java.lang.String: 
-          - ↑value: ./document/object/*
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response.id
 ↓Question [variables.RequestableVariable-1744201780525]: 
 ↓threadid [variables.RequestableVariable-1744201831244]: 
 ↓TestOK [core.TestCase]: 
