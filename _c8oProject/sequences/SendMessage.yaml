@@ -141,7 +141,7 @@ responseTimeout: 300
     			context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
     			
     		} catch (e) {
-    			// log.error("Error parsing JSON: " + e.message);
+    			log.error("Error parsing JSON: " + "\nERROR" +  e.message + "\nLINE: " + line");
     		}
     	}
     }
