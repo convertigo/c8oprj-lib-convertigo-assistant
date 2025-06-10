@@ -27,4 +27,258 @@
               - ↑value: 1748451097185
             - java.lang.String: 
               - ↑value: .//document/object/*
+    ↓Call_Transaction3 [steps.TransactionStep-1749567488915]: 
+      output: true
+      sourceTransaction: ConvertigoAssistant.OpenAI.CheckMessages
+      ↓threadid [variables.StepVariable-1749567488918]: 
+      ↓order [variables.StepVariable-1749569043439]: 
+        description: order
+        value: asc
+    ↓message [steps.JsonArrayStep-1749567488921]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: Message
+      output: false
+      ↓Iterator [steps.IteratorStep-1749567488924]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1749567488915
+              - java.lang.String: 
+                - ↑value: ./document/object/data/object
+        ↓Message [steps.JsonObjectStep-1749567488927]: 
+          output: false
+          ↓Iterator [steps.IteratorStep-1749567488930]: 
+            sourceDefinition: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1749567488924
+                  - java.lang.String: 
+                    - ↑value: ./content/object
+            ↓field [steps.JsonFieldStep-1749567488933]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: text
+              output: false
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: SOURCE
+                    - com.twinsoft.convertigo.beans.common.XMLVector: 
+                      - java.lang.String: 
+                        - ↑value: 1749567488930
+                      - java.lang.String: 
+                        - ↑value: ./text/value/text()
+          ↓role [steps.JsonFieldStep-1749567488936]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: role
+            output: false
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: SOURCE
+                  - com.twinsoft.convertigo.beans.common.XMLVector: 
+                    - java.lang.String: 
+                      - ↑value: 1749567488924
+                    - java.lang.String: 
+                      - ↑value: ./role/text()
+          ↓field1 [steps.JsonFieldStep-1749567488939]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: id
+            output: false
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: SOURCE
+                  - com.twinsoft.convertigo.beans.common.XMLVector: 
+                    - java.lang.String: 
+                      - ↑value: 1749567488924
+                    - java.lang.String: 
+                      - ↑value: ./id/text()
+    ↓Messages [steps.JsonSourceStep-1749567488942]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749567488921
+            - java.lang.String: 
+              - ↑value: .
+      variableName: Messages
+    ↓BuildThreadMsg [steps.SimpleStep-1749567488945]: 
+      expression: |
+        'with (new JavaImporter(
+        )) {
+        	function findMatchingObject(jsonObject) {
+        		if (''JsonResponse'' in jsonObject) {
+        			return findMatchingObject(jsonObject.JsonResponse)
+        		} else if (jsonObject.css && jsonObject.typescript && jsonObject.XHTML && jsonObject.variables) {
+        			return jsonObject;
+        		}
+        		return null;
+        	}
+        	
+        	function extractJSONFromMarkdown(md) {
+        	  let jsonOb = null;
+        	  try {
+        		  jsonOb = findMatchingObject(JSON.parse(md));
+        	  } catch (e) {
+        		  log.error("Failed to parse JSON: "+ e.message);
+        		  
+        		  const jsonCodeBlockRegex = /```json\s*([\s\S]*?)\s*```/gi;
+        		  const matches = md.matchAll(jsonCodeBlockRegex);
+        		  if (matches) {
+        			  for (var match of matches) {
+        				  //log.warn("MATCH: "+ match[0]);
+        				  try {
+        				      let parsed = JSON.parse(match[1]);
+        				      //log.warn("JSON: "+ match[1]);
+        				      //log.warn("JSON p: "+ JSON.stringify(parsed));
+        				      //log.warn("JSON css: "+ parsed.css);
+        					  jsonOb = findMatchingObject(parsed);
+        					  if (jsonOb != null) {
+        						  break;
+        					  }
+        				  } catch (e) {
+        					  log.error("Failed to parse JSON: "+ e.message);
+        				  }
+        			  }
+        		  } else {
+        			  log.error("No JSON code block found.");
+        		  }
+        	  }
+        	  return jsonOb;
+        	}
+        	
+        	function buildMsg(Messages) {
+        		var data = [];
+        		for (let i = 0; i < Messages.length; i++) {
+        			let message = Messages[i];
+        			if (message.role && message.text != null && message.text != "") {
+        				//log.warn("Extract JSON from message "+ message.id +":\n"+ message.text);
+        				log.warn("Extract JSON from message "+ message.id);
+        				try {
+        					var text = message.text;
+        					if (message.role == "assistant") {
+        						let jsonOb = extractJSONFromMarkdown(message.text);
+        						if (jsonOb != null) {
+        							text = jsonOb.explanation;
+        						} else {
+        							text = "explanation: invalid or not found";
+        						}
+        					}
+        					log.warn("Text from message "+ text);
+        					let msg = {
+        						type: message.role,
+        						msg: text,
+        						id: message.id,
+        					}
+        					data.push(msg);
+        				} catch (e) {
+        					log.error("Failed to handle message "+ message.id +": "+ e.message);
+        				}
+        			}
+        		}
+        		
+        		var jsonAData = {
+        			"messages": data,
+        			"threadid": threadid,
+        		};
+        
+        		return jsonAData;
+        	}
+        	
+        	AIData = buildMsg(Messages);
+        }
+        '
+    ↓object [steps.JsonObjectStep-1749567488948]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: AIData
+      ↓threadid [steps.JsonFieldStep-1749567488951]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: threadid
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.threadid
+      ↓messages [steps.JsonArrayStep-1749567488954]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: messages
+        ↓jIterator [steps.SimpleIteratorStep-1749567488957]: 
+          expression: AIData.messages
+          ↓object [steps.JsonObjectStep-1749567488960]: 
+            ↓type [steps.JsonFieldStep-1749567488963]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: type
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: JS
+                    - →→: item.type
+            ↓id [steps.JsonFieldStep-1749567488966]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: id
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: JS
+                    - →→: '-1'
+            ↓msg [steps.JsonFieldStep-1749567488969]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: msg
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: JS
+                    - →→: item.msg
 ↓threadid [variables.RequestableVariable-1748450588626]: 
