@@ -176,7 +176,7 @@ title: First page
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:5
+              - MobileSmartSourceType: script:4
       ↓H1 [ngx.components.UIDynamicElement-1749315886819]: 
         beanData: '{"ionBean":"Heading1"}'
         isEnabled: false
@@ -221,7 +221,16 @@ title: First page
               →: |
                 '		try {
                 			page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                
                 			
+                			page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
+                				"__context": "byside"
+                			}).async().then((r) => {
+                				var buffer = JSON.parse(r.C8OAiAssistantBuffer);
+                				page.local.Buffer = buffer;
+                				page.local.Buffer.intId = intId
+                			})
+                
                 			// call every second the GetTokenBuffer sequence
                 			let intId = window.setInterval(() => {
                 				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {

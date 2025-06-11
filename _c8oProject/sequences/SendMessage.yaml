@@ -1,4 +1,12 @@
 responseTimeout: 300
+↓InitProgressMessage [steps.SimpleStep-1749617307020]: 
+  expression: |
+    'buffer = {
+    	"size" : 0,
+    	"content": "Sending data to the AI assistant..."
+    };
+    context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+    '
 ↓Message [steps.JsonObjectStep-1744201795804]: 
   key: 
     - xmlizable: 
@@ -108,17 +116,10 @@ responseTimeout: 300
     out.close();
     
     
-    const buffSize = 50;
-    buffer = {
-    	"size" : 0,
-    	"content": ""
-    };
-    context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
-    
-    
     // Read streaming response
     var reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
     var line;
+    
     
     while ((line = reader.readLine()) !== null) {
     //	log.warn("Received line: " + line); // Log the received line)
@@ -131,15 +132,12 @@ responseTimeout: 300
     			var response = JSON.parse(data);
     			var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
     			
-    			buffer.content += response.delta.content[0].text.value;
-    			buffer.size += buffer.content.length;
-    			
-    			if (buffer.content.length > buffSize) {
-    				buffer.content = buffer.content.substring(buffer.content.length - buffSize);
-    			}
-    			// log.debug(JSON.stringify(buffer)); // Log the delta content])
-    			context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
-    			
+    			if (buffer && response.delta) {
+    				log.warn("Buffer from get attribute is : " + JSON.stringify(buffer)); 
+    				buffer.content += response.delta.content[0].text.value;
+    				buffer.size += buffer.content.length;
+    				context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+    			}			
     		} catch (e) {
     			log.error("Error parsing JSON: " + "\nERROR" +  e.message + "\nLINE: " + line);
     		}
