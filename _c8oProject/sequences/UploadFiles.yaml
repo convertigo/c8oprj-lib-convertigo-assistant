@@ -1,0 +1,39 @@
+↓inputVars [steps.InputVariablesStep-1749657587038]: 
+  output: true
+↓file [steps.XMLComplexStep-1749720646620]: 
+  nodeName: file
+↓Iterator [steps.IteratorStep-1749660700921]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1749657587038
+        - java.lang.String: 
+          - ↑value: ./files
+  ↓Call_Transaction2 [steps.TransactionStep-1749720578511]: 
+    sourceTransaction: ConvertigoAssistant.OpenAI.UploadFile
+    ↓file [variables.StepVariable-1749720578514]: 
+      description: file
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749660700921
+            - java.lang.String: 
+              - ↑value: ./text()
+    ↓purpose [variables.StepVariable-1749720578517]: 
+      value: vision
+  ↓file [steps.XMLComplexStep-1749720629873]: 
+    nodeName: file
+    ↓Copy [steps.XMLCopyStep-1749720668169]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749720578511
+            - java.lang.String: 
+              - ↑value: ./document/object/*
+↓files [variables.RequestableMultiValuedVariable-1749660259868]: 
