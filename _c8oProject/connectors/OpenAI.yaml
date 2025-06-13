@@ -237,3 +237,41 @@ server: api.openai.com
   ↓__body [variables.RequestableHttpVariable-1744026645315]: 
     httpMethod: POST
     value: '{}'
+↓UploadFile [transactions.JsonHttpTransaction]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/x-www-form-urlencoded
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpVerb: POST
+  subDir: files
+  ↓file [variables.RequestableHttpVariable-1749719989411]: 
+    description: file
+    doFileUploadMode: multipartFormData
+    httpMethod: POST
+    httpName: file
+    isFileUpload: true
+  ↓purpose [variables.RequestableHttpVariable-1749719989414]: 
+    description: purpose
+    httpMethod: POST
+    httpName: purpose

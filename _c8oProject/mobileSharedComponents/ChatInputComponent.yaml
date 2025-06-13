@@ -1,0 +1,209 @@
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        	imagePreview: string | ArrayBuffer | null = null;
+        	/*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+        		/*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        		/*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        		/*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        		/*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        		/*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        		/*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        		/*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        		/*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        	onFileUploaded(file: any) {
+        		if (this.Files) {
+        			let len = this.Files.length;
+        			for (let i=0; i<len; i++) {
+        				let f = this.Files[i];
+        				if (f.name == file.filename) {
+        					const reader = new FileReader();
+        					reader.onload = (e) => {
+        					  this.imagePreview = e.target?.result;
+        					};
+        					reader.readAsDataURL(f);
+        				}
+        			};
+        		} else {
+        		  this.imagePreview = null;
+        		}
+        	}
+        	
+        	onFileSelected(event: any) {
+        		this.Files = event.target.files;
+        		//this.getInstance(Events).publish("FilesAdded", {files: this.Files});
+        		this.FilesAdded.emit({files: this.Files});
+        	}
+        
+        	/*async sendMessage() {
+        	  const headers = new HttpHeaders({ Authorization: "Bearer "+this.apiKey });
+        
+        	  let content: any[] = [];
+        
+        	  // Upload image if present
+        	  if (this.File) {
+        	    const formData = new FormData();
+        	    formData.append(''file'', this.File);
+        	    formData.append(''purpose'', ''vision'');
+        
+        	    const uploadRes: any = await this.http.post(
+        	      ''https://api.openai.com/v1/files'',
+        	      formData,
+        	      { headers }
+        	    ).toPromise();
+        
+        	    content.push({
+        	      type: ''image_file'',
+        	      image_file: { file_id: uploadRes.id }
+        	    });
+        	  }
+        
+        	  if (this.Question.trim()) {
+        	    content.push({
+        	      type: ''text'',
+        	      text: this.Question.trim()
+        	    });
+        	  }
+        
+        	  // Create message with image/text
+        	  await this.http.post(
+        	    "https://api.openai.com/v1/threads/"+this.threadId+"/messages",
+        	    { role: ''user'', content },
+        	    {
+        	      headers: headers.set(''Content-Type'', ''application/json'')
+        	    }
+        	  ).toPromise();
+        
+        	  // Clear inputs
+        	  this.Question = '''';
+        	  this.File = null;
+        	}*/
+        	
+        	sendMessage() {
+        		let data = {}
+        		/*if (this.Files) {
+        		  data = {files: this.Files, text: this.Question};
+        		} else {
+        		  data = {files: null, text: this.Question};
+        		}*/
+        		console.log("emit", data);
+        		this.RunQuestion.emit(data);
+        	}
+        	
+        	/*End_c8o_CompFunction*/
+        '
+↓Fragment [ngx.components.UICustom-1749652210265]: 
+  htmlTemplate: |
+    <!-- Prévisualisation de l'image -->
+    <div *ngIf="imagePreview" class="preview-container">
+    <ion-icon name="close-circle" class="remove-icon" (click)="removeImage()"></ion-icon>
+      <img [src]="imagePreview" alt="Prévisualisation" class="preview-image" />
+    </div>
+    
+    
+    <ion-item lines="none" class="chat-input-container">
+      <ion-icon name="add-outline" slot="start" (click)="fileInput.click()" title="Add file"></ion-icon>
+      <input
+        type="file"
+        hidden
+        accept="image/*"
+        (change)="onFileSelected($event)"
+        #fileInput
+      />
+      
+      <ion-input
+        [(ngModel)]="this.Question"
+        placeholder="Poser une question"
+    	aria-label="question input"
+        class="chat-text-input"
+        clearInput
+      ></ion-input>
+    
+      <ion-icon name="mic-outline" slot="end"></ion-icon>
+      <ion-button fill="clear" slot="end" (click)="sendMessage()">
+        <ion-icon name="send" title="Soumettre"></ion-icon>
+      </ion-button>
+    </ion-item>
+    
+    
+↓Style [ngx.components.UIStyle-1749652210268]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.chat-input-container {
+            border-radius: 10px;
+            background: #f9f9f9;
+            padding: 8px;
+            margin: 5px;
+            align-items: center;
+          
+            ion-input {
+              flex: 1;
+              margin: 0 5px;
+            }
+          
+            ion-icon {
+              font-size: 22px;
+              padding: 0 5px;
+              cursor: pointer;
+            }
+          
+            ion-button {
+              margin-left: 5px;
+            }
+          }
+          
+          .preview-container {
+            position: relative;
+            max-width: 50%;
+            margin: 10px auto;
+            border-radius: 12px;
+            overflow: hidden;
+            //box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          }
+          
+          .preview-image {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+          }
+          
+          .remove-icon {
+            position: absolute;
+            top: -1px;
+            left: -4px;
+            font-size: 22px;
+            color: #f44336;
+            background: white;
+            border-radius: 50%;
+            padding: 0px;
+            cursor: pointer;
+          }'
+↓Question [ngx.components.UICompVariable-1749652210271]: 
+  autoEmit: true
+↓Files [ngx.components.UICompVariable-1749652210274]: 
+  autoEmit: true
+  value: null
+↓RunQuestion [ngx.components.UICompEvent-1749652210277]: 
+  attrName: RunQuestion
+↓FilesAdded [ngx.components.UICompEvent-1749729560350]: 
+  attrName: FilesAdded

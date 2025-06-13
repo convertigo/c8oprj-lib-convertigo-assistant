@@ -1,4 +1,6 @@
 responseTimeout: 300
+↓inputVars [steps.InputVariablesStep-1749739947672]: 
+  output: true
 ↓InitProgressMessage [steps.SimpleStep-1749617307020]: 
   expression: |
     'buffer = {
@@ -62,6 +64,74 @@ responseTimeout: 300
             - SmartType: 
               - ↑mode: PLAIN
               - →→: text
+    ↓IfExist [steps.IfExistStep-1749743325344]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749739947672
+            - java.lang.String: 
+              - ↑value: ./AIFiles/text()
+      ↓myVariable [steps.JsonSourceStep-1749743325347]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1749739947672
+              - java.lang.String: 
+                - ↑value: ./AIFiles/text()
+        variableName: files
+      ↓jIterator [steps.SimpleIteratorStep-1749743325350]: 
+        expression: files
+        ↓object [steps.JsonObjectStep-1749743325356]: 
+          ↓type [steps.JsonFieldStep-1749743325359]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: type
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: image_file
+          ↓image_file [steps.JsonObjectStep-1749743325362]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: image_file
+            ↓content [steps.JsonFieldStep-1749743325365]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: file_id
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: JS
+                    - →→: item.id
+            ↓type [steps.JsonFieldStep-1749743325368]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: detail
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: high
 ↓Call_Transaction1 [steps.TransactionStep-1744201808156]: 
   sourceTransaction: ConvertigoAssistant.OpenAI.Message
   ↓__body [variables.StepVariable-1744201808159]: 
@@ -160,8 +230,131 @@ responseTimeout: 300
       - SmartType: 
         - ↑mode: JS
         - →→: response.id
+↓Message1 [steps.JsonObjectStep-1749742901433]: 
+  isEnabled: false
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Message
+  output: false
+  ↓role [steps.JsonFieldStep-1749742901436]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: role
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: user
+  ↓content1 [steps.JsonArrayStep-1749742901439]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: content
+    ↓object [steps.JsonObjectStep-1749742901442]: 
+      ↓type [steps.JsonFieldStep-1749742901448]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: type
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: text
+      ↓content [steps.JsonFieldStep-1749742901445]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: text
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: Question
+    ↓IfExist [steps.IfExistStep-1749742763400]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749739947672
+            - java.lang.String: 
+              - ↑value: ./AIFiles/text()
+      ↓myVariable [steps.JsonSourceStep-1749742025928]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1749739947672
+              - java.lang.String: 
+                - ↑value: ./AIFiles/text()
+        variableName: files
+      ↓jIterator [steps.SimpleIteratorStep-1749742413008]: 
+        expression: files
+        ↓element [steps.ElementStep-1749742443832]: 
+          expression: item.id
+          isEnabled: false
+          nodeName: file-id
+        ↓object [steps.JsonObjectStep-1749742966818]: 
+          ↓type [steps.JsonFieldStep-1749742966824]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: type
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: image_file
+          ↓object [steps.JsonObjectStep-1749743040936]: 
+            ↓content [steps.JsonFieldStep-1749743040939]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: file_id
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: JS
+                    - →→: item.id
+            ↓type [steps.JsonFieldStep-1749743040942]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: detail
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: low
 ↓Question [variables.RequestableVariable-1744201780525]: 
 ↓threadid [variables.RequestableVariable-1744201831244]: 
+↓AIFiles [variables.RequestableVariable-1749739846542]: 
 ↓TestOK [core.TestCase]: 
   ↓Question [variables.TestCaseVariable-1744201869454]: 
     value: Can you add nice CSS to present this with some color gradients,  glossy effects and modern UI ? 

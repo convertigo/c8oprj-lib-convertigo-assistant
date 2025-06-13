@@ -1,0 +1,81 @@
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        	imagePreview: string | ArrayBuffer | null = null;
+        	/*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+        		/*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        		/*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        		/*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        		/*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        		/*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        		/*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        		/*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		if (this.Files) {
+        			let idx = -1;
+        			let len = this.Files.length;
+        			for (let i=0; i<len; i++) {
+        				let f = this.Files[i];
+        				if (f.name == this.file.filename) {
+        					idx = i;
+        					const reader = new FileReader();
+        					reader.onload = (e) => {
+        					  this.imagePreview = e.target?.result;
+        					};
+        					reader.readAsDataURL(f);
+        					break;
+        				}
+        			};
+        		} else {
+        		  this.imagePreview = null;
+        		}
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        		/*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        	/*End_c8o_CompFunction*/
+        '
+↓Fragment [ngx.components.UICustom-1749723949220]: 
+  htmlTemplate: |
+    <div *ngIf="imagePreview" class="preview-container">
+      <img [src]="imagePreview" alt="Prévisualisation" class="preview-image" />
+    </div>
+    
+↓Style [ngx.components.UIStyle-1749724323231]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.preview-container {
+          	display: flex;
+          	justify-content: flex-start;
+          	width: 50%;
+          	margin: 6px 0;
+          	border-radius: 12px;
+          	overflow: hidden;
+          }
+          
+          .preview-image {
+          	width: 100%;
+            	height: auto;
+            	display: block;
+            	border-radius: 12px;
+          }
+          '
+↓Files [ngx.components.UICompVariable-1749724842256]: 
+  value: null
+↓file [ngx.components.UICompVariable-1749725647711]: 
+  value: null
