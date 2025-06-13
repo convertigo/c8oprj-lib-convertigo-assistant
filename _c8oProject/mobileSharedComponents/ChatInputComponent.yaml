@@ -6,7 +6,7 @@ scriptContent:
         '/*Begin_c8o_CompImport*/
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
-        	imagePreview: string | ArrayBuffer | null = null;
+        	previews = {};
         	/*End_c8o_CompDeclaration*/
         /*Begin_c8o_CompConstructor*/
         		/*End_c8o_CompConstructor*/
@@ -27,27 +27,22 @@ scriptContent:
         /*Begin_c8o_CompAfterViewChecked*/
         		/*End_c8o_CompAfterViewChecked*/
         /*Begin_c8o_CompFunction*/
-        	onFileUploaded(file: any) {
-        		if (this.Files) {
-        			let len = this.Files.length;
-        			for (let i=0; i<len; i++) {
-        				let f = this.Files[i];
-        				if (f.name == file.filename) {
-        					const reader = new FileReader();
-        					reader.onload = (e) => {
-        					  this.imagePreview = e.target?.result;
-        					};
-        					reader.readAsDataURL(f);
-        				}
-        			};
-        		} else {
-        		  this.imagePreview = null;
-        		}
+        	previewImage(f) {
+        		const reader = new FileReader();
+        		reader.onload = (e) => {
+        		  this.previews[f.name] = e.target?.result;
+        		};
+        		reader.readAsDataURL(f);
         	}
         	
         	onFileSelected(event: any) {
         		this.Files = event.target.files;
-        		this.FilesAdded.emit({files: this.Files});
+        		
+        		this.previews = {};
+        		for (let i=0; i< this.Files.length; i++) {
+        			this.previewImage(this.Files[i]);
+        		}
+        		//this.FilesAdded.emit({files: this.Files});
         	}
         	
         	onKeyEnter(event: KeyboardEvent): void {
@@ -58,21 +53,21 @@ scriptContent:
         	}
         	
         	sendMessage() {
-        		this.RunQuestion.emit({});
+        		this.RunQuestion.emit({files: this.Files});
+        	}
+        	
+        	reset() {
+        		this.Files = null;
+        		this.Question = '''';
+        		this.previews = {};
+        		this.local.AIFiles = [];
         	}
         	/*End_c8o_CompFunction*/
         '
 ↓Fragment [ngx.components.UICustom-1749652210265]: 
   htmlTemplate: |
-    <!-- Prévisualisation de l'image -->
-    <div *ngIf="imagePreview" class="preview-container">
-    <ion-icon name="close-circle" class="remove-icon" (click)="removeImage()"></ion-icon>
-      <img [src]="imagePreview" alt="Prévisualisation" class="preview-image" />
-    </div>
-    
-    
     <ion-item lines="none" class="chat-input-container">
-      <ion-icon name="add-outline" slot="start" (click)="fileInput.click()" title="Add file"></ion-icon>
+      <ion-icon name="add-outline" slot="start" (click)="fileInput.click()" title="Add image"></ion-icon>
       <input
         type="file"
         hidden
@@ -80,7 +75,9 @@ scriptContent:
         (change)="onFileSelected($event)"
         #fileInput
       />
-      
+      <ng-container *ngFor="let File of Files">
+    	<img *ngIf="this.previews[File.name]" [src]="this.previews[File.name]" class="preview-image" />
+      </ng-container>
       <ion-input
         [(ngModel)]="this.Question"
         placeholder="Poser une question"
@@ -126,33 +123,15 @@ scriptContent:
             }
           }
           
-          .preview-container {
-            position: relative;
-            max-width: 50%;
-            margin: 10px auto;
-            border-radius: 12px;
-            overflow: hidden;
-            //box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          }
-          
           .preview-image {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 12px;
+          	width: 50px;
+          	height: 50px;
+          	object-fit: cover;
+          	display: block;
+          	border-radius: 8px;
+          	//border: 2px solid red;
           }
-          
-          .remove-icon {
-            position: absolute;
-            top: -1px;
-            left: -4px;
-            font-size: 22px;
-            color: #f44336;
-            background: white;
-            border-radius: 50%;
-            padding: 0px;
-            cursor: pointer;
-          }'
+          '
 ↓Question [ngx.components.UICompVariable-1749652210271]: 
   autoEmit: true
 ↓Files [ngx.components.UICompVariable-1749652210274]: 
