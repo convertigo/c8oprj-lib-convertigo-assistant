@@ -132,7 +132,7 @@ responseTimeout: 300
     			var response = JSON.parse(data);
     			var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
     			
-    			if (buffer && response.delta) {
+    			if (buffer && response.delta && line != "data: [DONE]") {
     				log.warn("Buffer from get attribute is : " + JSON.stringify(buffer)); 
     				buffer.content += response.delta.content[0].text.value;
     				buffer.size += buffer.content.length;
