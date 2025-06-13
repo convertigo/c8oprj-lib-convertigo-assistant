@@ -74,33 +74,19 @@ title: First page
           beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''refresh''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
-          ↓SetLocal [ngx.components.UIDynamicAction-1744701686197]: 
-            beanData: |
-              '{
-               "ionBean": "SetLocalAction",
-               "Property": "plain:Question",
-               "Value": "script:''''"
-              }'
-            ↓CallSequence [ngx.components.UIDynamicAction-1744701686200]: 
-              beanData: |
-                '{
-                 "ionBean": "CallSequenceAction",
-                 "requestable": "plain:ConvertigoAssistant.CreateConversation",
-                 "noLoading": "plain:true"
-                }'
-              ↓SetLocal [ngx.components.UIDynamicAction-1744701686203]: 
-                beanData: |
-                  '{
-                   "ionBean": "SetLocalAction",
-                   "Property": "plain:Conversation",
-                   "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
-                  }'
           ↓RunID [ngx.components.UIDynamicAction-1744701686206]: 
             beanData: |
               '{
                "ionBean": "SetLocalAction",
                "Property": "plain:RunID",
                "Value": "script:''''"
+              }'
+          ↓Buffer [ngx.components.UIDynamicAction-1749801204930]: 
+            beanData: |
+              '{
+               "ionBean": "SetLocalAction",
+               "Property": "plain:Buffer",
+               "Value": "script:{}"
               }'
           ↓Messages [ngx.components.UIDynamicAction-1744701686209]: 
             beanData: |
@@ -109,6 +95,41 @@ title: First page
                "Property": "plain:Messages",
                "Value": "script:[]"
               }'
+            ↓Buffer [ngx.components.UIDynamicAction-1749801247645]: 
+              beanData: |
+                '{
+                 "ionBean": "SetLocalAction",
+                 "Property": "plain:InputFiles",
+                 "Value": "script:null"
+                }'
+            ↓Buffer1 [ngx.components.UIDynamicAction-1749801247648]: 
+              beanData: |
+                '{
+                 "ionBean": "SetLocalAction",
+                 "Property": "plain:AIFiles",
+                 "Value": "script:[]"
+                }'
+            ↓SetLocal [ngx.components.UIDynamicAction-1744701686197]: 
+              beanData: |
+                '{
+                 "ionBean": "SetLocalAction",
+                 "Property": "plain:Question",
+                 "Value": "script:''''"
+                }'
+              ↓CallSequence [ngx.components.UIDynamicAction-1744701686200]: 
+                beanData: |
+                  '{
+                   "ionBean": "CallSequenceAction",
+                   "requestable": "plain:ConvertigoAssistant.CreateConversation",
+                   "noLoading": "plain:true"
+                  }'
+                ↓SetLocal [ngx.components.UIDynamicAction-1744701686203]: 
+                  beanData: |
+                    '{
+                     "ionBean": "SetLocalAction",
+                     "Property": "plain:Conversation",
+                     "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                    }'
 ↓Content [ngx.components.UIDynamicElement-1489674805352]: 
   beanData: '{"ionBean":"Content"}'
   comment: Page content
