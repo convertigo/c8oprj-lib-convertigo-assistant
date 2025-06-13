@@ -130,6 +130,17 @@ title: First page
                      "Property": "plain:Conversation",
                      "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                     }'
+          ↓ClearChatFiles [ngx.components.UICustomAction-1749803261384]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                    		page.chatinput.Files = null;
+                    		console.log("chatinput.Files = null");
+                    		resolve();
+                    '
 ↓Content [ngx.components.UIDynamicElement-1489674805352]: 
   beanData: '{"ionBean":"Content"}'
   comment: Page content
@@ -371,6 +382,7 @@ title: First page
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
   ↓UseSharedComponent [ngx.components.UIUseShared-1749652379644]: 
+    identifier: chatinput
     sharedcomponent: ConvertigoAssistant.Application.NgxApp.ChatInputComponent
     ↓Event [ngx.components.UIControlEvent-1749652401112]: 
       attrName: (RunQuestion)

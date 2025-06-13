@@ -47,65 +47,19 @@ scriptContent:
         	
         	onFileSelected(event: any) {
         		this.Files = event.target.files;
-        		//this.getInstance(Events).publish("FilesAdded", {files: this.Files});
         		this.FilesAdded.emit({files: this.Files});
         	}
-        
-        	/*async sendMessage() {
-        	  const headers = new HttpHeaders({ Authorization: "Bearer "+this.apiKey });
-        
-        	  let content: any[] = [];
-        
-        	  // Upload image if present
-        	  if (this.File) {
-        	    const formData = new FormData();
-        	    formData.append(''file'', this.File);
-        	    formData.append(''purpose'', ''vision'');
-        
-        	    const uploadRes: any = await this.http.post(
-        	      ''https://api.openai.com/v1/files'',
-        	      formData,
-        	      { headers }
-        	    ).toPromise();
-        
-        	    content.push({
-        	      type: ''image_file'',
-        	      image_file: { file_id: uploadRes.id }
-        	    });
-        	  }
-        
-        	  if (this.Question.trim()) {
-        	    content.push({
-        	      type: ''text'',
-        	      text: this.Question.trim()
-        	    });
-        	  }
-        
-        	  // Create message with image/text
-        	  await this.http.post(
-        	    "https://api.openai.com/v1/threads/"+this.threadId+"/messages",
-        	    { role: ''user'', content },
-        	    {
-        	      headers: headers.set(''Content-Type'', ''application/json'')
-        	    }
-        	  ).toPromise();
-        
-        	  // Clear inputs
-        	  this.Question = '''';
-        	  this.File = null;
-        	}*/
         	
-        	sendMessage() {
-        		let data = {}
-        		/*if (this.Files) {
-        		  data = {files: this.Files, text: this.Question};
-        		} else {
-        		  data = {files: null, text: this.Question};
-        		}*/
-        		console.log("emit", data);
-        		this.RunQuestion.emit(data);
+        	onKeyEnter(event: KeyboardEvent): void {
+        	    if (event.key === ''Enter'') {
+        	      event.preventDefault();
+        	      this.sendMessage();
+        	    }
         	}
         	
+        	sendMessage() {
+        		this.RunQuestion.emit({});
+        	}
         	/*End_c8o_CompFunction*/
         '
 ↓Fragment [ngx.components.UICustom-1749652210265]: 
@@ -133,6 +87,7 @@ scriptContent:
     	aria-label="question input"
         class="chat-text-input"
         clearInput
+    	(keydown)="this.onKeyEnter($event)"
       ></ion-input>
     
       <ion-icon name="mic-outline" slot="end"></ion-icon>
