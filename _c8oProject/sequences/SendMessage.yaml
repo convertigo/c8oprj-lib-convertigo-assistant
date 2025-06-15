@@ -215,13 +215,13 @@ responseTimeout: 300
     	if (line.trim() === "") {
     		continue; // Skip empty lines
     	}
-    	if (line.startsWith("data: ")) {
+    	if (line.startsWith("data: ") && line != "data: [DONE]") {
     		var data = line.substring(6).trim(); // Remove "data: " prefix
     		try {
     			var response = JSON.parse(data);
     			var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
     			
-    			if (buffer && response.delta && line != "data: [DONE]") {
+    			if (buffer && response.delta) {
     				log.warn("Buffer from get attribute is : " + JSON.stringify(buffer)); 
     				buffer.content += response.delta.content[0].text.value;
     				buffer.size += buffer.content.length;
