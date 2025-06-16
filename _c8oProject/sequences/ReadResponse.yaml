@@ -162,7 +162,8 @@ responseTimeout: 120
         	function findMatchingObject(jsonObject) {
         		if (''JsonResponse'' in jsonObject) {
         			return findMatchingObject(jsonObject.JsonResponse)
-        		} else if (jsonObject.css && jsonObject.typescript && jsonObject.XHTML && jsonObject.variables) {
+        		//} else if (jsonObject.css && jsonObject.typescript && jsonObject.XHTML && jsonObject.variables) {
+        		} else if (jsonObject.explanation) {
         			return jsonObject;
         		}
         		return null;
@@ -448,11 +449,15 @@ responseTimeout: 120
         	function isVariableDeclarationLine(variables, line) {
         		let found = false;
         		try {
-        			let keys = variables.keys();
-        			for (let i = 0; i < keys.length; i++) {
-        				let re = new RegExp(keys[i]+"\\W");
-        				if (re.test(line)) {
-        					log.warn("Variable "+ keys[i] +" found:"+found+ " in "+ line);
+        			let keys = [];
+        			for (let key in variables) {
+        				keys.push(key);
+        			}
+        			//log.warn("Keys: "+ keys);
+        			for (let i=0; i < keys.length; i++) {
+        				let re = new RegExp(""+keys[i]+"\\W");
+        				if (re.test(""+line)) {
+        					//log.warn("Variable "+ keys[i] +" found:"+found+ " in "+ line);
         					found = true;
         					break;
         				}
@@ -516,10 +521,32 @@ responseTimeout: 120
         		}
         		
         		if (data.length > 0) {
-        			let jsonOb = data.shift();
+        			let dataLength = data.length;
+        			let jsonOb = null;
+        			try {
+        				if (data.length == 1) {
+        					jsonOb = data.shift();
+        				} else if (data.length > 1) {
+        					jsonOb = {};
+        					while (data.length > 0) {
+        						let last = data.pop();
+        						if (last != null && last != undefined) {
+        							for (let key in last) {
+        								jsonOb[key] = last[key];
+        							};
+        						}
+        						//log.warn("JSONResponseXXXXXXXX:\n"+ JSON.stringify(jsonOb));
+        					}
+        				}
+        			} catch (e) {
+        				jsonOb = null;
+        				log.error("Failed to retrieve Json object: "+ e.message);
+        			}
+        			
+        			//let jsonOb = data.shift();
         			if (jsonOb != null) {
         				log.warn("JSONResponse:\n"+ JSON.stringify(jsonOb));
-        				dataType = data.length == 0 ? "create":"edit";
+        				dataType = dataLength == 1 ? "create":"edit";
         				
         				try {
         					var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
