@@ -445,6 +445,24 @@ responseTimeout: 120
         		return "";
         	}
         
+        	function isVariableDeclarationLine(variables, line) {
+        		let found = false;
+        		try {
+        			let keys = variables.keys();
+        			for (let i = 0; i < keys.length; i++) {
+        				let re = new RegExp(keys[i]+"\\W");
+        				if (re.test(line)) {
+        					log.warn("Variable "+ keys[i] +" found:"+found+ " in "+ line);
+        					found = true;
+        					break;
+        				}
+        			}
+        		} catch (e) {
+        			log.error("Failed to isVariableDeclarationLine: "+ e.message);
+        		}
+        		return found;
+        	}
+        	
         	function getComponentFromMessages(Messages) {
         	const start = Date.now();
         	var scriptContent = `
@@ -507,7 +525,7 @@ responseTimeout: 120
         					var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
         					if (comp != null) {
         						explanation = jsonOb.explanation;
-        						comp.setComment("-- AI generated: "+ threadid);
+        						
         						
         						// extract and set name
         						try {
@@ -516,6 +534,14 @@ responseTimeout: 120
         								comp.setName(name);
         							}
         						} catch (e) {}
+        						
+        						// extract and set comment
+        						try {
+        							var comment = jsonOb.comment;
+        							comp.setComment(comment + "\n-- AI generated: "+ threadid);
+        						} catch (e) {
+        							comp.setComment("-- AI generated: "+ threadid);
+        						}
         						
         						// add compAfterViewInit event with a CustomAction
         						try {
@@ -599,6 +625,7 @@ responseTimeout: 120
         								var variable = jsonOb.variablesB[key];
         								var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
         								uicv.setName(key);
+        								uicv.setComment(variable.description);
         								//log.warn("input variable "+ key +"["+ typeof variable.type +"]: "+ variable.value);
         								if ("string" == variable.type) {
         									uicv.setVariableValue("''"+ new String(variable.value).replace(/''/g, "\\''") +"''");
@@ -650,7 +677,9 @@ responseTimeout: 120
         								//var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
         								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
         								jsonOb["declarations"].forEach((line) => {
-        									customDMarker += line + "\n";
+        									if (!isVariableDeclarationLine(jsonOb.variablesB, line)) {
+        										customDMarker += line + "\n";
+        									}
         								});
         								customDMarker += "/*End_c8o_CompDeclaration*/\n";
         
