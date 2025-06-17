@@ -166,7 +166,15 @@ responseTimeout: 120
         		if (''JsonResponse'' in jsonObject) {
         			return jsonObject.JsonResponse;
         		} else if (''JsonChanges'' in jsonObject) {
-        			return jsonObject.JsonChanges;
+        			let changes = jsonObject.JsonChanges;
+        			if (''explanation'' in jsonObject) {
+        				changes.push({
+        				      "op": "replace",
+        				      "path": "/explanation",
+        				      "value": jsonObject.explanation
+        				});
+        			}
+        			return changes;
         		}
         		return null;
         	}
@@ -448,24 +456,45 @@ responseTimeout: 120
         		return "";
         	}
         
-        	function isVariableDeclarationLine(variables, line) {
+        	function isMapDeclarationLine(map, line) {
         		let found = false;
         		try {
         			let keys = [];
-        			for (let key in variables) {
+        			for (let key in map) {
         				keys.push(key);
         			}
-        			//log.warn("Keys: "+ keys);
+        			log.warn("Map Keys: "+ keys);
         			for (let i=0; i < keys.length; i++) {
-        				let re = new RegExp(""+keys[i]+"\\W");
+        				let re = new RegExp(""+keys[i]+"\\b");
         				if (re.test(""+line)) {
-        					//log.warn("Variable "+ keys[i] +" found:"+found+ " in "+ line);
+        					log.warn("Key "+ keys[i] +" found:"+found+ " in "+ line);
         					found = true;
         					break;
         				}
         			}
         		} catch (e) {
-        			log.error("Failed to isVariableDeclarationLine: "+ e.message);
+        			log.error("Failed to isMapDeclarationLine: "+ e.message);
+        		}
+        		return found;
+        	}
+        	function isArrDeclarationLine(arr, line) {
+        		let found = false;
+        		try {
+        			let keys = [];
+        			for (let key of arr) {
+        				keys.push(key);
+        			}
+        			log.warn("Arr Keys: "+ keys);
+        			for (let i=0; i < keys.length; i++) {
+        				let re = new RegExp(""+keys[i]+"\\b");
+        				if (re.test(""+line)) {
+        					log.warn("Key "+ keys[i] +" found:"+found+ " in "+ line);
+        					found = true;
+        					break;
+        				}
+        			}
+        		} catch (e) {
+        			log.error("Failed to isArrDeclarationLine: "+ e.message);
         		}
         		return found;
         	}
@@ -515,7 +544,6 @@ responseTimeout: 120
         					let jsonOb = extractJSONFromMarkdown(message.text);
         					if (jsonOb != null) {
         						data.push(jsonOb);
-        						
         					}
         				} catch (e) {
         					log.error("Failed to handle message "+ message.id +": "+ e.message);
@@ -656,11 +684,23 @@ responseTimeout: 120
         								uicv.setName(key);
         								uicv.setComment(variable.description);
         								//log.warn("input variable "+ key +"["+ typeof variable.type +"]: "+ variable.value);
-        								if ("string" == variable.type) {
+        								/*if ("string" == variable.type) {
         									uicv.setVariableValue("''"+ new String(variable.value).replace(/''/g, "\\''") +"''");
         								} else {
         									uicv.setVariableValue(JSON.stringify(variable.value));
+        								}*/
+        								var value = variable.value;
+        								log.warn("input variable "+ key +"["+ typeof variable.type +"]: "+ value);
+        								if ("string" == variable.type) {
+        									uicv.setVariableValue("''"+ new String(value).replace(/''/g, "\\''") +"''");
+        								} else {
+        									if ("string" == typeof value) {
+        										uicv.setVariableValue(new String(value));
+        									} else {
+        										uicv.setVariableValue(new String(JSON.stringify(value)));
+        									}
         								}
+        								
         								comp.add(uicv);
         							}
         						} catch(e) {
@@ -706,7 +746,8 @@ responseTimeout: 120
         								//var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
         								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
         								jsonOb["declarations"].forEach((line) => {
-        									if (!isVariableDeclarationLine(jsonOb.variables, line)) {
+        									if (!isMapDeclarationLine(jsonOb.variables, line) && 
+        										!isArrDeclarationLine(jsonOb["emitters"], line)) {
         										customDMarker += line + "\n";
         									}
         								});
