@@ -159,12 +159,14 @@ responseTimeout: 120
         	org.jsoup.parser.Parser,
         	org.jsoup.Jsoup,
         )) {
+        	
+        	include("js/jsonpatch-js/jsonpatch.js");
+        	
         	function findMatchingObject(jsonObject) {
         		if (''JsonResponse'' in jsonObject) {
-        			return findMatchingObject(jsonObject.JsonResponse)
-        		//} else if (jsonObject.css && jsonObject.typescript && jsonObject.XHTML && jsonObject.variables) {
-        		} else if (jsonObject.explanation) {
-        			return jsonObject;
+        			return jsonObject.JsonResponse;
+        		} else if (''JsonChanges'' in jsonObject) {
+        			return jsonObject.JsonChanges;
         		}
         		return null;
         	}
@@ -513,6 +515,7 @@ responseTimeout: 120
         					let jsonOb = extractJSONFromMarkdown(message.text);
         					if (jsonOb != null) {
         						data.push(jsonOb);
+        						
         					}
         				} catch (e) {
         					log.error("Failed to handle message "+ message.id +": "+ e.message);
@@ -521,21 +524,21 @@ responseTimeout: 120
         		}
         		
         		if (data.length > 0) {
+        			//log.warn("DATAxxxxxxxx:\n"+ JSON.stringify(data));
         			let dataLength = data.length;
-        			let jsonOb = null;
+        			let jsonOb = null;			
         			try {
-        				if (data.length == 1) {
-        					jsonOb = data.shift();
-        				} else if (data.length > 1) {
-        					jsonOb = {};
-        					while (data.length > 0) {
-        						let last = data.pop();
-        						if (last != null && last != undefined) {
-        							for (let key in last) {
-        								jsonOb[key] = last[key];
-        							};
+        				while (data.length > 0) {
+        					let last = data.pop();
+        					//log.warn("JSONLASTXXXXXXXX:\n"+ JSON.stringify(last));
+        					if (last != null && last != undefined) {
+        						if (Array.isArray(last)) {
+        							jsonpatch.apply(jsonOb, last);
+        							//log.warn("JSONPatchXXXXXXXX:\n"+ JSON.stringify(jsonOb));
+        						} else {
+        							jsonOb = last;
+        							//log.warn("JSONObjectXXXXXXXX:\n"+ JSON.stringify(jsonOb));
         						}
-        						//log.warn("JSONResponseXXXXXXXX:\n"+ JSON.stringify(jsonOb));
         					}
         				}
         			} catch (e) {
@@ -543,9 +546,8 @@ responseTimeout: 120
         				log.error("Failed to retrieve Json object: "+ e.message);
         			}
         			
-        			//let jsonOb = data.shift();
         			if (jsonOb != null) {
-        				log.warn("JSONResponse:\n"+ JSON.stringify(jsonOb));
+        				log.warn("JSONResponse:\n"+ JSON.stringify(jsonOb, null, "\t"));
         				dataType = dataLength == 1 ? "create":"edit";
         				
         				try {
@@ -647,9 +649,9 @@ responseTimeout: 120
         						
         						// Add variables from ''variables''
         						try {
-        							//log.warn("variables:\n"+ jsonOb.variablesB);
-        							for (let key in jsonOb.variablesB) {
-        								var variable = jsonOb.variablesB[key];
+        							//log.warn("variables:\n"+ jsonOb.variables);
+        							for (let key in jsonOb.variables) {
+        								var variable = jsonOb.variables[key];
         								var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
         								uicv.setName(key);
         								uicv.setComment(variable.description);
@@ -704,7 +706,7 @@ responseTimeout: 120
         								//var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
         								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
         								jsonOb["declarations"].forEach((line) => {
-        									if (!isVariableDeclarationLine(jsonOb.variablesB, line)) {
+        									if (!isVariableDeclarationLine(jsonOb.variables, line)) {
         										customDMarker += line + "\n";
         									}
         								});
