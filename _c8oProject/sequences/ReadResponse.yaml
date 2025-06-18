@@ -561,11 +561,13 @@ responseTimeout: 120
         					//log.warn("JSONLASTXXXXXXXX:\n"+ JSON.stringify(last));
         					if (last != null && last != undefined) {
         						if (Array.isArray(last)) {
-        							jsonpatch.apply(jsonOb, last);
-        							//log.warn("JSONPatchXXXXXXXX:\n"+ JSON.stringify(jsonOb));
+        							try {
+        								jsonpatch.apply(jsonOb, last);
+        							} catch (e) {
+        								log.error("Failed to apply jsonpatch: "+ e.message);
+        							}
         						} else {
         							jsonOb = last;
-        							//log.warn("JSONObjectXXXXXXXX:\n"+ JSON.stringify(jsonOb));
         						}
         					}
         				}
@@ -869,6 +871,7 @@ responseTimeout: 120
         			}
         		} else {
         			log.error("No valid message");
+        			explanation = "Failed: try Regenerate all";
         		}
         				
         		var xml = clipboard.toXml();
