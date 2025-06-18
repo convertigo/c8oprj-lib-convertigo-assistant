@@ -130,45 +130,26 @@
       expression: |
         'with (new JavaImporter(
         )) {
-        	function findMatchingObject(jsonObject) {
-        		if (''JsonResponse'' in jsonObject) {
-        			return findMatchingObject(jsonObject.JsonResponse)
-        		} else if (jsonObject.css && jsonObject.typescript && jsonObject.XHTML && jsonObject.variables) {
-        			return jsonObject;
+        	function getExplanation(jsonObject) {
+        		try {
+        			if (''JsonResponse'' in jsonObject) {
+        				return jsonObject.JsonResponse.explanation;
+        			} else if (''JsonChanges'' in jsonObject) {
+        				if (''explanation'' in jsonObject) {
+        					return jsonObject.explanation;
+        				}
+        				let patches = jsonObject.JsonChanges;
+        				for (let i = 0; i < patches.length; i++) {
+        					let patch = patches[i];
+        					if (patch.path == "/explanation") {
+        						return patch.value;
+        					}
+        				}
+        			}
+        		} catch (e) {
+        			log.error("Failed to getExplanation "+ e.message);
         		}
         		return null;
-        	}
-        	
-        	function extractJSONFromMarkdown(md) {
-        	  let jsonOb = null;
-        	  try {
-        		  jsonOb = findMatchingObject(JSON.parse(md));
-        	  } catch (e) {
-        		  log.error("Failed to parse JSON: "+ e.message);
-        		  
-        		  const jsonCodeBlockRegex = /```json\s*([\s\S]*?)\s*```/gi;
-        		  const matches = md.matchAll(jsonCodeBlockRegex);
-        		  if (matches) {
-        			  for (var match of matches) {
-        				  //log.warn("MATCH: "+ match[0]);
-        				  try {
-        				      let parsed = JSON.parse(match[1]);
-        				      //log.warn("JSON: "+ match[1]);
-        				      //log.warn("JSON p: "+ JSON.stringify(parsed));
-        				      //log.warn("JSON css: "+ parsed.css);
-        					  jsonOb = findMatchingObject(parsed);
-        					  if (jsonOb != null) {
-        						  break;
-        					  }
-        				  } catch (e) {
-        					  log.error("Failed to parse JSON: "+ e.message);
-        				  }
-        			  }
-        		  } else {
-        			  log.error("No JSON code block found.");
-        		  }
-        	  }
-        	  return jsonOb;
         	}
         	
         	function buildMsg(Messages) {
@@ -181,10 +162,8 @@
         				try {
         					var text = message.text;
         					if (message.role == "assistant") {
-        						let jsonOb = extractJSONFromMarkdown(message.text);
-        						if (jsonOb != null) {
-        							text = jsonOb.explanation;
-        						} else {
+        						text = getExplanation(JSON.parse(message.text));
+        						if (text == null || text == undefined) {
         							text = "explanation: invalid or not found";
         						}
         					}

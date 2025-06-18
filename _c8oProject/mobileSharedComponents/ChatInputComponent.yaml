@@ -4,8 +4,10 @@ scriptContent:
     - com.twinsoft.convertigo.beans.common.FormatedContent: 
       →: |
         '/*Begin_c8o_CompImport*/
+        import { ViewChild } from ''@angular/core'';
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
+        	@ViewChild("btnReset", { static: false }) public btnReset;
         	previews = {};
         	/*End_c8o_CompDeclaration*/
         /*Begin_c8o_CompConstructor*/
@@ -57,10 +59,19 @@ scriptContent:
         	}
         	
         	reset() {
+        		try {
+        			//console.log("btnReset", this.btnReset.nativeElement);
+        			this.btnReset.nativeElement.click();
+        			console.log("btnReset clicked");
+        		} catch(e) {
+        			console.log("error", e);
+        		}
+        		
         		this.Files = null;
         		this.Question = '''';
         		this.previews = {};
         		this.local.AIFiles = [];
+        		console.log("chatinput reset");
         	}
         	/*End_c8o_CompFunction*/
         '
@@ -68,13 +79,16 @@ scriptContent:
   htmlTemplate: |
     <ion-item lines="none" class="chat-input-container">
       <ion-icon name="add-outline" slot="start" (click)="fileInput.click()" title="Add image"></ion-icon>
-      <input
-        type="file"
-        hidden
-        accept="image/*"
-        (change)="onFileSelected($event)"
-        #fileInput
-      />
+      <form>
+    	  <input
+    	    type="file"
+    	    hidden
+    	    accept="image/*"
+    	    (change)="onFileSelected($event)"
+    	    #fileInput
+    	  />
+    	  <button hidden type="reset" #btnReset >Reset form</button>
+      </form>
       <ng-container *ngFor="let File of Files">
     	<img *ngIf="this.previews[File.name]" [src]="this.previews[File.name]" class="preview-image" />
       </ng-container>
@@ -92,7 +106,6 @@ scriptContent:
         <ion-icon name="send" title="Soumettre"></ion-icon>
       </ion-button>
     </ion-item>
-    
     
 ↓Style [ngx.components.UIStyle-1749652210268]: 
   styleContent: 
@@ -141,3 +154,14 @@ scriptContent:
   attrName: RunQuestion
 ↓FilesAdded [ngx.components.UICompEvent-1749729560350]: 
   attrName: FilesAdded
+↓PageEvent [ngx.components.UIPageEvent-1750231712498]: 
+  ↓Reset [ngx.components.UICustomAction-1750231725900]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		page.reset();
+            		resolve();
+            '

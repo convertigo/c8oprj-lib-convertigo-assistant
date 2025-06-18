@@ -19,7 +19,9 @@ scriptContent:
         		console.log("[Assistant] navParams ", this.navParams);
         		try {
         			if (this.navParams.data["threadid"]) {
-        				threadid = this.navParams.data["threadid"];
+        				if (this.navParams.data["threadid"] != ":threadid") {
+        					threadid = this.navParams.data["threadid"];
+        				}
         			}
         		} catch (e) {}
         		this.c8o.log.warn("[Assistant] loading with threadid: "+ threadid);
@@ -130,17 +132,16 @@ title: First page
                      "Property": "plain:Conversation",
                      "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                     }'
-          ↓ClearChatFiles [ngx.components.UICustomAction-1749803261384]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                    		page.chatinput.Files = null;
-                    		console.log("chatinput.Files = null");
-                    		resolve();
-                    '
+                ↓ChatReset [ngx.components.UICustomAction-1749803261384]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                          		page.chatinput.reset();
+                          		resolve();
+                          '
 ↓Content [ngx.components.UIDynamicElement-1489674805352]: 
   beanData: '{"ionBean":"Content"}'
   comment: Page content
@@ -561,7 +562,7 @@ title: First page
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AIFiles","prefix":"JSON.stringify(","suffix":")","custom":"","useCustom":false}}
-                  ↓ResetChat [ngx.components.UICustomAction-1749823768910]: 
+                  ↓ChatReset [ngx.components.UICustomAction-1749823768910]: 
                     actionValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
