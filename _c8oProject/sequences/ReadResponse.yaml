@@ -1,9 +1,9 @@
 responseTimeout: 120
 ↓inputVars [steps.InputVariablesStep-1744901534491]: 
   output: true
-↓Call_Transaction3 [steps.TransactionStep-1744206363463]: 
-  sourceTransaction: ConvertigoAssistant.OpenAI.CheckMessages
-  ↓__stub [variables.StepVariable-1744901510873]: 
+↓Call_Sequence [steps.SequenceStep-1750351205688]: 
+  sourceSequence: ConvertigoAssistant.GetMessages
+  ↓__stub [variables.StepVariable-1750351276456]: 
     sourceDefinition: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
@@ -12,7 +12,7 @@ responseTimeout: 120
             - ↑value: 1744901534491
           - java.lang.String: 
             - ↑value: ./fromStub/text()
-  ↓threadid [variables.StepVariable-1744206363466]: 
+  ↓threadid [variables.StepVariable-1750351228481]: 
 ↓message [steps.JsonArrayStep-1744736404624]: 
   key: 
     - xmlizable: 
@@ -26,9 +26,9 @@ responseTimeout: 120
         - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
         - com.twinsoft.convertigo.beans.common.XMLVector: 
           - java.lang.String: 
-            - ↑value: 1744206363463
+            - ↑value: 1750351205688
           - java.lang.String: 
-            - ↑value: ./document/object/data/object
+            - ↑value: ./document/page/transaction/document/object/data/object
     ↓Message [steps.JsonObjectStep-1744217119892]: 
       ↓Iterator [steps.IteratorStep-1744217119895]: 
         sourceDefinition: 
@@ -161,6 +161,7 @@ responseTimeout: 120
         )) {
         	
         	include("js/jsonpatch-js/jsonpatch.js");
+        	include("js/format.js");
         	
         	function findMatchingObject(jsonObject) {
         		if (''JsonResponse'' in jsonObject) {
@@ -467,7 +468,7 @@ responseTimeout: 120
         			for (let i=0; i < keys.length; i++) {
         				let re = new RegExp(""+keys[i]+"\\b");
         				if (re.test(""+line)) {
-        					log.warn("Key "+ keys[i] +" found:"+found+ " in "+ line);
+        					log.warn("Key "+ keys[i] +" found in "+ line);
         					found = true;
         					break;
         				}
@@ -488,7 +489,7 @@ responseTimeout: 120
         			for (let i=0; i < keys.length; i++) {
         				let re = new RegExp(""+keys[i]+"\\b");
         				if (re.test(""+line)) {
-        					log.warn("Key "+ keys[i] +" found:"+found+ " in "+ line);
+        					log.warn("Key "+ keys[i] +" found in "+ line);
         					found = true;
         					break;
         				}
@@ -530,8 +531,8 @@ responseTimeout: 120
         	/*End_c8o_CompFunction*/
         	`;
         		var clipboard = new Clipboard();
-        		var explanation = "";
         		var dataType = "create";
+        		var explanation = "";
         		var data = [];
         		var cpt = 0;
         		
@@ -541,7 +542,14 @@ responseTimeout: 120
         				//log.warn("Extract JSON from message "+ message.id +":\n"+ message.text);
         				log.warn("Extract JSON from message "+ message.id);
         				try {
-        					let jsonOb = extractJSONFromMarkdown(message.text);
+        					//Just to log invalid json string
+        					try {
+        						JSON.parse(message.text);
+        					} catch (e) {
+        						log.error("Invalid json string for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        					}//
+        					
+        					let jsonOb = extractJSONFromMarkdown(formatLiteral(message.text));
         					if (jsonOb != null) {
         						data.push(jsonOb);
         					}
@@ -557,17 +565,17 @@ responseTimeout: 120
         			let jsonOb = null;			
         			try {
         				while (data.length > 0) {
-        					let last = data.pop();
-        					//log.warn("JSONLASTXXXXXXXX:\n"+ JSON.stringify(last));
-        					if (last != null && last != undefined) {
-        						if (Array.isArray(last)) {
+        					let cur = data.shift();
+        					//log.warn("JSONCURXXXXXXXX:\n"+ JSON.stringify(cur));
+        					if (cur != null && cur != undefined) {
+        						if (Array.isArray(cur)) {
         							try {
-        								jsonpatch.apply(jsonOb, last);
+        								jsonpatch.apply(jsonOb, cur);
         							} catch (e) {
         								log.error("Failed to apply jsonpatch: "+ e.message);
         							}
         						} else {
-        							jsonOb = last;
+        							jsonOb = cur;
         						}
         					}
         				}
@@ -577,7 +585,7 @@ responseTimeout: 120
         			}
         			
         			if (jsonOb != null) {
-        				log.warn("JSONResponse:\n"+ JSON.stringify(jsonOb, null, "\t"));
+        				log.warn("JSON stringified:\n"+ JSON.stringify(jsonOb, null, "\t"));
         				dataType = dataLength == 1 ? "create":"edit";
         				
         				try {
@@ -963,11 +971,6 @@ responseTimeout: 120
   wsdl: false
 ↓threadid [variables.RequestableVariable-1744206384502]: 
 ↓runid [variables.RequestableVariable-1744389554413]: 
-↓TestOK [core.TestCase]: 
-  ↓threadid [variables.TestCaseVariable-1744206412966]: 
-    value: thread_cDTR5P2IM1QO1fh0xNfu7VsU
 ↓TestStub [core.TestCase]: 
-  ↓threadid [variables.TestCaseVariable-1744901628223]: 
-  ↓runid [variables.TestCaseVariable-1744901628225]: 
   ↓fromStub [variables.TestCaseVariable-1744901628227]: 
     value: true

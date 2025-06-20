@@ -1,0 +1,153 @@
+responseTimeout: 80
+↓inputVars [steps.InputVariablesStep-1750343729893]: 
+  output: true
+↓init [steps.SimpleStep-1750344526654]: 
+  expression: |
+    var after = null;
+    var max = Number.parseInt(""+limit, 10);
+    var doit = Number.isInteger(max);
+↓element1 [steps.ElementStep-1750346888132]: 
+  expression: doit
+  nodeName: doit
+↓IfIsInDoItTRUE [steps.IsInStep-1750347396096]: 
+  condition: IfIsInDoItTRUE
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1750346888132
+        - java.lang.String: 
+          - ↑value: ./text()
+  testDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: AND
+            - java.lang.String: 
+              - ↑value: true
+  ↓jWhile [steps.WhileStep-1750347873928]: 
+    condition: doit == true
+    ↓page [steps.XMLComplexStep-1750349559945]: 
+      nodeName: page
+      ↓attribute [steps.AttributeStep-1750349629392]: 
+        expression: after
+        nodeName: after
+      ↓element [steps.ElementStep-1750348030051]: 
+        expression: after
+        nodeName: after
+        output: false
+      ↓Call_Transaction3 [steps.TransactionStep-1750348129244]: 
+        output: true
+        sourceTransaction: ConvertigoAssistant.OpenAI.CheckMessages
+        ↓threadid [variables.StepVariable-1750348129247]: 
+        ↓order [variables.StepVariable-1750348129250]: 
+          description: order
+        ↓limit [variables.StepVariable-1750348129253]: 
+          description: limit
+        ↓after [variables.StepVariable-1750348129256]: 
+          description: after
+          sourceDefinition: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1750348030051
+                - java.lang.String: 
+                  - ↑value: ./text()
+      ↓hasMore [steps.SimpleSourceStep-1750348489981]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1750348129244
+              - java.lang.String: 
+                - ↑value: ./document/object/has_more/text()
+        variableName: has_more
+      ↓IfIsIn [steps.IsInThenElseStep-1750348489984]: 
+        condition: IfIsIn
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1750348129244
+              - java.lang.String: 
+                - ↑value: ./document/object/has_more/text()
+        testDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: AND
+                  - java.lang.String: 
+                    - ↑value: true
+        ↓jThen [steps.ThenStep-1750348489987]: 
+          ↓lastId [steps.SimpleSourceStep-1750348489990]: 
+            sourceDefinition: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1750348129244
+                  - java.lang.String: 
+                    - ↑value: ./document/object/last_id/text()
+            variableName: last_id
+          ↓setAfterToLastId [steps.SimpleStep-1750348489993]: 
+            expression: after = ""+ last_id;
+        ↓jElse [steps.ElseStep-1750348489996]: 
+          ↓stop [steps.SimpleStep-1750348489999]: 
+            expression: |
+              after = null;
+              doit = false;
+↓threadid [variables.RequestableVariable-1750345453728]: 
+↓order [variables.RequestableVariable-1750345453730]: 
+  description: order
+  value: asc
+↓limit [variables.RequestableVariable-1750345453732]: 
+  description: limit
+  value: 20
+↓Test_Case_thread_5OtYXu2sBw6p8vmsxz0A1AbL_Asc [core.TestCase]: 
+  ↓threadid [variables.TestCaseVariable-1750404338482]: 
+    value: thread_5OtYXu2sBw6p8vmsxz0A1AbL
+  ↓order [variables.TestCaseVariable-1750404338485]: 
+    description: order
+    value: asc
+  ↓limit [variables.TestCaseVariable-1750404338488]: 
+    description: limit
+    value: 20
+↓Test_Case_thread_5OtYXu2sBw6p8vmsxz0A1AbL_Desc [core.TestCase]: 
+  ↓threadid [variables.TestCaseVariable-1750404343211]: 
+    value: thread_5OtYXu2sBw6p8vmsxz0A1AbL
+  ↓order [variables.TestCaseVariable-1750404343214]: 
+    description: order
+    value: desc
+  ↓limit [variables.TestCaseVariable-1750404343217]: 
+    description: limit
+    value: 20
+↓Test_Case_thread_u9QUti2ix1KyH9oPn691vsAv1_Asc [core.TestCase]: 
+  ↓threadid [variables.TestCaseVariable-1750357245816]: 
+    value: thread_u9QUti2ix1KyH9oPn691vsAv
+  ↓order [variables.TestCaseVariable-1750357245819]: 
+    description: order
+    value: asc
+  ↓limit [variables.TestCaseVariable-1750357245822]: 
+    description: limit
+    value: 20
+↓Test_Case_thread_u9QUti2ix1KyH9oPn691vsAv_Desc [core.TestCase]: 
+  ↓threadid [variables.TestCaseVariable-1750346466219]: 
+    value: thread_u9QUti2ix1KyH9oPn691vsAv
+  ↓order [variables.TestCaseVariable-1750346466221]: 
+    description: order
+    value: desc
+  ↓limit [variables.TestCaseVariable-1750346466223]: 
+    description: limit
+    value: 20

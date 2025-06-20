@@ -1,3 +1,4 @@
+responseTimeout: 80
 ↓jIfThenElse [steps.IfThenElseStep-1748450886240]: 
   condition: threadid == null
   ↓jThen [steps.ThenStep-1748450887723]: 
@@ -27,13 +28,9 @@
               - ↑value: 1748451097185
             - java.lang.String: 
               - ↑value: .//document/object/*
-    ↓Call_Transaction3 [steps.TransactionStep-1749567488915]: 
-      output: true
-      sourceTransaction: ConvertigoAssistant.OpenAI.CheckMessages
-      ↓threadid [variables.StepVariable-1749567488918]: 
-      ↓order [variables.StepVariable-1749569043439]: 
-        description: order
-        value: asc
+    ↓Call_Sequence [steps.SequenceStep-1750355487393]: 
+      sourceSequence: ConvertigoAssistant.GetMessages
+      ↓threadid [variables.StepVariable-1750355487399]: 
     ↓message [steps.JsonArrayStep-1749567488921]: 
       key: 
         - xmlizable: 
@@ -48,9 +45,9 @@
             - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
             - com.twinsoft.convertigo.beans.common.XMLVector: 
               - java.lang.String: 
-                - ↑value: 1749567488915
+                - ↑value: 1750355487393
               - java.lang.String: 
-                - ↑value: ./document/object/data/object
+                - ↑value: ./document/page/transaction/document/object/data/object
         ↓Message [steps.JsonObjectStep-1749567488927]: 
           output: false
           ↓Iterator [steps.IteratorStep-1749567488930]: 
@@ -130,6 +127,8 @@
       expression: |
         'with (new JavaImporter(
         )) {
+        	include("js/format.js");
+        	
         	function getExplanation(jsonObject) {
         		try {
         			if (''JsonResponse'' in jsonObject) {
@@ -158,31 +157,41 @@
         			let message = Messages[i];
         			if (message.role && message.text != null && message.text != "") {
         				//log.warn("Extract JSON from message "+ message.id +":\n"+ message.text);
-        				log.warn("Extract JSON from message "+ message.id);
+        				log.warn("(buildMsg) Extract JSON from message "+ message.id);
         				try {
-        					var text = message.text;
-        					if (message.role == "assistant") {
-        						text = getExplanation(JSON.parse(message.text));
-        						if (text == null || text == undefined) {
-        							text = "explanation: invalid or not found";
-        						}
+        					var text = null;
+        					if (message.role == "user") {
+        						text = message.text;
+        					} else if (message.role == "assistant") {
+        						//Just to log invalid json string
+        						try {
+        							JSON.parse(message.text);
+        						} catch (e) {
+        							log.error("(buildMsg) Invalid json string for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        						}//
+        						
+        						text = getExplanation(JSON.parse(formatLiteral(message.text)));
         					}
-        					log.warn("Text from message "+ text);
+        					
+        					if (text == null || text == undefined) {
+        						text = "explanation: invalid or not found";
+        					}
+        					
         					let msg = {
         						type: message.role,
-        						msg: text,
         						id: message.id,
+        						msg: text,
         					}
         					data.push(msg);
         				} catch (e) {
-        					log.error("Failed to handle message "+ message.id +": "+ e.message);
+        					log.error("(buildMsg) Failed to handle message "+ message.id +": "+ e.message);
         				}
         			}
         		}
         		
         		var jsonAData = {
-        			"messages": data,
         			"threadid": threadid,
+        			"messages": data
         		};
         
         		return jsonAData;

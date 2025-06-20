@@ -32,8 +32,16 @@ server: api.openai.com
   subDir: threads/{threadid}/messages
   ↓threadid [variables.RequestableHttpVariable-1744031161931]: 
   ↓order [variables.RequestableHttpVariable-1749568991736]: 
+    description: order
     httpName: order
-    value: desc
+    value: asc
+  ↓limit [variables.RequestableHttpVariable-1750343843974]: 
+    description: limit
+    httpName: limit
+    value: 20
+  ↓after [variables.RequestableHttpVariable-1750343791158]: 
+    description: after
+    httpName: after
 ↓CheckRun [transactions.JsonHttpTransaction-1744026459613]: 
   ↑default: true
   httpParameters: 

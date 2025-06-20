@@ -44,6 +44,22 @@ comment
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableHttpVariable" >&nbsp;after
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableHttpVariable" >&nbsp;limit
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableHttpVariable" >&nbsp;order
 </td>
 <td>
@@ -402,6 +418,60 @@ comment
 
 </p></blockquote></details>
 
+<details><summary><b>GetMessages</b></summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") GetMessages
+
+
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;limit
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;order
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;threadid
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
+<details><summary><b>GetMessagesTests</b></summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") GetMessagesTests
+
+
+</p></blockquote></details>
+
 <details><summary><b>GetTokenBuffer</b></summary><blockquote><p>
 
 
@@ -545,7 +615,7 @@ Describes the mobile application global properties
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") Page
 
-My First Page as root page
+AI Component Assistant Page
 </p></blockquote></details>
 
 <details><summary><span style="color:DarkGoldenRod"><i>Shared Components</i></span></summary><blockquote><p>
@@ -791,12 +861,12 @@ comment
 
 </p></blockquote></details>
 
-<details><summary><b>TypeWriterComponent</b> : -- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh</summary><blockquote><p>
+<details><summary><b>TypeWriterComponent</b> : -- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh---</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uisharedcomponent_16x16.png?raw=true "UISharedRegularComponent") TypeWriterComponent
 
--- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh
+-- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh---
 
 <span style="color:DarkGoldenRod">Variables</span>
 

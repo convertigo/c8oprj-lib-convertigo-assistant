@@ -41,6 +41,10 @@ scriptContent:
         		} else {
         		  this.imagePreview = null;
         		}
+        		
+        		try {
+        			this.findPageOwner()["content"].scrollToBottom();
+        		} catch (e) {}
         		/*End_c8o_CompAfterViewInit*/
         /*Begin_c8o_CompAfterViewChecked*/
         		/*End_c8o_CompAfterViewChecked*/
