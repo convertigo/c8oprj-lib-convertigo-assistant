@@ -163,14 +163,17 @@ responseTimeout: 80
         					if (message.role == "user") {
         						text = message.text;
         					} else if (message.role == "assistant") {
-        						//Just to log invalid json string
+        						let json = message.text;
+        						//Just to log invalid json string and try to fix it
         						try {
-        							JSON.parse(message.text);
+        							JSON.parse(json);
         						} catch (e) {
-        							log.error("(buildMsg) Invalid json string for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        							log.warn("(buildMsg) Invalid json string for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        							json = fixMalformedJson(message.text);
         						}//
         						
-        						text = getExplanation(JSON.parse(formatLiteral(message.text)));
+        						//text = getExplanation(JSON.parse(formatLiteral(message.text)));
+        						text = getExplanation(JSON.parse(json));
         					}
         					
         					if (text == null || text == undefined) {

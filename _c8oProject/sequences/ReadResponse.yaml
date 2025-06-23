@@ -12,6 +12,15 @@ responseTimeout: 120
             - ↑value: 1744901534491
           - java.lang.String: 
             - ↑value: ./fromStub/text()
+  ↓__stub_filename [variables.StepVariable-1750432311159]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744901534491
+          - java.lang.String: 
+            - ↑value: ./fromStubFileName/text()
   ↓threadid [variables.StepVariable-1750351228481]: 
 ↓message [steps.JsonArrayStep-1744736404624]: 
   key: 
@@ -179,7 +188,7 @@ responseTimeout: 120
         		}
         		return null;
         	}
-        	
+        /*	
         	function extractJSONFromMarkdown(md) {
         	  let jsonOb = null;
         	  try {
@@ -211,7 +220,7 @@ responseTimeout: 120
         	  }
         	  return jsonOb;
         	}
-        	
+        */	
         	function getBeanKey(tag) {
         		var beanKey = undefined;
         		if (cm != null) {
@@ -499,7 +508,7 @@ responseTimeout: 120
         		}
         		return found;
         	}
-        	
+        
         	function getComponentFromMessages(Messages) {
         	const start = Date.now();
         	var scriptContent = `
@@ -542,14 +551,18 @@ responseTimeout: 120
         				//log.warn("Extract JSON from message "+ message.id +":\n"+ message.text);
         				log.warn("Extract JSON from message "+ message.id);
         				try {
-        					//Just to log invalid json string
+        					let json = message.text;
+        					//Just to log invalid json string and try to fix it
         					try {
-        						JSON.parse(message.text);
+        						JSON.parse(json);
         					} catch (e) {
-        						log.error("Invalid json string for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        						log.warn("Invalid json string detected for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        						json = fixMalformedJson(message.text);
         					}//
         					
-        					let jsonOb = extractJSONFromMarkdown(formatLiteral(message.text));
+        					//let jsonOb = extractJSONFromMarkdown(formatLiteral(message.text));
+        					//let jsonOb = extractJSONFromMarkdown(json);
+        					let jsonOb = findMatchingObject(JSON.parse(json));
         					if (jsonOb != null) {
         						data.push(jsonOb);
         					}
@@ -969,8 +982,14 @@ responseTimeout: 120
 ↓fromStub [variables.RequestableVariable-1744901364156]: 
   value: false
   wsdl: false
+↓fromStubFileName [variables.RequestableVariable-1750432336672]: 
 ↓threadid [variables.RequestableVariable-1744206384502]: 
 ↓runid [variables.RequestableVariable-1744389554413]: 
 ↓TestStub [core.TestCase]: 
   ↓fromStub [variables.TestCaseVariable-1744901628227]: 
     value: true
+↓TestStubInvalidJson [core.TestCase]: 
+  ↓fromStub [variables.TestCaseVariable-1750431645455]: 
+    value: true
+  ↓fromStubFileName [variables.TestCaseVariable-1750431990904]: 
+    value: GetMessages_invalid.xml
