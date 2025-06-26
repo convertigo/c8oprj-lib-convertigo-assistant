@@ -8,6 +8,7 @@ scriptContent:
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
         	@ViewChild("btnReset", { static: false }) public btnReset;
+        	disabled = false;
         	previews = {};
         	/*End_c8o_CompDeclaration*/
         /*Begin_c8o_CompConstructor*/
@@ -29,6 +30,12 @@ scriptContent:
         /*Begin_c8o_CompAfterViewChecked*/
         		/*End_c8o_CompAfterViewChecked*/
         /*Begin_c8o_CompFunction*/
+        	setEnable(enable) {
+        		this.disabled = !enable;
+        		this.tick();
+        		//this.c8o.log.warn("disabled:"+ this.disabled);
+        	}
+        	
         	previewImage(f) {
         		const reader = new FileReader();
         		reader.onload = (e) => {
@@ -44,7 +51,6 @@ scriptContent:
         		for (let i=0; i< this.Files.length; i++) {
         			this.previewImage(this.Files[i]);
         		}
-        		//this.FilesAdded.emit({files: this.Files});
         	}
         	
         	onKeyEnter(event: KeyboardEvent): void {
@@ -77,7 +83,7 @@ scriptContent:
         '
 ↓Fragment [ngx.components.UICustom-1749652210265]: 
   htmlTemplate: |
-    <ion-item lines="none" class="chat-input-container">
+    <ion-item lines="none" [disabled]="this.disabled" class="chat-input-container">
       <ion-icon name="add-outline" slot="start" (click)="fileInput.click()" title="Add image"></ion-icon>
       <form>
     	  <input

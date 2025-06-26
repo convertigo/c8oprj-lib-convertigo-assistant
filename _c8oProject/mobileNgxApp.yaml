@@ -622,11 +622,21 @@ tplProjectName: mobilebuilder_tpl_8_3_0_ngx
             		};
             		
             		window[''setupMessageListener'']((msg) => {
-            			if (msg.type == ''init'') {
+            			//page.c8o.log.warn("msg:"+JSON.stringify(msg));
+            			if (''init'' == msg.type) {
             				page.global.studio = true;
             			}
+            			
+            			if (page.global.studio) {
+            				if (''select'' == msg.type) {
+            					page.global.projectName = msg.projectName;
+            					page.global.threadQname = msg.threadQname;
+            					page.tick();
+            					page.getInstance(Events).publish("JavaMessage",{});
+            				}
+            			}
             		});
-            		
+            
             		resolve();
             '
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 

@@ -9,24 +9,64 @@ scriptContent:
         '/*Begin_c8o_PageImport*/
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
+        	private threadid = null;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
-        		/*End_c8o_PageConstructor*/
-        /*Begin_c8o_PageFunction*/
-        	public getLocalThreadId() {
-        		let threadid = null;
         		this.c8o.log.warn("[Assistant] navParams: "+ JSON.stringify(this.navParams));
         		console.log("[Assistant] navParams ", this.navParams);
         		try {
+        			this.threadid = null;
         			if (this.navParams.data["threadid"]) {
         				if (this.navParams.data["threadid"] != ":threadid") {
-        					threadid = this.navParams.data["threadid"];
+        					this.threadid = this.navParams.data["threadid"];
         				}
         			}
         		} catch (e) {}
-        		this.c8o.log.warn("[Assistant] loading with threadid: "+ threadid);
-        		this.log("[Assistant] loading with threadid: "+ threadid);
-        		return threadid;
+        		this.c8o.log.warn("[Assistant] loading with threadid: "+ this.threadid);
+        		this.log("[Assistant] loading with threadid: "+ this.threadid);
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageFunction*/
+        	public debug() {
+        		if (this.global.studio) {
+        			this.c8o.log.warn("[Page] this.threadid: "+ this.threadid);
+        			this.c8o.log.warn("[Page] this.local.Conversation: "+ this.local.Conversation);
+        			this.c8o.log.warn("[Page] this.isEditionMode: "+ this.isEditionMode());
+        			this.c8o.log.warn("[Page] local: "+ JSON.stringify(this.local));
+        			this.c8o.log.warn("[Page] global: "+ JSON.stringify(this.global));
+        		}
+        	}
+        	
+        	public getLocalThreadId() {
+        		return this.threadid;
+        	}
+        	
+        	public isEditionMode() {
+        		return this.threadid === this.local.Conversation;
+        	}
+        	
+        	public setEnableChat() {
+        		if (this.global.studio) {
+        			let enable = this.isEditionMode();
+        			if (!enable) {
+        				enable = this.global.projectName != undefined && this.global.projectName !== "";
+        			}
+        			this.chatinput.setEnable(enable);
+        		}
+        	}
+        	
+        	public getProjectHeading() {
+        		if (this.global.studio) {
+        			if (this.isEditionMode()) {
+        				let compname = this.global.threadQname;
+        				try {compname = compname.substring(compname.lastIndexOf(".")+1)} catch (e) {}
+        				return ": edition of " + compname;
+        			}
+        			if (this.global.projectName == undefined || this.global.projectName === "") {
+        				return ": Please select an NGX project !"
+        			}
+        			return ": creation for " + this.global.projectName;
+        		}
+        		return ": " + this.local.Conversation;
         	}
         	/*End_c8o_PageFunction*/
         '
@@ -52,20 +92,33 @@ title: Component assistant
       beanData: '{"ionBean":"BarTitle"}'
       tagName: ion-title
       ↓Text [ngx.components.UIText-1491634275121]: 
+        isEnabled: false
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:Convertigo AI assistant  (
       ↓Text1 [ngx.components.UIText-1744701439953]: 
+        isEnabled: false
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
       ↓Text2 [ngx.components.UIText-1744701456174]: 
+        isEnabled: false
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:)
+      ↓Text4 [ngx.components.UIText-1750678138153]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Component assistant
+      ↓Text5 [ngx.components.UIText-1750678138156]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getProjectHeading()
     ↓ButtonSet2 [ngx.components.UIDynamicElement-1588170811054]: 
       beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
       tagName: ion-buttons
@@ -132,6 +185,15 @@ title: Component assistant
                      "Property": "plain:Conversation",
                      "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                     }'
+                  ↓enableChat [ngx.components.UICustomAction-1750760389223]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.setEnableChat();	
+                            		resolve();
+                            
                 ↓ChatReset [ngx.components.UICustomAction-1749803261384]: 
                   actionValue: 
                     - xmlizable: 
@@ -440,6 +502,15 @@ title: Component assistant
              "Property": "plain:Conversation",
              "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
+          ↓enableChat [ngx.components.UICustomAction-1750760591426]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setEnableChat();	
+                    		resolve();
+                    
         ↓threadid [ngx.components.UIControlVariable-1748451291690]: 
           varValue: 
             - xmlizable: 
@@ -862,6 +933,7 @@ title: Component assistant
     ↓Event1 [ngx.components.UIControlEvent-1749730258545]: 
       attrName: (FilesAdded)
       eventName: FilesAdded
+      isEnabled: false
       ↓CallSequence [ngx.components.UIDynamicAction-1749730933878]: 
         beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.UploadFiles"}'
         isEnabled: false
@@ -946,3 +1018,14 @@ title: Component assistant
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:local.InputFiles
+↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1750758766481]: 
+  topic: JavaMessage
+  ↓enableChat [ngx.components.UICustomAction-1750759185953]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.setEnableChat();	
+            		resolve();
+            
