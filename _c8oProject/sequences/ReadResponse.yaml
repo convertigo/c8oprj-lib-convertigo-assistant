@@ -509,6 +509,24 @@ responseTimeout: 120
         		return found;
         	}
         
+        	function getLines(ob) {
+        		try {			
+        			if (Array.isArray(ob)) {
+        				return ob;
+        			} else {
+        				let arr = [];
+        				for (let key in ob) {
+        					arr.push(ob[''key'']);
+        				}
+        				return arr;
+        			}
+        		}
+        		catch (e) {
+        			log.error("Failed to getLines: "+ e.message);
+        		}
+        		return [];
+        	}
+        	
         	function getComponentFromMessages(Messages) {
         	const start = Date.now();
         	var scriptContent = `
@@ -706,12 +724,7 @@ responseTimeout: 120
         								var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
         								uicv.setName(key);
         								uicv.setComment(variable.description);
-        								//log.warn("input variable "+ key +"["+ typeof variable.type +"]: "+ variable.value);
-        								/*if ("string" == variable.type) {
-        									uicv.setVariableValue("''"+ new String(variable.value).replace(/''/g, "\\''") +"''");
-        								} else {
-        									uicv.setVariableValue(JSON.stringify(variable.value));
-        								}*/
+        
         								var value = variable.value;
         								log.warn("input variable "+ key +"["+ typeof variable.type +"]: "+ value);
         								if ("string" == variable.type) {
@@ -759,92 +772,128 @@ responseTimeout: 120
         								var ngAfterViewCheckedMarker = NgxBuilder.getMarker(scriptContent, "CompAfterViewChecked");
         								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
         								
-        								//var customIMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompImport");
         								var customIMarker = "/*Begin_c8o_CompImport*/\n";
-        								for (let key in jsonOb.interfaces) {
-        									customIMarker += jsonOb.interfaces[key] + "\n";
+        								try {
+        									for (let key in jsonOb.interfaces) {
+        										customIMarker += jsonOb.interfaces[key] + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompImport marker: "+ e.message);
         								}
         								customIMarker += "/*End_c8o_CompImport*/\n";
         								
-        								//var customDMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDeclaration");
         								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
-        								jsonOb["declarations"].forEach((line) => {
-        									if (!isMapDeclarationLine(jsonOb.variables, line) && 
-        										!isArrDeclarationLine(jsonOb["emitters"], line)) {
-        										customDMarker += line + "\n";
-        									}
-        								});
+        								try {
+        									getLines(jsonOb["declarations"]).forEach((line) => {
+        										if (!isMapDeclarationLine(jsonOb.variables, line) && 
+        											!isArrDeclarationLine(jsonOb["emitters"], line)) {
+        											customDMarker += line + "\n";
+        										}
+        									});
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompDeclaration marker: "+ e.message);
+        								}
         								customDMarker += "/*End_c8o_CompDeclaration*/\n";
         
-        								//var customCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompConstructor");
         								var customCMarker = "/*Begin_c8o_CompConstructor*/\n";
-        								if (jsonOb.constructor != null) {
-        									customCMarker += getInnerCode(jsonOb.constructor) + "\n";
+        								try {
+        									if (jsonOb.constructor != null) {
+        										customCMarker += getInnerCode(jsonOb.constructor) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompConstructor marker: "+ e.message);
         								}
         								customCMarker += "/*End_c8o_CompConstructor*/\n";
         								
-        								//var customInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompInitialization");
         								var customInitMarker = "/*Begin_c8o_CompInitialization*/\n";
-        								if (jsonOb.ngOnInit != null) {
-        									customInitMarker += getInnerCode(jsonOb.ngOnInit) + "\n";
+        								try {
+        									if (jsonOb.ngOnInit != null) {
+        										customInitMarker += getInnerCode(jsonOb.ngOnInit) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompInitialization marker: "+ e.message);
         								}
         								customInitMarker += "/*End_c8o_CompInitialization*/\n";
         								
-        								//var customDestroyMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFinalization");
         								var customDestroyMarker = "/*Begin_c8o_CompFinalization*/\n";
-        								if (jsonOb.ngOnDestroy != null) {
-        									customDestroyMarker += getInnerCode(jsonOb.ngOnDestroy) + "\n";
+        								try {
+        									if (jsonOb.ngOnDestroy != null) {
+        										customDestroyMarker += getInnerCode(jsonOb.ngOnDestroy) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompFinalization marker: "+ e.message);
         								}
         								customDestroyMarker += "/*End_c8o_CompFinalization*/\n";
         								
-        								//var customNgCMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompChanges");
         								var customNgCMarker = "/*Begin_c8o_CompChanges*/\n";
-        								if (jsonOb.ngOnChanges != null) {
-        									customNgCMarker += getInnerCode(jsonOb.ngOnChanges) + "\n";
+        								try {
+        									if (jsonOb.ngOnChanges != null) {
+        										customNgCMarker += getInnerCode(jsonOb.ngOnChanges) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompChanges marker: "+ e.message);
         								}
         								customNgCMarker += "/*End_c8o_CompChanges*/\n";
         								
-        								//var customNgDoCheckMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompDoCheck");
         								var customNgDoCheckMarker = "/*Begin_c8o_CompDoCheck*/\n";
-        								if (jsonOb.ngDoCheck != null) {
-        									customNgDoCheckMarker += getInnerCode(jsonOb.ngDoCheck) + "\n";
+        								try {
+        									if (jsonOb.ngDoCheck != null) {
+        										customNgDoCheckMarker += getInnerCode(jsonOb.ngDoCheck) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompDoCheck marker: "+ e.message);
         								}
         								customNgDoCheckMarker += "/*End_c8o_CompDoCheck*/\n";
         								
-        								//var customNgAfterContentInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentInit");
         								var customNgAfterContentInitMarker = "/*Begin_c8o_CompAfterContentInit*/\n";
-        								if (jsonOb.ngAfterContentInit != null) {
-        									customNgAfterContentInitMarker += getInnerCode(jsonOb.ngAfterContentInit) + "\n";
+        								try {
+        									if (jsonOb.ngAfterContentInit != null) {
+        										customNgAfterContentInitMarker += getInnerCode(jsonOb.ngAfterContentInit) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompAfterContentInit marker: "+ e.message);
         								}
         								customNgAfterContentInitMarker += "/*End_c8o_CompAfterContentInit*/\n";
         								
-        								//var customNgAfterContentCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterContentChecked");
         								var customNgAfterContentCheckedMarker = "/*Begin_c8o_CompAfterContentChecked*/\n";
-        								if (jsonOb.ngAfterContentChecked != null) {
-        									customNgAfterContentCheckedMarker += getInnerCode(jsonOb.ngAfterContentChecked) + "\n";
+        								try {
+        									if (jsonOb.ngAfterContentChecked != null) {
+        										customNgAfterContentCheckedMarker += getInnerCode(jsonOb.ngAfterContentChecked) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompAfterContentChecked marker: "+ e.message);
         								}
         								customNgAfterContentCheckedMarker += "/*End_c8o_CompAfterContentChecked*/\n";
         								
-        								//var customNgAfterViewInitMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewInit");
         								var customNgAfterViewInitMarker = "/*Begin_c8o_CompAfterViewInit*/\n";
-        								if (jsonOb.ngAfterViewInit != null) {
-        									customNgAfterViewInitMarker += getInnerCode(jsonOb.ngAfterViewInit) + "\n";
+        								try {
+        									if (jsonOb.ngAfterViewInit != null) {
+        										customNgAfterViewInitMarker += getInnerCode(jsonOb.ngAfterViewInit) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompAfterViewInit marker: "+ e.message);
         								}
         								customNgAfterViewInitMarker += "/*End_c8o_CompAfterViewInit*/\n";
         								
-        								//var customNgAfterViewCheckedMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompAfterViewChecked");
         								var customNgAfterViewCheckedMarker = "/*Begin_c8o_CompAfterViewChecked*/\n";
-        								if (jsonOb.ngAfterViewChecked != null) {
-        									customNgAfterViewCheckedMarker += getInnerCode(jsonOb.ngAfterViewChecked) + "\n";
+        								try {
+        									if (jsonOb.ngAfterViewChecked != null) {
+        										customNgAfterViewCheckedMarker += getInnerCode(jsonOb.ngAfterViewChecked) + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompAfterViewChecked marker: "+ e.message);
         								}
         								customNgAfterViewCheckedMarker += "/*End_c8o_CompAfterViewChecked*/\n";
         								
-        								//var customFMarker = NgxBuilder.getMarker(jsonOb.typescript, "CompFunction");
         								var customFMarker = "/*Begin_c8o_CompFunction*/\n";
-        								for (let key in jsonOb.functions) {
-        									if (!key.startsWith("ng")) {
-        										customFMarker += jsonOb.functions[key] + "\n";
+        								try {
+        									for (let key in jsonOb.functions) {
+        										if (!key.startsWith("ng")) {
+        											customFMarker += jsonOb.functions[key] + "\n";
+        										}
         									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompFunction marker: "+ e.message);
         								}
         								customFMarker += "/*End_c8o_CompFunction*/\n";
         								

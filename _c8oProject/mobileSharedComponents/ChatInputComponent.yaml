@@ -7,6 +7,7 @@ scriptContent:
         import { ViewChild } from ''@angular/core'';
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
+        	@ViewChild("fileInput", { static: false }) public fileInput;
         	@ViewChild("btnReset", { static: false }) public btnReset;
         	disabled = false;
         	previews = {};
@@ -46,7 +47,23 @@ scriptContent:
         	
         	onFileSelected(event: any) {
         		this.Files = event.target.files;
-        		
+        		//console.log("onFileSelected",this.Files);
+        		this.previews = {};
+        		for (let i=0; i< this.Files.length; i++) {
+        			this.previewImage(this.Files[i]);
+        		}
+        	}
+        	
+        	onDragOver(event) {
+        	    event.preventDefault();
+        	}
+        	
+        	onDrop(event) {
+        		event.preventDefault();
+        		event.stopPropagation();
+        		this.fileInput.nativeElement.files = event.dataTransfer.files;
+        		this.Files = event.dataTransfer.files;
+        		//console.log("onDrop",this.Files);
         		this.previews = {};
         		for (let i=0; i< this.Files.length; i++) {
         			this.previewImage(this.Files[i]);
@@ -54,9 +71,9 @@ scriptContent:
         	}
         	
         	onKeyEnter(event: KeyboardEvent): void {
-        	    if (event.key === ''Enter'') {
-        	      event.preventDefault();
-        	      this.sendMessage();
+        	    if (event.key === ''Enter'' && event.ctrlKey) {
+        	      	event.preventDefault();
+        	      	this.sendMessage();
         	    }
         	}
         	
@@ -98,15 +115,19 @@ scriptContent:
       <ng-container *ngFor="let File of Files">
     	<img *ngIf="this.previews[File.name]" [src]="this.previews[File.name]" class="preview-image" />
       </ng-container>
-      <ion-input
+      <ion-textarea
+      	[autoGrow]="true"
         [(ngModel)]="this.Question"
-        placeholder="Poser une question"
+        placeholder="Poser une question (multi-lignes) et Ctrl+Enter"
     	aria-label="question input"
         class="chat-text-input"
         clearInput
+    	(drop)="this.onDrop($event)"
+    	(dragover)="this.onDragOver($event)"
     	(keydown)="this.onKeyEnter($event)"
-      ></ion-input>
+      ></ion-textarea>
     
+      <ion-icon name="close-outline" slot="end" (click)="reset()" title="Reset"></ion-icon>
       <ion-icon name="mic-outline" slot="end"></ion-icon>
       <ion-button fill="clear" slot="end" (click)="sendMessage()">
         <ion-icon name="send" title="Soumettre"></ion-icon>
