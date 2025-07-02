@@ -475,7 +475,7 @@ responseTimeout: 120
         			}
         			log.warn("Map Keys: "+ keys);
         			for (let i=0; i < keys.length; i++) {
-        				let re = new RegExp(""+keys[i]+"\\b");
+        				let re = new RegExp("^\\s*"+keys[i]+"\\b");
         				if (re.test(""+line)) {
         					log.warn("Key "+ keys[i] +" found in "+ line);
         					found = true;
@@ -496,7 +496,7 @@ responseTimeout: 120
         			}
         			log.warn("Arr Keys: "+ keys);
         			for (let i=0; i < keys.length; i++) {
-        				let re = new RegExp(""+keys[i]+"\\b");
+        				let re = new RegExp("^\\s*"+keys[i]+"\\b");
         				if (re.test(""+line)) {
         					log.warn("Key "+ keys[i] +" found in "+ line);
         					found = true;
@@ -897,14 +897,14 @@ responseTimeout: 120
         								}
         								customFMarker += "/*End_c8o_CompFunction*/\n";
         								
-        								var s1 = "/*End_c8o_CompDeclaration*/";
-        								var s2 = "/*End_c8o_CompConstructor*/";
+        								var s1 = "/*Begin_c8o_CompDeclaration*/";
+        								var s2 = "/*Begin_c8o_CompConstructor*/";
         								if (jsonOb.constructor != null) {
         									//var params = extractConstructorParamsMapFromText(jsonOb.typescript);
         									var params = extractConstructorParamsMapFromText(jsonOb.constructor);
         									params.forEach((value, key) => {
-        										customDMarker = customDMarker.replace(s1, ""+key+" : "+ value + ";\n"+s1);
-        										customCMarker = customCMarker.replace(s2, "this."+key+" = this.injector.get("+ value + ");\n"+s2);
+        										customDMarker = customDMarker.replace(s1, s1+"\n" +key+" : "+ value + ";\n");
+        										customCMarker = customCMarker.replace(s2, s2+"\n" +"this."+key+" = this.injector.get("+ value + ");\n");
         									});
         								}
         								

@@ -85,28 +85,87 @@ responseTimeout: 300
         variableName: files
       ↓jIterator [steps.SimpleIteratorStep-1749743325350]: 
         expression: files
-        ↓object [steps.JsonObjectStep-1749743325356]: 
-          ↓type [steps.JsonFieldStep-1749743325359]: 
-            key: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-                - SmartType: 
-                  - ↑mode: PLAIN
-                  - →→: type
-            value: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-                - SmartType: 
-                  - ↑mode: PLAIN
-                  - →→: image_file
-          ↓image_file [steps.JsonObjectStep-1749743325362]: 
-            key: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-                - SmartType: 
-                  - ↑mode: PLAIN
-                  - →→: image_file
-            ↓content [steps.JsonFieldStep-1749743325365]: 
+        ↓jIf [steps.IfStep-1751374247016]: 
+          condition: item.purpose == 'vision'
+          ↓object [steps.JsonObjectStep-1749743325356]: 
+            ↓type [steps.JsonFieldStep-1749743325359]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: type
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: image_file
+            ↓image_file [steps.JsonObjectStep-1749743325362]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: image_file
+              ↓content [steps.JsonFieldStep-1749743325365]: 
+                key: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: PLAIN
+                      - →→: file_id
+                value: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: JS
+                      - →→: item.id
+              ↓type [steps.JsonFieldStep-1749743325368]: 
+                key: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: PLAIN
+                      - →→: detail
+                value: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: PLAIN
+                      - →→: high
+  ↓IfExist [steps.IfExistStep-1751374316258]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1749739947672
+          - java.lang.String: 
+            - ↑value: ./AIFiles/text()
+    ↓myVariable [steps.JsonSourceStep-1751374316261]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749739947672
+            - java.lang.String: 
+              - ↑value: ./AIFiles/text()
+      variableName: files
+    ↓attachments [steps.JsonArrayStep-1751374373336]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: attachments
+      ↓jIterator [steps.SimpleIteratorStep-1751374316264]: 
+        expression: files
+        ↓jIf [steps.IfStep-1751374316267]: 
+          condition: item.purpose == 'assistants'
+          ↓object [steps.JsonObjectStep-1751374316270]: 
+            ↓content [steps.JsonFieldStep-1751374316279]: 
               key: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
@@ -119,19 +178,41 @@ responseTimeout: 300
                   - SmartType: 
                     - ↑mode: JS
                     - →→: item.id
-            ↓type [steps.JsonFieldStep-1749743325368]: 
+            ↓tools [steps.JsonArrayStep-1751374539014]: 
               key: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
                   - SmartType: 
                     - ↑mode: PLAIN
-                    - →→: detail
-              value: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-                  - SmartType: 
-                    - ↑mode: PLAIN
-                    - →→: high
+                    - →→: tools
+              ↓object [steps.JsonObjectStep-1751374718537]: 
+                ↓type [steps.JsonFieldStep-1751374733875]: 
+                  key: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: type
+                  value: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: file_search
+              ↓object1 [steps.JsonObjectStep-1751374797932]: 
+                ↓type [steps.JsonFieldStep-1751374797935]: 
+                  key: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: type
+                  value: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: code_interpreter
 ↓Call_Transaction1 [steps.TransactionStep-1744201808156]: 
   sourceTransaction: ConvertigoAssistant.OpenAI.Message
   ↓__body [variables.StepVariable-1744201808159]: 

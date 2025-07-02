@@ -24,17 +24,19 @@ scriptContent:
         		/*End_c8o_CompAfterContentChecked*/
         /*Begin_c8o_CompAfterViewInit*/
         		if (this.Files) {
-        			let idx = -1;
         			let len = this.Files.length;
         			for (let i=0; i<len; i++) {
         				let f = this.Files[i];
         				if (f.name == this.file.filename) {
-        					idx = i;
-        					const reader = new FileReader();
-        					reader.onload = (e) => {
-        					  this.imagePreview = e.target?.result;
-        					};
-        					reader.readAsDataURL(f);
+        					if (f.type.startsWith(''image/'')) {
+        						const reader = new FileReader();
+        						reader.onload = (e) => {
+        						  this.imagePreview = e.target?.result;
+        						};
+        						reader.readAsDataURL(f);
+        					} else {
+        						this.imagePreview = ''./assets/attachment.png'';
+        					}
         					break;
         				}
         			};
