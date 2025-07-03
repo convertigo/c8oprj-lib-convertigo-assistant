@@ -635,6 +635,9 @@ tplProjectName: mobilebuilder_tpl_8_3_0_ngx
             					page.tick();
             					page.getInstance(Events).publish("JavaMessage",{});
             				}
+            				if (''capture'' == msg.type) {
+            					page.getInstance(Events).publish("JavaCapture", msg);
+            				}
             			}
             		});
             

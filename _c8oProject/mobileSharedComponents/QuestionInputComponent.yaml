@@ -37,9 +37,65 @@ scriptContent:
         /*Begin_c8o_CompAfterViewChecked*/
         		/*End_c8o_CompAfterViewChecked*/
         /*Begin_c8o_CompFunction*/
+        	
+        	/*
+        	async createFile(path: string, name: string, type: string): Promise<File> {
+        	    let response = await fetch(path);
+        	    let data = await response.blob();
+        	    let metadata = {
+        	        type: type
+        	    };
+        	    return new File([data], name, metadata);
+        	}
+        	async setImage(path: string, name: string, type: string) {
+        		try {
+        			//this.createFile(''../assets/test.png'', ''test.png'', ''image/png'')
+        			//this.createFile(''http://localhost:18080/convertigo/projects/CATest/marketplace/screen1.jpg'', ''screen1.jpg'', ''image/jpg'')
+        			const file = await this.createFile(path, name, type);
+        			const files = [];
+        			files.push(file);
+        			this.addFiles(files, true);
+        			this.c8o.log.warn("setImage done !");
+        			this.refresh(200);
+        		} catch (e) {
+        			this.c8o.log.warn("setImage failed: "+ e.message);
+        		}
+        	}
+        	*/
+        	
+        	base64ToFile(base64String: string, name: string, type: string) {
+        	  const byteString = atob(base64String.split('','')[1]); // supprime le préfixe data:...base64,
+        	  const ab = new ArrayBuffer(byteString.length);
+        	  const ia = new Uint8Array(ab);
+        
+        	  for (let i = 0; i < byteString.length; i++) {
+        	    ia[i] = byteString.charCodeAt(i);
+        	  }
+        
+        	  return new File([ab], name, { type: type });
+        	}
+        	
+        	setImage(base64String: string, name: string, type: string) {
+        		try {
+        			const file = this.base64ToFile(base64String, name, type);
+        			const files = [];
+        			files.push(file);
+        			this.addFiles(files, true);
+        			this.refresh(200);
+        		} catch (e) {
+        			this.c8o.log.warn("setImage failed: "+ e.message);
+        		}
+        	}
+        	
+        	refresh(timeout: number) {
+        		setTimeout(() => {
+        		  this.tick();//this.ref.detectChanges();
+        		}, timeout);
+        	}
+        	
         	setEnable(enable) {
         		this.disabled = !enable;
-        		this.tick();
+        		this.refresh(0);
         		//this.c8o.log.warn("disabled:"+ this.disabled);
         	}
         	
@@ -118,6 +174,7 @@ scriptContent:
         	
         	removeFile(filename) {
         		try {
+        			//this.c8o.log.warn(''removeFile: ''+ filename);
         			if (this.Files.length > 0) {
         				const dataTransfer = new DataTransfer();
         				
@@ -142,6 +199,9 @@ scriptContent:
         				this.attachInput.nativeElement.files = attachTransfer.files;
         				
         				this.Files = dataTransfer.files;
+        				
+        				this.refresh(0);
+        				
         				console.log("this.Files",this.Files);
         				console.log("imageInput.files",this.imageInput.nativeElement.files);
         				console.log("attachInput.files",this.attachInput.nativeElement.files);
@@ -177,6 +237,10 @@ scriptContent:
         		console.log("images",this.imageInput.nativeElement.files);
         		console.log("attachments",this.attachInput.nativeElement.files);
         		this.RunQuestion.emit({images: images, attachments: attachments});
+        	}
+        	
+        	requestCapture() {
+        		this.RequestCapture.emit({});
         	}
         	
         	reset() {
@@ -246,7 +310,7 @@ scriptContent:
         '
 ↓Fragment [ngx.components.UICustom-1751017536963]: 
   htmlTemplate: |
-    <ion-card class="input-card" [disabled]="this.disabled">
+    <ion-card class="input-card" [disabled]="disabled">
       <ion-item lines="none">
     	<ng-container *ngIf="Files && Files.length > 0">
     		<ng-container *ngFor="let file of Files; index as i">
@@ -284,6 +348,9 @@ scriptContent:
       </ion-item>
     
       <ion-item lines="none" class="tools-bar">
+    	<ion-button fill="clear" (click)="requestCapture()" title="Prendre une image">
+    	  <ion-icon name="camera-outline"></ion-icon>
+    	</ion-button>
         <ion-button fill="clear" (click)="imageInput.click()" title="Ajouter une image">
           <ion-icon name="image-outline"></ion-icon>
         </ion-button>
@@ -387,6 +454,8 @@ scriptContent:
           	  --background: transparent;
           	}
           }'
+↓RequestCapture [ngx.components.UICompEvent-1751553244973]: 
+  attrName: RequestCapture
 ↓RunQuestion [ngx.components.UICompEvent-1751018056758]: 
   attrName: RunQuestion
 ↓FilesAdded [ngx.components.UICompEvent-1751018056761]: 

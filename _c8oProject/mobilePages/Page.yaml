@@ -44,6 +44,12 @@ scriptContent:
         		return this.threadid === this.local.Conversation;
         	}
         	
+        	public setChatImage(filedata, filename, filetype) {
+        		if (this.global.studio) {
+        			this.chatinput.setImage(filedata, filename, filetype);
+        		}
+        	}
+        	
         	public setEnableChat() {
         		if (this.global.studio) {
         			let enable = this.isEditionMode();
@@ -1274,6 +1280,21 @@ title: Component assistant
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:local.InputFiles
+    ↓Event1 [ngx.components.UIControlEvent-1751553343810]: 
+      attrName: (RequestCapture)
+      eventName: RequestCapture
+      ↓takeCapture [ngx.components.UICustomAction-1751553366026]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                		window[''sendToHost'']({
+                			type: ''capture''
+                		});
+                		resolve();
+                '
 ↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1750758766481]: 
   topic: JavaMessage
   ↓enableChat [ngx.components.UICustomAction-1750759185953]: 
@@ -1285,3 +1306,19 @@ title: Component assistant
             		page.setEnableChat();	
             		resolve();
             
+↓Subscribe_Handler2 [ngx.components.UIEventSubscriber-1751537016993]: 
+  topic: JavaCapture
+  ↓CustomAction [ngx.components.UICustomAction-1751537016996]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		if ("capture" == event.type) {
+            			//page.c8o.log.warn("event: "+JSON.stringify(event));
+            			//page.setChatImage(event.fileurl, event.filename, event.filetype);
+            			page.setChatImage(event.filedata, event.filename, event.filetype);
+            		}
+            		resolve();
+            '
