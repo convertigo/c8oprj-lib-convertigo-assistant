@@ -156,8 +156,7 @@ responseTimeout: 80
         		for (let i = 0; i < Messages.length; i++) {
         			let message = Messages[i];
         			if (message.role && message.text != null && message.text != "") {
-        				//log.warn("Extract JSON from message "+ message.id +":\n"+ message.text);
-        				log.warn("(buildMsg) Extract JSON from message "+ message.id);
+        				log.debug("(buildMsg) Extract JSON from message "+ message.id);
         				try {
         					var text = null;
         					if (message.role == "user") {
@@ -172,7 +171,6 @@ responseTimeout: 80
         							json = fixMalformedJson(message.text);
         						}//
         						
-        						//text = getExplanation(JSON.parse(formatLiteral(message.text)));
         						text = getExplanation(JSON.parse(json));
         					}
         					

@@ -96,7 +96,6 @@ scriptContent:
         	setEnable(enable) {
         		this.disabled = !enable;
         		this.refresh(0);
-        		//this.c8o.log.warn("disabled:"+ this.disabled);
         	}
         	
         	onImageSelected(event: any) {
@@ -132,13 +131,13 @@ scriptContent:
         			console.log("attachInput.files",this.attachInput.nativeElement.files);
         			
         		} catch(e) {
-        			console.log(e.message);
+        			console.error(e.message);
+        			this.c8o.log.warn("addFiles failed: "+ e.message);
         		}
         	}	
         	
         	addInputFiles(files) {
         		if (files) {
-        			console.log("dragged files start", files);
         			const imageTransfer = new DataTransfer();
         			const attachTransfer = new DataTransfer();
         			
@@ -174,7 +173,6 @@ scriptContent:
         	
         	removeFile(filename) {
         		try {
-        			//this.c8o.log.warn(''removeFile: ''+ filename);
         			if (this.Files.length > 0) {
         				const dataTransfer = new DataTransfer();
         				
@@ -207,7 +205,8 @@ scriptContent:
         				console.log("attachInput.files",this.attachInput.nativeElement.files);
         			}
         		} catch (e) {
-        			console.log(e.message);
+        			console.error(e.message);
+        			this.c8o.log.warn("removeFile failed: "+ e.message);
         		}
         	}
         	
@@ -244,19 +243,12 @@ scriptContent:
         	}
         	
         	reset() {
-        		try {
-        			//console.log("imageReset", this.btnReset.nativeElement);
-        			this.btnReset.nativeElement.click();
-        			console.log("btnReset clicked");
-        		} catch(e) {
-        			console.log("error", e);
-        		}
+        		this.btnReset.nativeElement.click();
         		
         		this.Files = null;
         		this.Question = '''';
         		this.previews = {};
         		this.local.AIFiles = [];
-        		console.log("chatinput reset");
         	}
         	
         	startSpeechRecognition() {
