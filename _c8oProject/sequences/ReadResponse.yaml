@@ -501,8 +501,9 @@ responseTimeout: 120
         			} else {
         				let arr = [];
         				for (let key in ob) {
-        					arr.push(ob[''key'']);
+        					arr.push(ob[key]);
         				}
+        				log.warn("lines: "+arr);
         				return arr;
         			}
         		}

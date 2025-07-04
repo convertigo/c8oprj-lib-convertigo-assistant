@@ -623,6 +623,27 @@ title: Component assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
+              ↓If1 [ngx.components.UIDynamicAction-1751634630354]: 
+                beanData: '{"ionBean":"IfAction","condition":"script:item.error"}'
+                ↓AddAssistantMessage [ngx.components.UICustomAction-1751634630369]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                          		this.local.Messages.push({
+                          			msg : ''<span class="red">**''+vars.file.error.message+''**'',
+                          			type: "assistant",
+                          			id : -1,
+                          		});
+                          		resolve();
+                          '
+                  ↓file [ngx.components.UIControlVariable-1751634630372]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item
             ↓If [ngx.components.UIDynamicAction-1751354620878]: 
               beanData: '{"ionBean":"IfAction","condition":"script:parent.out == ''done''"}'
               ↓ConsoleLog [ngx.components.UICustomAction-1751354620881]: 
@@ -741,7 +762,6 @@ title: Component assistant
                               '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
                               		this.local.Messages.push({
                               			msg : ''<span class="red">**''+vars.error.message+''**'',
-                              			
                               			type: "assistant",
                               			id: -1
                               		});
