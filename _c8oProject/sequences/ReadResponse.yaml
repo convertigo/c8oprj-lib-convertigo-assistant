@@ -391,22 +391,27 @@ responseTimeout: 120
         			if (dbo != null) {
         				e.attributes().forEach((a) => {
         					if (!setBeanProperty(a, dbo)) {
-        						var akey = ""+a.getKey();
-        						var aval = ""+a.getValue();
-        						
-        						var value = aval.trim();
-        						var mode = MobileSmartSourceType.Mode.PLAIN;
-        						if (akey.startsWith("[") && akey.endsWith("]")) {
-        							mode = MobileSmartSourceType.Mode.SCRIPT;
+        						try {
+        							var akey = ""+a.getKey();
+        							var aval = ""+a.getValue();
+        							//log.debug("2- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
+        							
+        							var value = aval.trim();
+        							var mode = MobileSmartSourceType.Mode.PLAIN;
+        							if (akey.startsWith("[") && akey.endsWith("]")) {
+        								mode = MobileSmartSourceType.Mode.SCRIPT;
+        							}
+        							var msst = new MobileSmartSourceType();
+        							msst.setMode(mode);
+        							msst.setSmartValue(value);
+        							
+        							var dbo_attr = cm.createBean(cm.getComponentByName("UIAttribute"));
+        							dbo_attr.setAttrName(akey);
+        							dbo_attr.setAttrSmartType(msst);
+        							dbo.add(dbo_attr);
+        						} catch (e) {
+        							log.error("Failed to add attribute: "+ e.message);
         						}
-        						var msst = new MobileSmartSourceType();
-        						msst.setMode(mode);
-        						msst.setSmartValue(value);
-        						
-        						var dbo_attr = cm.createBean(cm.getComponentByName("UIAttribute"));
-        						dbo_attr.setAttrName(akey);
-        						dbo_attr.setAttrSmartType(msst);
-        						dbo.add(dbo_attr);
         					}
         				});
         			}
@@ -677,10 +682,21 @@ responseTimeout: 120
         						
         						// Add dbos from ''XHTML''
         						try {
-        							var parser = Parser.htmlParser();
+        							// HTML parser
+        							/*var parser = Parser.htmlParser();
         							parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
         							var doc = Jsoup.parse("<body>"+jsonOb.XHTML+"</body>", "", parser);
+        							//log.debug("Jsoup document:\n"+ doc.toString());
         							doc.body().children().forEach((child) => {
+        								createBeans(child, comp);
+        							});*/
+        							
+        							// XML parser
+        							var parser = Parser.xmlParser();
+        							parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
+        							var doc = Jsoup.parse(jsonOb.XHTML, "", parser);
+        							//log.debug("Jsoup document:\n"+ doc.toString());
+        							doc.children().forEach((child) => {
         								createBeans(child, comp);
         							});
         						} catch(e) {
