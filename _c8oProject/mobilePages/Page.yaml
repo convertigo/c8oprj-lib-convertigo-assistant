@@ -516,7 +516,7 @@ title: Component assistant
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
                     '		if (vars.data != null) {
-                    			page.c8o.log.debug("AIData:\n"+ JSON.stringify(vars.data));
+                    			page.c8o.log.debug("AIData:\n"+ JSON.stringify(vars.data, null, "\t"));
                     			let msg = {
                     				type: "assistant",
                     				msg: "\n" + vars.data.explanation + "\n",

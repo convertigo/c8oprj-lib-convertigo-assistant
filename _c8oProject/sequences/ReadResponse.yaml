@@ -178,7 +178,7 @@ responseTimeout: 120
         		} else if (''JsonChanges'' in jsonObject) {
         			let changes = jsonObject.JsonChanges;
         			if (''explanation'' in jsonObject) {
-        				changes.push({
+        				changes.unshift({
         				      "op": "replace",
         				      "path": "/explanation",
         				      "value": jsonObject.explanation
@@ -267,6 +267,9 @@ responseTimeout: 120
         								
         								var mode = MobileSmartSourceType.Mode.PLAIN;
         								if (akey.startsWith("[") && akey.endsWith("]")) {
+        									mode = MobileSmartSourceType.Mode.SCRIPT;
+        								}
+        								if (akey.startsWith("(") && akey.endsWith(")")) {
         									mode = MobileSmartSourceType.Mode.SCRIPT;
         								}
         								if (value.startsWith("{{") && value.endsWith("}}")) {
@@ -401,6 +404,9 @@ responseTimeout: 120
         							if (akey.startsWith("[") && akey.endsWith("]")) {
         								mode = MobileSmartSourceType.Mode.SCRIPT;
         							}
+        							if (akey.startsWith("(") && akey.endsWith(")")) {
+        								mode = MobileSmartSourceType.Mode.SCRIPT;
+        							}
         							var msst = new MobileSmartSourceType();
         							msst.setMode(mode);
         							msst.setSmartValue(value);
@@ -456,34 +462,37 @@ responseTimeout: 120
         		return "";
         	}
         
-        	function isMapDeclarationLine(map, line) {
-        		let found = false;
+        	function getVariableNames(map) {
+        		let keys = [];
         		try {
-        			let keys = [];
         			for (let key in map) {
         				keys.push(key);
         			}
-        			//log.debug("Map Keys: "+ keys);
-        			for (let i=0; i < keys.length; i++) {
-        				let re = new RegExp("^\\s*"+keys[i]+"\\b");
-        				if (re.test(""+line)) {
-        					//log.debug("Key "+ keys[i] +" found in "+ line);
-        					found = true;
-        					break;
-        				}
-        			}
         		} catch (e) {
-        			log.error("Failed to isMapDeclarationLine: "+ e.message);
+        			log.error("Failed to getVariableNames: "+ e.message);
         		}
-        		return found;
+        		return keys;
         	}
-        	function isArrDeclarationLine(arr, line) {
-        		let found = false;
+        
+        	function getEmitterNames(arr) {
+        		let keys = [];
         		try {
-        			let keys = [];
         			for (let key of arr) {
         				keys.push(key);
         			}
+        		} catch (e) {
+        			log.error("Failed to getEmitterNames: "+ e.message);
+        		}
+        		return keys;
+        	}
+        	
+        	function checkDuplicates(arr) {
+        		return arr.filter((item, idx) => arr.indexOf(item) === idx);
+        	}
+        	
+        	function hasName(keys, line) {
+        		let found = false;
+        		try {
         			//log.debug("Arr Keys: "+ keys);
         			for (let i=0; i < keys.length; i++) {
         				let re = new RegExp("^\\s*"+keys[i]+"\\b");
@@ -494,28 +503,47 @@ responseTimeout: 120
         				}
         			}
         		} catch (e) {
-        			log.error("Failed to isArrDeclarationLine: "+ e.message);
+        			log.error("Failed to hasName: "+ e.message);
         		}
         		return found;
         	}
-        
+        		
         	function getLines(ob) {
         		try {			
         			if (Array.isArray(ob)) {
-        				return ob;
+        				return checkDuplicates(ob);
         			} else {
         				let arr = [];
         				for (let key in ob) {
         					arr.push(ob[key]);
         				}
         				log.warn("lines: "+arr);
-        				return arr;
+        				return checkDuplicates(arr);
         			}
         		}
         		catch (e) {
         			log.error("Failed to getLines: "+ e.message);
         		}
         		return [];
+        	}
+        	
+        	function getMarkerCode(jsonOb, marker, key) {
+        		var code = "/*Begin_c8o_"+ marker +"*/\n";
+        		try {
+        			var value = null;
+        			if (jsonOb[key] != null) {
+        				value = getInnerCode(jsonOb[key]) + "\n";
+        			} else if (jsonOb.functions[key] != undefined) {
+        				value = getInnerCode(jsonOb.functions[key]) + "\n";
+        			}
+        			if (value != null) {
+        				code += value;
+        			}
+        		} catch (e) {
+        			log.error("Failed to set "+ marker +" marker: "+ e.message);
+        		}
+        		code += "/*End_c8o_"+ marker +"*/\n";
+        		return code;
         	}
         	
         	function getComponentFromMessages(Messages) {
@@ -551,6 +579,8 @@ responseTimeout: 120
         		var clipboard = new Clipboard();
         		var dataType = "create";
         		var explanation = "";
+        		var jsonParseErrors = [];
+        		var jsonPatchErrors = [];
         		var data = [];
         		var cpt = 0;
         		
@@ -574,6 +604,7 @@ responseTimeout: 120
         						data.push(jsonOb);
         					}
         				} catch (e) {
+        					jsonParseErrors.push({error: e.message, object: message});
         					log.error("Failed to handle message "+ message.id +": "+ e.message);
         				}
         			}
@@ -590,6 +621,7 @@ responseTimeout: 120
         							try {
         								jsonpatch.apply(jsonOb, cur);
         							} catch (e) {
+        								jsonPatchErrors.push({error: e.message, object: cur});
         								log.error("Failed to apply jsonpatch: "+ e.message);
         							}
         						} else {
@@ -751,6 +783,9 @@ responseTimeout: 120
         						
         						// Add others (interfaces, declarations, methods...)
         						try {
+        							const variables = getVariableNames(jsonOb.variables);
+        							const emitters = getEmitterNames(jsonOb.emitters);
+        							
         							try {
         								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
         								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
@@ -777,9 +812,10 @@ responseTimeout: 120
         								
         								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
         								try {
+        									var pnames = checkDuplicates(variables.concat(emitters));
+        									//log.debug("all names:" + pnames);
         									getLines(jsonOb["declarations"]).forEach((line) => {
-        										if (!isMapDeclarationLine(jsonOb.variables, line) && 
-        											!isArrDeclarationLine(jsonOb["emitters"], line)) {
+        										if (!hasName(pnames, line)) {
         											customDMarker += line + "\n";
         										}
         									});
@@ -788,100 +824,20 @@ responseTimeout: 120
         								}
         								customDMarker += "/*End_c8o_CompDeclaration*/\n";
         
-        								var customCMarker = "/*Begin_c8o_CompConstructor*/\n";
-        								try {
-        									if (jsonOb.constructor != null) {
-        										customCMarker += getInnerCode(jsonOb.constructor) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompConstructor marker: "+ e.message);
-        								}
-        								customCMarker += "/*End_c8o_CompConstructor*/\n";
-        								
-        								var customInitMarker = "/*Begin_c8o_CompInitialization*/\n";
-        								try {
-        									if (jsonOb.ngOnInit != null) {
-        										customInitMarker += getInnerCode(jsonOb.ngOnInit) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompInitialization marker: "+ e.message);
-        								}
-        								customInitMarker += "/*End_c8o_CompInitialization*/\n";
-        								
-        								var customDestroyMarker = "/*Begin_c8o_CompFinalization*/\n";
-        								try {
-        									if (jsonOb.ngOnDestroy != null) {
-        										customDestroyMarker += getInnerCode(jsonOb.ngOnDestroy) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompFinalization marker: "+ e.message);
-        								}
-        								customDestroyMarker += "/*End_c8o_CompFinalization*/\n";
-        								
-        								var customNgCMarker = "/*Begin_c8o_CompChanges*/\n";
-        								try {
-        									if (jsonOb.ngOnChanges != null) {
-        										customNgCMarker += getInnerCode(jsonOb.ngOnChanges) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompChanges marker: "+ e.message);
-        								}
-        								customNgCMarker += "/*End_c8o_CompChanges*/\n";
-        								
-        								var customNgDoCheckMarker = "/*Begin_c8o_CompDoCheck*/\n";
-        								try {
-        									if (jsonOb.ngDoCheck != null) {
-        										customNgDoCheckMarker += getInnerCode(jsonOb.ngDoCheck) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompDoCheck marker: "+ e.message);
-        								}
-        								customNgDoCheckMarker += "/*End_c8o_CompDoCheck*/\n";
-        								
-        								var customNgAfterContentInitMarker = "/*Begin_c8o_CompAfterContentInit*/\n";
-        								try {
-        									if (jsonOb.ngAfterContentInit != null) {
-        										customNgAfterContentInitMarker += getInnerCode(jsonOb.ngAfterContentInit) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompAfterContentInit marker: "+ e.message);
-        								}
-        								customNgAfterContentInitMarker += "/*End_c8o_CompAfterContentInit*/\n";
-        								
-        								var customNgAfterContentCheckedMarker = "/*Begin_c8o_CompAfterContentChecked*/\n";
-        								try {
-        									if (jsonOb.ngAfterContentChecked != null) {
-        										customNgAfterContentCheckedMarker += getInnerCode(jsonOb.ngAfterContentChecked) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompAfterContentChecked marker: "+ e.message);
-        								}
-        								customNgAfterContentCheckedMarker += "/*End_c8o_CompAfterContentChecked*/\n";
-        								
-        								var customNgAfterViewInitMarker = "/*Begin_c8o_CompAfterViewInit*/\n";
-        								try {
-        									if (jsonOb.ngAfterViewInit != null) {
-        										customNgAfterViewInitMarker += getInnerCode(jsonOb.ngAfterViewInit) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompAfterViewInit marker: "+ e.message);
-        								}
-        								customNgAfterViewInitMarker += "/*End_c8o_CompAfterViewInit*/\n";
-        								
-        								var customNgAfterViewCheckedMarker = "/*Begin_c8o_CompAfterViewChecked*/\n";
-        								try {
-        									if (jsonOb.ngAfterViewChecked != null) {
-        										customNgAfterViewCheckedMarker += getInnerCode(jsonOb.ngAfterViewChecked) + "\n";
-        									}
-        								} catch(e) {
-        									log.error("Failed to set c8o_CompAfterViewChecked marker: "+ e.message);
-        								}
-        								customNgAfterViewCheckedMarker += "/*End_c8o_CompAfterViewChecked*/\n";
+        								var customCMarker = getMarkerCode(jsonOb, "CompConstructor", "constructor");
+        								var customInitMarker = getMarkerCode(jsonOb, "CompInitialization", "ngOnInit");
+        								var customDestroyMarker = getMarkerCode(jsonOb, "CompFinalization", "ngOnDestroy");
+        								var customNgCMarker = getMarkerCode(jsonOb, "CompChanges", "ngOnChanges");
+        								var customNgDoCheckMarker = getMarkerCode(jsonOb, "CompDoCheck", "ngDoCheck");
+        								var customNgAfterContentInitMarker = getMarkerCode(jsonOb, "CompAfterContentInit", "ngAfterContentInit");
+        								var customNgAfterContentCheckedMarker = getMarkerCode(jsonOb, "CompAfterContentChecked", "ngAfterContentChecked");
+        								var customNgAfterViewInitMarker = getMarkerCode(jsonOb, "CompAfterViewInit", "ngAfterViewInit");
+        								var customNgAfterViewCheckedMarker = getMarkerCode(jsonOb, "CompAfterViewChecked", "ngAfterViewChecked");
         								
         								var customFMarker = "/*Begin_c8o_CompFunction*/\n";
         								try {
         									for (let key in jsonOb.functions) {
-        										if (!key.startsWith("ng")) {
+        										if (key !== "constructor" && !key.startsWith("ng")) {
         											customFMarker += jsonOb.functions[key] + "\n";
         										}
         									}
@@ -893,7 +849,6 @@ responseTimeout: 120
         								var s1 = "/*Begin_c8o_CompDeclaration*/";
         								var s2 = "/*Begin_c8o_CompConstructor*/";
         								if (jsonOb.constructor != null) {
-        									//var params = extractConstructorParamsMapFromText(jsonOb.typescript);
         									var params = extractConstructorParamsMapFromText(jsonOb.constructor);
         									params.forEach((value, key) => {
         										customDMarker = customDMarker.replace(s1, s1+"\n" +key+" : "+ value + ";\n");
@@ -942,9 +897,11 @@ responseTimeout: 120
         		
         		var jsonAData = {
         			"type": dataType,
-        			"clipboard": xml,
         			"threadid": threadid,
-        			"explanation": explanation
+        			"parseErrors": JSON.stringify(jsonParseErrors),
+        			"patchErrors": JSON.stringify(jsonPatchErrors),
+        			"explanation": explanation,
+        			"clipboard": xml
         		};
         		
         		return jsonAData;
@@ -979,32 +936,6 @@ responseTimeout: 120
             - SmartType: 
               - ↑mode: JS
               - →→: AIData.type
-      ↓clipboard [steps.JsonFieldStep-1747227976746]: 
-        key: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-            - SmartType: 
-              - ↑mode: PLAIN
-              - →→: clipboard
-        value: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-            - SmartType: 
-              - ↑mode: JS
-              - →→: AIData.clipboard
-      ↓explanation [steps.JsonFieldStep-1747228971470]: 
-        key: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-            - SmartType: 
-              - ↑mode: PLAIN
-              - →→: explanation
-        value: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-            - SmartType: 
-              - ↑mode: JS
-              - →→: AIData.explanation
       ↓threadid [steps.JsonFieldStep-1747386452769]: 
         key: 
           - xmlizable: 
@@ -1018,6 +949,58 @@ responseTimeout: 120
             - SmartType: 
               - ↑mode: JS
               - →→: AIData.threadid
+      ↓parseErrors [steps.JsonFieldStep-1752249246607]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: parseErrors
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.parseErrors
+      ↓parseErrors1 [steps.JsonFieldStep-1752249287875]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: patchErrors
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.patchErrors
+      ↓explanation [steps.JsonFieldStep-1747228971470]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: explanation
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.explanation
+      ↓clipboard [steps.JsonFieldStep-1747227976746]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: clipboard
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.clipboard
   ↓jElse [steps.ElseStep-1744822845333]: 
 ↓fromStub [variables.RequestableVariable-1744901364156]: 
   value: false
