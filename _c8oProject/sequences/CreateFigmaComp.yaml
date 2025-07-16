@@ -1,0 +1,447 @@
+↓inputVars [steps.InputVariablesStep-1752574591786]: 
+  output: true
+↓Iterator [steps.IteratorStep-1752576338439]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1752574591786
+        - java.lang.String: 
+          - ↑value: ./zipfiles
+  ↓myVariable [steps.SimpleSourceStep-1752577375111]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1752576338439
+          - java.lang.String: 
+            - ↑value: ./text()
+    variableName: filepath
+  ↓UnzipAndExtract [steps.SimpleStep-1752576921231]: 
+    expression: |
+      'with (new JavaImporter(
+      	com.twinsoft.convertigo.beans.common.FormatedContent,
+      	com.twinsoft.convertigo.beans.common.XMLVector,
+      	com.twinsoft.convertigo.beans.ngx.components.dynamic.IonBean,
+      	com.twinsoft.convertigo.beans.ngx.components.dynamic.ComponentManager,
+      	com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType.Mode,
+      	com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType,
+      	com.twinsoft.convertigo.beans.ngx.components.UIDynamicElement,
+      	com.twinsoft.convertigo.engine.mobile.NgxBuilder,
+      	com.twinsoft.convertigo.engine.util.Clipboard,
+      	com.twinsoft.convertigo.engine.util.FileUtils,
+      	com.twinsoft.convertigo.engine.util.ZipUtils,
+      	org.jsoup.parser.ParseSettings,
+      	org.jsoup.parser.Parser,
+      	org.jsoup.Jsoup,
+      	java.util.Base64,
+      	java.io.File
+      )) {
+      	
+      	function getBeanKey(tag) {
+      		var beanKey = undefined;
+      		if (cm != null) {
+      			try {
+      				var map = cm.getIonBeans();
+      				for (let key of map.keySet()) {
+      				  if (tag == map.get(key).getTag()) {
+      					  beanKey = key;
+      					  if ("FSImage" == beanKey) {
+      						  beanKey = "Image";
+      					  }
+      					  break;
+      				  }
+      				}
+      			} catch (e) {
+      				log.error("Failed to getBeanKey: "+ e.message);
+      			}
+      		}
+      		return beanKey;
+      	}
+      
+      	function setBeanProperty(a, dbo) {
+      		var bRet = false;
+      		try {
+      			if (dbo != null) {
+      				var akey = ""+a.getKey();
+      				var aval = ""+a.getValue();
+      				
+      				// treats special cases
+      				if ("img" == dbo.getTagName() && "src" == akey) {
+      					akey = "[src]";
+      					aval = "''" + (aval.startsWith("http") ? aval : "assets/"+ aval) + "''";
+      				}			
+      				log.debug("1- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
+      				
+      				var fake = new UIDynamicElement();
+      				if (fake.getClass().isAssignableFrom(dbo.getClass())) {
+      					dbo.loadBean(cm);
+      					var ionBean = dbo.getIonBean();
+      					if (ionBean != null) {
+      						let map = ionBean.getProperties();
+      						for (let key of map.keySet()) {
+      							let property = map.get(key);
+      							var pname = property.getName();
+      							var pattr = property.getAttr();
+      							pattr = pattr == "" ? pname : pattr;
+      							if ((akey == pattr || akey == "["+pattr+"]" ) && akey !== "class") {
+      								
+      								var value = aval.trim();
+      								
+      								var mode = MobileSmartSourceType.Mode.PLAIN;
+      								if (akey.startsWith("[") && akey.endsWith("]")) {
+      									mode = MobileSmartSourceType.Mode.SCRIPT;
+      								}
+      								if (akey.startsWith("(") && akey.endsWith(")")) {
+      									mode = MobileSmartSourceType.Mode.SCRIPT;
+      								}
+      								if (value.startsWith("{{") && value.endsWith("}}")) {
+      									mode = MobileSmartSourceType.Mode.SCRIPT;
+      									value = value.replace("{{","").replace("}}","").trim();
+      								}
+      								
+      								var msst = new MobileSmartSourceType();
+      								msst.setMode(mode);
+      								msst.setSmartValue(value);
+      								
+      								ionBean.setPropertyValue(pname, msst);
+      								
+      								bRet = true;
+      								break;
+      							}
+      						}
+      						
+      						dbo.saveBean();
+      					}
+      				} else {
+      					//....
+      				}
+      			}
+      		} catch (e) {
+      			log.error("Failed to setBeanProperty: "+ e.message);
+      		}
+      		return bRet;
+      	}
+      	
+      	function isSelfClosingTag(tag) {
+      		var tags = ["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"];
+      		return tags.includes(tag.trim());
+      	}
+      
+      	function createBeans(e, parent) {
+      		try {
+      			var dbo = null;			
+      			var tag = e.nodeName();
+      			var key = getBeanKey(tag);
+      			if (key == undefined) {
+      				dbo = cm.createBean(cm.getComponentByName("UIElement"));
+      				dbo.setTagName(tag);
+      				if (isSelfClosingTag(""+tag)) {
+      					dbo.setSelfClose(true);
+      				}
+      			} else {
+      				dbo = cm.createBean(cm.getComponentByName(key));
+      			}
+      			if (parent != null && dbo != null) {
+      				parent.add(dbo);
+      			}
+      			if (dbo != null) {
+      				e.attributes().forEach((a) => {
+      					if (!setBeanProperty(a, dbo)) {
+      						try {
+      							var akey = ""+a.getKey();
+      							var aval = ""+a.getValue();
+      							//log.debug("2- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
+      							
+      							var value = aval.trim();
+      							var mode = MobileSmartSourceType.Mode.PLAIN;
+      							if (akey.startsWith("[") && akey.endsWith("]")) {
+      								mode = MobileSmartSourceType.Mode.SCRIPT;
+      							}
+      							if (akey.startsWith("(") && akey.endsWith(")")) {
+      								mode = MobileSmartSourceType.Mode.SCRIPT;
+      							}
+      							var msst = new MobileSmartSourceType();
+      							msst.setMode(mode);
+      							msst.setSmartValue(value);
+      							
+      							var dbo_attr = cm.createBean(cm.getComponentByName("UIAttribute"));
+      							dbo_attr.setAttrName(akey);
+      							dbo_attr.setAttrSmartType(msst);
+      							dbo.add(dbo_attr);
+      						} catch (e) {
+      							log.error("Failed to add attribute: "+ e.message);
+      						}
+      					}
+      				});
+      			}
+      			if (e.hasText() && dbo != null) {
+      				var comp = dbo.getSharedComponent();			
+      				e.textNodes().forEach((node) => {
+      					if (!node.isBlank()) {
+      						var text = node.text().trim().trimEnd();
+      						try {
+      							// add a variable
+      							var num = comp.getVariables().size() + 1;
+      							var varname = "text_"+ num;
+      							var varvalue = "''"+ new String(text).replace(/''/g, "\\''").replace(/"/g, "\\") + "''";
+      							var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
+      							uicv.setName(varname);
+      							uicv.setVariableValue(varvalue);
+      							comp.add(uicv);	
+      							
+      							// add a text
+      							var msst = new MobileSmartSourceType();
+      							msst.setMode(MobileSmartSourceType.Mode.SCRIPT);
+      							msst.setSmartValue("this."+varname);
+      							var dbo_text = cm.createBean(cm.getComponentByName("UIText"));
+      							dbo_text.setTextSmartType(msst);
+      							dbo.add(dbo_text);
+      						} catch (e) {
+      							log.error("Failed to add variable and text node: "+ e.message);
+      							
+      							var dbo_text = cm.createBean(cm.getComponentByName("UIText"));
+      							dbo.add(dbo_text);
+      						}
+      					}
+      				});
+      			}
+      			if (e.childrenSize() > 0) {
+      				e.children().forEach((child) => {
+      					createBeans(child, dbo);
+      				});
+      			}
+      			return dbo;
+      		} catch (e) {
+      			log.error("Failed to createBeans: "+ e.message);
+      		}
+      		return null;
+      	}
+      
+      	function unzipToJson(filepath) {
+      		try {
+      			var json = {name: "Figma", assets: [], css: "", XHTML: ""};
+      			
+      			var folder = File.createTempFile("tempFigma", "");
+      			folder.deleteOnExit();
+      			
+      			FileUtils.deleteQuietly(folder);
+      			folder.mkdirs();
+      			
+      			var zipfile = new File(filepath);
+      			ZipUtils.expandZip(zipfile.getPath(), folder.getPath(), null);
+      			
+      			var files = folder.listFiles();
+      			for (var i = 0 ; i < files.length ; i++) {
+      			    var file = files[i];
+      			    if (file.isFile()) {
+      					var filename = file.getName();
+      					var filecontent = FileUtils.readFileToString(file, "UTF-8");
+      					if (filename.endsWith(".svg")) {
+      						json.assets.push({
+      							type: "image/svg+xml",
+      							filename: filename,
+      							content: filecontent
+      						});
+      					} else if (filename.endsWith(".png")) {
+      						var bytes = FileUtils.readFileToByteArray(file);
+      						var encoded = Base64.getEncoder().encodeToString(bytes);
+      						json.assets.push({
+      							type: "image/png",
+      							filename: filename,
+      							content: encoded
+      						});
+      					} else if (filename.endsWith(".css") && filename != "vars.css") {
+      						json.css = filecontent;
+      					}
+      					else if (filename.endsWith(".html") && filename != "index.html") {
+      						json.name = filename.substring(0, filename.lastIndexOf(".html"));
+      						json.XHTML = filecontent;
+      					}
+      				}
+      			}
+      			
+      			return json;
+      			
+      		} catch(e) {
+      			log.error("Unable to unzipToJson: "+ e.message);
+      			return null;
+      		} finally {
+      			FileUtils.deleteQuietly(zipfile);
+      			FileUtils.deleteQuietly(folder);
+      		}
+      	}
+      	
+      	function createFromFigma() {
+      		var clipboard = new Clipboard();
+      		var comp = null;
+      		
+      		var jsonOb = unzipToJson(filepath);
+      		if (jsonOb != null) {
+      			log.warn("jsonOb:\n"+ JSON.stringify(jsonOb, null, "\t"));
+      			
+      			try {
+      				comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
+      				if (comp != null) {
+      					
+      					// Set name
+      					comp.setName(jsonOb.name + "Component");				
+      					
+      					// Add style from ''css''
+      					try {
+      						var uis = cm.createBean(cm.getComponentByName("UIStyle"));
+      						uis.setStyleContent(new FormatedContent(jsonOb.css));
+      						comp.add(uis);
+      					} catch (e) {
+      						log.error("Failed to handle style: "+ e.message);
+      					}
+      									
+      					// Add dbos from ''XHTML''
+      					try {
+      						// XML parser
+      						var parser = Parser.xmlParser();
+      						parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
+      						var doc = Jsoup.parse(jsonOb.XHTML, "", parser);
+      						//log.debug("Jsoup document:\n"+ doc.toString());
+      						doc.children().forEach((child) => {
+      							createBeans(child, comp);
+      						});
+      					} catch(e) {
+      						log.error("Failed to handle dbos: "+ e.message);
+      					}
+      
+      					clipboard.add(comp);
+      				}
+      			} catch (e) {
+      				log.error("Failed to create component: "+ e.message);
+      			}
+      		} else {
+      			log.error("Failed to retrieve Json");
+      		}
+      		
+      		var xml = clipboard.toXml();
+      		log.warn("Clipboard xml:\n"+ xml);
+      		
+      		var assets = jsonOb.assets;
+      		//log.warn("Assets:\n"+ JSON.stringify(assets));
+      		
+      		var compname = comp != null ? comp.getName() : null;
+      		
+      		var jsonAData = {
+      			"type": "create",
+      			"component": compname,
+      			"assets": assets,
+      			"clipboard": xml
+      		};
+      
+      		return jsonAData;
+      	}
+      	
+      	var cm = ComponentManager.of(context.project);
+      	if (cm.getTemplateProjectName() == "Java@Ngx") {
+      		log.warn("Failed to retrieve TPL associated with assistant project. Will use mobilebuilder_tpl_8_3_0_ngx");
+      		cm = ComponentManager.of("mobilebuilder_tpl_8_3_0_ngx");
+      	}
+      	
+      	FigmaData = createFromFigma();
+      }'
+  ↓object [steps.JsonObjectStep-1752659485242]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: FigmaData
+    ↓type [steps.JsonFieldStep-1752659485245]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: type
+      value: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: JS
+            - →→: FigmaData.type
+    ↓component [steps.JsonFieldStep-1752675238597]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: component
+      value: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: JS
+            - →→: FigmaData.component
+    ↓clipboard [steps.JsonFieldStep-1752659485260]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: clipboard
+      value: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: JS
+            - →→: FigmaData.clipboard
+    ↓assets [steps.JsonArrayStep-1752659794415]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: assets
+      ↓jIterator [steps.SimpleIteratorStep-1752660098550]: 
+        expression: FigmaData.assets
+        ↓object [steps.JsonObjectStep-1752660131276]: 
+          ↓type [steps.JsonFieldStep-1752660138438]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: type
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: JS
+                  - →→: item.type
+          ↓filename [steps.JsonFieldStep-1752660223178]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: filename
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: JS
+                  - →→: item.filename
+          ↓content [steps.JsonFieldStep-1752660232832]: 
+            key: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: PLAIN
+                  - →→: content
+            value: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                - SmartType: 
+                  - ↑mode: JS
+                  - →→: item.content
+↓zipfiles [variables.RequestableMultiValuedVariable-1752574570425]: 
+  description: zipfiles
+  isFileUpload: true

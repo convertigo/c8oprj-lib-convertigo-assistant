@@ -517,12 +517,44 @@ title: Component assistant
                   →: |
                     '		if (vars.data != null) {
                     			page.c8o.log.debug("AIData:\n"+ JSON.stringify(vars.data, null, "\t"));
-                    			let msg = {
-                    				type: "assistant",
-                    				msg: "\n" + vars.data.explanation + "\n",
-                    				id: -1,
+                    			
+                    //			if (vars.data.parseErrors) {
+                    //				try {
+                    //					var jsonParseErrors = JSON.parse(vars.data.parseErrors);
+                    //					jsonParseErrors.forEach((item) => {
+                    //						let msg = {
+                    //							type: "assistant",
+                    //							msg: "<span class=\"red\">**"+item.error+"**",
+                    //							id: -1,
+                    //						}
+                    //						page.local.Messages.push(msg);
+                    //					})
+                    //					
+                    //				} catch (e) {}
+                    //			}
+                    //			if (vars.data.patchErrors) {
+                    //				try {
+                    //					var jsonPatchErrors = JSON.parse(vars.data.patchErrors);
+                    //					jsonPatchErrors.forEach((item) => {
+                    //						let msg = {
+                    //							type: "assistant",
+                    //							msg: "<span class=\"red\">**"+item.error+"**",
+                    //							id: -1,
+                    //						}
+                    //						page.local.Messages.push(msg);
+                    //					})
+                    //					
+                    //				} catch (e) {}
+                    //			}
+                    			
+                    			if (vars.data.explanation) {
+                    				let msg = {
+                    					type: "assistant",
+                    					msg: "\n" + vars.data.explanation + "\n",
+                    					id: -1,
+                    				}
+                    				page.local.Messages.push(msg);
                     			}
-                    			page.local.Messages.push(msg);
                     			
                     			window[''sendToHost'']({
                     				type: vars.data.type,
