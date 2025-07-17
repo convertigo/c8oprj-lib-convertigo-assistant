@@ -61,6 +61,25 @@
       		return beanKey;
       	}
       
+      	function getVariableSourceValue(priority, varname) {
+      		// __selected_project__ has to be replaced with selected tree project
+      		var jsonSource = {
+      			"filter":"Shared",
+      			"project":"__selected_project__",
+      			"input":"",
+      			"model":{
+      				"data":[{"priority":priority,"regular":true}],
+      				"path":"?."+varname,
+      				"prefix":"",
+      				"suffix":"",
+      				"custom":"",
+      				"useCustom":false
+      			}
+      		};
+      		var val = "SC=" + JSON.stringify(jsonSource);
+      		return val;
+      	}
+      	
       	function setBeanProperty(a, dbo) {
       		var bRet = false;
       		try {
@@ -70,10 +89,21 @@
       				
       				// treats special cases
       				if ("img" == dbo.getTagName() && "src" == akey) {
+      					// add a variable
+      					var comp = dbo.getSharedComponent();
+      					var num = comp.getVariables().size() + 1;
+      					var varname = "img_"+ num;
+      					var varvalue = "''"+ (aval.startsWith("http") ? aval : "assets/"+ aval) + "''";
+      					var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
+      					uicv.setName(varname);
+      					uicv.setVariableValue(varvalue);
+      					comp.add(uicv);	
+      					
+      					// set attribute source
       					akey = "[src]";
-      					aval = "''" + (aval.startsWith("http") ? aval : "assets/"+ aval) + "''";
+      					aval = getVariableSourceValue(comp.priority, varname);
       				}			
-      				log.debug("1- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
+      				//log.debug("1- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
       				
       				var fake = new UIDynamicElement();
       				if (fake.getClass().isAssignableFrom(dbo.getClass())) {
@@ -100,6 +130,10 @@
       								if (value.startsWith("{{") && value.endsWith("}}")) {
       									mode = MobileSmartSourceType.Mode.SCRIPT;
       									value = value.replace("{{","").replace("}}","").trim();
+      								}
+      								if (value.startsWith("SC={")) {
+      									mode = MobileSmartSourceType.Mode.SOURCE;
+      									value = value.replace("SC=","");
       								}
       								
       								var msst = new MobileSmartSourceType();
@@ -194,8 +228,8 @@
       							
       							// add a text
       							var msst = new MobileSmartSourceType();
-      							msst.setMode(MobileSmartSourceType.Mode.SCRIPT);
-      							msst.setSmartValue("this."+varname);
+      							msst.setMode(MobileSmartSourceType.Mode.SOURCE);
+      							msst.setSmartValue(getVariableSourceValue(comp.priority, varname).replace("SC=",""));
       							var dbo_text = cm.createBean(cm.getComponentByName("UIText"));
       							dbo_text.setTextSmartType(msst);
       							dbo.add(dbo_text);

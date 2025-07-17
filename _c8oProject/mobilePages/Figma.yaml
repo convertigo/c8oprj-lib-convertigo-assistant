@@ -180,7 +180,7 @@ title: Title for Figma
                     			window[''sendToHost'']({
                     				type: vars.data.type,
                     				assets: vars.data.assets,
-                    				clipboard: vars.data.clipboard,
+                    				clipboard: vars.data.clipboard.replaceAll("__selected_project__", page.global.projectName)
                     			});
                     		}
                     		resolve();
