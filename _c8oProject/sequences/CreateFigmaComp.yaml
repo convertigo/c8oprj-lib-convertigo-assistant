@@ -168,7 +168,19 @@
       		try {
       			var dbo = null;			
       			var tag = e.nodeName();
-      			var key = getBeanKey(tag);
+      			var key = undefined;
+      			if (mapping == "class") {
+      				var classval = e.className();
+      				//log.warn("classval:"+classval);
+      				if (classval.startsWith("input")) {
+      					key = getBeanKey("ion-input");
+      				} else if (classval.startsWith("button")) {
+      					key = getBeanKey("ion-button");
+      				} else {
+      					key = getBeanKey(tag);
+      				}
+      				//log.warn("beankey:"+key);
+      			}
       			if (key == undefined) {
       				dbo = cm.createBean(cm.getComponentByName("UIElement"));
       				dbo.setTagName(tag);
@@ -479,3 +491,4 @@
 ↓zipfiles [variables.RequestableMultiValuedVariable-1752574570425]: 
   description: zipfiles
   isFileUpload: true
+↓mapping [variables.RequestableVariable-1752846789200]: 

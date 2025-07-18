@@ -45,6 +45,13 @@ title: Title for Figma
          "Property": "plain:Question",
          "Value": "script:''''"
         }'
+  ↓SetLocal [ngx.components.UIDynamicAction-1752846164110]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:Configuration",
+       "Value": "script:{divMapping: ''class''}"
+      }'
 ↓Header [ngx.components.UIDynamicElement-1752572046166]: 
   beanData: '{"ionBean":"Header"}'
   tagName: ion-header
@@ -67,9 +74,100 @@ title: Title for Figma
         beanData: '{"ionBean":"Button"}'
         tagName: ion-button
         ↓Icon [ngx.components.UIDynamicElement-1752572046180]: 
-          beanData: '{"ionBean":"Icon","IconName":"plain:ellipsis-vertical"}'
+          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''construct-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1752572046182]: 
+        ↓id [ngx.components.UIAttribute-1752844531685]: 
+          attrName: id
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:config
+      ↓Popover [ngx.components.UIDynamicElement-1752844433633]: 
+        beanData: '{"ionBean":"InlinePopover","Trigger":"plain:config"}'
+        tagName: ion-popover
+        ↓ng_template [ngx.components.UIElement-1752844630996]: 
+          tagName: ng_template
+          ↓ng_template [ngx.components.UIElement-1752844669387]: 
+            tagName: ion-content
+            ↓ListContainer [ngx.components.UIDynamicElement-1752844693482]: 
+              beanData: '{"ionBean":"List"}'
+              tagName: ion-list
+              ↓ListHeader [ngx.components.UIDynamicElement-1752844693467]: 
+                beanData: '{"ionBean":"Listheader"}'
+                tagName: ion-list-header
+                ↓Label [ngx.components.UIDynamicElement-1752844693469]: 
+                  beanData: '{"ionBean":"Label"}'
+                  tagName: ion-label
+                  ↓Heading [ngx.components.UIDynamicTag-1752844693471]: 
+                    beanData: '{"ionBean":"Heading"}'
+                    tagName: h1
+                    ↓Text [ngx.components.UIText-1752844693473]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:Configuration
+              ↓ListItem [ngx.components.UIDynamicElement-1752845497914]: 
+                beanData: '{"ionBean":"ListItem"}'
+                tagName: ion-item
+                ↓SelectContainer [ngx.components.UIDynamicElement-1752844820781]: 
+                  beanData: |
+                    '{
+                     "ionBean": "Select",
+                     "ControlName": "plain:name1752844820781",
+                     "Label": "plain:Div mapping",
+                     "Value": "source:{\"filter\":\"Local\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.Configuration\",\"prefix\":\"\",\"suffix\":\".divMapping\",\"custom\":\"\",\"useCustom\":false}}"
+                    }'
+                  tagName: ion-select
+                  ↓SelectOption [ngx.components.UIDynamicElement-1752844862827]: 
+                    beanData: '{"ionBean":"SelectOption","Value":"plain:tag"}'
+                    tagName: ion-select-option
+                    ↓TextItem [ngx.components.UIDynamicElement-1752845388640]: 
+                      beanData: '{"ionBean":"TextItem"}'
+                      tagName: ion-text
+                      ↓Text [ngx.components.UIText-1752845388639]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:Tag bean
+                  ↓SelectOption2 [ngx.components.UIDynamicElement-1752845126756]: 
+                    beanData: '{"ionBean":"SelectOption","Value":"plain:class"}'
+                    tagName: ion-select-option
+                    ↓TextItem [ngx.components.UIDynamicElement-1752845393795]: 
+                      beanData: '{"ionBean":"TextItem"}'
+                      tagName: ion-text
+                      ↓Text [ngx.components.UIText-1752845393794]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:based on 'class'
+                  ↓Event [ngx.components.UIControlEvent-1752846374086]: 
+                    attrName: (ionChange)
+                    eventName: ionChange
+                    ↓CustomAction [ngx.components.UICustomAction-1752846422413]: 
+                      actionValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                            →: |
+                              '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                              		page.local.Configuration.divMapping = event.detail.value;
+                              		resolve();
+                              '
+            ↓Button [ngx.components.UIDynamicElement-1752844433639]: 
+              beanData: '{"ionBean":"Button"}'
+              tagName: ion-button
+              ↓Label [ngx.components.UIDynamicElement-1752844433641]: 
+                beanData: '{"ionBean":"Label"}'
+                tagName: ion-label
+                ↓Text [ngx.components.UIText-1752844433643]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:done
+              ↓Event [ngx.components.UIControlEvent-1752844433645]: 
+                ↓ClosePopover [ngx.components.UIDynamicAction-1752844433647]: 
+                  beanData: '{"ionBean":"ClosePopoverAction"}'
     ↓BarTitle [ngx.components.UIDynamicElement-1752572046184]: 
       beanData: '{"ionBean":"BarTitle"}'
       tagName: ion-title
@@ -200,6 +298,11 @@ title: Title for Figma
                       		page.chatinput.reset();
                       		resolve();
                       '
+        ↓mapping [ngx.components.UIControlVariable-1752846838793]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Configuration","prefix":"","suffix":".divMapping","custom":"","useCustom":false}}
     ↓Question [ngx.components.UIUseVariable-1752575630475]: 
       varValue: 
         - xmlizable: 
