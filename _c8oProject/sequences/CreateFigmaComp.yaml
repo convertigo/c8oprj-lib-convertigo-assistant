@@ -195,6 +195,20 @@
       				}
       			} else {
       				dbo = cm.createBean(cm.getComponentByName(key));
+      				try {
+      					// for button: add css property text-tranform=none
+      					if (dbo != null && dbo.getTagName() == "ion-button") {
+      						// add style text-transform attribute
+      						var msst = new MobileSmartSourceType();
+      						//msst.setMode(mode);
+      						msst.setSmartValue("none");
+      	
+      						var dbo_attr = cm.createBean(cm.getComponentByName("UIAttribute"));
+      						dbo_attr.setAttrName("[style.text-transform]");
+      						dbo_attr.setAttrSmartType(msst);
+      						dbo.add(dbo_attr);						
+      					}
+      				} catch (e) {}
       			}
       			if (parent != null && dbo != null) {
       				parent.add(dbo);
@@ -333,12 +347,7 @@
       
       	  cssPrefixList.forEach((propertyPrefix) => {
       	    var escapedPrefix = propertyPrefix.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-      
-      	    var blockRegex = new RegExp(
-      	      "(\\." + escapedClass + "[^{]*\\{[^}]*?)\\b(" + escapedPrefix + "[a-zA-Z0-9-]*)\\s*:",
-      	      "g"
-      	    );
-      
+      	    var blockRegex = new RegExp("(\\." + escapedClass + "[^{]*\\{[^}]*?)\\b(" + escapedPrefix + "[a-zA-Z0-9-]*)\\s*:", "g");
       	    cssCode = cssCode.replace(blockRegex, "$1--$2:");
       	  });
       

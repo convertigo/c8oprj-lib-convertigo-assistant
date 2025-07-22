@@ -45,6 +45,32 @@ title: Title for Figma
          "Property": "plain:Question",
          "Value": "script:''''"
         }'
+    ↓AddAssistantMessage [ngx.components.UICustomAction-1753181082864]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              '		let text = `
+              		### Bienvenue dans l''assistant Figma !  
+              		  
+              		1- utiliser figma pour créer un composant  
+              		2- renommer vos ''layers'', ultiliser le préfixe:   
+              		  - **input** pour la génération de champ de saisie Ionic  
+              		  - **button** pour la génération de bouton Ionic 
+              		  
+              		3- exécuter le plugin AutoHTML et déposer le zip ci-dessous  
+              		`;
+              		
+              		let msg = {
+              			type: "assistant",
+              			msg: "\n" + text + "\n",
+              			id: -1,
+              		}
+              		page.local.Messages.push(msg);
+              		
+              		resolve();
+              '
   ↓SetLocal [ngx.components.UIDynamicAction-1752846164110]: 
     beanData: |
       '{
@@ -72,6 +98,7 @@ title: Title for Figma
       tagName: ion-buttons
       ↓Button [ngx.components.UIDynamicElement-1752572046178]: 
         beanData: '{"ionBean":"Button"}'
+        isEnabled: false
         tagName: ion-button
         ↓Icon [ngx.components.UIDynamicElement-1752572046180]: 
           beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''construct-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
@@ -85,6 +112,7 @@ title: Title for Figma
               - MobileSmartSourceType: plain:config
       ↓Popover [ngx.components.UIDynamicElement-1752844433633]: 
         beanData: '{"ionBean":"InlinePopover","Trigger":"plain:config"}'
+        isEnabled: false
         tagName: ion-popover
         ↓ng_template [ngx.components.UIElement-1752844630996]: 
           tagName: ng_template
