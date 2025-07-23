@@ -173,13 +173,13 @@ scriptContent:
     		<input type="file" hidden #attachInput (change)="onAttachSelected($event)" accept=".zip"/>
     		<button hidden type="reset" #btnReset ></button>
     	</form>
-    	<ion-label>Déposez votre fichier zip généré par AutoHTML ou sélectionnez le</ion-label>
+    	<ion-label>Drop here the ZIP file downloaded from AutoHTML plugin or select it using the 'staple' button</ion-label>
     	<ion-button fill="clear" (click)="attachInput.click()" title="Ajouter un zip">
     	  <ion-icon name="attach-outline"></ion-icon>
     	</ion-button>
       </ion-item>
     </ion-card>
-    <div class="drag-overlay" *ngIf="isDragging">Déposez votre fichier ici...</div>
+    <div class="drag-overlay" *ngIf="isDragging">Drop your ZIP file here...</div>
 ↓Style [ngx.components.UIStyle-1752676065927]: 
   styleContent: 
     - xmlizable: 
