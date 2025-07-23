@@ -1,0 +1,186 @@
+accessibility: Private
+↓Call_Transaction [steps.TransactionStep-1744027105402]: 
+  sourceTransaction: ConvertigoAssistant.OpenAI.Threads
+  ↓__body [variables.StepVariable-1744027105404]: 
+    value: '{}'
+↓Message [steps.JsonObjectStep-1744027152082]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Message
+  ↓role [steps.JsonFieldStep-1744027173825]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: role
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: user
+  ↓content1 [steps.JsonArrayStep-1744200161863]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: content
+    ↓content [steps.JsonFieldStep-1744027193441]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: text
+      value: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: JS
+            - →→: Question
+    ↓type [steps.JsonFieldStep-1744200194019]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: type
+      value: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: text
+↓Call_Transaction1 [steps.TransactionStep-1744027118560]: 
+  sourceTransaction: ConvertigoAssistant.OpenAI.Message
+  ↓__body [variables.StepVariable-1744027118562]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744027152082
+          - java.lang.String: 
+            - ↑value: ./*
+    value: |
+      '{
+      	role : "user";
+      	content : "Can you provide a summary of the latest news in technology?"	
+      }
+      '
+  ↓threadid [variables.StepVariable-1744027118564]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744027105402
+          - java.lang.String: 
+            - ↑value: ./document/object/id/text()
+↓Run [steps.JsonObjectStep-1744030856178]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Run
+  ↓assitant_id [steps.JsonFieldStep-1744030856184]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: assistant_id
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: asst_BHpTrHeKI2X8EtWIaokJ8TiP
+↓Call_Transaction2 [steps.TransactionStep-1744030912268]: 
+  sourceTransaction: ConvertigoAssistant.OpenAI.Run
+  ↓__body [variables.StepVariable-1744030912270]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744030856178
+          - java.lang.String: 
+            - ↑value: ./*
+    value: '{}'
+  ↓threadid [variables.StepVariable-1744030912272]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744027105402
+          - java.lang.String: 
+            - ↑value: ./document/object/id/text()
+↓jWhile [steps.WhileStep-1744031279704]: 
+  condition: wait-- > 0
+  ↓Call_Transaction3 [steps.TransactionStep-1744031233268]: 
+    sourceTransaction: ConvertigoAssistant.OpenAI.CheckMessages
+    ↓threadid [variables.StepVariable-1744031233270]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1744027105402
+            - java.lang.String: 
+              - ↑value: ./document/object/id/text()
+  ↓Iterator [steps.IteratorStep-1744200714593]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744031233268
+          - java.lang.String: 
+            - ↑value: ./document/object/data/object
+    ↓Message [steps.JsonObjectStep-1744200983142]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: Message
+      ↓Iterator [steps.IteratorStep-1744200994438]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1744200714593
+              - java.lang.String: 
+                - ↑value: ./content/object
+        ↓field [steps.JsonFieldStep-1744201018822]: 
+          key: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: PLAIN
+                - →→: text
+          value: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: SOURCE
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1744200994438
+                  - java.lang.String: 
+                    - ↑value: ./text/value/text()
+  ↓Sleep [steps.SleepStep-1744031296610]: 
+    delay: 1000
+↓Question [variables.RequestableVariable-1744027055120]: 
+  value: Generate a login Shared component with user and password
+↓wait [variables.RequestableVariable-1744031363645]: 
+  value: 10

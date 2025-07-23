@@ -1,0 +1,340 @@
+responseTimeout: 300
+↓inputVars [steps.InputVariablesStep-1749739947672]: 
+  output: true
+↓InitProgressMessage [steps.SimpleStep-1749617307020]: 
+  expression: |
+    'buffer = {
+    	"size" : 0,
+    	"content": "Sending data to the AI assistant..."
+    };
+    context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+    '
+↓Message [steps.JsonObjectStep-1744201795804]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Message
+  output: false
+  ↓role [steps.JsonFieldStep-1744201795807]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: role
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: user
+  ↓content1 [steps.JsonArrayStep-1744201795810]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: content
+    ↓object [steps.JsonObjectStep-1744205789705]: 
+      ↓content [steps.JsonFieldStep-1744201795813]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: text
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: Question
+      ↓type [steps.JsonFieldStep-1744201795816]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: type
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: text
+    ↓IfExist [steps.IfExistStep-1749743325344]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749739947672
+            - java.lang.String: 
+              - ↑value: ./AIFiles/text()
+      ↓myVariable [steps.JsonSourceStep-1749743325347]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1749739947672
+              - java.lang.String: 
+                - ↑value: ./AIFiles/text()
+        variableName: files
+      ↓jIterator [steps.SimpleIteratorStep-1749743325350]: 
+        expression: files
+        ↓jIf [steps.IfStep-1751374247016]: 
+          condition: item.purpose == 'vision'
+          ↓object [steps.JsonObjectStep-1749743325356]: 
+            ↓type [steps.JsonFieldStep-1749743325359]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: type
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: image_file
+            ↓image_file [steps.JsonObjectStep-1749743325362]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: image_file
+              ↓content [steps.JsonFieldStep-1749743325365]: 
+                key: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: PLAIN
+                      - →→: file_id
+                value: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: JS
+                      - →→: item.id
+              ↓type [steps.JsonFieldStep-1749743325368]: 
+                key: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: PLAIN
+                      - →→: detail
+                value: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                    - SmartType: 
+                      - ↑mode: PLAIN
+                      - →→: high
+  ↓IfExist [steps.IfExistStep-1751374316258]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1749739947672
+          - java.lang.String: 
+            - ↑value: ./AIFiles/text()
+    ↓myVariable [steps.JsonSourceStep-1751374316261]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1749739947672
+            - java.lang.String: 
+              - ↑value: ./AIFiles/text()
+      variableName: files
+    ↓attachments [steps.JsonArrayStep-1751374373336]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: attachments
+      ↓jIterator [steps.SimpleIteratorStep-1751374316264]: 
+        expression: files
+        ↓jIf [steps.IfStep-1751374316267]: 
+          condition: item.purpose == 'assistants'
+          ↓object [steps.JsonObjectStep-1751374316270]: 
+            ↓content [steps.JsonFieldStep-1751374316279]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: file_id
+              value: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: JS
+                    - →→: item.id
+            ↓tools [steps.JsonArrayStep-1751374539014]: 
+              key: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                  - SmartType: 
+                    - ↑mode: PLAIN
+                    - →→: tools
+              ↓object [steps.JsonObjectStep-1751374718537]: 
+                ↓type [steps.JsonFieldStep-1751374733875]: 
+                  key: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: type
+                  value: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: file_search
+              ↓object1 [steps.JsonObjectStep-1751374797932]: 
+                ↓type [steps.JsonFieldStep-1751374797935]: 
+                  key: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: type
+                  value: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+                      - SmartType: 
+                        - ↑mode: PLAIN
+                        - →→: code_interpreter
+↓Call_Transaction1 [steps.TransactionStep-1744201808156]: 
+  sourceTransaction: ConvertigoAssistant.OpenAI.Message
+  ↓__body [variables.StepVariable-1744201808159]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744201795804
+          - java.lang.String: 
+            - ↑value: ./*
+    value: |
+      '{
+      	role : "user";
+      	content : "Can you provide a summary of the latest news in technology?"	
+      }
+      '
+  ↓threadid [variables.StepVariable-1744201808162]: 
+↓IfExistError [steps.IfExistStep-1749806070355]: 
+  condition: IfExistError
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1744201808156
+        - java.lang.String: 
+          - ↑value: ./document/object/error
+  ↓Copy [steps.XMLCopyStep-1749805325337]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744201808156
+          - java.lang.String: 
+            - ↑value: ./document/object/error
+↓StreamRun [steps.SimpleStep-1749283782808]: 
+  expression: |
+    '// Required Java classes
+    // log.warn("Starting stream read"); // Log the received line)
+    
+    var URL = java.net.URL;
+    var HttpsURLConnection = java.net.HttpURLConnection;
+    var InputStreamReader = java.io.InputStreamReader;
+    var BufferedReader = java.io.BufferedReader;
+    
+    // Set your API key and thread/run info
+    var apiKey = "${lib_C8Oforms_AI.GPT.apikey.secret}";
+    var url = new URL("https://api.openai.com/v1/threads/" + threadid + "/runs");
+    
+    var conn = url.openConnection();
+    conn.setRequestMethod("POST");
+    conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+    conn.setRequestProperty("OpenAI-Beta", "assistants=v2");
+    conn.setRequestProperty("Content-Type", "application/json");
+    conn.setRequestProperty("Accept", "text/event-stream");
+    conn.setDoOutput(true);
+    
+    // Enable streaming mode
+    var payload = JSON.stringify({
+      assistant_id: "asst_iLSiB5Gu0EkkJArAwuC6aET3",
+      stream: true
+    });
+    
+    
+    // log.warn("About to call API with apiKey: " + apiKey + " and URL: " + url); 
+    
+    var out = new java.io.OutputStreamWriter(conn.getOutputStream());
+    out.write(payload);
+    out.close();
+    
+    
+    // Read streaming response
+    var reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+    var line;
+    
+    
+    while ((line = reader.readLine()) !== null) {
+    //	log.warn("Received line: " + line); // Log the received line)
+    	if (line.trim() === "") {
+    		continue; // Skip empty lines
+    	}
+    	if (line.startsWith("data: ") && line != "data: [DONE]") {
+    		var data = line.substring(6).trim(); // Remove "data: " prefix
+    		try {
+    			var response = JSON.parse(data);
+    			var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
+    			
+    			if (buffer && response.delta) {
+    				//log.warn("Buffer from get attribute is : " + JSON.stringify(buffer)); 
+    				buffer.content += response.delta.content[0].text.value;
+    				buffer.size += buffer.content.length;
+    				context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+    			}			
+    		} catch (e) {
+    			log.error("Error parsing JSON: " + "\nERROR" +  e.message + "\nLINE: " + line);
+    		}
+    	}
+    }
+    
+    reader.close();
+    // log.warn("Finished stream read"); // Log the received line)
+    '
+↓id [steps.JsonFieldStep-1749290655104]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: id
+  value: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response.id
+↓Question [variables.RequestableVariable-1744201780525]: 
+↓threadid [variables.RequestableVariable-1744201831244]: 
+↓AIFiles [variables.RequestableVariable-1749739846542]: 
+↓TestOK [core.TestCase]: 
+  ↓Question [variables.TestCaseVariable-1744201869454]: 
+    value: Can you add nice CSS to present this with some color gradients,  glossy effects and modern UI ? 
+  ↓threadid [variables.TestCaseVariable-1744201869456]: 
+    value: thread_cDTR5P2IM1QO1fh0xNfu7VsU

@@ -1,0 +1,84 @@
+accessibility: Private
+↓inputVars [steps.InputVariablesStep-1750354086687]: 
+  output: true
+↓Call_Sequence [steps.SequenceStep-1750354086690]: 
+  sourceSequence: ConvertigoAssistant.GetMessages
+  ↓__stub [variables.StepVariable-1750354086693]: 
+    value: true
+↓message [steps.JsonArrayStep-1750354242064]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: message
+  ↓Iterator [steps.IteratorStep-1750354242067]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1750354086690
+          - java.lang.String: 
+            - ↑value: ./document/page/transaction/document/object/data/object
+    ↓Message [steps.JsonObjectStep-1750354242070]: 
+      ↓Iterator [steps.IteratorStep-1750354242073]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1750354242067
+              - java.lang.String: 
+                - ↑value: ./content/object
+        ↓field [steps.JsonFieldStep-1750354242076]: 
+          key: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: PLAIN
+                - →→: text
+          value: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: SOURCE
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1750354242073
+                  - java.lang.String: 
+                    - ↑value: ./text/value/text()
+      ↓role [steps.JsonFieldStep-1750354242079]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: role
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: SOURCE
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1750354242067
+                - java.lang.String: 
+                  - ↑value: ./role/text()
+      ↓field1 [steps.JsonFieldStep-1750354242082]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: id
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: SOURCE
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1750354242067
+                - java.lang.String: 
+                  - ↑value: ./id/text()

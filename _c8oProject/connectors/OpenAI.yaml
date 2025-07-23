@@ -1,0 +1,285 @@
+baseDir: /v1/
+https: true
+port: 443
+server: api.openai.com
+↓CheckMessages [transactions.JsonHttpTransaction-1744026459613]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  subDir: threads/{threadid}/messages
+  ↓threadid [variables.RequestableHttpVariable-1744031161931]: 
+  ↓order [variables.RequestableHttpVariable-1749568991736]: 
+    description: order
+    httpName: order
+    value: asc
+  ↓limit [variables.RequestableHttpVariable-1750343843974]: 
+    description: limit
+    httpName: limit
+    value: 20
+  ↓after [variables.RequestableHttpVariable-1750343791158]: 
+    description: after
+    httpName: after
+↓CheckRun [transactions.JsonHttpTransaction-1744026459613]: 
+  ↑default: true
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  httpVerb: POST
+  subDir: threads/{threadid}/runs/{runid}
+  ↓threadid [variables.RequestableHttpVariable-1744030773834]: 
+  ↓runid [variables.RequestableHttpVariable-1744030773836]: 
+↓GetRunStatus [transactions.JsonHttpTransaction-1744026459613]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  subDir: threads/{threadid}/runs/{runid}
+  ↓TestOK [core.TestCase]: 
+    ↓threadid [variables.TestCaseVariable-1744389315436]: 
+      value: thread_piGg7RJL7eKMHaVo7mZ0sgfk
+    ↓runid [variables.TestCaseVariable-1744389315438]: 
+      value: run_3EaGuyUmNcI0QFoDWijaqbqS
+  ↓threadid [variables.RequestableHttpVariable-1744389242106]: 
+  ↓runid [variables.RequestableHttpVariable-1744389242109]: 
+↓GetThread [transactions.JsonHttpTransaction-1744026459613]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  subDir: threads/{threadid}
+  ↓TestOK [core.TestCase]: 
+    ↓threadid [variables.TestCaseVariable-1748451010511]: 
+      value: thread_piGg7RJL7eKMHaVo7mZ0sgfk
+  ↓threadid [variables.RequestableHttpVariable-1748451010517]: 
+↓Message [transactions.JsonHttpTransaction-1744026459613]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  httpVerb: POST
+  subDir: threads/{threadid}/messages
+  ↓__body [variables.RequestableHttpVariable-1744026809043]: 
+    httpMethod: POST
+    value: |
+      '{
+      	role : "user";
+      	content : "Can you provide a summary of the latest news in technology?"	
+      }
+      '
+  ↓threadid [variables.RequestableHttpVariable-1744026917407]: 
+↓Run [transactions.JsonHttpTransaction-1744026459613]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  httpVerb: POST
+  responseTimeout: 280
+  subDir: threads/{threadid}/runs
+  ↓__body [variables.RequestableHttpVariable-1744026947935]: 
+    httpMethod: POST
+    value: '{}'
+  ↓threadid [variables.RequestableHttpVariable-1744026988196]: 
+↓Threads [transactions.JsonHttpTransaction-1744026459613]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpPool: session
+  httpVerb: POST
+  subDir: threads
+  ↓__body [variables.RequestableHttpVariable-1744026645315]: 
+    httpMethod: POST
+    value: '{}'
+↓UploadFile [transactions.JsonHttpTransaction]: 
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/x-www-form-urlencoded
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Authorization
+            - java.lang.String: 
+              - ↑value: Bearer ${lib_C8Oforms_AI.GPT.apikey.secret}
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: OpenAI-Beta
+            - java.lang.String: 
+              - ↑value: assistants=v2
+  httpVerb: POST
+  subDir: files
+  ↓file [variables.RequestableHttpVariable-1749719989411]: 
+    description: file
+    doFileUploadMode: multipartFormData
+    httpMethod: POST
+    httpName: file
+    isFileUpload: true
+  ↓purpose [variables.RequestableHttpVariable-1749719989414]: 
+    description: purpose
+    httpMethod: POST
+    httpName: purpose

@@ -1,0 +1,1018 @@
+responseTimeout: 120
+↓inputVars [steps.InputVariablesStep-1744901534491]: 
+  output: true
+↓Call_Sequence [steps.SequenceStep-1750351205688]: 
+  sourceSequence: ConvertigoAssistant.GetMessages
+  ↓__stub [variables.StepVariable-1750351276456]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744901534491
+          - java.lang.String: 
+            - ↑value: ./fromStub/text()
+  ↓__stub_filename [variables.StepVariable-1750432311159]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744901534491
+          - java.lang.String: 
+            - ↑value: ./fromStubFileName/text()
+  ↓threadid [variables.StepVariable-1750351228481]: 
+↓message [steps.JsonArrayStep-1744736404624]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: Message
+  ↓Iterator [steps.IteratorStep-1744217119885]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1750351205688
+          - java.lang.String: 
+            - ↑value: ./document/page/transaction/document/object/data/object
+    ↓Message [steps.JsonObjectStep-1744217119892]: 
+      ↓Iterator [steps.IteratorStep-1744217119895]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1744217119885
+              - java.lang.String: 
+                - ↑value: ./content/object
+        ↓field [steps.JsonFieldStep-1744217119898]: 
+          key: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: PLAIN
+                - →→: text
+          value: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+              - SmartType: 
+                - ↑mode: SOURCE
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1744217119895
+                  - java.lang.String: 
+                    - ↑value: ./text/value/text()
+      ↓role [steps.JsonFieldStep-1744217497157]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: role
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: SOURCE
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1744217119885
+                - java.lang.String: 
+                  - ↑value: ./role/text()
+      ↓field1 [steps.JsonFieldStep-1744631449896]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: id
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: SOURCE
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1744217119885
+                - java.lang.String: 
+                  - ↑value: ./id/text()
+↓Call_Transaction [steps.TransactionStep-1744389507990]: 
+  sourceTransaction: ConvertigoAssistant.OpenAI.GetRunStatus
+  ↓__stub [variables.StepVariable-1744901566997]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744901534491
+          - java.lang.String: 
+            - ↑value: ./fromStub/text()
+  ↓threadid [variables.StepVariable-1744389521095]: 
+  ↓runid [variables.StepVariable-1744389521097]: 
+↓status [steps.JsonFieldStep-1744367319107]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: status
+  value: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: SOURCE
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1744389507990
+          - java.lang.String: 
+            - ↑value: ./document/object/status/text()
+↓jStatus [steps.SimpleSourceStep-1744822802324]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1744389507990
+        - java.lang.String: 
+          - ↑value: ./document/object/status/text()
+  variableName: jStatus
+↓jIfThenElse [steps.IfThenElseStep-1744822843512]: 
+  condition: jStatus == 'completed'
+  ↓jThen [steps.ThenStep-1744822845331]: 
+    ↓Messages [steps.JsonSourceStep-1744736733823]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1744736404624
+            - java.lang.String: 
+              - ↑value: .
+      variableName: Messages
+    ↓ExtractCodeBlocks [steps.SimpleStep-1744736763321]: 
+      expression: |
+        'with (new JavaImporter(
+        	com.twinsoft.convertigo.beans.common.FormatedContent,
+        	com.twinsoft.convertigo.beans.common.XMLVector,
+        	com.twinsoft.convertigo.beans.ngx.components.dynamic.IonBean,
+        	com.twinsoft.convertigo.beans.ngx.components.dynamic.ComponentManager,
+        	com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType.Mode,
+        	com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType,
+        	com.twinsoft.convertigo.beans.ngx.components.UIDynamicElement,
+        	com.twinsoft.convertigo.engine.mobile.NgxBuilder,
+        	com.twinsoft.convertigo.engine.util.Clipboard,
+        	org.jsoup.parser.ParseSettings,
+        	org.jsoup.parser.Parser,
+        	org.jsoup.Jsoup,
+        )) {
+        	
+        	include("js/jsonpatch-js/jsonpatch.js");
+        	include("js/format.js");
+        	
+        	function findMatchingObject(jsonObject) {
+        		if (''JsonResponse'' in jsonObject) {
+        			return jsonObject.JsonResponse;
+        		} else if (''JsonChanges'' in jsonObject) {
+        			let changes = jsonObject.JsonChanges;
+        			if (''explanation'' in jsonObject) {
+        				changes.unshift({
+        				      "op": "replace",
+        				      "path": "/explanation",
+        				      "value": jsonObject.explanation
+        				});
+        			}
+        			return changes;
+        		}
+        		return null;
+        	}
+        /*	
+        	function extractJSONFromMarkdown(md) {
+        	  let jsonOb = null;
+        	  try {
+        		  jsonOb = findMatchingObject(JSON.parse(md));
+        	  } catch (e) {
+        		  log.error("Failed to parse JSON: "+ e.message);
+        		  
+        		  const jsonCodeBlockRegex = /```json\s*([\s\S]*?)\s*```/gi;
+        		  const matches = md.matchAll(jsonCodeBlockRegex);
+        		  if (matches) {
+        			  for (var match of matches) {
+        				  //log.warn("MATCH: "+ match[0]);
+        				  try {
+        				      let parsed = JSON.parse(match[1]);
+        				      //log.warn("JSON: "+ match[1]);
+        				      //log.warn("JSON p: "+ JSON.stringify(parsed));
+        				      //log.warn("JSON css: "+ parsed.css);
+        					  jsonOb = findMatchingObject(parsed);
+        					  if (jsonOb != null) {
+        						  break;
+        					  }
+        				  } catch (e) {
+        					  log.error("Failed to parse JSON: "+ e.message);
+        				  }
+        			  }
+        		  } else {
+        			  log.error("No JSON code block found.");
+        		  }
+        	  }
+        	  return jsonOb;
+        	}
+        */	
+        	function getBeanKey(tag) {
+        		var beanKey = undefined;
+        		if (cm != null) {
+        			try {
+        				var map = cm.getIonBeans();
+        				for (let key of map.keySet()) {
+        				  if (tag == map.get(key).getTag()) {
+        					  beanKey = key;
+        					  if ("FSImage" == beanKey) {
+        						  beanKey = "Image";
+        					  }
+        					  break;
+        				  }
+        				}
+        			} catch (e) {
+        				log.error("Failed to getBeanKey: "+ e.message);
+        			}
+        		}
+        		return beanKey;
+        	}
+        	
+        	function setBeanProperty(a, dbo) {
+        		var bRet = false;
+        		try {
+        			if (dbo != null) {
+        				var akey = ""+a.getKey();
+        				var aval = ""+a.getValue();
+        				//log.debug("1- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
+        				
+        				var fake = new UIDynamicElement();
+        				if (fake.getClass().isAssignableFrom(dbo.getClass())) {
+        					dbo.loadBean(cm);
+        					var ionBean = dbo.getIonBean();
+        					if (ionBean != null) {
+        						let map = ionBean.getProperties();
+        						for (let key of map.keySet()) {
+        							let property = map.get(key);
+        							var pname = property.getName();
+        							var pattr = property.getAttr();
+        							pattr = pattr == "" ? pname : pattr;
+        							if ((akey == pattr || akey == "["+pattr+"]" ) && akey !== "class") {
+        								
+        								var value = aval.trim();
+        								
+        								var mode = MobileSmartSourceType.Mode.PLAIN;
+        								if (akey.startsWith("[") && akey.endsWith("]")) {
+        									mode = MobileSmartSourceType.Mode.SCRIPT;
+        								}
+        								if (akey.startsWith("(") && akey.endsWith(")")) {
+        									mode = MobileSmartSourceType.Mode.SCRIPT;
+        								}
+        								if (value.startsWith("{{") && value.endsWith("}}")) {
+        									mode = MobileSmartSourceType.Mode.SCRIPT;
+        									value = value.replace("{{","").replace("}}","").trim();
+        								}
+        								
+        								var msst = new MobileSmartSourceType();
+        								msst.setMode(mode);
+        								msst.setSmartValue(value);
+        								
+        								ionBean.setPropertyValue(pname, msst);
+        								
+        								bRet = true;
+        								break;
+        							}
+        						}
+        						
+        						dbo.saveBean();
+        					}
+        				} else {
+        					//....
+        				}
+        			}
+        		} catch (e) {
+        			log.error("Failed to setBeanProperty: "+ e.message);
+        		}
+        		return bRet;
+        	}
+        	
+        	function parseText(template) {
+        	  const regex = /\{\{\s*(.*?)\s*\}\}/g;
+        	  let result = [];
+        	  let lastIndex = 0;
+        	
+        	  let match;
+        	  while ((match = regex.exec(template)) !== null) {
+        	    // Texte statique avant l''expression
+        	    if (match.index > lastIndex) {
+        	      result.push({
+        	        type: ''text'',
+        	        value: template.slice(lastIndex, match.index)
+        	      });
+        	    }
+        	
+        	    // Expression
+        	    result.push({
+        	      type: ''expression'',
+        	      value: match[1]
+        	    });
+        	
+        	    lastIndex = regex.lastIndex;
+        	  }
+        	
+        	  // Texte statique restant après la dernière expression
+        	  if (lastIndex < template.length) {
+        	    result.push({
+        	      type: ''text'',
+        	      value: template.slice(lastIndex)
+        	    });
+        	  }
+        	
+        	  return result;
+        	}
+        
+        	function extractConstructorParamsMapFromText(sourceCode) {
+        	    const paramMap = new Map();
+        		//log.debug("constructor code\n"+sourceCode);
+        		
+        		try {
+        		    // Match constructor content
+        		    const constructorRegex = /constructor\s*\(([\s\S]*?)\)\s*{/;
+        		    const match = constructorRegex.exec(sourceCode);
+        		
+        		    if (!match) {
+        				log.warn("no match for constructor");
+        		        return paramMap;
+        		    }
+        		
+        		    const paramsString = match[1].trim();
+        			const params = paramsString.split(",");
+        		    const paramRegex = /\s*(?:public|private|protected)?\s*([\w$]+)\s*:\s*([\w$.<>\[\], \t]+)\s*/;
+        		
+        		    for (var param of params) {
+        		        var paramMatch = paramRegex.exec(param);
+        		        if (paramMatch) {
+        		            var name = paramMatch[1];
+        		            var type = paramMatch[2].trim();
+        		            paramMap.set(name, type);
+        		        }
+        		    }
+        		    //log.debug("paramMap\n"+ JSON.stringify(Object.fromEntries(paramMap)));
+        		    
+        		} catch (e) {
+        			log.error("Failed to extractConstructorParamsMapFromText: "+ e.message);
+        		}
+        	    return paramMap;
+        	}
+        	
+        	function isSelfClosingTag(tag) {
+        		var tags = ["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"];
+        		return tags.includes(tag.trim());
+        	}
+        	
+        	function createBeans(e, parent) {
+        		try {
+        			var dbo = null;			
+        			var tag = e.nodeName();
+        			var key = getBeanKey(tag);
+        			if (key == undefined) {
+        				dbo = cm.createBean(cm.getComponentByName("UIElement"));
+        				dbo.setTagName(tag);
+        				if (isSelfClosingTag(""+tag)) {
+        					dbo.setSelfClose(true);
+        				}
+        			} else {
+        				dbo = cm.createBean(cm.getComponentByName(key));
+        			}
+        			if (parent != null && dbo != null) {
+        				parent.add(dbo);
+        			}
+        			if (dbo != null) {
+        				e.attributes().forEach((a) => {
+        					if (!setBeanProperty(a, dbo)) {
+        						try {
+        							var akey = ""+a.getKey();
+        							var aval = ""+a.getValue();
+        							//log.debug("2- setBeanProperty a:"+ akey + "=" + aval + ", dbo:" + dbo.getClass());
+        							
+        							var value = aval.trim();
+        							var mode = MobileSmartSourceType.Mode.PLAIN;
+        							if (akey.startsWith("[") && akey.endsWith("]")) {
+        								mode = MobileSmartSourceType.Mode.SCRIPT;
+        							}
+        							if (akey.startsWith("(") && akey.endsWith(")")) {
+        								mode = MobileSmartSourceType.Mode.SCRIPT;
+        							}
+        							var msst = new MobileSmartSourceType();
+        							msst.setMode(mode);
+        							msst.setSmartValue(value);
+        							
+        							var dbo_attr = cm.createBean(cm.getComponentByName("UIAttribute"));
+        							dbo_attr.setAttrName(akey);
+        							dbo_attr.setAttrSmartType(msst);
+        							dbo.add(dbo_attr);
+        						} catch (e) {
+        							log.error("Failed to add attribute: "+ e.message);
+        						}
+        					}
+        				});
+        			}
+        			if (e.hasText() && dbo != null) {
+        				e.textNodes().forEach((node) => {
+        					if (!node.isBlank()) {
+        						var text = node.text().trim().trimEnd();
+        						var parsed = parseText(text);
+        						parsed.forEach(item => {
+        						  var value = item.value;
+        						  var mode = item.type == ''text'' ? MobileSmartSourceType.Mode.PLAIN : MobileSmartSourceType.Mode.SCRIPT;
+        						  var msst = new MobileSmartSourceType();
+        						  msst.setMode(mode);
+        						  msst.setSmartValue(value);
+        						  var dbo_text = cm.createBean(cm.getComponentByName("UIText"));
+        						  dbo_text.setTextSmartType(msst);
+        						  dbo.add(dbo_text);
+        						});						
+        					}
+        				});
+        			}
+        			if (e.childrenSize() > 0) {
+        				e.children().forEach((child) => {
+        					createBeans(child, dbo);
+        				});
+        			}
+        			return dbo;
+        		} catch (e) {
+        			log.error("Failed to createBeans: "+ e.message);
+        		}
+        		return null;
+        	}
+        	
+        	function getInnerCode(method) {
+        		try {
+        			if (method != null) {
+        				return method.substring(method.indexOf(''{'')+1,method.lastIndexOf(''}''));
+        			}
+        		} catch (e) {
+        			log.error("Failed to getInnerCode: "+ e.message);
+        		}
+        		return "";
+        	}
+        
+        	function getVariableNames(map) {
+        		let keys = [];
+        		try {
+        			for (let key in map) {
+        				keys.push(key);
+        			}
+        		} catch (e) {
+        			log.error("Failed to getVariableNames: "+ e.message);
+        		}
+        		return keys;
+        	}
+        
+        	function getEmitterNames(arr) {
+        		let keys = [];
+        		try {
+        			for (let key of arr) {
+        				keys.push(key);
+        			}
+        		} catch (e) {
+        			log.error("Failed to getEmitterNames: "+ e.message);
+        		}
+        		return keys;
+        	}
+        	
+        	function checkDuplicates(arr) {
+        		return arr.filter((item, idx) => arr.indexOf(item) === idx);
+        	}
+        	
+        	function hasName(keys, line) {
+        		let found = false;
+        		try {
+        			//log.debug("Arr Keys: "+ keys);
+        			for (let i=0; i < keys.length; i++) {
+        				let re = new RegExp("^\\s*"+keys[i]+"\\b");
+        				if (re.test(""+line)) {
+        					//log.debug("Key "+ keys[i] +" found in "+ line);
+        					found = true;
+        					break;
+        				}
+        			}
+        		} catch (e) {
+        			log.error("Failed to hasName: "+ e.message);
+        		}
+        		return found;
+        	}
+        		
+        	function getLines(ob) {
+        		try {			
+        			if (Array.isArray(ob)) {
+        				return checkDuplicates(ob);
+        			} else {
+        				let arr = [];
+        				for (let key in ob) {
+        					arr.push(ob[key]);
+        				}
+        				log.warn("lines: "+arr);
+        				return checkDuplicates(arr);
+        			}
+        		}
+        		catch (e) {
+        			log.error("Failed to getLines: "+ e.message);
+        		}
+        		return [];
+        	}
+        	
+        	function getMarkerCode(jsonOb, marker, key) {
+        		var code = "/*Begin_c8o_"+ marker +"*/\n";
+        		try {
+        			var value = null;
+        			if (jsonOb[key] != null) {
+        				value = getInnerCode(jsonOb[key]) + "\n";
+        			} else if (jsonOb.functions[key] != undefined) {
+        				value = getInnerCode(jsonOb.functions[key]) + "\n";
+        			}
+        			if (value != null) {
+        				code += value;
+        			}
+        		} catch (e) {
+        			log.error("Failed to set "+ marker +" marker: "+ e.message);
+        		}
+        		code += "/*End_c8o_"+ marker +"*/\n";
+        		return code;
+        	}
+        	
+        	function getComponentFromMessages(Messages) {
+        	const start = Date.now();
+        	var scriptContent = `
+        	/*Begin_c8o_CompImport*/
+        	/*End_c8o_CompImport*/
+        	/*Begin_c8o_OuputDeclaration*/
+        	/*End_c8o_OuputDeclaration*/
+        	/*Begin_c8o_CompDeclaration*/
+        	/*End_c8o_CompDeclaration*/
+        	/*Begin_c8o_CompConstructor*/
+        	/*End_c8o_CompConstructor*/
+        	/*Begin_c8o_CompInitialization*/
+        	/*End_c8o_CompInitialization*/
+        	/*Begin_c8o_CompFinalization*/
+        	/*End_c8o_CompFinalization*/
+        	/*Begin_c8o_CompChanges*/
+        	/*End_c8o_CompChanges*/
+        	/*Begin_c8o_CompDoCheck*/
+        	/*End_c8o_CompDoCheck*/
+        	/*Begin_c8o_CompAfterContentInit*/
+        	/*End_c8o_CompAfterContentInit*/
+        	/*Begin_c8o_CompAfterContentChecked*/
+        	/*End_c8o_CompAfterContentChecked*/
+        	/*Begin_c8o_CompAfterViewInit*/
+        	/*End_c8o_CompAfterViewInit*/
+        	/*Begin_c8o_CompAfterViewChecked*/
+        	/*End_c8o_CompAfterViewChecked*/
+        	/*Begin_c8o_CompFunction*/
+        	/*End_c8o_CompFunction*/
+        	`;
+        		var clipboard = new Clipboard();
+        		var dataType = "create";
+        		var explanation = "";
+        		var jsonParseErrors = [];
+        		var jsonPatchErrors = [];
+        		var data = [];
+        		var cpt = 0;
+        		
+        		for (let i = 0; i < Messages.length; i++) {
+        			let message = Messages[i];
+        			if (message.role == "assistant" && message.text != null && message.text != "") {
+        				//log.debug("Extract JSON from message "+ message.id +":\n"+ message.text);
+        				log.warn("Extract JSON from message "+ message.id);
+        				try {
+        					let json = message.text;
+        					//Just to log invalid json string and try to fix it
+        					try {
+        						JSON.parse(json);
+        					} catch (e) {
+        						log.warn("Invalid json string detected for message "+ message.id +": "+ e.message + "\n"+ message.text);
+        						json = fixMalformedJson(message.text);
+        					}//
+        					
+        					let jsonOb = findMatchingObject(JSON.parse(json));
+        					if (jsonOb != null) {
+        						data.push(jsonOb);
+        					}
+        				} catch (e) {
+        					jsonParseErrors.push({error: e.message, object: message});
+        					log.error("Failed to handle message "+ message.id +": "+ e.message);
+        				}
+        			}
+        		}
+        		
+        		if (data.length > 0) {
+        			let dataLength = data.length;
+        			let jsonOb = null;			
+        			try {
+        				while (data.length > 0) {
+        					let cur = data.shift();
+        					if (cur != null && cur != undefined) {
+        						if (Array.isArray(cur)) {
+        							try {
+        								jsonpatch.apply(jsonOb, cur);
+        							} catch (e) {
+        								jsonPatchErrors.push({error: e.message, object: cur});
+        								log.error("Failed to apply jsonpatch: "+ e.message);
+        							}
+        						} else {
+        							jsonOb = cur;
+        						}
+        					}
+        				}
+        			} catch (e) {
+        				jsonOb = null;
+        				log.error("Failed to retrieve Json object: "+ e.message);
+        			}
+        			
+        			if (jsonOb != null) {
+        				log.debug("JSON stringified:\n"+ JSON.stringify(jsonOb, null, "\t"));
+        				dataType = dataLength == 1 ? "create":"edit";
+        				
+        				try {
+        					var comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
+        					if (comp != null) {
+        						explanation = jsonOb.explanation;
+        						
+        						
+        						// extract and set name
+        						try {
+        							var name = jsonOb.name;
+        							if (name != undefined) {
+        								comp.setName(name);
+        							}
+        						} catch (e) {}
+        						
+        						// extract and set comment
+        						try {
+        							var comment = jsonOb.comment;
+        							comp.setComment(comment + "\n-- AI generated: "+ threadid);
+        						} catch (e) {
+        							comp.setComment("-- AI generated: "+ threadid);
+        						}
+        						
+        						// add compAfterViewInit event with a CustomAction
+        						try {
+        							var evt = cm.createBean(cm.getComponentByName("UISharedComponentEvent"));
+        							var action = cm.createBean(cm.getComponentByName("UICustomAction"));
+        							
+        							// setPageTsImports from comp-imports 
+        							var lmti = new XMLVector(action.getPageTsImports());
+        							for (let key in jsonOb["comp-imports"]) {
+        								var value = jsonOb["comp-imports"][key];
+        								var xmlv = new XMLVector();
+        								xmlv.add(""+key);
+        								xmlv.add(""+value);
+        								lmti.add(xmlv);
+        							}
+        							action.setPageTsImports(lmti);
+        
+        							// setModuleTsImports from module-imports 
+        							var lmti = new XMLVector(action.getModuleTsImports());
+        							for (let key in jsonOb["module-imports"]) {
+        								var value = jsonOb["module-imports"][key];
+        								var xmlv = new XMLVector();
+        								xmlv.add(""+key);
+        								xmlv.add(""+value);
+        								lmti.add(xmlv);
+        							}
+        							action.setModuleTsImports(lmti);
+        							
+        							// setModuleNgImports from module-ngmodules 
+        							var lmngi = new XMLVector(action.getModuleNgImports());
+        							jsonOb["module-ngmodules"].forEach((value) => {
+        								var xmlv = new XMLVector();
+        								xmlv.add(value);
+        								lmngi.add(xmlv);
+        							});
+        							action.setModuleNgImports(lmngi);
+        							
+        							// setModuleNgProviders from module-ngproviders 
+        							var lmngp = new XMLVector(action.getModuleNgProviders());
+        							jsonOb["module-ngproviders"].forEach((value) => {
+        								var xmlv = new XMLVector();
+        								xmlv.add(value);
+        								lmngp.add(xmlv);
+        							});
+        							action.setModuleNgProviders(lmngp);
+        							
+        							action.setName("install");
+        							evt.add(action);
+        							comp.add(evt);
+        						} catch (e) {
+        							log.error("Failed to handle style: "+ e.message);
+        						}
+        						
+        						// Add dbos from ''XHTML''
+        						try {
+        							// HTML parser
+        							/*var parser = Parser.htmlParser();
+        							parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
+        							var doc = Jsoup.parse("<body>"+jsonOb.XHTML+"</body>", "", parser);
+        							//log.debug("Jsoup document:\n"+ doc.toString());
+        							doc.body().children().forEach((child) => {
+        								createBeans(child, comp);
+        							});*/
+        							
+        							// XML parser
+        							var parser = Parser.xmlParser();
+        							parser.settings(new ParseSettings(true, true)); //respect case !!!!!!!!!!
+        							var doc = Jsoup.parse(jsonOb.XHTML, "", parser);
+        							//log.debug("Jsoup document:\n"+ doc.toString());
+        							doc.children().forEach((child) => {
+        								createBeans(child, comp);
+        							});
+        						} catch(e) {
+        							log.error("Failed to handle dbos: "+ e.message);
+        						}
+        						
+        						// Add style from ''css''
+        						try {
+        							var uis = cm.createBean(cm.getComponentByName("UIStyle"));
+        							uis.setStyleContent(new FormatedContent(jsonOb.css));
+        							comp.add(uis);
+        						} catch (e) {
+        							log.error("Failed to handle style: "+ e.message);
+        						}
+        						
+        						// Add variables from ''variables''
+        						try {
+        							for (let key in jsonOb.variables) {
+        								var variable = jsonOb.variables[key];
+        								var uicv = cm.createBean(cm.getComponentByName("UICompVariable"));
+        								uicv.setName(key);
+        								uicv.setComment(variable.description);
+        
+        								var value = variable.value;
+        								//log.debug("input variable "+ key +"["+ typeof variable.type +"]: "+ value);
+        								if ("string" == variable.type) {
+        									uicv.setVariableValue("''"+ new String(value).replace(/''/g, "\\''") +"''");
+        								} else {
+        									if ("string" == typeof value) {
+        										uicv.setVariableValue(new String(value));
+        									} else {
+        										uicv.setVariableValue(new String(JSON.stringify(value)));
+        									}
+        								}
+        								
+        								comp.add(uicv);
+        							}
+        						} catch(e) {
+        							log.error("Failed to handle variables: "+ e.message);
+        						}
+        						
+        						// Add event emitters
+        						try {
+        							jsonOb["emitters"].forEach((evtname) => {
+        								var evt = cm.createBean(cm.getComponentByName("UICompEvent"));
+        								evt.setName(evtname);
+        								comp.add(evt);
+        							});
+        						} catch(e) {
+        							log.error("Failed to handle event emitters: "+ e.message);
+        						}
+        						
+        						// Add others (interfaces, declarations, methods...)
+        						try {
+        							const variables = getVariableNames(jsonOb.variables);
+        							const emitters = getEmitterNames(jsonOb.emitters);
+        							
+        							try {
+        								var importMarker = NgxBuilder.getMarker(scriptContent, "CompImport");
+        								var delarationMarker = NgxBuilder.getMarker(scriptContent, "CompDeclaration");
+        								var constructorMarker = NgxBuilder.getMarker(scriptContent, "CompConstructor");
+        								var initMarker = NgxBuilder.getMarker(scriptContent, "CompInitialization");
+        								var destroyMarker = NgxBuilder.getMarker(scriptContent, "CompFinalization");
+        								var ngChangesMarker = NgxBuilder.getMarker(scriptContent, "CompChanges");
+        								var ngDoCheckMarker = NgxBuilder.getMarker(scriptContent, "CompDoCheck");
+        								var ngAfterContentInitMarker = NgxBuilder.getMarker(scriptContent, "CompAfterContentInit");
+        								var ngAfterContentCheckedMarker = NgxBuilder.getMarker(scriptContent, "CompAfterContentChecked");
+        								var ngAfterViewInitMarker = NgxBuilder.getMarker(scriptContent, "CompAfterViewInit");
+        								var ngAfterViewCheckedMarker = NgxBuilder.getMarker(scriptContent, "CompAfterViewChecked");
+        								var functionMarker = NgxBuilder.getMarker(scriptContent, "CompFunction");
+        								
+        								var customIMarker = "/*Begin_c8o_CompImport*/\n";
+        								try {
+        									for (let key in jsonOb.interfaces) {
+        										customIMarker += jsonOb.interfaces[key] + "\n";
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompImport marker: "+ e.message);
+        								}
+        								customIMarker += "/*End_c8o_CompImport*/\n";
+        								
+        								var customDMarker = "/*Begin_c8o_CompDeclaration*/\n";
+        								try {
+        									var pnames = checkDuplicates(variables.concat(emitters));
+        									//log.debug("all names:" + pnames);
+        									getLines(jsonOb["declarations"]).forEach((line) => {
+        										if (!hasName(pnames, line)) {
+        											customDMarker += line + "\n";
+        										}
+        									});
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompDeclaration marker: "+ e.message);
+        								}
+        								customDMarker += "/*End_c8o_CompDeclaration*/\n";
+        
+        								var customCMarker = getMarkerCode(jsonOb, "CompConstructor", "constructor");
+        								var customInitMarker = getMarkerCode(jsonOb, "CompInitialization", "ngOnInit");
+        								var customDestroyMarker = getMarkerCode(jsonOb, "CompFinalization", "ngOnDestroy");
+        								var customNgCMarker = getMarkerCode(jsonOb, "CompChanges", "ngOnChanges");
+        								var customNgDoCheckMarker = getMarkerCode(jsonOb, "CompDoCheck", "ngDoCheck");
+        								var customNgAfterContentInitMarker = getMarkerCode(jsonOb, "CompAfterContentInit", "ngAfterContentInit");
+        								var customNgAfterContentCheckedMarker = getMarkerCode(jsonOb, "CompAfterContentChecked", "ngAfterContentChecked");
+        								var customNgAfterViewInitMarker = getMarkerCode(jsonOb, "CompAfterViewInit", "ngAfterViewInit");
+        								var customNgAfterViewCheckedMarker = getMarkerCode(jsonOb, "CompAfterViewChecked", "ngAfterViewChecked");
+        								
+        								var customFMarker = "/*Begin_c8o_CompFunction*/\n";
+        								try {
+        									for (let key in jsonOb.functions) {
+        										if (key !== "constructor" && !key.startsWith("ng")) {
+        											customFMarker += jsonOb.functions[key] + "\n";
+        										}
+        									}
+        								} catch(e) {
+        									log.error("Failed to set c8o_CompFunction marker: "+ e.message);
+        								}
+        								customFMarker += "/*End_c8o_CompFunction*/\n";
+        								
+        								var s1 = "/*Begin_c8o_CompDeclaration*/";
+        								var s2 = "/*Begin_c8o_CompConstructor*/";
+        								if (jsonOb.constructor != null) {
+        									var params = extractConstructorParamsMapFromText(jsonOb.constructor);
+        									params.forEach((value, key) => {
+        										customDMarker = customDMarker.replace(s1, s1+"\n" +key+" : "+ value + ";\n");
+        										customCMarker = customCMarker.replace(s2, s2+"\n" +"this."+key+" = this.injector.get("+ value + ");\n");
+        									});
+        								}
+        								
+        								scriptContent = scriptContent.replace(importMarker, customIMarker);
+        								scriptContent = scriptContent.replace(constructorMarker, customCMarker);
+        								scriptContent = scriptContent.replace(delarationMarker, customDMarker);
+        								scriptContent = scriptContent.replace(initMarker, customInitMarker);
+        								scriptContent = scriptContent.replace(destroyMarker, customDestroyMarker);
+        								scriptContent = scriptContent.replace(ngChangesMarker, customNgCMarker);
+        								scriptContent = scriptContent.replace(ngDoCheckMarker, customNgDoCheckMarker);
+        								scriptContent = scriptContent.replace(ngAfterContentInitMarker, customNgAfterContentInitMarker);
+        								scriptContent = scriptContent.replace(ngAfterContentCheckedMarker, customNgAfterContentCheckedMarker);
+        								scriptContent = scriptContent.replace(ngAfterViewInitMarker, customNgAfterViewInitMarker);
+        								scriptContent = scriptContent.replace(ngAfterViewCheckedMarker, customNgAfterViewCheckedMarker);
+        								scriptContent = scriptContent.replace(functionMarker, customFMarker);
+        								
+        							} catch(e) {
+        								log.error("Failed to handle markers : "+ e.message);
+        							}
+        														
+        							comp.setScriptContent(new FormatedContent(scriptContent));
+        							//log.debug("comp scriptContent:\n"+ comp.getScriptContent().getString());
+        						} catch (e) {
+        							log.error("Failed to set typescript content: "+ e.message);
+        						}
+        						
+        						clipboard.add(comp);
+        					}
+        				} catch (e) {
+        					log.error("Failed to create component: "+ e.message);
+        				}
+        			} else {
+        				log.error("Failed to retrieve Json");
+        			}
+        		} else {
+        			log.error("No valid message");
+        			explanation = "Failed: try Regenerate all";
+        		}
+        				
+        		var xml = clipboard.toXml();
+        		log.warn("Clipboard xml:\n"+ xml);
+        		
+        		var jsonAData = {
+        			"type": dataType,
+        			"threadid": threadid,
+        			"parseErrors": JSON.stringify(jsonParseErrors),
+        			"patchErrors": JSON.stringify(jsonPatchErrors),
+        			"explanation": explanation,
+        			"clipboard": xml
+        		};
+        		
+        		return jsonAData;
+        	}
+        
+        	var cm = ComponentManager.of(context.project);
+        	if (cm.getTemplateProjectName() == "Java@Ngx") {
+        		log.warn("Failed to retrieve TPL associated with assistant project. Will use mobilebuilder_tpl_8_3_0_ngx");
+        		cm = ComponentManager.of("mobilebuilder_tpl_8_3_0_ngx");
+        	}
+        	
+        	AIData = getComponentFromMessages(Messages);
+        }
+        '
+    ↓object [steps.JsonObjectStep-1747227848030]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: AIData
+      ↓type [steps.JsonFieldStep-1747389003582]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: type
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.type
+      ↓threadid [steps.JsonFieldStep-1747386452769]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: threadid
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.threadid
+      ↓parseErrors [steps.JsonFieldStep-1752249246607]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: parseErrors
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.parseErrors
+      ↓patchErrors [steps.JsonFieldStep-1752249287875]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: patchErrors
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.patchErrors
+      ↓explanation [steps.JsonFieldStep-1747228971470]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: explanation
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.explanation
+      ↓clipboard [steps.JsonFieldStep-1747227976746]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: clipboard
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: AIData.clipboard
+  ↓jElse [steps.ElseStep-1744822845333]: 
+↓fromStub [variables.RequestableVariable-1744901364156]: 
+  value: false
+  wsdl: false
+↓fromStubFileName [variables.RequestableVariable-1750432336672]: 
+↓threadid [variables.RequestableVariable-1744206384502]: 
+↓runid [variables.RequestableVariable-1744389554413]: 
+↓TestStub [core.TestCase]: 
+  ↓fromStub [variables.TestCaseVariable-1744901628227]: 
+    value: true
+↓TestStubInvalidJson [core.TestCase]: 
+  ↓fromStub [variables.TestCaseVariable-1750431645455]: 
+    value: true
+  ↓fromStubFileName [variables.TestCaseVariable-1750431990904]: 
+    value: GetMessages_invalid.xml

@@ -1,0 +1,191 @@
+comment: '-- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh---'
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        displayedText: string = '''';
+        private currentIndex: number = 0;
+        private intervalId: any = null;
+        private maxLength: number = 50;
+        private scrollOffset: number = 0;
+        private fullText: string = '''';
+        private newText: string = '''';
+        private scrollTextRef!: ElementRef<HTMLSpanElement>;
+        /*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+         
+        /*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        
+            // Initial typing triggered on first input change
+          
+        /*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        
+            this.clearTypingInterval();
+          
+        /*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        
+            if (changes[''text'']) {
+              const newTextValue = changes[''text''].currentValue || '''';
+              if (changes[''text''].firstChange) {
+                this.fullText = newTextValue;
+                this.newText = '''';
+              } else {
+                this.newText = newTextValue;
+              }
+              this.restartTyping();
+            }
+          
+        /*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        /*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        /*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        /*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		try {
+        			this.findPageOwner()["content"].scrollToBottom();
+        		} catch (e) {}
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        /*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        private restartTyping(): void {
+            this.clearTypingInterval();
+            this.currentIndex = 0;
+            this.scrollOffset = 0;
+            this.updateScrollPosition(0);
+            this.displayedText = this.fullText.length > this.maxLength ? this.fullText.substring(0, this.maxLength) : this.fullText;
+        
+            if (this.newText.length === 0) {
+              // No new text to type, just show existing text
+              return;
+            }
+        
+            this.intervalId = setInterval(() => {
+              if (this.currentIndex < this.newText.length) {
+                this.displayedText += this.newText.charAt(this.currentIndex);
+                this.currentIndex++;
+        
+                if (this.displayedText.length > this.maxLength) {
+                  this.scrollOffset += this.getCharWidth();
+                  this.updateScrollPosition(this.scrollOffset);
+                  this.displayedText = this.displayedText.substring(1);
+                }
+              } else {
+                this.clearTypingInterval();
+                // After typing new text, append it to fullText
+                this.fullText += this.newText;
+                this.newText = '''';
+              }
+            }, this.speed);
+          }
+        private getCharWidth(): number {
+            if (!this.scrollTextRef || this.displayedText.length === 0) {
+              return 10; // fallback width
+            }
+            const span = this.scrollTextRef.nativeElement;
+            return span.offsetWidth / this.displayedText.length || 10;
+          }
+        private updateScrollPosition(offset: number): void {
+            if (this.scrollTextRef) {
+              this.scrollTextRef.nativeElement.style.transform = `translateX(-${offset}px)`;
+            }
+          }
+        private clearTypingInterval(): void {
+            if (this.intervalId !== null) {
+              clearInterval(this.intervalId);
+              this.intervalId = null;
+            }
+          }
+        onRestartClick(): void {
+            this.restartTyping();
+          }
+        /*End_c8o_CompFunction*/
+        '
+↓SharedComponent_Event [ngx.components.UISharedComponentEvent-1749560989370]: 
+  ↓install [ngx.components.UICustomAction-1749560989373]: 
+↓Div [ngx.components.UIDynamicElement-1749560989376]: 
+  beanData: '{"ionBean":"DivTag"}'
+  tagName: div
+  ↓Attr [ngx.components.UIAttribute-1749560989379]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:scroll-container
+  ↓TextItem [ngx.components.UIDynamicElement-1749560989382]: 
+    beanData: '{"ionBean":"TextItem"}'
+    tagName: ion-text
+    ↓Span [ngx.components.UIDynamicElement-1749560989385]: 
+      beanData: '{"ionBean":"SpanTag"}'
+      tagName: span
+      ↓Attr [ngx.components.UIAttribute-1749560989388]: 
+        attrName: '#scrollText'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:
+      ↓Attr1 [ngx.components.UIAttribute-1749560989391]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:scroll-text
+      ↓Text [ngx.components.UIText-1749560989394]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.displayedText
+↓Button [ngx.components.UIDynamicElement-1749560989397]: 
+  beanData: '{"ionBean":"Button"}'
+  isEnabled: false
+  tagName: ion-button
+  ↓Attr [ngx.components.UIAttribute-1749560989400]: 
+    attrName: (click)
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:onRestartClick()
+  ↓Text [ngx.components.UIText-1749560989403]: 
+    textValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:Restart
+↓Style [ngx.components.UIStyle-1749560989406]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          'ion-text {
+            font-family: monospace, monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            display: block;
+            width: 100%;
+            max-width: 100%;
+          }
+          .scroll-container {
+            overflow: hidden;
+            width: 100%;
+            max-width: 100%;
+            position: relative;
+          }
+          .scroll-text {
+            display: inline-block;
+            white-space: nowrap;
+            transition: transform 0.4s ease;
+          }
+          '
+↓text [ngx.components.UICompVariable-1749560989409]: 
+  value: '''New incoming text.'''
+↓speed [ngx.components.UICompVariable-1749560989412]: 
+  value: 100

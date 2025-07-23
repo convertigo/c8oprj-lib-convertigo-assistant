@@ -1,0 +1,655 @@
+componentScriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_AppImport*/
+        /*End_c8o_AppImport*/
+        /*Begin_c8o_AppDeclaration*/
+        	/*End_c8o_AppDeclaration*/
+        /*Begin_c8o_AppSettings*/
+                /*End_c8o_AppSettings*/
+        /*Begin_c8o_AppConstructor*/
+        		/*End_c8o_AppConstructor*/
+        /*Begin_c8o_AppInitialization*/
+                        /* Uncomment the following lines to enable the i18n feature.
+                         * You should add a json per language in the assets/i18n folder. */
+                        translate.setDefaultLang(''en'');
+                        translate.use(translate.getBrowserLang());
+                        
+                        /* Uncomment the following lines to enable the custom status bar color. */
+                        // statusBar.overlaysWebView(false);
+                        // statusBar.backgroundColorByHexString("#000000");
+                        // statusBar.styleBlackOpaque();
+                        
+        				/* Uncomment the following lines to enable the Service Worker Update. */
+        				/*let updates = this.getInstance(SwUpdate);
+        				let alertCtrl = this.getInstance(AlertController);
+        				let fu = ()=>{
+        				   this.c8o.log._debug("[SW] checking for updates each 60000 ms")
+        				   updates.checkForUpdate()
+        				  .then((res)=>{
+        					  this.c8o.log._debug("[SW] updates checked")
+        				  })
+        				  .catch((e)=>{
+        					  this.c8o.log._error("[SW] updates error")
+        					  console.log(JSON.stringify(e));
+        				  });
+        				}
+        				fu()
+        				setInterval(fu, 60000)
+        				
+        				updates.available.subscribe(event => {
+        				   this.c8o.log._debug("[SW] update available");
+        				   this.c8o.log._debug("new version is "+ event.current);
+        				   const prompt = alertCtrl.create({
+        					  title: "Convertigo Update Service",
+        					  message: "A new version is available for for your app.",
+        					  buttons: [
+        					  {
+        						 text: "Restart app",
+        						 handler: data => {
+        							 this.c8o.log._debug("update available we will reload app");
+        							 updates.activateUpdate().then(() => document.location.reload());
+        						 }
+        					  }
+        					 ]
+        				   });
+        				   prompt.present();
+        				});*/
+        				
+        			/*End_c8o_AppInitialization*/
+        /*Begin_c8o_AppFunction*/
+        	/*End_c8o_AppFunction*/
+        '
+tplProjectName: mobilebuilder_tpl_8_3_0_ngx
+↓Menu [ngx.components.UIDynamicMenu-1500890597895]: 🗏 mobileMenus/Menu.yaml
+↓AssitantMessage [ngx.components.UISharedRegularComponent-1744220193433]: 🗏 mobileSharedComponents/AssitantMessage.yaml
+↓ChatQuestion [ngx.components.UISharedRegularComponent-1744217927346]: 🗏 mobileSharedComponents/ChatQuestion.yaml
+↓ChatInputComponent [ngx.components.UISharedRegularComponent-1749652210262]: 🗏 mobileSharedComponents/ChatInputComponent.yaml
+↓ImagePreviewer [ngx.components.UISharedRegularComponent-1749723864070]: 🗏 mobileSharedComponents/ImagePreviewer.yaml
+↓Markdown [ngx.components.UISharedRegularComponent-1744618692303]: 🗏 mobileSharedComponents/Markdown.yaml
+↓QuestionInputComponent [ngx.components.UISharedRegularComponent-1751017536960]: 🗏 mobileSharedComponents/QuestionInputComponent.yaml
+↓TypeWriterComponent [ngx.components.UISharedRegularComponent-1749560989367]: 🗏 mobileSharedComponents/TypeWriterComponent.yaml
+↓UserMessage [ngx.components.UISharedRegularComponent-1744218374521]: 🗏 mobileSharedComponents/UserMessage.yaml
+↓FigmaInputComponent [ngx.components.UISharedRegularComponent-1752676065921]: 🗏 mobileSharedComponents/FigmaInputComponent.yaml
+↓Page [ngx.components.PageComponent-1500538678074]: 🗏 mobilePages/Page.yaml
+↓Figma [ngx.components.PageComponent-1752572046162]: 🗏 mobilePages/Figma.yaml
+↓Style [ngx.components.UIStyle-1491635462437]: 
+  comment: You can add some global application styles here
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Ionic old custom [hidden] attribute removed since Ionic 7 */
+          [hidden] {
+            display: none !important;
+          }
+          
+          ion-menu ion-content {
+            --background: var(--ion-item-background, var(--ion-background-color, #fff));
+          }
+          
+          ion-menu.md ion-content {
+            --padding-start: 8px;
+            --padding-end: 8px;
+            --padding-top: 20px;
+            --padding-bottom: 20px;
+          }
+          
+          ion-menu.md ion-list {
+            padding: 20px 0;
+          }
+          
+          ion-menu.md ion-note {
+            margin-bottom: 30px;
+          }
+          
+          ion-menu.md ion-list-header,
+          ion-menu.md ion-note {
+            padding-left: 10px;
+          }
+          
+          ion-menu.md ion-list#inbox-list {
+            border-bottom: 1px solid var(--ion-color-step-150, #d7d8da);
+          }
+          
+          ion-menu.md ion-list#inbox-list ion-list-header {
+            font-size: 22px;
+            font-weight: 600;
+          
+            min-height: 20px;
+          }
+          
+          ion-menu.md ion-list#labels-list ion-list-header {
+            font-size: 16px;
+          
+            margin-bottom: 18px;
+          
+            color: #757575;
+          
+            min-height: 26px;
+          }
+          
+          ion-menu.md ion-item {
+            --padding-start: 10px;
+            --padding-end: 10px;
+            border-radius: 4px;
+          }
+          
+          ion-menu.md ion-item.selected {
+            --background: rgba(var(--ion-color-primary-rgb), 0.14);
+          }
+          
+          ion-menu.md ion-item.selected ion-icon {
+            color: var(--ion-color-primary);
+          }
+          
+          ion-menu.md ion-item ion-icon {
+            color: #616e7e;
+          }
+          
+          ion-menu.md ion-item ion-label {
+            font-weight: 500;
+          }
+          
+          ion-menu.ios ion-content {
+            --padding-bottom: 20px;
+          }
+          
+          ion-menu.ios ion-list {
+            padding: 20px 0 0 0;
+          }
+          
+          ion-menu.ios ion-note {
+            line-height: 24px;
+            margin-bottom: 20px;
+          }
+          
+          ion-menu.ios ion-item {
+            --padding-start: 16px;
+            --padding-end: 16px;
+            --min-height: 50px;
+          }
+          
+          ion-menu.ios ion-item.selected ion-icon {
+            color: var(--ion-color-primary);
+          }
+          
+          ion-menu.ios ion-item ion-icon {
+            font-size: 24px;
+            color: #73849a;
+          }
+          
+          ion-menu.ios ion-list#labels-list ion-list-header {
+            margin-bottom: 8px;
+          }
+          
+          ion-menu.ios ion-list-header,
+          ion-menu.ios ion-note {
+            padding-left: 16px;
+            padding-right: 16px;
+          }
+          
+          ion-menu.ios ion-note {
+            margin-bottom: 8px;
+          }
+          
+          ion-note {
+            display: inline-block;
+            font-size: 16px;
+          
+            color: var(--ion-color-medium-shade);
+          }
+          
+          ion-item.selected {
+            --color: var(--ion-color-primary);
+          }
+          '
+↓LightTheme [ngx.components.UIStyle-1662391887095]: 
+  comment: This will define the light theme for the application. This will be selected if the device is in light mode.
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':root {
+            /** primary **/
+            --ion-color-primary: #3880ff;
+            --ion-color-primary-rgb: 56, 128, 255;
+            --ion-color-primary-contrast: #ffffff;
+            --ion-color-primary-contrast-rgb: 255, 255, 255;
+            --ion-color-primary-shade: #3171e0;
+            --ion-color-primary-tint: #4c8dff;
+          
+            /** secondary **/
+            --ion-color-secondary: #3dc2ff;
+            --ion-color-secondary-rgb: 61, 194, 255;
+            --ion-color-secondary-contrast: #ffffff;
+            --ion-color-secondary-contrast-rgb: 255, 255, 255;
+            --ion-color-secondary-shade: #36abe0;
+            --ion-color-secondary-tint: #50c8ff;
+          
+            /** tertiary **/
+            --ion-color-tertiary: #5260ff;
+            --ion-color-tertiary-rgb: 82, 96, 255;
+            --ion-color-tertiary-contrast: #ffffff;
+            --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+            --ion-color-tertiary-shade: #4854e0;
+            --ion-color-tertiary-tint: #6370ff;
+          
+            /** success **/
+            --ion-color-success: #2dd36f;
+            --ion-color-success-rgb: 45, 211, 111;
+            --ion-color-success-contrast: #ffffff;
+            --ion-color-success-contrast-rgb: 255, 255, 255;
+            --ion-color-success-shade: #28ba62;
+            --ion-color-success-tint: #42d77d;
+          
+            /** warning **/
+            --ion-color-warning: #ffc409;
+            --ion-color-warning-rgb: 255, 196, 9;
+            --ion-color-warning-contrast: #000000;
+            --ion-color-warning-contrast-rgb: 0, 0, 0;
+            --ion-color-warning-shade: #e0ac08;
+            --ion-color-warning-tint: #ffca22;
+          
+            /** danger **/
+            --ion-color-danger: #eb445a;
+            --ion-color-danger-rgb: 235, 68, 90;
+            --ion-color-danger-contrast: #ffffff;
+            --ion-color-danger-contrast-rgb: 255, 255, 255;
+            --ion-color-danger-shade: #cf3c4f;
+            --ion-color-danger-tint: #ed576b;
+          
+            /** dark **/
+            --ion-color-dark: #222428;
+            --ion-color-dark-rgb: 34, 36, 40;
+            --ion-color-dark-contrast: #ffffff;
+            --ion-color-dark-contrast-rgb: 255, 255, 255;
+            --ion-color-dark-shade: #1e2023;
+            --ion-color-dark-tint: #383a3e;
+          
+            /** medium **/
+            --ion-color-medium: #92949c;
+            --ion-color-medium-rgb: 146, 148, 156;
+            --ion-color-medium-contrast: #ffffff;
+            --ion-color-medium-contrast-rgb: 255, 255, 255;
+            --ion-color-medium-shade: #808289;
+            --ion-color-medium-tint: #9d9fa6;
+          
+            /** light **/
+            --ion-color-light: #f4f5f8;
+            --ion-color-light-rgb: 244, 245, 248;
+            --ion-color-light-contrast: #000000;
+            --ion-color-light-contrast-rgb: 0, 0, 0;
+            --ion-color-light-shade: #d7d8da;
+            --ion-color-light-tint: #f5f6f9;
+          }
+          '
+↓AutoDarkTheme [ngx.components.UIStyle-1662391887098]: 
+  comment: This will define the dark theme for the application. This will be selected if the device is in dark mode. You can disable this to disable automatic dark mode switching
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '@media (prefers-color-scheme: dark) {
+            /*
+             * Dark Colors
+             * -------------------------------------------
+             */
+          
+            body {
+              --ion-color-primary: #428cff;
+              --ion-color-primary-rgb: 66,140,255;
+              --ion-color-primary-contrast: #ffffff;
+              --ion-color-primary-contrast-rgb: 255,255,255;
+              --ion-color-primary-shade: #3a7be0;
+              --ion-color-primary-tint: #5598ff;
+          
+              --ion-color-secondary: #50c8ff;
+              --ion-color-secondary-rgb: 80,200,255;
+              --ion-color-secondary-contrast: #ffffff;
+              --ion-color-secondary-contrast-rgb: 255,255,255;
+              --ion-color-secondary-shade: #46b0e0;
+              --ion-color-secondary-tint: #62ceff;
+          
+              --ion-color-tertiary: #6a64ff;
+              --ion-color-tertiary-rgb: 106,100,255;
+              --ion-color-tertiary-contrast: #ffffff;
+              --ion-color-tertiary-contrast-rgb: 255,255,255;
+              --ion-color-tertiary-shade: #5d58e0;
+              --ion-color-tertiary-tint: #7974ff;
+          
+              --ion-color-success: #2fdf75;
+              --ion-color-success-rgb: 47,223,117;
+              --ion-color-success-contrast: #000000;
+              --ion-color-success-contrast-rgb: 0,0,0;
+              --ion-color-success-shade: #29c467;
+              --ion-color-success-tint: #44e283;
+          
+              --ion-color-warning: #ffd534;
+              --ion-color-warning-rgb: 255,213,52;
+              --ion-color-warning-contrast: #000000;
+              --ion-color-warning-contrast-rgb: 0,0,0;
+              --ion-color-warning-shade: #e0bb2e;
+              --ion-color-warning-tint: #ffd948;
+          
+              --ion-color-danger: #ff4961;
+              --ion-color-danger-rgb: 255,73,97;
+              --ion-color-danger-contrast: #ffffff;
+              --ion-color-danger-contrast-rgb: 255,255,255;
+              --ion-color-danger-shade: #e04055;
+              --ion-color-danger-tint: #ff5b71;
+          
+              --ion-color-dark: #f4f5f8;
+              --ion-color-dark-rgb: 244,245,248;
+              --ion-color-dark-contrast: #000000;
+              --ion-color-dark-contrast-rgb: 0,0,0;
+              --ion-color-dark-shade: #d7d8da;
+              --ion-color-dark-tint: #f5f6f9;
+          
+              --ion-color-medium: #989aa2;
+              --ion-color-medium-rgb: 152,154,162;
+              --ion-color-medium-contrast: #000000;
+              --ion-color-medium-contrast-rgb: 0,0,0;
+              --ion-color-medium-shade: #86888f;
+              --ion-color-medium-tint: #a2a4ab;
+          
+              --ion-color-light: #222428;
+              --ion-color-light-rgb: 34,36,40;
+              --ion-color-light-contrast: #ffffff;
+              --ion-color-light-contrast-rgb: 255,255,255;
+              --ion-color-light-shade: #1e2023;
+              --ion-color-light-tint: #383a3e;
+            }
+          
+            /*
+             * iOS Dark Theme
+             * -------------------------------------------
+             */
+          
+            .ios body {
+              --ion-background-color: #000000;
+              --ion-background-color-rgb: 0,0,0;
+          
+              --ion-text-color: #ffffff;
+              --ion-text-color-rgb: 255,255,255;
+          
+              --ion-color-step-50: #0d0d0d;
+              --ion-color-step-100: #1a1a1a;
+              --ion-color-step-150: #262626;
+              --ion-color-step-200: #333333;
+              --ion-color-step-250: #404040;
+              --ion-color-step-300: #4d4d4d;
+              --ion-color-step-350: #595959;
+              --ion-color-step-400: #666666;
+              --ion-color-step-450: #737373;
+              --ion-color-step-500: #808080;
+              --ion-color-step-550: #8c8c8c;
+              --ion-color-step-600: #999999;
+              --ion-color-step-650: #a6a6a6;
+              --ion-color-step-700: #b3b3b3;
+              --ion-color-step-750: #bfbfbf;
+              --ion-color-step-800: #cccccc;
+              --ion-color-step-850: #d9d9d9;
+              --ion-color-step-900: #e6e6e6;
+              --ion-color-step-950: #f2f2f2;
+          
+              --ion-toolbar-background: #0d0d0d;
+          
+              --ion-item-background: #000000;
+            }
+          
+          
+            /*
+             * Material Design Dark Theme
+             * -------------------------------------------
+             */
+          
+            .md body {
+              --ion-background-color: #121212;
+              --ion-background-color-rgb: 18,18,18;
+          
+              --ion-text-color: #ffffff;
+              --ion-text-color-rgb: 255,255,255;
+          
+              --ion-border-color: #222222;
+          
+              --ion-color-step-50: #1e1e1e;
+              --ion-color-step-100: #2a2a2a;
+              --ion-color-step-150: #363636;
+              --ion-color-step-200: #414141;
+              --ion-color-step-250: #4d4d4d;
+              --ion-color-step-300: #595959;
+              --ion-color-step-350: #656565;
+              --ion-color-step-400: #717171;
+              --ion-color-step-450: #7d7d7d;
+              --ion-color-step-500: #898989;
+              --ion-color-step-550: #949494;
+              --ion-color-step-600: #a0a0a0;
+              --ion-color-step-650: #acacac;
+              --ion-color-step-700: #b8b8b8;
+              --ion-color-step-750: #c4c4c4;
+              --ion-color-step-800: #d0d0d0;
+              --ion-color-step-850: #dbdbdb;
+              --ion-color-step-900: #e7e7e7;
+              --ion-color-step-950: #f3f3f3;
+          
+              --ion-item-background: #1e1e1e;
+          
+              --ion-toolbar-background: #1f1f1f;
+          
+              --ion-tab-bar-background: #1f1f1f;
+            }
+          
+            ion-title.title-large {
+              --color: white;
+            }
+          }'
+↓Theme [ngx.components.UITheme-1662391887092]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          // Ionic Variables and Theming. For more info, please see:
+          // http://ionicframework.com/docs/theming/
+          
+          /** Ionic CSS Variables **/
+          
+          
+↓AssitantStyle [ngx.components.UIStyle-1744217878624]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.ask-question-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            width: 100%;
+          }
+          
+          .ask-question-container {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            background-color: white;
+            border-radius: 28px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 10px 16px;
+            gap: 10px;
+            max-width: 900px;
+            width: 100%;
+          }
+          
+          .icon-plus {
+            font-size: 20px;
+            color: #888;
+          }
+          
+          .question-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            padding-left: 8px;
+            min-width: 160px;
+          }
+          
+          .button-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+          }
+          
+          .chip-button {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #f4f4f4;
+            border: none;
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 14px;
+            cursor: pointer;
+          
+            ion-icon {
+              font-size: 16px;
+            }
+          
+            &:hover {
+              background-color: #e6e6e6;
+            }
+          }
+          
+          .mic-button {
+            background-color: #000;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+          
+            ion-icon {
+              font-size: 18px;
+            }
+          
+            &:hover {
+              background-color: #222;
+            }
+          }
+          
+          .user-message-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            margin: 6px 0;
+          }
+          
+          .user-message-bubble {
+            background-color: #f1f1f1;
+            color: #000;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 80%;
+            display: inline-block;
+          }
+          
+          
+          .assistant-message-wrapper {
+            display: flex;
+            justify-content: flex-start;
+            width: 100%;
+            margin: 6px 0;
+          }
+          
+          .assistant-message-bubble {
+            background-color: #f4f4f4;
+            color: #000;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 80%;
+            display: inline-block;
+          }
+          
+          .red {
+          	color: red;
+          }
+          '
+↓AppEvent [ngx.components.UIAppEvent-1747213310646]: 
+  appEvent: onAppInit
+  ↓HandlePostMessage [ngx.components.UICustomAction-1747213325348]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		
+            
+            		if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
+            			page.global.studio = true;
+            		}
+            		
+            		window[''sendToHost''] = (message) => {
+            			if (page.global.studio) {
+            				window[''java''].receiveFromJS(JSON.stringify(message));
+            			} else if (window.parent && window != window.parent) {
+            				window.parent.postMessage(message, ''*'');
+            			}
+            		};
+            		
+            		window[''setupMessageListener''] = (callback) => {
+            			if (page.global.studio) {
+            				window[''receiveFromJava''] = function(msg) {
+            					callback(msg);
+            				};
+            			} else {
+            				window.addEventListener(''message'', (event) => {
+            					callback(event.data);
+            				});
+            			}
+            		};
+            		
+            		window[''setupMessageListener'']((msg) => {
+            			if (''init'' == msg.type) {
+            				page.global.studio = true;
+            			}
+            			
+            			if (page.global.studio) {
+            				if (''select'' == msg.type) {
+            					page.global.projectName = msg.projectName;
+            					page.global.threadQname = msg.threadQname;
+            					page.tick();
+            					page.getInstance(Events).publish("JavaMessage",{});
+            				}
+            				if (''capture'' == msg.type) {
+            					page.getInstance(Events).publish("JavaCapture", msg);
+            				}
+            			}
+            		});
+            
+            		resolve();
+            '
+  ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
+    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.GetVersion"}'
+    ↓SetLocal [ngx.components.UIDynamicAction-1750662135534]: 
+      beanData: |
+        '{
+         "ionBean": "SetLocalAction",
+         "Property": "plain:version",
+         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.GetVersion\",\"marker\":\"\"}],\"path\":\"?.version\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+        }'

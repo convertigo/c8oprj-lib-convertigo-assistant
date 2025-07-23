@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8"?><xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ConvertigoAssistant_ns="http://www.convertigo.com/convertigo/projects/ConvertigoAssistant" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://www.convertigo.com/convertigo/projects/ConvertigoAssistant">
+    <xsd:element name="OpenAI__GetRunStatus" type="ConvertigoAssistant_ns:OpenAI__GetRunStatusRequestData">
+        <xsd:annotation/>
+    </xsd:element>
+    <xsd:element name="OpenAI__GetRunStatusResponse">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="response" type="ConvertigoAssistant_ns:OpenAI__GetRunStatusResponseData"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    <xsd:complexType name="OpenAI__GetRunStatusResponseType">
+        <xsd:sequence>
+            <xsd:element name="document" type="ConvertigoAssistant_ns:OpenAI__GetRunStatusResponseData"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI__GetRunStatusRequestData">
+        <xsd:sequence>
+            <xsd:element name="threadid" type="xsd:string">
+                <xsd:annotation/>
+            </xsd:element>
+            <xsd:element name="runid" type="xsd:string">
+                <xsd:annotation/>
+            </xsd:element>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_idType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_objectType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_created_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_assistant_idType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_thread_idType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_statusType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_started_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_expires_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_cancelled_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_failed_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_completed_atType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_required_actionType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_last_errorType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_modelType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_instructionsType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_object_typeType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_object_file_search_max_num_resultsType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_object_file_search_ranking_options_rankerType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_object_file_search_ranking_options_score_thresholdType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_object_file_search_ranking_optionsType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="ranker" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_object_file_search_ranking_options_rankerType"/>
+            <xsd:element minOccurs="0" name="score_threshold" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_object_file_search_ranking_options_score_thresholdType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_object_file_searchType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="max_num_results" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_object_file_search_max_num_resultsType"/>
+            <xsd:element minOccurs="0" name="ranking_options" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_object_file_search_ranking_optionsType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tools_objectType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="type" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_object_typeType"/>
+            <xsd:element minOccurs="0" name="file_search" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_object_file_searchType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_toolsType">
+        <xsd:sequence>
+            <xsd:element maxOccurs="unbounded" minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tools_objectType"/>
+        </xsd:sequence>
+        <xsd:attribute name="length" type="xsd:byte"/>
+        <xsd:attribute default="array" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tool_resourcesType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="object" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_metadataType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="object" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_temperatureType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_top_pType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_reasoning_effortType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_max_completion_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_max_prompt_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_truncation_strategy_typeType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_truncation_strategy_last_messagesType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_truncation_strategyType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="type" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_truncation_strategy_typeType"/>
+            <xsd:element minOccurs="0" name="last_messages" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_truncation_strategy_last_messagesType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_incomplete_detailsType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_prompt_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_completion_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_total_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_prompt_token_details_cached_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_prompt_token_detailsType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="cached_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_prompt_token_details_cached_tokensType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_completion_tokens_details_reasoning_tokensType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usage_completion_tokens_detailsType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="reasoning_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_completion_tokens_details_reasoning_tokensType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_usageType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="prompt_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_prompt_tokensType"/>
+            <xsd:element minOccurs="0" name="completion_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_completion_tokensType"/>
+            <xsd:element minOccurs="0" name="total_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_total_tokensType"/>
+            <xsd:element minOccurs="0" name="prompt_token_details" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_prompt_token_detailsType"/>
+            <xsd:element minOccurs="0" name="completion_tokens_details" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usage_completion_tokens_detailsType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_response_format_typeType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_response_formatType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="type" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_response_format_typeType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_tool_choiceType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_object_parallel_tool_callsType">
+        <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+                <xsd:attribute default="string" name="type" type="xsd:string"/>
+            </xsd:extension>
+        </xsd:simpleContent>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI_GetRunStatus_document_objectType">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="id" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_idType"/>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_objectType"/>
+            <xsd:element minOccurs="0" name="created_at" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_created_atType"/>
+            <xsd:element minOccurs="0" name="assistant_id" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_assistant_idType"/>
+            <xsd:element minOccurs="0" name="thread_id" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_thread_idType"/>
+            <xsd:element minOccurs="0" name="status" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_statusType"/>
+            <xsd:element minOccurs="0" name="started_at" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_started_atType"/>
+            <xsd:element minOccurs="0" name="expires_at" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_expires_atType"/>
+            <xsd:element minOccurs="0" name="cancelled_at" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_cancelled_atType"/>
+            <xsd:element minOccurs="0" name="failed_at" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_failed_atType"/>
+            <xsd:element minOccurs="0" name="completed_at" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_completed_atType"/>
+            <xsd:element minOccurs="0" name="required_action" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_required_actionType"/>
+            <xsd:element minOccurs="0" name="last_error" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_last_errorType"/>
+            <xsd:element minOccurs="0" name="model" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_modelType"/>
+            <xsd:element minOccurs="0" name="instructions" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_instructionsType"/>
+            <xsd:element minOccurs="0" name="tools" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_toolsType"/>
+            <xsd:element minOccurs="0" name="tool_resources" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tool_resourcesType"/>
+            <xsd:element minOccurs="0" name="metadata" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_metadataType"/>
+            <xsd:element minOccurs="0" name="temperature" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_temperatureType"/>
+            <xsd:element minOccurs="0" name="top_p" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_top_pType"/>
+            <xsd:element minOccurs="0" name="reasoning_effort" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_reasoning_effortType"/>
+            <xsd:element minOccurs="0" name="max_completion_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_max_completion_tokensType"/>
+            <xsd:element minOccurs="0" name="max_prompt_tokens" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_max_prompt_tokensType"/>
+            <xsd:element minOccurs="0" name="truncation_strategy" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_truncation_strategyType"/>
+            <xsd:element minOccurs="0" name="incomplete_details" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_incomplete_detailsType"/>
+            <xsd:element minOccurs="0" name="usage" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_usageType"/>
+            <xsd:element minOccurs="0" name="response_format" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_response_formatType"/>
+            <xsd:element minOccurs="0" name="tool_choice" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_tool_choiceType"/>
+            <xsd:element minOccurs="0" name="parallel_tool_calls" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_object_parallel_tool_callsType"/>
+        </xsd:sequence>
+        <xsd:attribute default="object" name="type" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="OpenAI__GetRunStatusResponseData">
+        <xsd:sequence>
+            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_GetRunStatus_document_objectType"/>
+            <xsd:element minOccurs="0" name="error" type="ConvertigoAssistant_ns:ConvertigoError"/>
+        </xsd:sequence>
+        <xsd:attribute name="connector" type="xsd:string"/>
+        <xsd:attribute name="context" type="xsd:string"/>
+        <xsd:attribute name="contextId" type="xsd:string"/>
+        <xsd:attribute name="fromStub" type="xsd:boolean"/>
+        <xsd:attribute name="fromcache" type="xsd:boolean"/>
+        <xsd:attribute name="generated" type="xsd:string"/>
+        <xsd:attribute name="project" type="xsd:string"/>
+        <xsd:attribute name="sequence" type="xsd:string"/>
+        <xsd:attribute name="signature" type="xsd:long"/>
+        <xsd:attribute name="transaction" type="xsd:string"/>
+        <xsd:attribute name="version" type="xsd:string"/>
+        <xsd:attribute name="screenclass" type="xsd:string"/>
+        <xsd:attribute name="userReference" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="ConvertigoErrorContextVariable">
+        <xsd:attribute name="name" type="xsd:string"/>
+        <xsd:attribute name="value" type="xsd:string"/>
+    </xsd:complexType>
+    <xsd:complexType name="ConvertigoErrorContext">
+        <xsd:sequence>
+            <xsd:element maxOccurs="unbounded" minOccurs="0" name="variable" type="ConvertigoAssistant_ns:ConvertigoErrorContextVariable"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    <xsd:complexType name="ConvertigoError">
+        <xsd:sequence minOccurs="0">
+            <xsd:element name="code" type="xsd:integer"/>
+            <xsd:element name="message" type="xsd:string"/>
+            <xsd:element name="details" type="xsd:string"/>
+            <xsd:element name="context" type="ConvertigoAssistant_ns:ConvertigoErrorContext"/>
+            <xsd:element name="exception" type="xsd:string"/>
+            <xsd:element name="stacktrace" type="xsd:string"/>
+        </xsd:sequence>
+        <xsd:attribute name="project" type="xsd:string"/>
+        <xsd:attribute name="connector" type="xsd:string"/>
+        <xsd:attribute name="transaction" type="xsd:string"/>
+        <xsd:attribute name="sequence" type="xsd:string"/>
+        <xsd:attribute name="type">
+            <xsd:simpleType>
+                <xsd:restriction base="xsd:string">
+                    <xsd:enumeration value="c8o"/>
+                    <xsd:enumeration value="project"/>
+                </xsd:restriction>
+            </xsd:simpleType>
+        </xsd:attribute>
+    </xsd:complexType>
+</xsd:schema>
