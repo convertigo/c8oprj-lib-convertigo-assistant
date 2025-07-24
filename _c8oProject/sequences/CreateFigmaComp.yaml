@@ -168,6 +168,23 @@
       		return arr.filter((item, idx) => arr.indexOf(item) === idx);
       	}
       	
+      	function getComponentByTag(tag) {
+      		var comp = null;
+      		var comps = cm.getComponents();
+      		for (let i=0; i < comps.length; i++) {
+      			if (comps[i].getTag() == tag) {
+      				if ("FSImage" == comps[i].getName()) {
+      					continue;
+      				} else {
+      					comp = comps[i];
+      					//log.debug("comp tag:"+ comp.getTag() + ",tag:"+ tag);
+      					break;
+      				}
+      			}
+      		}
+      		return comp;
+      	}
+      	
       	function createBeans(e, parent, classes) {
       		try {
       			var dbo = null;			
@@ -175,17 +192,16 @@
       			var key = undefined;
       			if (mapping == "class") {
       				var classval = ""+ e.className();
-      				//log.warn("classval:"+classval);
+      				//log.debug("classval:"+classval);
       				if (classval.startsWith("input")) {
       					classes.push(classval);
-      					key = getBeanKey("ion-input");
+      					tag = "ion-input";
       				} else if (classval.startsWith("button")) {
       					classes.push(classval);
-      					key = getBeanKey("ion-button");
-      				} else {
-      					key = getBeanKey(tag);
+      					tag = "ion-button";
       				}
-      				//log.warn("beankey:"+key);
+      				key = getBeanKey(tag);
+      				//log.debug("beankey:"+key);
       			}
       			if (key == undefined) {
       				dbo = cm.createBean(cm.getComponentByName("UIElement"));
@@ -194,7 +210,7 @@
       					dbo.setSelfClose(true);
       				}
       			} else {
-      				dbo = cm.createBean(cm.getComponentByName(key));
+      				dbo = cm.createBean(getComponentByTag(tag));
       				try {
       					// for button: add css property text-tranform=none
       					if (dbo != null && dbo.getTagName() == "ion-button") {
@@ -361,7 +377,7 @@
       		
       		var jsonOb = unzipToJson(filepath);
       		if (jsonOb != null) {
-      			log.warn("jsonOb:\n"+ JSON.stringify(jsonOb, null, "\t"));
+      			log.debug("Figma jsonOb:\n"+ JSON.stringify(jsonOb, null, "\t"));
       			
       			try {
       				comp = cm.createBean(cm.getComponentByName("UISharedRegularComponent"));
@@ -410,10 +426,10 @@
       		}
       		
       		var xml = clipboard.toXml();
-      		log.warn("Clipboard xml:\n"+ xml);
+      		//log.debug("Clipboard xml:\n"+ xml);
       		
       		var assets = jsonOb.assets;
-      		//log.warn("Assets:\n"+ JSON.stringify(assets));
+      		//log.debug("Assets:\n"+ JSON.stringify(assets));
       		
       		var compname = comp != null ? comp.getName() : null;
       		
