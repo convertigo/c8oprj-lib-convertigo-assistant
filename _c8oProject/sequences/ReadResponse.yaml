@@ -188,39 +188,7 @@ responseTimeout: 120
         		}
         		return null;
         	}
-        /*	
-        	function extractJSONFromMarkdown(md) {
-        	  let jsonOb = null;
-        	  try {
-        		  jsonOb = findMatchingObject(JSON.parse(md));
-        	  } catch (e) {
-        		  log.error("Failed to parse JSON: "+ e.message);
-        		  
-        		  const jsonCodeBlockRegex = /```json\s*([\s\S]*?)\s*```/gi;
-        		  const matches = md.matchAll(jsonCodeBlockRegex);
-        		  if (matches) {
-        			  for (var match of matches) {
-        				  //log.warn("MATCH: "+ match[0]);
-        				  try {
-        				      let parsed = JSON.parse(match[1]);
-        				      //log.warn("JSON: "+ match[1]);
-        				      //log.warn("JSON p: "+ JSON.stringify(parsed));
-        				      //log.warn("JSON css: "+ parsed.css);
-        					  jsonOb = findMatchingObject(parsed);
-        					  if (jsonOb != null) {
-        						  break;
-        					  }
-        				  } catch (e) {
-        					  log.error("Failed to parse JSON: "+ e.message);
-        				  }
-        			  }
-        		  } else {
-        			  log.error("No JSON code block found.");
-        		  }
-        	  }
-        	  return jsonOb;
-        	}
-        */	
+        
         	function getBeanKey(tag) {
         		var beanKey = undefined;
         		if (cm != null) {
@@ -374,6 +342,23 @@ responseTimeout: 120
         		return tags.includes(tag.trim());
         	}
         	
+        	function getComponentByTag(tag) {
+        		var comp = null;
+        		var comps = cm.getComponents();
+        		for (let i=0; i < comps.length; i++) {
+        			if (comps[i].getTag() == tag) {
+        				if ("FSImage" == comps[i].getName()) {
+        					continue;
+        				} else {
+        					comp = comps[i];
+        					//log.debug("comp tag:"+ comp.getTag() + ",tag:"+ tag);
+        					break;
+        				}
+        			}
+        		}
+        		return comp;
+        	}
+        
         	function createBeans(e, parent) {
         		try {
         			var dbo = null;			
@@ -386,7 +371,7 @@ responseTimeout: 120
         					dbo.setSelfClose(true);
         				}
         			} else {
-        				dbo = cm.createBean(cm.getComponentByName(key));
+        				dbo = cm.createBean(getComponentByTag(tag));
         			}
         			if (parent != null && dbo != null) {
         				parent.add(dbo);
@@ -517,7 +502,7 @@ responseTimeout: 120
         				for (let key in ob) {
         					arr.push(ob[key]);
         				}
-        				log.warn("lines: "+arr);
+        				//log.debug("lines: "+arr);
         				return checkDuplicates(arr);
         			}
         		}
@@ -588,7 +573,7 @@ responseTimeout: 120
         			let message = Messages[i];
         			if (message.role == "assistant" && message.text != null && message.text != "") {
         				//log.debug("Extract JSON from message "+ message.id +":\n"+ message.text);
-        				log.warn("Extract JSON from message "+ message.id);
+        				log.debug("Extract JSON from message "+ message.id);
         				try {
         					let json = message.text;
         					//Just to log invalid json string and try to fix it
