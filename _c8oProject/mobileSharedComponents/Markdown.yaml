@@ -51,7 +51,7 @@
             - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
             - com.twinsoft.convertigo.beans.common.XMLVector: 
               - java.lang.String: 
-                - ↑value: MarkdownModule.forRoot()
+                - ↑value: 'MarkdownModule.forRoot({markedOptions: {provide: MARKED_OPTIONS,useFactory: () => {const renderer = new MarkedRenderer();const originalLinkRenderer = renderer.link;renderer.link = function (link) {const html = originalLinkRenderer.call(this, link);return html.replace(/^<a /,''<a role="link" tabindex="0" target="_blank" rel="nofollow noopener noreferrer" '',);};return {renderer,gfm: true,breaks: false,pedantic: false};}}})'
     local_module_ts_imports: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
@@ -61,6 +61,20 @@
             - com.twinsoft.convertigo.beans.common.XMLVector: 
               - java.lang.String: 
                 - ↑value: '{ MarkdownModule }'
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ MarkedRenderer }'
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ MARKED_OPTIONS}'
               - java.lang.String: 
                 - ↑value: ngx-markdown
     package_dependencies: 

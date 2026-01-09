@@ -14,6 +14,78 @@ This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
 <details><summary><span style="color:DarkGoldenRod"><i>Connectors</i></span></summary><blockquote><p>
 
 
+<details><summary><b>LightRAG</b></summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/connectors/images/httpconnector_color_16x16.png?raw=true "HttpConnector") LightRAG
+
+
+
+<details><summary><span style="color:DarkGoldenRod"><i>Transactions</i></span></summary><blockquote><p>
+
+
+<details><summary><b>query_text</b> : Query Text</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/jsonhttptransaction_color_16x16.png?raw=true "JsonHttpTransaction") query_text
+
+Query Text
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableHttpVariable" >&nbsp;__body
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
+<details><summary><b>query_text_stream</b> : Query Text Stream</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/jsonhttptransaction_color_16x16.png?raw=true "JsonHttpTransaction") query_text_stream
+
+Query Text Stream
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableHttpVariable" >&nbsp;__body
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+</p></blockquote></details>
+</p></blockquote></details>
+
 <details><summary><b>OpenAI</b></summary><blockquote><p>
 
 
@@ -526,6 +598,60 @@ comment
 
 </p></blockquote></details>
 
+<details><summary><b>LRagQuery</b></summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") LRagQuery
+
+
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;fromStub
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;History
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;Question
+</td>
+<td>
+
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;stream
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
 <details><summary><b>ReadResponse</b></summary><blockquote><p>
 
 
@@ -675,12 +801,20 @@ Describes the mobile application global properties
 <details><summary><span style="color:DarkGoldenRod"><i>Pages</i></span></summary><blockquote><p>
 
 
-<details><summary><b>Figma</b></summary><blockquote><p>
+<details><summary><b>Figma</b> : Figma Assistant Page</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") Figma
 
+Figma Assistant Page
+</p></blockquote></details>
 
+<details><summary><b>LightRag</b> : IT Support Page</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") LightRag
+
+IT Support Page
 </p></blockquote></details>
 
 <details><summary><b>Page</b> : AI Component Assistant Page</summary><blockquote><p>
@@ -822,6 +956,58 @@ comment
 <tr>
 <td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uicompvariable_16x16.png?raw=true "  alt="UICompVariable" >&nbsp;Files
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
+<details><summary><b>LightRagInputComponent</b></summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uisharedcomponent_16x16.png?raw=true "UISharedRegularComponent") LightRagInputComponent
+
+
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uicompvariable_16x16.png?raw=true "  alt="UICompVariable" >&nbsp;Question
+</td>
+<td>
+
+</td>
+</tr>
+</table>
+
+
+<span style="color:DarkGoldenRod">Events</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uicompevent_16x16.png?raw=true "  alt="UICompEvent" >&nbsp;RunQuestion
 </td>
 <td>
 

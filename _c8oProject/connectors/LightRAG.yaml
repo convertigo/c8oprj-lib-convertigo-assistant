@@ -1,0 +1,125 @@
+port: 9621
+server: 51.77.17.146
+↓query_text [transactions.JsonHttpTransaction]: 
+  ↑default: true
+  comment: Query Text
+  httpInfo: true
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Accept
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: X-API-Key
+            - java.lang.String: 
+              - ↑value: ${assistant.lrag.apikey.secret}
+  httpVerb: POST
+  subDir: query
+  ↓Test_Case [core.TestCase]: 
+    ↓__body [variables.TestCaseVariable-1767111929491]: 
+      required: true
+      value: |
+        '{
+          "query": "comment exposer un service rest",
+          "mode": "mix",
+          "response_type": "Multiple Paragraphs",
+          "top_k": 10,
+          "chunk_top_k": 20,
+          "max_entity_tokens": 6000,
+          "max_relation_tokens": 8000,
+          "max_total_tokens": 30000,
+          "enable_rerank": true,
+          "include_references": true,
+          "include_chunk_content": false,
+          "stream": false
+        }'
+  ↓Test_Case1 [core.TestCase]: 
+    ↓__body [variables.TestCaseVariable-1767700294613]: 
+      required: true
+      value: |
+        '{
+          "query": "comment exposer un service rest",
+          "only_need_context": true,
+          "mode": "mix",
+          "stream": false
+        }'
+  ↓Test_Case2 [core.TestCase]: 
+    ↓__body [variables.TestCaseVariable-1767780625221]: 
+      required: true
+      value: |
+        '{
+          "query": "comment exposer un service rest",
+          "only_need_prompt": true,
+          "mode": "mix",
+          "stream": false
+        }'
+  ↓__body [variables.RequestableHttpVariable-1767111929497]: 
+    httpMethod: POST
+    required: true
+↓query_text_stream [transactions.JsonHttpTransaction]: 
+  comment: Query Text Stream
+  httpInfo: true
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Accept
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: X-API-Key
+            - java.lang.String: 
+              - ↑value: ${assistant.lrag.apikey.secret}
+  httpVerb: POST
+  subDir: query/stream
+  ↓Test_Case [core.TestCase]: 
+    ↓__body [variables.TestCaseVariable-1767112085428]: 
+      required: true
+      value: |
+        '{
+          "query": "comment extraire les données de ma base et générer un pdf",
+          "mode": "mix",
+          "response_type": "Multiple Paragraphs",
+          "top_k": 10,
+          "chunk_top_k": 20,
+          "max_entity_tokens": 6000,
+          "max_relation_tokens": 8000,
+          "max_total_tokens": 30000,
+          "enable_rerank": true,
+          "include_references": false,
+          "include_chunk_content": false,
+          "stream": true
+        }'
+  ↓__body [variables.RequestableHttpVariable-1767112085434]: 
+    httpMethod: POST
+    required: true

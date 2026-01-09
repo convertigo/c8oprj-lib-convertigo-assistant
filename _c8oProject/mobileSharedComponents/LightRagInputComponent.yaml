@@ -1,0 +1,140 @@
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        import { ViewChild, HostListener } from ''@angular/core'';
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        	@ViewChild("btnReset", { static: false }) public btnReset;
+        	disabled = false;
+        	
+        	multiple = false;
+        	questionText: string = '''';
+        	/*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+        		/*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        		/*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        		/*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        		/*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        		/*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        		/*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        		/*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        		/*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        	
+        	refresh(timeout: number) {
+        		setTimeout(() => {
+        		  this.tick();//this.ref.detectChanges();
+        		}, timeout);
+        	}
+        	
+        	setEnable(enable) {
+        		this.disabled = !enable;
+        		this.refresh(0);
+        	}
+        	
+        	onKeyEnter(event: KeyboardEvent): void {
+        	    if (event.key === ''Enter'' && event.ctrlKey) {
+        	      	event.preventDefault();
+        	      	this.sendMessage();
+        	    }
+        	}
+        
+        	sendMessage() {
+        		this.RunQuestion.emit({});
+        	}
+        	
+        	reset() {
+        		this.Question = '''';
+        	}
+        	
+        	startSpeechRecognition() {
+        	  const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        	  if (!SpeechRecognition) {
+        	    alert("La reconnaissance vocale n''est pas prise en charge par ce navigateur.");
+        	    return;
+        	  }
+        
+        	  const recognition = new SpeechRecognition();
+        	  recognition.lang = ''fr-FR'';
+        	  recognition.interimResults = false;
+        	  recognition.maxAlternatives = 1;
+        
+        	  recognition.onresult = (event: any) => {
+        	    const transcript = event.results[0][0].transcript;
+        	    this.questionText += (this.questionText ? '' '' : '''') + transcript;
+        	  };
+        
+        	  recognition.onerror = (event: any) => {
+        	    console.error(''Erreur de reconnaissance vocale:'', event.error);
+        	  };
+        
+        	  recognition.start();
+        	}
+        
+        	/*End_c8o_CompFunction*/
+        '
+↓Fragment [ngx.components.UICustom-1767170563881]: 
+  htmlTemplate: |
+    <ion-card class="input-card" [disabled]="disabled">
+      <ion-item lines="none">
+        <ion-textarea 
+    		class="chat-text-input"
+    		aria-label="question input"
+    		placeholder="Poser une question (multi-lignes) et Ctrl+Enter"
+    		[autoGrow]="true"
+    		[(ngModel)]="this.Question"
+    		(keydown)="this.onKeyEnter($event)"
+    	></ion-textarea>
+    
+    	<ion-button fill="clear" (click)="reset()" title="Effacer">
+    		<ion-icon name="close-outline"></ion-icon>
+    	</ion-button>
+        <ion-button fill="clear" (click)="startSpeechRecognition()" title="Dicter">
+          <ion-icon name="mic-outline"></ion-icon>
+        </ion-button>
+    
+        <ion-button fill="solid" (click)="sendMessage()" title="Soumettre">
+          <ion-icon name="arrow-up-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+    </ion-card>
+    
+↓Style [ngx.components.UIStyle-1767170563884]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.input-card {
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 8px;
+          }
+          '
+↓RunQuestion [ngx.components.UICompEvent-1767170563890]: 
+  attrName: RunQuestion
+↓Question [ngx.components.UICompVariable-1767170563896]: 
+  autoEmit: true
+↓PageEvent [ngx.components.UIPageEvent-1767170563902]: 
+  ↓Reset [ngx.components.UICustomAction-1767170563905]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            		page.reset();
+            		resolve();
+            '

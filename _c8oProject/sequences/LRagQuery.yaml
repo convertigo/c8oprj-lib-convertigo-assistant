@@ -1,0 +1,256 @@
+responseTimeout: 80
+↓inputVars [steps.InputVariablesStep-1767364410194]: 
+↓jIfThenElse [steps.IfThenElseStep-1767180603000]: 
+  condition: stream == "true"
+  ↓jThen [steps.ThenStep-1767180604769]: 
+    ↓InitProgressMessage [steps.SimpleStep-1767366401271]: 
+      expression: |
+        'buffer = {
+        	"size" : 0,
+        	"content": "Reasoning..."
+        };
+        context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+        '
+    ↓StreamRun [steps.SimpleStep-1767366415002]: 
+      expression: |
+        '
+        var URL = java.net.URL;
+        var HttpsURLConnection = java.net.HttpURLConnection;
+        var InputStreamReader = java.io.InputStreamReader;
+        var BufferedReader = java.io.BufferedReader;
+        
+        // Set your API key and thread/run info
+        var apiKey = "${assistant.lrag.apikey.secret}";
+        var hostUrl = "${assistant.lrag.host.url}";
+        //var url = new URL("http://51.77.17.146:9621/query/stream");
+        var url = new URL(hostUrl + "/query/stream");
+        
+        var conn = url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("X-API-Key", apiKey);
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Accept", "text/event-stream");
+        conn.setDoOutput(true);
+        
+        // Enable streaming mode
+        var payload = JSON.stringify({
+          query: Question,
+          conversation_history: History ? JSON.parse(History) : [],
+          response_type: "Multiple Paragraphs",
+          mode: "mix",
+          include_references: true,
+          stream: true
+        });
+        
+        
+        var out = new java.io.OutputStreamWriter(conn.getOutputStream());
+        out.write(payload);
+        out.close();
+        
+        var error = "";
+        var response = "";
+        var refs = "";
+        var references = ["null"];
+        
+        // Read streaming response
+        var reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        var line;
+        
+        while ((line = reader.readLine()) !== null) {
+        	//log.warn("Received line: " + line); // Log the received line)
+        	try {
+        		var ob = JSON.parse(line);
+        		if (ob) {
+        			if (ob && ob.response) {
+        				var text = ob.response;
+        				response += text;
+        				
+        				var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
+        				buffer.content += text;
+        				buffer.size += buffer.content.length;
+        				context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+        			}
+        			if (ob && ob.references) {
+        				ob.references.forEach(reference => {
+        					//log.warn("reference:"+JSON.stringify(reference));
+        					references.push(reference.file_path);
+        					refs += "- ["+ reference.reference_id +"] "+ reference.file_path + java.lang.System.lineSeparator();
+        				});
+        			}
+        		}
+        	} catch (e) {
+        		error = e.message;
+        		log.error("Error parsing JSON: " + "\nERROR" +  e.message + "\nLINE: " + line);
+        	}
+        	
+        }
+        
+        reader.close();
+        
+        try {
+        	context.httpSession.setAttribute("C8OAiAssistantBuffer", {"size" : 0, "content": "Reasoning..."});
+        } catch (e) {}
+        
+        var doc = context.outputDocument;
+        if (error == "") {
+        	var msg = response;
+        	//log.warn("Response done:"+ response);
+        	if (msg.toLowerCase().indexOf("### références") == -1 && msg.toLowerCase().indexOf("### references") == -1) {
+        		msg = msg + java.lang.System.lineSeparator() + "### Notes" + java.lang.System.lineSeparator() + refs;
+        	}
+        	var el = doc.createElement("object");
+        	doc.getDocumentElement().appendChild(el);
+        	
+        	var er = doc.createElement("response");
+        	er.appendChild(doc.createTextNode(msg));
+        	el.appendChild(er);
+        } else {
+        	var er = doc.createElement("error");
+        	er.appendChild(doc.createTextNode(error));
+        	doc.getDocumentElement().appendChild(er);	
+        }'
+  ↓jElse [steps.ElseStep-1767180604771]: 
+    ↓Message [steps.JsonObjectStep-1767113260210]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: Message
+      output: false
+      ↓query [steps.JsonFieldStep-1767113309688]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: query
+        output: false
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: Question
+      ↓conversation_history [steps.JsonFieldStep-1767698369273]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: conversation_history
+        output: false
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: History
+      ↓response_type [steps.JsonFieldStep-1767113403362]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: response_type
+        output: false
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: Multiple Paragraphs
+      ↓mode [steps.JsonFieldStep-1767113364610]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: mode
+        output: false
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: mix
+      ↓include_references [steps.JsonFieldStep-1767181248877]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: include_references
+        output: false
+        type: bool
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: true
+      ↓stream [steps.JsonFieldStep-1767113433223]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: stream
+        output: false
+        type: bool
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: stream
+    ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
+      sourceTransaction: ConvertigoAssistant.LightRAG.query_text
+      ↓__body [variables.StepVariable-1767113549281]: 
+        required: true
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1767113260210
+              - java.lang.String: 
+                - ↑value: ./*
+      ↓__stub [variables.StepVariable-1767364549032]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1767364410194
+              - java.lang.String: 
+                - ↑value: ./fromStub/text()
+        value: 
+    ↓Copy [steps.XMLCopyStep-1767365310190]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1767113489319
+            - java.lang.String: 
+              - ↑value: ./document/object
+↓Question [variables.RequestableVariable-1767113097776]: 
+↓History [variables.RequestableVariable-1767698342784]: 
+↓stream [variables.RequestableVariable-1767180068215]: 
+  value: false
+↓fromStub [variables.RequestableVariable-1767364339123]: 
+  value: false
+↓Test_Case_NoStream [core.TestCase]: 
+  ↓Question [variables.TestCaseVariable-1767113685813]: 
+    value: comment exposer un service REST
+  ↓stream [variables.TestCaseVariable-1767364447862]: 
+    value: false
+  ↓fromStub [variables.TestCaseVariable-1767364447864]: 
+    value: false
+  ↓History [variables.TestCaseVariable-1767967658913]: 
+↓Test_Case_WithStream [core.TestCase]: 
+  ↓Question [variables.TestCaseVariable-1767180040652]: 
+    value: comment interroger une base de données Oracle
+  ↓stream [variables.TestCaseVariable-1767180214588]: 
+    value: true
