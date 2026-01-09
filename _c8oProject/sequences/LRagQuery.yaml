@@ -35,6 +35,7 @@ responseTimeout: 80
         // Enable streaming mode
         var payload = JSON.stringify({
           query: Question,
+          user_prompt: Prompt,
           conversation_history: History ? JSON.parse(History) : [],
           response_type: "Multiple Paragraphs",
           mode: "mix",
@@ -237,6 +238,8 @@ responseTimeout: 80
               - ↑value: ./document/object
 ↓Question [variables.RequestableVariable-1767113097776]: 
 ↓History [variables.RequestableVariable-1767698342784]: 
+↓Prompt [variables.RequestableVariable-1767974017753]: 
+  value: In the References Section, each reference MUST be a link to the URL of the source documentation
 ↓stream [variables.RequestableVariable-1767180068215]: 
   value: false
 ↓fromStub [variables.RequestableVariable-1767364339123]: 
