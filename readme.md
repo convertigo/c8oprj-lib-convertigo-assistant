@@ -19,11 +19,17 @@ For more technical informations : [documentation](./project.md)
 - [Installation](#installation)
 - [Mobile Application](#mobile-application)
     - [Pages](#pages)
+        - [Figma](#figma)
+        - [LightRag](#lightrag)
         - [Page](#page)
     - [Shared Components](#shared-components)
         - [AssitantMessage](#assitantmessage)
-        - [ChatQuestion](#chatquestion)
+        - [FigmaInputComponent](#figmainputcomponent)
+        - [ImagePreviewer](#imagepreviewer)
+        - [LightRagInputComponent](#lightraginputcomponent)
         - [Markdown](#markdown)
+        - [QuestionInputComponent](#questioninputcomponent)
+        - [TypeWriterComponent](#typewritercomponent)
         - [UserMessage](#usermessage)
 
 
@@ -40,13 +46,13 @@ For more technical informations : [documentation](./project.md)
      <tr><td>To contribute</td><td>
 
      ```
-     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assistant.git:branch=master
+     ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
      ```
      </td></tr>
      <tr><td>To simply use</td><td>
 
      ```
-     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assistant/archive/master.zip
+     ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/archive/master.zip
      ```
      </td></tr>
     </table>
@@ -59,9 +65,17 @@ Describes the mobile application global properties
 
 ### Pages
 
+#### Figma
+
+Figma Assistant Page
+
+#### LightRag
+
+IT Support Page
+
 #### Page
 
-My First Page as root page
+AI Component Assistant Page
 
 ### Shared Components
 
@@ -78,7 +92,53 @@ My First Page as root page
 </tr>
 </table>
 
-#### ChatQuestion
+#### FigmaInputComponent
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>Files</td><td></td>
+</tr>
+<tr>
+<td>Question</td><td></td>
+</tr>
+</table>
+
+**events**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>FilesAdded</td><td></td>
+</tr>
+<tr>
+<td>RunQuestion</td><td></td>
+</tr>
+</table>
+
+#### ImagePreviewer
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>file</td><td></td>
+</tr>
+<tr>
+<td>Files</td><td></td>
+</tr>
+</table>
+
+#### LightRagInputComponent
 
 **variables**
 
@@ -123,6 +183,57 @@ My First Page as root page
 </tr>
 <tr>
 <td>ready</td><td></td>
+</tr>
+</table>
+
+#### QuestionInputComponent
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>Files</td><td></td>
+</tr>
+<tr>
+<td>Question</td><td></td>
+</tr>
+</table>
+
+**events**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>FilesAdded</td><td></td>
+</tr>
+<tr>
+<td>RequestCapture</td><td></td>
+</tr>
+<tr>
+<td>RunQuestion</td><td></td>
+</tr>
+</table>
+
+#### TypeWriterComponent
+
+-- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh---
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>speed</td><td></td>
+</tr>
+<tr>
+<td>text</td><td></td>
 </tr>
 </table>
 

@@ -1,3 +1,4 @@
+↑isRoot: true
 comment: IT Support Page
 preloadPriority: high
 scriptContent: 
@@ -92,7 +93,7 @@ title: Title for LightRag
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:IT Support assistant
+            - MobileSmartSourceType: plain:How To Assitant
       ↓Text5 [ngx.components.UIText-1767170334181]: 
         isEnabled: false
         textValue: 
@@ -229,6 +230,101 @@ title: Title for LightRag
          "Property": "plain:Question",
          "Value": "script:''''"
         }'
+    ↓AddAssistantMessage [ngx.components.UICustomAction-1768210415817]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              '		let text = `
+              		
+              		<p align="center">
+              		  <img src="https://cdn.prod.website-files.com/66745dcd1d27373131b0f833/6674b4d7323dccc24609a7ad_logo.png" alt="Alt Text" width="200x"/>
+              		</p>
+              		
+              		# Welcome to the Convertigo How-To Assistant
+              
+              		Welcome to the **Convertigo How-To Assistant**, your AI-powered helper designed to support low-code developers in building applications with Convertigo.
+              
+              		This assistant helps you ask questions, understand concepts, and learn how to do things in Convertigo — quickly and efficiently.
+              
+              		---
+              
+              		## What can you ask?
+              
+              		You can ask any practical “how-to” question, such as:
+              
+              		- How do I consume a REST or SOAP web service?
+              		- How can I create a button centered on a page?
+              		- How do I call a backend sequence from a UI component?
+              		- How can I connect to a database or an external API?
+              		- How do I handle authentication, variables, or events?
+              		- How do I design responsive pages or reusable components?
+              
+              		If it’s something you can do with Convertigo, you can ask about it.
+              
+              		---
+              
+              		## How does the Assistant work?
+              
+              		The AI Assistant builds its answers using trusted Convertigo sources, including:
+              
+              		- Official Convertigo Documentation
+              		- Convertigo Knowledge Base
+              		- All official and community libraries available in the Marketplace
+              
+              		Each answer is context-aware and actionable. Whenever possible, the assistant will:
+              
+              		- Explain how to do something step by step  
+              		- Provide technical details adapted to low-code development  
+              		- Reference the documents used to build the answer  
+              
+              		This ensures responses are reliable, verifiable, and aligned with Convertigo best practices.
+              
+              		---
+              
+              		## Multilingual support
+              
+              		The assistant is fully multilingual.
+              
+              		You can:
+              		- Ask your question in any language
+              		- Receive the answer in the same language
+              
+              		---
+              
+              		## Advanced features
+              
+              		- You can copy Convertigo objects from your project tree and paste them directly into the question.  
+              		  The assistant will analyze them and use them as context.
+              
+              		- The assistant may also return Convertigo objects in XML Clipboard format.  
+              		  Simply copy and paste them back into your project tree.
+              
+              		---
+              
+              		## Tips
+              
+              		- If the Submit button disappears because you pasted a large amount of text,  
+              		  use **Ctrl + Enter** to send your question.
+              
+              		---
+              
+              		## Get started
+              
+              		Ask your question, describe what you want to achieve, and let the Convertigo How-To Assistant guide you.
+              		 
+              		`;
+              		
+              		let msg = {
+              			type: "assistant",
+              			msg: "\n" + text + "\n",
+              			id: -1,
+              		}
+              		page.local.Messages.push(msg);
+              		
+              		resolve();
+              '
 ↓Footer [ngx.components.UIDynamicElement-1767170334370]: 
   beanData: '{"ionBean":"Footer"}'
   tagName: ion-footer
