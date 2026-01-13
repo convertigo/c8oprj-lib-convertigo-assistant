@@ -239,7 +239,15 @@ responseTimeout: 80
 ↓Question [variables.RequestableVariable-1767113097776]: 
 ↓History [variables.RequestableVariable-1767698342784]: 
 ↓Prompt [variables.RequestableVariable-1767974017753]: 
-  value: In the References Section, each reference MUST be a link to the URL of the source documentation
+  value: |
+    'Reference list entries should adhere to the markdown format: `* [Document Title] Document URL`.
+    Do not include a caret (`^`) after opening square bracket (`[`).
+     - The Document Title in the citation must retain its original language.
+     - Output each citation on an individual line
+     - Provide maximum of 5 most relevant citations.
+     - Do not generate footnotes section or any comment, summary, or explanation after the references
+    Reference Section Example:
+    ```\n### References\n\n- [Document Title One] https://server/docs/doc1\n- [Document Title Two] https://server/docs/doc2\n- [Document Title Three] https://server/docs/doc3\n```'
 ↓stream [variables.RequestableVariable-1767180068215]: 
   value: false
 ↓fromStub [variables.RequestableVariable-1767364339123]: 
