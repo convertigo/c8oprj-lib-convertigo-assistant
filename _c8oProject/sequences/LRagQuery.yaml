@@ -3,113 +3,123 @@ responseTimeout: 80
 ↓jIfThenElse [steps.IfThenElseStep-1767180603000]: 
   condition: stream == "true"
   ↓jThen [steps.ThenStep-1767180604769]: 
-    ↓InitProgressMessage [steps.SimpleStep-1767366401271]: 
-      expression: |
-        'buffer = {
-        	"size" : 0,
-        	"content": "Reasoning..."
-        };
-        context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
-        '
-    ↓StreamRun [steps.SimpleStep-1767366415002]: 
-      expression: |
-        '
-        var URL = java.net.URL;
-        var HttpsURLConnection = java.net.HttpURLConnection;
-        var InputStreamReader = java.io.InputStreamReader;
-        var BufferedReader = java.io.BufferedReader;
-        
-        // Set your API key and thread/run info
-        var apiKey = "${assistant.lrag.apikey.secret}";
-        var hostUrl = "${assistant.lrag.host.url}";
-        //var url = new URL("http://51.77.17.146:9621/query/stream");
-        var url = new URL(hostUrl + "/query/stream");
-        
-        var conn = url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("X-API-Key", apiKey);
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Accept", "text/event-stream");
-        conn.setDoOutput(true);
-        
-        // Enable streaming mode
-        var payload = JSON.stringify({
-          query: Question,
-          user_prompt: Prompt,
-          conversation_history: History ? JSON.parse(History) : [],
-          response_type: "Multiple Paragraphs",
-          mode: "mix",
-          include_references: true,
-          stream: true
-        });
-        
-        
-        var out = new java.io.OutputStreamWriter(conn.getOutputStream());
-        out.write(payload);
-        out.close();
-        
-        var error = "";
-        var response = "";
-        var refs = "";
-        var references = ["null"];
-        
-        // Read streaming response
-        var reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-        var line;
-        
-        while ((line = reader.readLine()) !== null) {
-        	//log.warn("Received line: " + line); // Log the received line)
-        	try {
-        		var ob = JSON.parse(line);
-        		if (ob) {
-        			if (ob && ob.response) {
-        				var text = ob.response;
-        				response += text;
-        				
-        				var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
-        				buffer.content += text;
-        				buffer.size += buffer.content.length;
-        				context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
-        			}
-        			if (ob && ob.references) {
-        				ob.references.forEach(reference => {
-        					//log.warn("reference:"+JSON.stringify(reference));
-        					references.push(reference.file_path);
-        					refs += "- ["+ reference.reference_id +"] "+ reference.file_path + java.lang.System.lineSeparator();
-        				});
-        			}
-        		}
-        	} catch (e) {
-        		error = e.message;
-        		log.error("Error parsing JSON: " + "\nERROR" +  e.message + "\nLINE: " + line);
-        	}
-        	
-        }
-        
-        reader.close();
-        
-        try {
-        	context.httpSession.setAttribute("C8OAiAssistantBuffer", {"size" : 0, "content": "Reasoning..."});
-        } catch (e) {}
-        
-        var doc = context.outputDocument;
-        if (error == "") {
-        	var msg = response;
-        	//log.warn("Response done:"+ response);
-        	if (msg.toLowerCase().indexOf("### références") == -1 && msg.toLowerCase().indexOf("### references") == -1) {
-        		msg = msg + java.lang.System.lineSeparator() + "### Notes" + java.lang.System.lineSeparator() + refs;
-        	}
-        	var el = doc.createElement("object");
-        	doc.getDocumentElement().appendChild(el);
-        	
-        	var er = doc.createElement("response");
-        	er.appendChild(doc.createTextNode(msg));
-        	el.appendChild(er);
-        } else {
-        	var er = doc.createElement("error");
-        	er.appendChild(doc.createTextNode(error));
-        	doc.getDocumentElement().appendChild(er);	
-        }'
+    ↓Parallel [steps.ParallelStep-1768389197075]: 
+      ↓InitProgressMessage [steps.SimpleStep-1767366401271]: 
+        expression: |
+          'context.httpSession.setAttribute("C8OAiAssistantBuffer", {
+          	"size" : 0,
+          	"content": ""
+          });
+          
+          for (var i = 0; i < BufferMessages.length; i++) {
+          	var message = BufferMessages[i];
+          	var content = message.slice(-50).padStart(50, " ");
+          	context.httpSession.setAttribute("C8OAiAssistantBuffer", {
+          		"size" : 50,
+          		"content": content
+          	});
+            	java.lang.Thread.sleep(1050);
+          }
+          '
+      ↓StreamRun [steps.SimpleStep-1767366415002]: 
+        expression: |
+          '
+          var URL = java.net.URL;
+          var HttpsURLConnection = java.net.HttpURLConnection;
+          var InputStreamReader = java.io.InputStreamReader;
+          var BufferedReader = java.io.BufferedReader;
+          
+          // Set your API key and thread/run info
+          var apiKey = "${assistant.lrag.apikey.secret}";
+          var hostUrl = "${assistant.lrag.host.url}";
+          //var url = new URL("http://51.77.17.146:9621/query/stream");
+          var url = new URL(hostUrl + "/query/stream");
+          
+          var conn = url.openConnection();
+          conn.setRequestMethod("POST");
+          conn.setRequestProperty("X-API-Key", apiKey);
+          conn.setRequestProperty("Content-Type", "application/json");
+          conn.setRequestProperty("Accept", "text/event-stream");
+          conn.setDoOutput(true);
+          
+          // Enable streaming mode
+          var payload = JSON.stringify({
+            query: Question,
+            user_prompt: Prompt,
+            conversation_history: History ? JSON.parse(History) : [],
+            response_type: "Multiple Paragraphs",
+            mode: "mix",
+            include_references: true,
+            stream: true
+          });
+          
+          
+          var out = new java.io.OutputStreamWriter(conn.getOutputStream());
+          out.write(payload);
+          out.close();
+          
+          var error = "";
+          var response = "";
+          var refs = "";
+          var references = ["null"];
+          
+          // Read streaming response
+          var reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+          var line;
+          
+          while ((line = reader.readLine()) !== null) {
+          	//log.warn("Received line: " + line); // Log the received line)
+          	try {
+          		var ob = JSON.parse(line);
+          		if (ob) {
+          			if (ob && ob.response) {
+          				var text = ob.response;
+          				response += text;
+          				
+          				var buffer = context.httpSession.getAttribute("C8OAiAssistantBuffer");
+          				buffer.content += text;
+          				buffer.size += buffer.content.length;
+          				context.httpSession.setAttribute("C8OAiAssistantBuffer", buffer);
+          			}
+          			if (ob && ob.references) {
+          				ob.references.forEach(reference => {
+          					//log.warn("reference:"+JSON.stringify(reference));
+          					references.push(reference.file_path);
+          					refs += "- ["+ reference.reference_id +"] "+ reference.file_path + java.lang.System.lineSeparator();
+          				});
+          			}
+          		}
+          	} catch (e) {
+          		error = e.message;
+          		log.error("Error parsing JSON: " + "\nERROR" +  e.message + "\nLINE: " + line);
+          	}
+          	
+          }
+          
+          reader.close();
+          
+          try {
+          	context.httpSession.setAttribute("C8OAiAssistantBuffer", {"size" : 0, "content": ""});
+          } catch (e) {}
+          
+          var doc = context.outputDocument;
+          if (error == "") {
+          	var msg = response;
+          	//log.warn("Response done:"+ response);
+          	if (msg.toLowerCase().indexOf("### références") == -1 && msg.toLowerCase().indexOf("### references") == -1) {
+          		msg = msg + java.lang.System.lineSeparator() + "### Notes" + java.lang.System.lineSeparator() + refs;
+          	}
+          	var el = doc.createElement("object");
+          	doc.getDocumentElement().appendChild(el);
+          	
+          	var er = doc.createElement("response");
+          	er.appendChild(doc.createTextNode(msg));
+          	el.appendChild(er);
+          } else {
+          	var er = doc.createElement("error");
+          	er.appendChild(doc.createTextNode(error));
+          	doc.getDocumentElement().appendChild(er);	
+          }'
   ↓jElse [steps.ElseStep-1767180604771]: 
     ↓Message [steps.JsonObjectStep-1767113260210]: 
       key: 
@@ -252,6 +262,23 @@ responseTimeout: 80
   value: false
 ↓fromStub [variables.RequestableVariable-1767364339123]: 
   value: false
+↓BufferMessages [variables.RequestableMultiValuedVariable-1768322306918]: 
+  value: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: Reasoning...
+        - java.lang.String: 
+          - ↑value: Querying the Documentation...
+        - java.lang.String: 
+          - ↑value: Querying the Marketplace...
+        - java.lang.String: 
+          - ↑value: Querying the Knowledge base...
+        - java.lang.String: 
+          - ↑value: Querying the Tutorial base...
+        - java.lang.String: 
+          - ↑value: Reasoning...
 ↓Test_Case_NoStream [core.TestCase]: 
   ↓Question [variables.TestCaseVariable-1767113685813]: 
     value: comment exposer un service REST
