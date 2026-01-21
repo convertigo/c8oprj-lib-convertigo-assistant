@@ -54,7 +54,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:selectedPath.startsWith('/'+'path-to-lightrag')
+            - MobileSmartSourceType: script:(selectedPath$ | async)?.startsWith('/path-to-lightrag')
     ↓ComponentItem [ngx.components.UIDynamicElement-1753179834069]: 
       beanData: |
         '{
@@ -88,7 +88,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:selectedPath.startsWith('/'+'path-to-xfirst/:threadid')
+            - MobileSmartSourceType: script:(selectedPath$ | async)?.startsWith('/path-to-xfirst/:threadid')
     ↓FigmaItem [ngx.components.UIDynamicElement-1753180404710]: 
       beanData: |
         '{
@@ -122,7 +122,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:selectedPath.startsWith('/'+'path-to-figma')
+            - MobileSmartSourceType: script:(selectedPath$ | async)?.startsWith('/path-to-figma')
 ↓Footer [ngx.components.UIDynamicElement-1750663875479]: 
   beanData: '{"ionBean":"Footer"}'
   tagName: ion-footer

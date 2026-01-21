@@ -11,7 +11,7 @@ scriptContent:
         	private threadid = null;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
-        		this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
+        		//this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
         		console.log("[Assistant] navParams ", this.navParams);
         		try {
         			this.threadid = null;
@@ -24,6 +24,12 @@ scriptContent:
         		this.c8o.log.debug("[Assistant] loading with threadid: "+ this.threadid);
         		this.log("[Assistant] loading with threadid: "+ this.threadid);
         		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageInitialization*/
+        		/*End_c8o_PageInitialization*/
+        /*Begin_c8o_PageAfterViewInit*/
+        		/*End_c8o_PageAfterViewInit*/
+        /*Begin_c8o_PageFinalization*/
+        		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
         	public debug() {
         		if (this.global.studio) {
@@ -475,7 +481,12 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
         ↓PublishEvent [ngx.components.UIDynamicAction-1744367857716]: 
-          beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+          beanData: |
+            '{
+             "ionBean": "PublishEventAction",
+             "topic": "plain:AssistantResponse",
+             "async": "plain:false"
+            }'
         ↓runid [ngx.components.UIControlVariable-1744389800542]: 
           varValue: 
             - xmlizable: 
@@ -707,9 +718,13 @@ title: Component assistant
                         			page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
                         				"__context": "byside"
                         			}).async().then((r) => {
-                        				var buffer = JSON.parse(r.C8OAiAssistantBuffer);
-                        				page.local.Buffer = buffer;
-                        				page.local.Buffer.intId = intId
+                        				var text = ""+ r.C8OAiAssistantBuffer;
+                        				if (text.length > 0) {
+                        					var buffer = JSON.parse(text);
+                        					page.local.Buffer = buffer;
+                        					page.local.Buffer.intId = intId;
+                        					page.tick();
+                        				}
                         			})
                         
                         			// call every second the GetTokenBuffer sequence
@@ -717,9 +732,13 @@ title: Component assistant
                         				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
                         					"__context": "byside"
                         				}).async().then((r) => {
-                        					var buffer = JSON.parse(r.C8OAiAssistantBuffer);
-                        					page.local.Buffer = buffer;
-                        					page.local.Buffer.intId = intId
+                        					var text = ""+ r.C8OAiAssistantBuffer;
+                        					if (text.length > 0) {
+                        						var buffer = JSON.parse(text);
+                        						page.local.Buffer = buffer;
+                        						page.local.Buffer.intId = intId;
+                        						page.tick();
+                        					}
                         				})
                         			}, 1000);
                         			
@@ -823,7 +842,12 @@ title: Component assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
                       ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
-                        beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+                        beanData: |
+                          '{
+                           "ionBean": "PublishEventAction",
+                           "topic": "plain:AssistantResponse",
+                           "async": "plain:false"
+                          }'
                       ↓runid [ngx.components.UIControlVariable-1751354620932]: 
                         varValue: 
                           - xmlizable: 

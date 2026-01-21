@@ -90,11 +90,12 @@ scriptContent:
     <ion-card class="input-card" [disabled]="disabled">
       <ion-item lines="none">
         <ion-textarea 
+    		name="question"
     		class="chat-text-input"
     		aria-label="question input"
     		placeholder="Poser une question (multi-lignes) et Ctrl+Enter"
     		[autoGrow]="true"
-    		[(ngModel)]="this.Question"
+    		[(ngModel)]="Question"
     		(keydown)="this.onKeyEnter($event)"
     	></ion-textarea>
     
@@ -138,3 +139,43 @@ scriptContent:
             		page.reset();
             		resolve();
             '
+    local_module_ng_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonCard
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonItem
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonTextarea
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonButton
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonIcon
+    local_module_ts_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ IonCard, IonItem, IonTextarea, IonButton, IonIcon}'
+              - java.lang.String: 
+                - ↑value: '@ionic/angular/standalone'

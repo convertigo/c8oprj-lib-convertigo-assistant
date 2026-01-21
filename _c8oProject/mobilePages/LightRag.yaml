@@ -12,7 +12,7 @@ scriptContent:
         	public mdtext = "";
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
-        		this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
+        		//this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
         		console.log("[Assistant] navParams ", this.navParams);
         		
         		this.mdtext = `
@@ -43,6 +43,12 @@ scriptContent:
         		`;
         		
         		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageInitialization*/
+        		/*End_c8o_PageInitialization*/
+        /*Begin_c8o_PageAfterViewInit*/
+        		/*End_c8o_PageAfterViewInit*/
+        /*Begin_c8o_PageFinalization*/
+        		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
         	public setChatImage(filedata, filename, filetype) {
         		if (this.global.studio) {
@@ -343,9 +349,14 @@ title: Title for LightRag
                 			page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
                 				"__context": "byside"
                 			}).async().then((r) => {
-                				var buffer = JSON.parse(r.C8OAiAssistantBuffer);
-                				page.local.Buffer = buffer;
-                				page.local.Buffer.intId = intId
+                				var text = ""+ r.C8OAiAssistantBuffer;
+                				//console.log(''[MB] BUFFER : ''+ text);
+                				if (text.length > 0) {
+                					var buffer = JSON.parse(text);
+                					page.local.Buffer = buffer;
+                					page.local.Buffer.intId = intId;
+                					page.tick();
+                				}
                 			})
                 
                 			// call every second the GetTokenBuffer sequence
@@ -353,14 +364,20 @@ title: Title for LightRag
                 				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
                 					"__context": "byside"
                 				}).async().then((r) => {
-                					var buffer = JSON.parse(r.C8OAiAssistantBuffer);
-                					page.local.Buffer = buffer;
-                					page.local.Buffer.intId = intId
+                					var text = ""+ r.C8OAiAssistantBuffer;
+                					//console.log(''[MB] BUFFER : ''+ text);
+                					if (text.length > 0) {
+                						var buffer = JSON.parse(text);
+                						page.local.Buffer = buffer;
+                						page.local.Buffer.intId = intId;
+                						page.tick();
+                					}
                 				})
                 			}, 1000);
                 			
                 		} catch (e) {
-                		
+                			page.c8o.log.warn(''[MB] ERROR : ''+ e.message);
+                			console.log(''[MB] ERROR : ''+ e.message)
                 		} finally {
                 			return;
                 		}
