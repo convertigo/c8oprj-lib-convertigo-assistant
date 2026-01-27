@@ -28,7 +28,6 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    environment: beta
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,7 +61,7 @@ jobs:
 
       - name: Convertigo generate application code
         env:
-          C8O_SERVER: ${{ secrets.C8O_SERVER }}
+          C8O_SERVER: ${{ github.ref_type == 'tag' && secrets.C8O_SERVER_PROD || secrets.C8O_SERVER }}
         run: |
           echo "Generate Mobile Builder App" && \
           sh gradlew --stacktrace --info generateMobileBuilder export -x compileMobileBuilder \
