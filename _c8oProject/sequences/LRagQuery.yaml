@@ -102,12 +102,40 @@ responseTimeout: 80
           	context.httpSession.setAttribute("C8OAiAssistantBuffer", {"size" : 0, "content": ""});
           } catch (e) {}
           
+          function normalizeMarkdownLinks(text) {
+              return text.replace(
+                  /\[([^\]]+)\]\s*(?:\(([^)]+)\)|(\S+))/g,
+                  function (match, title, urlInParens, urlDirect) {
+          
+                      var url = urlInParens || urlDirect;
+          
+                      if (!/^https?:\/\//i.test(url) && /\.pdf$/i.test(url)) {
+          				url = "https://convertigo-download.s3.us-east-1.amazonaws.com/webrepository/Documents%20Convertigo/" + url; 				
+                      } else {
+          				if (title === "Front End Basic training V1.pdf") {
+          					url = "https://convertigo-download.s3.us-east-1.amazonaws.com/webrepository/Documents+Convertigo/Front+End+Basic+training+V1.pdf";
+          				}
+          				else if (title === "LowCodeStudio-BackEndTraining.pdf") {
+          					url = "https://convertigo-download.s3.us-east-1.amazonaws.com/webrepository/Documents%20Convertigo/LowCodeStudio-BackEndTraining.pdf";
+          				}
+          			}
+          
+                      // reconstruire en conservant la syntaxe d''origine
+                      if (urlInParens) {
+                          return "[" + title + "](" + url + ")";
+                      } else {
+                          return "[" + title + "] " + url;
+                      }
+                  }
+              );
+          }
+          
           var doc = context.outputDocument;
           if (error == "") {
-          	var msg = response;
+          	var msg = normalizeMarkdownLinks(response);
           	//log.warn("Response done:"+ response);
           	if (msg.toLowerCase().indexOf("### références") == -1 && msg.toLowerCase().indexOf("### references") == -1) {
-          		msg = msg + java.lang.System.lineSeparator() + "### Notes" + java.lang.System.lineSeparator() + refs;
+          		msg = msg + java.lang.System.lineSeparator() + "### Notes" + java.lang.System.lineSeparator() + normalizeMarkdownLinks(refs);
           	}
           	var el = doc.createElement("object");
           	doc.getDocumentElement().appendChild(el);
@@ -250,14 +278,16 @@ responseTimeout: 80
 ↓History [variables.RequestableVariable-1767698342784]: 
 ↓Prompt [variables.RequestableVariable-1767974017753]: 
   value: |
-    'Reference list entries should adhere to the markdown format: `* [Document Title] Document URL`.
+    'Reference list entries should adhere to the markdown format: `* [Document Title] Document URL` where
+    - Document URL is the full http URL to the document or the PDF filename if document is a PDF file
+    - Document Title is the last part (sub directory) of Document URL 
     Do not include a caret (`^`) after opening square bracket (`[`).
-     - The Document Title in the citation must retain its original language.
+     - The Document Title in the citation must retain its original language
      - Output each citation on an individual line
      - Provide maximum of 5 most relevant citations.
      - Do not generate footnotes section or any comment, summary, or explanation after the references
     Reference Section Example:
-    ```\n### References\n\n- [Document Title One] https://server/docs/doc1\n- [Document Title Two] https://server/docs/doc2\n- [Document Title Three] https://server/docs/doc3\n```'
+    ```\n### References\n\n- [Document Title One] https://server/docs/doc1\n- [Document Title Two] https://server/docs/doc2\n- [Document PDF Title] doc.pdf\n```'
 ↓stream [variables.RequestableVariable-1767180068215]: 
   value: false
 ↓fromStub [variables.RequestableVariable-1767364339123]: 
