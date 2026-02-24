@@ -1,3 +1,170 @@
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        	previewUrl = '''';
+        	previewFile = null;
+        	/*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+        		/*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        		/*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        		this.releasePreviewUrl();
+        		/*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        		/*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        		/*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        		/*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        		/*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        		/*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        	releasePreviewUrl() {
+        		try {
+        			if (this.previewUrl && this.previewUrl.indexOf(''blob:'') === 0 && window && window.URL && window.URL.revokeObjectURL) {
+        				window.URL.revokeObjectURL(this.previewUrl);
+        			}
+        		} catch (e) {}
+        		this.previewUrl = '''';
+        		this.previewFile = null;
+        	}
+        	
+        	looksLikeImageName(name) {
+        		var value = '''' + (name == null ? '''' : name);
+        		value = value.toLowerCase();
+        		var exts = [''.png'', ''.jpg'', ''.jpeg'', ''.gif'', ''.webp'', ''.bmp'', ''.svg'', ''.heic'', ''.heif'', ''.avif''];
+        		for (var i = 0; i < exts.length; i++) {
+        			var ext = exts[i];
+        			if (value.length >= ext.length && value.lastIndexOf(ext) === value.length - ext.length) {
+        				return true;
+        			}
+        		}
+        		return false;
+        	}
+        	
+        	findImageFileByName(name) {
+        		var target = '''' + (name == null ? '''' : name);
+        		if (!target.length) {
+        			return null;
+        		}
+        		var files = this.files;
+        		try {
+        			if (!files || files.length == null) {
+        				return null;
+        			}
+        			for (var i = 0; i < files.length; i++) {
+        				var current = files[i];
+        				if (!current) {
+        					continue;
+        				}
+        				if (('''' + (current.name == null ? '''' : current.name)) === target) {
+        					return current;
+        				}
+        			}
+        		} catch (e) {}
+        		return null;
+        	}
+        	
+        	getImageSource() {
+        		var value = this.file;
+        		if (!value) {
+        			return '''';
+        		}
+        		if (typeof value === ''string'') {
+        			return value;
+        		}
+        		try {
+        			if (value.url != null && ('''' + value.url).length) {
+        				return '''' + value.url;
+        			}
+        			if (value.src != null && ('''' + value.src).length) {
+        				return '''' + value.src;
+        			}
+        			if (value.imageUrl != null && ('''' + value.imageUrl).length) {
+        				return '''' + value.imageUrl;
+        			}
+        			if (value.preview != null && ('''' + value.preview).length) {
+        				return '''' + value.preview;
+        			}
+        		} catch (e1) {}
+        		
+        		var candidate = value;
+        		try {
+        			if (candidate && candidate.file) {
+        				candidate = candidate.file;
+        			}
+        		} catch (e2) {}
+        		
+        		try {
+        			var fileName = '''';
+        			if (value && value.filename != null) {
+        				fileName = '''' + value.filename;
+        			} else if (candidate && candidate.filename != null) {
+        				fileName = '''' + candidate.filename;
+        			}
+        			if (fileName.length) {
+        				var matched = this.findImageFileByName(fileName);
+        				if (matched) {
+        					candidate = matched;
+        				}
+        			}
+        		} catch (e22) {}
+        		
+        		try {
+        			if (candidate && typeof Blob !== ''undefined'' && candidate instanceof Blob && window && window.URL && window.URL.createObjectURL) {
+        				if (this.previewFile !== candidate || !this.previewUrl.length) {
+        					this.releasePreviewUrl();
+        					this.previewFile = candidate;
+        					this.previewUrl = window.URL.createObjectURL(candidate);
+        				}
+        				return this.previewUrl;
+        			}
+        		} catch (e3) {}
+        		
+        		return '''';
+        	}
+        	
+        	hasImageContent() {
+        		return this.getImageSource().length > 0;
+        	}
+        	
+        	getImageAlt() {
+        		var value = this.file;
+        		try {
+        			if (value && value.file) {
+        				value = value.file;
+        			}
+        		} catch (e1) {}
+        		try {
+        			var name = '''';
+        			if (value && value.name != null) {
+        				name = '''' + value.name;
+        			} else if (value && value.filename != null) {
+        				name = '''' + value.filename;
+        			}
+        			if (name.length) {
+        				return name;
+        			}
+        		} catch (e2) {}
+        		return ''image'';
+        	}
+        	
+        	hasTextMessage() {
+        		var text = '''' + (this.message == null ? '''' : this.message);
+        		return text.trim().length > 0;
+        	}
+        	/*End_c8o_CompFunction*/
+        '
 ↓Wrapper [ngx.components.UIDynamicElement-1771949858737]: 
   beanData: '{"ionBean":"DivTag"}'
   tagName: div
@@ -83,13 +250,47 @@
       ↓CardContent [ngx.components.UIDynamicElement-1771949858791]: 
         beanData: '{"ionBean":"CardContent"}'
         tagName: ion-card-content
-        ↓MdReader [ngx.components.UIUseShared-1771949858794]: 
-          sharedcomponent: ConvertigoAssistantV2.Application.NgxApp.MdReader
-          ↓data [ngx.components.UIUseVariable-1771949858797]: 
-            varValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.message
+        ↓IfImage [ngx.components.UIControlDirective-1777601000002]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.hasImageContent()
+          ↓Image [ngx.components.UIDynamicElement-1777601000003]: 
+            beanData: '{"ionBean":"Image"}'
+            selfClose: true
+            tagName: img
+            ↓Class [ngx.components.UIAttribute-1777601000004]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:chat-assistant-image
+            ↓Src [ngx.components.UIAttribute-1777601000005]: 
+              attrName: '[src]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getImageSource()
+            ↓Alt [ngx.components.UIAttribute-1777601000006]: 
+              attrName: alt
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getImageAlt()
+        ↓IfMessage [ngx.components.UIControlDirective-1777601000007]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.hasTextMessage() || this.writing === true
+          ↓MdReader [ngx.components.UIUseShared-1771949858794]: 
+            sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+            ↓data [ngx.components.UIUseVariable-1771949858797]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.message
         ↓IfWriting [ngx.components.UIControlDirective-1771949858800]: 
           directiveName: If
           directiveSource: 
@@ -169,6 +370,10 @@
                     - MobileSmartSourceType: script:this.tag3
 ↓message [ngx.components.UICompVariable-1771949858848]: 
   value: '''I am here to help with Convertigo development. I can guide you through forms, APIs and sequences.'''
+↓file [ngx.components.UICompVariable-1777601000008]: 
+  value: null
+↓files [ngx.components.UICompVariable-1777701000005]: 
+  value: null
 ↓author [ngx.components.UICompVariable-1771949858851]: 
   value: '''Assistant'''
 ↓time [ngx.components.UICompVariable-1771949858854]: 
@@ -243,6 +448,17 @@
           }
           .chat-assistant-bubble ion-card-content {
             padding: 15px 21px 12px;
+          }
+          .chat-assistant-image {
+            display: block;
+            width: 100%;
+            max-width: 480px;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            background: rgba(15, 23, 42, 0.65);
           }
           .chat-message-text {
             margin: 0;

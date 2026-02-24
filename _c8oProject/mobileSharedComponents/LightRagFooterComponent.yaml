@@ -1,0 +1,2345 @@
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        import { HostListener, signal, NgZone } from ''@angular/core'';
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        	disabled = false;
+        	questionInputEl = null;
+        	questionInputKeydownHandler = null;
+        	imageInputEl = null;
+        	imageInputChangeHandler = null;
+        	attachInputEl = null;
+        	attachInputChangeHandler = null;
+        	assetPreviewUrls = {};
+        	imagePreviewItemsSignal = signal([]);
+        	attachmentPreviewItemsSignal = signal([]);
+        	/*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+        		/*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        		/*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        		this.unbindQuestionInputKeydown();
+        		this.unbindAssetInputChanges();
+        		this.clearAssetPreviewUrls();
+        		/*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        		/*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        		/*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        		/*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        		/*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		this.bindQuestionInputKeydown(60);
+        		this.bindAssetInputChanges(80);
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        		/*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        	bindQuestionInputKeydown(delay) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				self.unbindQuestionInputKeydown();
+        				if (!(self.questionInput && self.questionInput.getInputElement)) {
+        					return;
+        				}
+        				var inputPromise = self.questionInput.getInputElement();
+        				var apply = function(inputEl) {
+        					try {
+        						if (!inputEl || !inputEl.addEventListener) {
+        							return;
+        						}
+        						self.questionInputEl = inputEl;
+        						self.questionInputKeydownHandler = function(ev) {
+        							self.handleQuestionKeydown(ev);
+        						};
+        						inputEl.addEventListener(''keydown'', self.questionInputKeydownHandler);
+        					} catch (e) {}
+        				};
+        				if (inputPromise && inputPromise.then) {
+        					inputPromise.then(function(inputEl) {
+        						apply(inputEl);
+        					}).catch(function() {});
+        				} else {
+        					apply(inputPromise);
+        				}
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	unbindQuestionInputKeydown() {
+        		try {
+        			if (this.questionInputEl && this.questionInputKeydownHandler && this.questionInputEl.removeEventListener) {
+        				this.questionInputEl.removeEventListener(''keydown'', this.questionInputKeydownHandler);
+        			}
+        		} catch (e) {}
+        		this.questionInputEl = null;
+        		this.questionInputKeydownHandler = null;
+        	}
+        	
+        	bindAssetInputChanges(delay) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				self.unbindAssetInputChanges();
+        				var bindOne = function(inputEl, kind) {
+        					try {
+        						if (!inputEl || !inputEl.addEventListener) {
+        							return;
+        						}
+        						var handler = function(ev) {
+        							if (kind === ''image'') {
+        								self.onImageSelected(ev);
+        							} else {
+        								self.onAttachSelected(ev);
+        							}
+        						};
+        						inputEl.addEventListener(''change'', handler);
+        						if (kind === ''image'') {
+        							self.imageInputEl = inputEl;
+        							self.imageInputChangeHandler = handler;
+        						} else {
+        							self.attachInputEl = inputEl;
+        							self.attachInputChangeHandler = handler;
+        						}
+        					} catch (e) {}
+        				};
+        				bindOne(self.getImageInputElement(), ''image'');
+        				bindOne(self.getAttachInputElement(), ''attach'');
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	unbindAssetInputChanges() {
+        		try {
+        			if (this.imageInputEl && this.imageInputChangeHandler && this.imageInputEl.removeEventListener) {
+        				this.imageInputEl.removeEventListener(''change'', this.imageInputChangeHandler);
+        			}
+        		} catch (e) {}
+        		try {
+        			if (this.attachInputEl && this.attachInputChangeHandler && this.attachInputEl.removeEventListener) {
+        				this.attachInputEl.removeEventListener(''change'', this.attachInputChangeHandler);
+        			}
+        		} catch (e2) {}
+        		this.imageInputEl = null;
+        		this.imageInputChangeHandler = null;
+        		this.attachInputEl = null;
+        		this.attachInputChangeHandler = null;
+        	}
+        	
+        	getDefaultSuggestions() {
+        		return [
+        			{ label: ''REST/SOAP web service'', question: ''How do I consume a REST or SOAP web service?'', icon: ''code-slash-outline'' },
+        			{ label: ''Center a button'', question: ''How can I create a button centered on a page?'', icon: ''move-outline'' },
+        			{ label: ''Call backend sequence'', question: ''How do I call a backend sequence from a UI component?'', icon: ''git-network-outline'' },
+        			{ label: ''Connect to database'', question: ''How can I connect to a database or an external API?'', icon: ''server-outline'' },
+        			{ label: ''Handle authentication'', question: ''How do I handle authentication, variables, or events?'', icon: ''lock-closed-outline'' },
+        			{ label: ''Responsive design'', question: ''How do I design responsive pages or reusable components?'', icon: ''phone-portrait-outline'' }
+        		];
+        	}
+        	
+        	normalizeSuggestionItem(item, fallbackItem) {
+        		var fallback = fallbackItem || {};
+        		var fallbackQuestion = '''' + (fallback.question == null ? '''' : fallback.question);
+        		var fallbackLabel = '''' + (fallback.label == null ? fallbackQuestion : fallback.label);
+        		var fallbackIcon = '''' + (fallback.icon == null ? ''help-circle-outline'' : fallback.icon);
+        		
+        		if (item == null) {
+        			return {
+        				question: fallbackQuestion,
+        				label: fallbackLabel,
+        				icon: fallbackIcon
+        			};
+        		}
+        		
+        		var kind = typeof item;
+        		if (kind === ''string'' || kind === ''number'') {
+        			var text = '''' + item;
+        			return {
+        				question: text,
+        				label: text,
+        				icon: fallbackIcon
+        			};
+        		}
+        		
+        		var question = '''' + ((item.question != null ? item.question : (item.text != null ? item.text : (item.value != null ? item.value : fallbackQuestion))));
+        		var label = '''' + ((item.label != null ? item.label : question));
+        		var icon = '''' + ((item.icon != null ? item.icon : (item.iconName != null ? item.iconName : fallbackIcon)));
+        		
+        		return {
+        			question: question,
+        			label: label,
+        			icon: icon
+        		};
+        	}
+        	
+        	getSuggestions() {
+        		var defaults = this.getDefaultSuggestions();
+        		var source = this.Suggestions;
+        		var list = [];
+        		try {
+        			if (source && source.length != null) {
+        				for (var i = 0; i < source.length && i < 6; i++) {
+        					var fallback = defaults[i] || defaults[0];
+        					var item = this.normalizeSuggestionItem(source[i], fallback);
+        					if (('''' + item.question).trim().length) {
+        						list.push(item);
+        					}
+        				}
+        			}
+        		} catch (e) {}
+        		
+        		if (!list.length) {
+        			for (var j = 0; j < defaults.length; j++) {
+        				list.push(this.normalizeSuggestionItem(defaults[j], defaults[j]));
+        			}
+        		}
+        		return list;
+        	}
+        	
+        	getSuggestionItem(index) {
+        		var i = Number(index);
+        		if (isNaN(i) || i < 0) {
+        			return null;
+        		}
+        		var list = this.getSuggestions();
+        		if (i >= list.length) {
+        			return null;
+        		}
+        		return list[i];
+        	}
+        	
+        	getSuggestionQuestion(index) {
+        		var item = this.getSuggestionItem(index);
+        		return '''' + (item && item.question != null ? item.question : '''');
+        	}
+        	
+        	getSuggestionLabel(index) {
+        		var item = this.getSuggestionItem(index);
+        		if (!item) {
+        			return '''';
+        		}
+        		var label = '''' + (item.label == null ? '''' : item.label);
+        		if (!label.length) {
+        			label = '''' + (item.question == null ? '''' : item.question);
+        		}
+        		return label;
+        	}
+        	
+        	getSuggestionIcon(index) {
+        		var item = this.getSuggestionItem(index);
+        		if (!item) {
+        			return ''help-circle-outline'';
+        		}
+        		var icon = '''' + (item.icon == null ? '''' : item.icon);
+        		return icon.length ? icon : ''help-circle-outline'';
+        	}
+        	
+        	hasSuggestion(index) {
+        		return this.getSuggestionQuestion(index).trim().length > 0;
+        	}
+        	
+        	setSuggestionByIndex(index) {
+        		var question = this.getSuggestionQuestion(index).trim();
+        		if (!question.length) {
+        			return;
+        		}
+        		this.setSuggestion(question);
+        	}
+        	
+        	getPlaceholder() {
+        		var text = '''' + (this.Placeholder == null ? '''' : this.Placeholder);
+        		text = text.trim();
+        		return text.length ? text : ''Ask how to build something...'';
+        	}
+        	
+        	setEnable(enable) {
+        		this.disabled = !enable;
+        		this.tick();
+        	}
+        	
+        	getQuestionText() {
+        		var current = '''';
+        		try {
+        			if (this.questionInput && this.questionInput.value != null) {
+        				current = '''' + this.questionInput.value;
+        			}
+        		} catch (e) {}
+        		if (current.length) {
+        			return current;
+        		}
+        		try {
+        			if (this.formAssistant) {
+        				if (this.formAssistant.form && this.formAssistant.form.get) {
+        					var ctrl = this.formAssistant.form.get(''question'');
+        					if (ctrl) {
+        						current = '''' + (ctrl.value == null ? '''' : ctrl.value);
+        					}
+        				} else if (this.formAssistant.controls && this.formAssistant.controls.question) {
+        					current = '''' + (this.formAssistant.controls.question.value == null ? '''' : this.formAssistant.controls.question.value);
+        				}
+        			}
+        		} catch (e) {}
+        		if (current.length) {
+        			return current;
+        		}
+        		return '''' + (this.Question == null ? '''' : this.Question);
+        	}
+        	
+        	setQuestionText(value, keepFocus) {
+        		var text = '''' + (value == null ? '''' : value);
+        		var setOnNativeInput = function(inputEl, val) {
+        			try {
+        				if (!inputEl) {
+        					return;
+        				}
+        				inputEl.value = val;
+        				try {
+        					inputEl.dispatchEvent(new Event(''input'', { bubbles: true }));
+        				} catch (e) {
+        					var ev = document.createEvent(''Event'');
+        					ev.initEvent(''input'', true, true);
+        					inputEl.dispatchEvent(ev);
+        				}
+        			} catch (e) {}
+        		};
+        		this.Question = text;
+        		try {
+        			if (this.formAssistant) {
+        				if (this.formAssistant.form && this.formAssistant.form.patchValue) {
+        					this.formAssistant.form.patchValue({ question: text });
+        				} else if (this.formAssistant.controls && this.formAssistant.controls.question && this.formAssistant.controls.question.setValue) {
+        					this.formAssistant.controls.question.setValue(text);
+        				}
+        			}
+        		} catch (e) {}
+        		try {
+        			if (this.questionInput) {
+        				try {
+        					this.questionInput.value = text;
+        				} catch (e) {}
+        				if (this.questionInput.getInputElement) {
+        					var inputPromise = this.questionInput.getInputElement();
+        					if (inputPromise && inputPromise.then) {
+        						inputPromise.then(function(inputEl) {
+        							setOnNativeInput(inputEl, text);
+        						}).catch(function() {});
+        					} else {
+        						setOnNativeInput(inputPromise, text);
+        					}
+        				}
+        			}
+        		} catch (e) {}
+        		this.tick();
+        		if (keepFocus !== false) {
+        			this.focusQuestionInputAtEnd(20);
+        		}
+        	}
+        	
+        	focusQuestionInput(delay) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				if (self.questionInput && self.questionInput.setFocus) {
+        					self.questionInput.setFocus();
+        				}
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	focusQuestionInputAtEnd(delay) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		var setCaret = function(inputEl) {
+        			try {
+        				if (!inputEl) {
+        					return;
+        				}
+        				var value = '''' + (inputEl.value == null ? '''' : inputEl.value);
+        				var end = value.length;
+        				if (inputEl.setSelectionRange) {
+        					inputEl.setSelectionRange(end, end);
+        				}
+        			} catch (e) {}
+        		};
+        		setTimeout(function() {
+        			try {
+        				if (self.questionInput && self.questionInput.setFocus) {
+        					self.questionInput.setFocus();
+        				}
+        				if (self.questionInput && self.questionInput.getInputElement) {
+        					var inputPromise = self.questionInput.getInputElement();
+        					if (inputPromise && inputPromise.then) {
+        						inputPromise.then(function(inputEl) {
+        							setCaret(inputEl);
+        						}).catch(function() {});
+        					} else {
+        						setCaret(inputPromise);
+        					}
+        				}
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	setSuggestion(question) {
+        		this.setQuestionText(question, true);
+        	}
+        	
+        	clearQuestion() {
+        		this.setQuestionText('''', true);
+        		this.clearAssetInputs();
+        	}
+        	
+        	isAssetInputEnabled() {
+        		var value = this.EnableAssetInputs;
+        		return value === true || value === ''true'' || value === 1 || value === ''1'';
+        	}
+        	
+        	isAttachmentInputEnabled() {
+        		if (!this.isAssetInputEnabled()) {
+        			return false;
+        		}
+        		var value = this.EnableAttachmentInputs;
+        		return value === true || value === ''true'' || value === 1 || value === ''1'';
+        	}
+        	
+        	getNativeInput(ref) {
+        		try {
+        			if (!ref) {
+        				return null;
+        			}
+        			if (ref.nativeElement) {
+        				return ref.nativeElement;
+        			}
+        			if (ref.el) {
+        				return ref.el;
+        			}
+        			return ref;
+        		} catch (e) {}
+        		return null;
+        	}
+        	
+        	getImageInputElement() {
+        		return this.getNativeInput(this.imageInput);
+        	}
+        	
+        	getAttachInputElement() {
+        		return this.getNativeInput(this.attachInput);
+        	}
+        	
+        	openImagePicker(event) {
+        		try {
+        			if (event && event.preventDefault) {
+        				event.preventDefault();
+        			}
+        			if (!this.isAssetInputEnabled()) {
+        				return;
+        			}
+        			if (this.EnableChat === false || this.IsProcessing === true) {
+        				return;
+        			}
+        			var input = this.getImageInputElement();
+        			if (input && input.click) {
+        				input.click();
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	openAttachPicker(event) {
+        		try {
+        			if (event && event.preventDefault) {
+        				event.preventDefault();
+        			}
+        			if (!this.isAttachmentInputEnabled()) {
+        				return;
+        			}
+        			if (this.EnableChat === false || this.IsProcessing === true) {
+        				return;
+        			}
+        			var input = this.getAttachInputElement();
+        			if (input && input.click) {
+        				input.click();
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	onImageSelected(event) {
+        		this.addFiles(event && event.target ? event.target.files : null, true);
+        	}
+        	
+        	onAttachSelected(event) {
+        		if (!this.isAttachmentInputEnabled()) {
+        			this.clearInputFiles(this.getAttachInputElement());
+        			this.syncAssetItems();
+        			this.syncAssetPreviews();
+        			this.refreshAssetView();
+        			return;
+        		}
+        		this.addFiles(event && event.target ? event.target.files : null, true);
+        	}
+        	
+        	getInputFiles(inputEl) {
+        		try {
+        			if (inputEl && inputEl.files != null) {
+        				return inputEl.files;
+        			}
+        		} catch (e) {}
+        		return [];
+        	}
+        	
+        	getImageFiles() {
+        		if (!this.isAssetInputEnabled()) {
+        			return [];
+        		}
+        		return this.getInputFiles(this.getImageInputElement());
+        	}
+        	
+        	getAttachFiles() {
+        		if (!this.isAttachmentInputEnabled()) {
+        			return [];
+        		}
+        		return this.getInputFiles(this.getAttachInputElement());
+        	}
+        	
+        	syncAssetItems() {
+        		var imageItems = this.toArray(this.getImageFiles());
+        		var attachmentItems = this.isAttachmentInputEnabled() ? this.toArray(this.getAttachFiles()) : [];
+        		this.imagePreviewItemsSignal.set(imageItems);
+        		this.attachmentPreviewItemsSignal.set(attachmentItems);
+        	}
+        	
+        	toArray(files) {
+        		var values = [];
+        		try {
+        			if (!files || files.length == null) {
+        				return values;
+        			}
+        			for (var i = 0; i < files.length; i++) {
+        				values.push(files[i]);
+        			}
+        		} catch (e) {}
+        		return values;
+        	}
+        	
+        	getFileKey(file) {
+        		try {
+        			if (!file) {
+        				return '''';
+        			}
+        			var name = '''' + (file.name == null ? '''' : file.name);
+        			var size = '''' + (file.size == null ? '''' : file.size);
+        			var mod = '''' + (file.lastModified == null ? '''' : file.lastModified);
+        			return name + ''|'' + size + ''|'' + mod;
+        		} catch (e) {}
+        		return '''';
+        	}
+        	
+        	isImageFile(file) {
+        		if (!file) {
+        			return false;
+        		}
+        		var type = '''' + (file.type == null ? '''' : file.type);
+        		type = type.toLowerCase();
+        		if (type.indexOf(''image/'') === 0) {
+        			return true;
+        		}
+        		var name = '''' + (file.name == null ? '''' : file.name);
+        		name = name.toLowerCase();
+        		var exts = [''.png'', ''.jpg'', ''.jpeg'', ''.gif'', ''.webp'', ''.bmp'', ''.svg'', ''.heic'', ''.heif'', ''.avif''];
+        		for (var i = 0; i < exts.length; i++) {
+        			var ext = exts[i];
+        			if (name.length >= ext.length && name.lastIndexOf(ext) === name.length - ext.length) {
+        				return true;
+        			}
+        		}
+        		return false;
+        	}
+        	
+        	getImagePreviewItems() {
+        		return this.imagePreviewItemsSignal() || [];
+        	}
+        	
+        	getAttachmentPreviewItems() {
+        		return this.attachmentPreviewItemsSignal() || [];
+        	}
+        	
+        	hasSelectedAssets() {
+        		return this.imagePreviewItemsSignal().length > 0 || this.attachmentPreviewItemsSignal().length > 0;
+        	}
+        	
+        	hasImagePreviewItems() {
+        		return this.imagePreviewItemsSignal().length > 0;
+        	}
+        	
+        	hasAttachmentPreviewItems() {
+        		return this.attachmentPreviewItemsSignal().length > 0;
+        	}
+        	
+        	createAssetPreviewUrl(file) {
+        		try {
+        			if (!file) {
+        				return '''';
+        			}
+        			if (window && window.URL && window.URL.createObjectURL) {
+        				return window.URL.createObjectURL(file);
+        			}
+        		} catch (e) {}
+        		return '''';
+        	}
+        	
+        	releaseAssetPreviewUrl(url) {
+        		try {
+        			if (!url || url.indexOf(''blob:'') !== 0) {
+        				return;
+        			}
+        			if (window && window.URL && window.URL.revokeObjectURL) {
+        				window.URL.revokeObjectURL(url);
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	clearAssetPreviewUrls() {
+        		var current = this.assetPreviewUrls || {};
+        		for (var key in current) {
+        			if (!current.hasOwnProperty(key)) {
+        				continue;
+        			}
+        			this.releaseAssetPreviewUrl(current[key]);
+        		}
+        		this.assetPreviewUrls = {};
+        	}
+        	
+        	syncAssetPreviews() {
+        		if (!this.isAssetInputEnabled()) {
+        			this.clearAssetPreviewUrls();
+        			return;
+        		}
+        		var current = this.assetPreviewUrls || {};
+        		var next = {};
+        		var imageFiles = this.toArray(this.getImageFiles());
+        		for (var i = 0; i < imageFiles.length; i++) {
+        			var file = imageFiles[i];
+        			var key = this.getFileKey(file);
+        			if (!key.length) {
+        				continue;
+        			}
+        			var previewUrl = current[key];
+        			if (!previewUrl) {
+        				previewUrl = this.createAssetPreviewUrl(file);
+        			}
+        			if (previewUrl) {
+        				next[key] = previewUrl;
+        			}
+        		}
+        		for (var existingKey in current) {
+        			if (!current.hasOwnProperty(existingKey)) {
+        				continue;
+        			}
+        			if (!next.hasOwnProperty(existingKey)) {
+        				this.releaseAssetPreviewUrl(current[existingKey]);
+        			}
+        		}
+        		this.assetPreviewUrls = next;
+        	}
+        	
+        	getImagePreviewUrl(file) {
+        		try {
+        			var key = this.getFileKey(file);
+        			if (!key.length) {
+        				return '''';
+        			}
+        			var value = this.assetPreviewUrls ? this.assetPreviewUrls[key] : '''';
+        			if (!value) {
+        				this.syncAssetPreviews();
+        				value = this.assetPreviewUrls ? this.assetPreviewUrls[key] : '''';
+        			}
+        			return value || '''';
+        		} catch (e) {}
+        		return '''';
+        	}
+        	
+        	formatFileSize(size) {
+        		var bytes = size == null ? 0 : size;
+        		if (bytes <= 0) {
+        			return '''';
+        		}
+        		var units = [''B'', ''KB'', ''MB'', ''GB''];
+        		var index = 0;
+        		var value = bytes;
+        		while (value >= 1024 && index < units.length - 1) {
+        			value = value / 1024;
+        			index++;
+        		}
+        		var rounded = index === 0 ? Math.round(value) : Math.round(value * 10) / 10;
+        		return ('''' + rounded) + '' '' + units[index];
+        	}
+        	
+        	getAttachmentLabel(file) {
+        		if (!file) {
+        			return '''';
+        		}
+        		var name = '''' + (file.name == null ? ''Attachment'' : file.name);
+        		var sizeLabel = this.formatFileSize(file.size);
+        		if (!sizeLabel.length) {
+        			return name;
+        		}
+        		return name + '' ('' + sizeLabel + '')'';
+        	}
+        	
+        	getAttachmentIcon(file) {
+        		var type = '''' + (file && file.type != null ? file.type : '''');
+        		type = type.toLowerCase();
+        		var name = '''' + (file && file.name != null ? file.name : '''');
+        		name = name.toLowerCase();
+        		if (type.indexOf(''pdf'') !== -1 || name.indexOf(''.pdf'') > -1) {
+        			return ''document-text-outline'';
+        		}
+        		if (type.indexOf(''zip'') !== -1 || name.indexOf(''.zip'') > -1 || name.indexOf(''.rar'') > -1 || name.indexOf(''.7z'') > -1) {
+        			return ''archive-outline'';
+        		}
+        		if (type.indexOf(''sheet'') !== -1 || type.indexOf(''excel'') !== -1 || name.indexOf(''.xls'') > -1 || name.indexOf(''.csv'') > -1) {
+        			return ''grid-outline'';
+        		}
+        		if (type.indexOf(''word'') !== -1 || name.indexOf(''.doc'') > -1) {
+        			return ''document-outline'';
+        		}
+        		return ''attach-outline'';
+        	}
+        	
+        	refreshAssetView() {
+        		var self = this;
+        		setTimeout(function() {
+        			var updateView = function() {
+        				try {
+        					self.syncAssetItems();
+        				} catch (e) {}
+        				self.tick();
+        			};
+        			try {
+        				var zone = self.getInstance ? self.getInstance(NgZone) : null;
+        				if (zone && zone.run) {
+        					zone.run(function() {
+        						updateView();
+        					});
+        				} else {
+        					updateView();
+        				}
+        			} catch (e2) {
+        				updateView();
+        			}
+        		}, 0);
+        	}
+        	
+        	removeFileFromInput(inputEl, targetKey) {
+        		try {
+        			if (!inputEl || !targetKey || !targetKey.length) {
+        				return;
+        			}
+        			var current = this.getInputFiles(inputEl);
+        			var dt = new DataTransfer();
+        			for (var i = 0; i < current.length; i++) {
+        				var file = current[i];
+        				if (this.getFileKey(file) !== targetKey) {
+        					dt.items.add(file);
+        				}
+        			}
+        			inputEl.files = dt.files;
+        			if (dt.files.length === 0) {
+        				inputEl.value = '''';
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	getEventFileKey(event) {
+        		try {
+        			var node = event && event.currentTarget ? event.currentTarget : (event ? event.target : null);
+        			var depth = 0;
+        			while (node && depth < 6) {
+        				var key = '''';
+        				try {
+        					if (node.getAttribute) {
+        						key = '''' + (node.getAttribute(''data-file-key'') || '''');
+        					}
+        				} catch (e1) {}
+        				if ((!key || !key.length) && node.dataset && node.dataset.fileKey) {
+        					key = '''' + node.dataset.fileKey;
+        				}
+        				if (key && key.length) {
+        					return key;
+        				}
+        				node = node.parentElement ? node.parentElement : (node.parentNode ? node.parentNode : null);
+        				depth++;
+        			}
+        		} catch (e) {}
+        		return '''';
+        	}
+        	
+        	removeAssetByKey(targetKey, event) {
+        		try {
+        			if (event && event.preventDefault) {
+        				event.preventDefault();
+        			}
+        			if (event && event.stopPropagation) {
+        				event.stopPropagation();
+        			}
+        			if (!targetKey.length) {
+        				return;
+        			}
+        			this.removeFileFromInput(this.getImageInputElement(), targetKey);
+        			this.removeFileFromInput(this.getAttachInputElement(), targetKey);
+        			this.syncAssetItems();
+        			this.syncAssetPreviews();
+        			this.refreshAssetView();
+        		} catch (e) {}
+        	}
+        	
+        	removeAssetFromEvent(event) {
+        		var targetKey = this.getEventFileKey(event);
+        		this.removeAssetByKey(targetKey, event);
+        	}
+        	
+        	addFiles(files, normalizeInputs) {
+        		try {
+        			if (!this.isAssetInputEnabled()) {
+        				this.clearAssetPreviewUrls();
+        				this.syncAssetItems();
+        				this.refreshAssetView();
+        				return;
+        			}
+        			if (normalizeInputs) {
+        				this.addInputFiles(files);
+        			}
+        			this.syncAssetItems();
+        			this.syncAssetPreviews();
+        			this.refreshAssetView();
+        		} catch (e) {}
+        	}
+        	
+        	addInputFiles(files) {
+        		try {
+        			if (!files || files.length == null || files.length === 0) {
+        				return;
+        			}
+        			var imageInput = this.getImageInputElement();
+        			var attachInput = this.getAttachInputElement();
+        			if (!imageInput || !attachInput) {
+        				return;
+        			}
+        			
+        			var byName = {};
+        			var i = 0;
+        			
+        			var imageFiles = this.getInputFiles(imageInput);
+        			for (i = 0; i < imageFiles.length; i++) {
+        				byName['''' + imageFiles[i].name] = imageFiles[i];
+        			}
+        			
+        			var attachFiles = this.getInputFiles(attachInput);
+        			if (this.isAttachmentInputEnabled()) {
+        				for (i = 0; i < attachFiles.length; i++) {
+        					byName['''' + attachFiles[i].name] = attachFiles[i];
+        				}
+        			}
+        			
+        			for (i = 0; i < files.length; i++) {
+        				byName['''' + files[i].name] = files[i];
+        			}
+        			
+        			var imageTransfer = new DataTransfer();
+        			var attachTransfer = new DataTransfer();
+        			
+        			for (var name in byName) {
+        				if (!byName.hasOwnProperty(name)) {
+        					continue;
+        				}
+        				var file = byName[name];
+        				if (this.isImageFile(file)) {
+        					imageTransfer.items.add(file);
+        				} else if (this.isAttachmentInputEnabled()) {
+        					attachTransfer.items.add(file);
+        				}
+        			}
+        			
+        			imageInput.files = imageTransfer.files;
+        			attachInput.files = attachTransfer.files;
+        		} catch (e) {}
+        	}
+        	
+        	clearInputFiles(inputEl) {
+        		try {
+        			if (!inputEl) {
+        				return;
+        			}
+        			var dt = new DataTransfer();
+        			inputEl.files = dt.files;
+        			inputEl.value = '''';
+        		} catch (e) {
+        			try {
+        				if (inputEl) {
+        					inputEl.value = '''';
+        				}
+        			} catch (e2) {}
+        		}
+        	}
+        	
+        	clearAssetInputs() {
+        		if (!this.isAssetInputEnabled()) {
+        			this.clearAssetPreviewUrls();
+        			this.syncAssetItems();
+        			this.refreshAssetView();
+        			return;
+        		}
+        		this.clearInputFiles(this.getImageInputElement());
+        		this.clearInputFiles(this.getAttachInputElement());
+        		this.clearAssetPreviewUrls();
+        		this.syncAssetItems();
+        		this.refreshAssetView();
+        	}
+        	
+        	@HostListener(''window:dragover'', [''$event''])
+        	onDragOver(event) {
+        		if (!this.isAssetInputEnabled()) {
+        			return;
+        		}
+        		if (event && event.preventDefault) {
+        			event.preventDefault();
+        		}
+        	}
+        	
+        	@HostListener(''window:drop'', [''$event''])
+        	onDrop(event) {
+        		if (!this.isAssetInputEnabled()) {
+        			return;
+        		}
+        		if (event && event.preventDefault) {
+        			event.preventDefault();
+        		}
+        		try {
+        			var dt = event && event.dataTransfer ? event.dataTransfer : null;
+        			if (dt && dt.files && dt.files.length > 0) {
+        				this.addFiles(dt.files, true);
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	handleQuestionKeydown(event) {
+        		try {
+        			if (!event || event.key !== ''Enter'') {
+        				return;
+        			}
+        			if (event.shiftKey) {
+        				return;
+        			}
+        			event.preventDefault();
+        			this.submitQuestionFromUI(event);
+        		} catch (e) {}
+        	}
+        	
+        	submitQuestionFromUI(event) {
+        		try {
+        			if (event && event.preventDefault) {
+        				event.preventDefault();
+        			}
+        			if (this.EnableChat === false || this.IsProcessing === true) {
+        				return;
+        			}
+        			var message = ('''' + this.getQuestionText()).trim();
+        			if (!message.length) {
+        				return;
+        			}
+        			this.Question = message;
+        			var images = this.getImageFiles();
+        			var attachments = this.getAttachFiles();
+        			this.RunQuestion.emit({
+        				question: message,
+        				images: images,
+        				attachments: attachments
+        			});
+        		} catch (e) {}
+        	}
+        	
+        	requestVoice(event) {
+        		try {
+        			if (event && event.preventDefault) {
+        				event.preventDefault();
+        			}
+        			if (this.EnableChat === false || this.IsProcessing === true) {
+        				return;
+        			}
+        			this.VoiceRequest.emit({});
+        		} catch (e) {}
+        	}
+        	/*End_c8o_CompFunction*/
+        '
+↓SuggestionsToolBar [ngx.components.UIDynamicElement-1772100000104]: 
+  beanData: '{"ionBean":"ToolBar"}'
+  tagName: ion-toolbar
+  ↓Class [ngx.components.UIAttribute-1772100000105]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:modern-suggestions-toolbar
+  ↓Wrap [ngx.components.UIDynamicElement-1772100000106]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1772100000107]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:modern-suggestions-wrap
+    ↓Label [ngx.components.UIDynamicElement-1772100000108]: 
+      beanData: '{"ionBean":"Paragraph"}'
+      tagName: p
+      ↓Class [ngx.components.UIAttribute-1772100000109]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-suggestions-label
+      ↓Text [ngx.components.UIText-1772100000110]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Quick suggestions:
+    ↓Row [ngx.components.UIDynamicElement-1772100000111]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1772100000112]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-suggestions-row
+      ↓S1 [ngx.components.UIDynamicElement-1772100000113]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1772100000114]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s1
+        ↓Hidden [ngx.components.UIAttribute-1775800000101]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.hasSuggestion(0)
+        ↓Icon [ngx.components.UIDynamicElement-1772100000241]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:code-slash-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+          ↓Name [ngx.components.UIAttribute-1775800000102]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getSuggestionIcon(0)
+          ↓Class [ngx.components.UIAttribute-1772100000242]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-icon
+        ↓Text [ngx.components.UIText-1772100000115]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getSuggestionLabel(0)
+        ↓Event [ngx.components.UIControlEvent-1773600000101]: 
+          ↓SetSuggestion [ngx.components.UICustomAction-1773600000102]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setSuggestionByIndex(0);
+                    		resolve();
+      ↓S2 [ngx.components.UIDynamicElement-1772100000116]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1772100000117]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s2
+        ↓Hidden [ngx.components.UIAttribute-1775800000103]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.hasSuggestion(1)
+        ↓Icon [ngx.components.UIDynamicElement-1772100000243]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:move-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+          ↓Name [ngx.components.UIAttribute-1775800000104]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getSuggestionIcon(1)
+          ↓Class [ngx.components.UIAttribute-1772100000244]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-icon
+        ↓Text [ngx.components.UIText-1772100000118]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getSuggestionLabel(1)
+        ↓Event [ngx.components.UIControlEvent-1773600000104]: 
+          ↓SetSuggestion [ngx.components.UICustomAction-1773600000105]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setSuggestionByIndex(1);
+                    		resolve();
+      ↓S3 [ngx.components.UIDynamicElement-1772100000119]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1772100000120]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s3
+        ↓Hidden [ngx.components.UIAttribute-1775800000105]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.hasSuggestion(2)
+        ↓Icon [ngx.components.UIDynamicElement-1772100000245]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:git-network-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+          ↓Name [ngx.components.UIAttribute-1775800000106]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getSuggestionIcon(2)
+          ↓Class [ngx.components.UIAttribute-1772100000246]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-icon
+        ↓Text [ngx.components.UIText-1772100000121]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getSuggestionLabel(2)
+        ↓Event [ngx.components.UIControlEvent-1773600000107]: 
+          ↓SetSuggestion [ngx.components.UICustomAction-1773600000108]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setSuggestionByIndex(2);
+                    		resolve();
+      ↓S4 [ngx.components.UIDynamicElement-1772100000225]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1772100000226]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s4
+        ↓Hidden [ngx.components.UIAttribute-1775800000107]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.hasSuggestion(3)
+        ↓Icon [ngx.components.UIDynamicElement-1772100000247]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:server-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+          ↓Name [ngx.components.UIAttribute-1775800000108]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getSuggestionIcon(3)
+          ↓Class [ngx.components.UIAttribute-1772100000248]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-icon
+        ↓Text [ngx.components.UIText-1772100000227]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getSuggestionLabel(3)
+        ↓Event [ngx.components.UIControlEvent-1773600000110]: 
+          ↓SetSuggestion [ngx.components.UICustomAction-1773600000111]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setSuggestionByIndex(3);
+                    		resolve();
+      ↓S5 [ngx.components.UIDynamicElement-1772100000228]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1772100000229]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s5
+        ↓Hidden [ngx.components.UIAttribute-1775800000109]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.hasSuggestion(4)
+        ↓Icon [ngx.components.UIDynamicElement-1772100000249]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:lock-closed-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+          ↓Name [ngx.components.UIAttribute-1775800000110]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getSuggestionIcon(4)
+          ↓Class [ngx.components.UIAttribute-1772100000250]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-icon
+        ↓Text [ngx.components.UIText-1772100000230]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getSuggestionLabel(4)
+        ↓Event [ngx.components.UIControlEvent-1773600000113]: 
+          ↓SetSuggestion [ngx.components.UICustomAction-1773600000114]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setSuggestionByIndex(4);
+                    		resolve();
+      ↓S6 [ngx.components.UIDynamicElement-1772100000231]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1772100000232]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s6
+        ↓Hidden [ngx.components.UIAttribute-1775800000111]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.hasSuggestion(5)
+        ↓Icon [ngx.components.UIDynamicElement-1772100000251]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:phone-portrait-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+          ↓Name [ngx.components.UIAttribute-1775800000112]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getSuggestionIcon(5)
+          ↓Class [ngx.components.UIAttribute-1772100000252]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-icon
+        ↓Text [ngx.components.UIText-1772100000233]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getSuggestionLabel(5)
+        ↓Event [ngx.components.UIControlEvent-1773600000116]: 
+          ↓SetSuggestion [ngx.components.UICustomAction-1773600000117]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setSuggestionByIndex(5);
+                    		resolve();
+↓InputToolBar [ngx.components.UIDynamicElement-1772100000122]: 
+  beanData: '{"ionBean":"ToolBar"}'
+  tagName: ion-toolbar
+  ↓Form [ngx.components.UIForm-1772100000124]: 
+    identifier: formAssistant
+    ↓Class [ngx.components.UIAttribute-1772100000234]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:modern-input-form
+    ↓AssetPreview [ngx.components.UIDynamicElement-1776301000001]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Hidden [ngx.components.UIAttribute-1776301000002]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.imagePreviewItemsSignal().length === 0 && this.attachmentPreviewItemsSignal().length === 0
+      ↓Class [ngx.components.UIAttribute-1776301000003]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-selected-assets
+      ↓ImageList [ngx.components.UIDynamicElement-1776301000004]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Hidden [ngx.components.UIAttribute-1776301000005]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.imagePreviewItemsSignal().length === 0
+        ↓Class [ngx.components.UIAttribute-1776301000006]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-selected-images
+        ↓Images [ngx.components.UIControlDirective-1776301000007]: 
+          directiveItemName: imageFile
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.imagePreviewItemsSignal()
+          ↓ImageCard [ngx.components.UIDynamicElement-1776301000008]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1776301000009]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:modern-selected-image
+            ↓Thumbnail [ngx.components.UIDynamicElement-1776301000010]: 
+              beanData: '{"ionBean":"Image"}'
+              selfClose: true
+              tagName: img
+              ↓Class [ngx.components.UIAttribute-1776301000011]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-selected-image-thumb
+              ↓Src [ngx.components.UIAttribute-1776301000012]: 
+                attrName: '[src]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getImagePreviewUrl(imageFile)
+              ↓Alt [ngx.components.UIAttribute-1776301000013]: 
+                attrName: alt
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:imageFile.name
+            ↓Caption [ngx.components.UIDynamicElement-1776301000014]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1776301000015]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-selected-image-name
+              ↓Text [ngx.components.UIText-1776301000016]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:imageFile.name
+            ↓Remove [ngx.components.UIDynamicElement-1776301000100]: 
+              beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+              tagName: ion-button
+              ↓FileKey [ngx.components.UIAttribute-1776402000001]: 
+                attrName: '[attr.data-file-key]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getFileKey(imageFile)
+              ↓Class [ngx.components.UIAttribute-1776301000101]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-selected-remove-btn
+              ↓Event [ngx.components.UIControlEvent-1776301000102]: 
+                ↓RemoveImage [ngx.components.UICustomAction-1776301000103]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.removeAssetFromEvent(event);
+                          		resolve();
+                          
+              ↓Icon [ngx.components.UIDynamicElement-1776301000104]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:close-outline"}'
+                tagName: ion-icon
+      ↓AttachList [ngx.components.UIDynamicElement-1776301000017]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Hidden [ngx.components.UIAttribute-1776301000018]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.attachmentPreviewItemsSignal().length === 0
+        ↓Class [ngx.components.UIAttribute-1776301000019]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-selected-attachments
+        ↓Attachments [ngx.components.UIControlDirective-1776301000020]: 
+          directiveItemName: attachmentFile
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.attachmentPreviewItemsSignal()
+          ↓AttachmentCard [ngx.components.UIDynamicElement-1776301000021]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1776301000022]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:modern-selected-attachment
+            ↓Icon [ngx.components.UIDynamicElement-1776301000023]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:attach-outline"}'
+              tagName: ion-icon
+              ↓Name [ngx.components.UIAttribute-1776301000024]: 
+                attrName: '[name]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getAttachmentIcon(attachmentFile)
+              ↓Class [ngx.components.UIAttribute-1776301000025]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-selected-attachment-icon
+            ↓Text [ngx.components.UIDynamicElement-1776301000026]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1776301000027]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-selected-attachment-text
+              ↓Value [ngx.components.UIText-1776301000028]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getAttachmentLabel(attachmentFile)
+            ↓Remove [ngx.components.UIDynamicElement-1776301000105]: 
+              beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+              tagName: ion-button
+              ↓FileKey [ngx.components.UIAttribute-1776402000002]: 
+                attrName: '[attr.data-file-key]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getFileKey(attachmentFile)
+              ↓Class [ngx.components.UIAttribute-1776301000106]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-selected-remove-btn modern-selected-remove-inline
+              ↓Event [ngx.components.UIControlEvent-1776301000107]: 
+                ↓RemoveAttachment [ngx.components.UICustomAction-1776301000108]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.removeAssetFromEvent(event);
+                          		resolve();
+                          
+              ↓Icon [ngx.components.UIDynamicElement-1776301000109]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:close-outline"}'
+                tagName: ion-icon
+    ↓InputItem [ngx.components.UIDynamicElement-1772100000125]: 
+      beanData: '{"ionBean":"FormItem"}'
+      tagName: ion-item
+      ↓Class [ngx.components.UIAttribute-1772100000126]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-input-item
+      ↓Input [ngx.components.UIDynamicElement-1772100000127]: 
+        beanData: |
+          '{
+           "ionBean": "TextArea",
+           "ControlName": "plain:question",
+           "AutoGrow": "plain:true"
+          }'
+        identifier: questionInput
+        tagName: ion-textarea
+        ↓Disabled [ngx.components.UIAttribute-1774000000005]: 
+          attrName: '[disabled]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.EnableChat === false
+        ↓AutoGrow [ngx.components.UIAttribute-1774200000001]: 
+          attrName: '[autoGrow]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:true
+        ↓Placeholder [ngx.components.UIAttribute-1772100000128]: 
+          attrName: placeholder
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getPlaceholder()
+        ↓Class [ngx.components.UIAttribute-1772100000236]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-input-field
+      ↓Actions [ngx.components.UIDynamicElement-1772100000129]: 
+        beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
+        tagName: ion-buttons
+        ↓Slot [ngx.components.UIAttribute-1772100000235]: 
+          attrName: slot
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:end
+        ↓Class [ngx.components.UIAttribute-1772100000130]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-input-actions
+          isEnabled: false
+        ↓clear [ngx.components.UIDynamicElement-1771939549357]: 
+          beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+          tagName: ion-button
+          ↓Disabled [ngx.components.UIAttribute-1774000000006]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.EnableChat === false
+          ↓Event [ngx.components.UIControlEvent-1774200000004]: 
+            ↓ClearQuestion [ngx.components.UICustomAction-1774200000005]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.setSuggestion('');
+                      		resolve();
+                      
+          ↓Class [ngx.components.UIAttribute-1771939549360]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-attach-btn
+          ↓Icon [ngx.components.UIDynamicElement-1771939549363]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:close-outline"}'
+            tagName: ion-icon
+        ↓IfImageAttach [ngx.components.UIControlDirective-1776501000001]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.isAssetInputEnabled()
+          ↓ImageAttach [ngx.components.UIDynamicElement-1776201000002]: 
+            beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+            tagName: ion-button
+            ↓Disabled [ngx.components.UIAttribute-1776201000004]: 
+              attrName: '[disabled]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.EnableChat === false || this.IsProcessing === true
+            ↓Event [ngx.components.UIControlEvent-1776201000005]: 
+              ↓OpenImagePicker [ngx.components.UICustomAction-1776201000006]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.openImagePicker(event);
+                        		resolve();
+                        
+            ↓Class [ngx.components.UIAttribute-1776201000007]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:modern-attach-btn
+            ↓Icon [ngx.components.UIDynamicElement-1776201000008]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:image-outline"}'
+              tagName: ion-icon
+        ↓IfAttach [ngx.components.UIControlDirective-1776501000002]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.isAttachmentInputEnabled()
+          ↓Attach [ngx.components.UIDynamicElement-1776201000009]: 
+            beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+            tagName: ion-button
+            ↓Disabled [ngx.components.UIAttribute-1776201000011]: 
+              attrName: '[disabled]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.EnableChat === false || this.IsProcessing === true
+            ↓Event [ngx.components.UIControlEvent-1776201000012]: 
+              ↓OpenAttachPicker [ngx.components.UICustomAction-1776201000013]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.openAttachPicker(event);
+                        		resolve();
+                        
+            ↓Class [ngx.components.UIAttribute-1776201000014]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:modern-attach-btn
+            ↓Icon [ngx.components.UIDynamicElement-1776201000015]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:attach-outline"}'
+              tagName: ion-icon
+        ↓Voice [ngx.components.UIDynamicElement-1772100000131]: 
+          beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+          tagName: ion-button
+          ↓Hidden [ngx.components.UIAttribute-1774600000001]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.SpeechRecognitionAvailable !== true
+          ↓Disabled [ngx.components.UIAttribute-1774000000007]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.EnableChat === false || this.IsProcessing === true
+          ↓Event [ngx.components.UIControlEvent-1774300000001]: 
+            ↓StartSpeechRecognition [ngx.components.UICustomAction-1774300000002]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.requestVoice(event);
+                      		resolve();
+                      
+          ↓Class [ngx.components.UIAttribute-1772100000132]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-attach-btn
+          ↓Icon [ngx.components.UIDynamicElement-1772100000133]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:mic-outline"}'
+            tagName: ion-icon
+        ↓Submit [ngx.components.UIDynamicElement-1772100000134]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonColor": "plain:primary",
+             "IonFill": "plain:clear"
+            }'
+          tagName: ion-button
+          ↓Disabled [ngx.components.UIAttribute-1774200000007]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:(formAssistant && formAssistant.invalid) || (this.EnableChat === false || this.IsProcessing === true)
+          ↓Event [ngx.components.UIControlEvent-1774200000008]: 
+            ↓SubmitQuestion [ngx.components.UICustomAction-1774200000009]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.submitQuestionFromUI(event);
+                      		resolve();
+                      
+          ↓DisabledClass [ngx.components.UIAttribute-1774100000002]: 
+            attrName: '[class.modern-submit-disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.IsProcessing === true
+          ↓Class [ngx.components.UIAttribute-1772100000135]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-submit-btn
+            isEnabled: false
+          ↓Icon [ngx.components.UIDynamicElement-1772100000136]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IonColor": "plain:primary",
+               "IconName": "plain:send",
+               "IconSlot": "plain:icon-only"
+              }'
+            tagName: ion-icon
+    ↓Event [ngx.components.UIControlEvent-1775200000210]: 
+      attrName: (ngSubmit)
+      eventName: onSubmit
+      ↓SubmitQuestion [ngx.components.UICustomAction-1775200000211]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		page.submitQuestionFromUI(event);
+                		resolve();
+                
+    ↓AssetInputs [ngx.components.UIDynamicElement-1776201000016]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1776201000017]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-hidden-file-inputs
+      ↓ImageInput [ngx.components.UIDynamicElement-1776201000018]: 
+        beanData: '{"ionBean":"DivTag"}'
+        identifier: imageInput
+        selfClose: true
+        tagName: input
+        ↓Type [ngx.components.UIAttribute-1776201000019]: 
+          attrName: type
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:file
+        ↓Accept [ngx.components.UIAttribute-1776201000020]: 
+          attrName: accept
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:image/*
+        ↓Multiple [ngx.components.UIAttribute-1776201000021]: 
+          attrName: multiple
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:true
+        ↓Change [ngx.components.UIControlEvent-1776201000022]: 
+          attrName: change
+          eventName: change
+          ↓OnImageSelected [ngx.components.UICustomAction-1776201000023]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.onImageSelected(event);
+                    		resolve();
+                    
+      ↓AttachInput [ngx.components.UIDynamicElement-1776201000024]: 
+        beanData: '{"ionBean":"DivTag"}'
+        identifier: attachInput
+        selfClose: true
+        tagName: input
+        ↓Type [ngx.components.UIAttribute-1776201000025]: 
+          attrName: type
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:file
+        ↓Multiple [ngx.components.UIAttribute-1776201000026]: 
+          attrName: multiple
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:true
+        ↓Change [ngx.components.UIControlEvent-1776201000027]: 
+          attrName: change
+          eventName: change
+          ↓OnAttachSelected [ngx.components.UICustomAction-1776201000028]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.onAttachSelected(event);
+                    		resolve();
+                    
+  ↓Meta [ngx.components.UIDynamicElement-1772100000139]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1772100000140]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:modern-meta-row
+    ↓Left [ngx.components.UIDynamicElement-1772100000141]: 
+      beanData: '{"ionBean":"Paragraph"}'
+      tagName: p
+      ↓Text [ngx.components.UIText-1772100000142]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Powered by AI • Convertigo Platform Guide
+    ↓Right [ngx.components.UIDynamicElement-1772100000143]: 
+      beanData: '{"ionBean":"Paragraph"}'
+      tagName: p
+      ↓Text [ngx.components.UIText-1772100000144]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Press Enter to send • Shift + Enter for long text
+  ↓Class [ngx.components.UIAttribute-1771938767381]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:modern-input-toolbar
+↓Style [ngx.components.UIStyle-1775200000102]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host {
+            display: block;
+          }
+          
+          :host-context(ion-footer.modern-footer) ion-toolbar,
+          :host-context(.modern-footer) ion-toolbar {
+            --background: var(--modern-surface-soft);
+            --color: var(--modern-muted);
+          }
+          
+          .modern-suggestions-label,
+          .modern-meta-row p {
+            margin: 0;
+          }
+          
+          .modern-suggestions-toolbar {
+            border-top: 1px solid var(--modern-border);
+            --min-height: 79px;
+            padding: 0;
+          }
+          
+          .modern-suggestions-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 13px 16px 12px;
+          }
+          
+          .modern-suggestions-label {
+            color: var(--modern-muted);
+            font-size: 12px;
+            line-height: 16px;
+          }
+          
+          .modern-suggestions-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+          }
+          
+          .modern-suggestions-row::-webkit-scrollbar {
+            display: none;
+          }
+          
+          .modern-suggestion-btn {
+            --color: var(--modern-text);
+            --border-color: var(--modern-border);
+            --background: var(--modern-surface);
+            --border-radius: 10px;
+            --padding-top: 0;
+            --padding-bottom: 0;
+            --padding-start: 11px;
+            --padding-end: 11px;
+            --box-shadow: none;
+            min-height: 30px;
+            height: 30px;
+            text-transform: none;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 0;
+            flex: 0 0 auto;
+          }
+          
+          .modern-suggestion-btn-s1 {
+            width: 180.781px;
+          }
+          
+          .modern-suggestion-btn-s2 {
+            width: 132.578px;
+          }
+          
+          .modern-suggestion-btn-s3 {
+            width: 175.672px;
+          }
+          
+          .modern-suggestion-btn-s4 {
+            width: 162.313px;
+          }
+          
+          .modern-suggestion-btn-s5 {
+            width: 169.25px;
+          }
+          
+          .modern-suggestion-btn-s6 {
+            width: 150.063px;
+          }
+          
+          .modern-suggestion-btn::part(native) {
+            border-radius: 10px;
+            border: 1px solid var(--modern-border);
+            background: var(--modern-surface);
+            color: var(--modern-text);
+            box-shadow: none;
+            padding: 1px 11px;
+            gap: 6px;
+            line-height: 16px;
+          }
+          
+          .modern-suggestion-icon {
+            font-size: 14px;
+            color: var(--modern-muted);
+          }
+          
+          .modern-input-toolbar {
+            border-top: 1px solid var(--modern-border);
+            padding: 0;
+          }
+          
+          .modern-input-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px 24px 0;
+            flex: 0 0 auto;
+          }
+          
+          .modern-hidden-file-inputs {
+            display: none;
+          }
+          
+          .modern-selected-assets {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--modern-border);
+            background: var(--modern-input-bg);
+          }
+          
+          .modern-selected-images {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            overflow-x: auto;
+            scrollbar-width: none;
+          }
+          
+          .modern-selected-images::-webkit-scrollbar {
+            display: none;
+          }
+          
+          .modern-selected-image {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 70px;
+            flex: 0 0 auto;
+            position: relative;
+          }
+          
+          .modern-selected-image-thumb {
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
+            border: 1px solid var(--modern-border);
+            object-fit: cover;
+            background: var(--modern-surface);
+          }
+          
+          .modern-selected-image-name {
+            margin: 0;
+            font-size: 11px;
+            line-height: 14px;
+            color: var(--modern-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          
+          .modern-selected-remove-btn {
+            --padding-start: 0;
+            --padding-end: 0;
+            --color: var(--modern-muted);
+            width: 20px;
+            height: 20px;
+            min-height: 20px;
+            margin: 0;
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            z-index: 2;
+          }
+          
+          .modern-selected-remove-btn::part(native) {
+            width: 20px;
+            height: 20px;
+            min-height: 20px;
+            padding: 0;
+            border-radius: 999px;
+            border: 1px solid var(--modern-border);
+            background: var(--modern-surface);
+          }
+          
+          .modern-selected-remove-btn ion-icon {
+            font-size: 12px;
+            color: var(--modern-muted);
+          }
+          
+          .modern-selected-attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          
+          .modern-selected-attachment {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 100%;
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--modern-border);
+            background: var(--modern-surface);
+          }
+          
+          .modern-selected-attachment-icon {
+            font-size: 14px;
+            color: var(--modern-muted);
+            flex: 0 0 auto;
+          }
+          
+          .modern-selected-attachment-text {
+            margin: 0;
+            font-size: 12px;
+            line-height: 16px;
+            color: var(--modern-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 280px;
+          }
+          
+          .modern-selected-remove-inline {
+            position: static;
+            margin-left: 2px;
+            width: 18px;
+            height: 18px;
+            min-height: 18px;
+          }
+          
+          .modern-selected-remove-inline::part(native) {
+            width: 18px;
+            height: 18px;
+            min-height: 18px;
+            border: 0;
+            background: transparent;
+          }
+          
+          .modern-input-toolbar::part(container) {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+          }
+          
+          .modern-input-item {
+            --background: transparent;
+            --border-width: 0;
+            --border-color: transparent;
+            --inner-border-width: 0;
+            --highlight-height: 0;
+            --padding-start: 0;
+            --padding-end: 0;
+            --inner-padding-start: 0;
+            --inner-padding-end: 0;
+            --min-height: 58px;
+            border: 0;
+            padding: 0;
+            min-height: 58px;
+            height: auto;
+            margin: 0;
+          }
+          
+          .modern-input-item::part(native) {
+            background: var(--modern-input-bg);
+            border: 1px solid var(--modern-border);
+            border-radius: 16px;
+            box-sizing: border-box;
+            height: auto;
+            min-height: 58px;
+            padding: 1px 17px;
+            gap: 12px;
+            align-items: flex-start;
+          }
+          
+          .modern-input-field {
+            --color: var(--modern-text);
+            --placeholder-color: var(--modern-muted-soft);
+            --placeholder-opacity: 1;
+            --min-height: 24px;
+            --padding-top: 2px;
+            --padding-bottom: 2px;
+            min-height: 24px;
+            height: auto;
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 19px;
+            letter-spacing: -0.31px;
+          }
+          
+          .modern-input-actions {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: auto;
+            height: 32px;
+            min-width: 0;
+            flex-wrap: nowrap;
+          }
+          
+          .modern-attach-btn {
+            --color: var(--modern-muted);
+            --padding-start: 0;
+            --padding-end: 0;
+            --border-radius: 10px;
+            width: 28px;
+            height: 28px;
+            min-height: 28px;
+            margin: 0;
+          }
+          
+          .modern-attach-btn::part(native) {
+            padding: 6px;
+            border-radius: 10px;
+            color: var(--modern-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+          }
+          
+          .modern-attach-btn ion-icon {
+            font-size: 16px;
+            color: var(--modern-muted);
+          }
+          
+          .modern-submit-disabled {
+            pointer-events: none;
+            opacity: 0.35;
+          }
+          
+          .modern-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            height: auto;
+            flex: 1 1 auto;
+            padding: 16px 24px 16px;
+            color: var(--modern-muted-soft);
+            font-size: 12px;
+            line-height: 16px;
+          }
+          
+          .modern-meta-row p {
+            line-height: 16px;
+          }
+          
+          .modern-meta-row p:last-child {
+            text-align: right;
+          }
+          
+          @media (max-width: 768px) {
+            .modern-input-toolbar {
+              padding: 0;
+            }
+          
+            .modern-input-form {
+              padding: 14px 12px 0;
+            }
+          
+            .modern-meta-row {
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 4px;
+            }
+          
+            .modern-meta-row p:last-child {
+              text-align: left;
+            }
+          }
+          '
+↓RunQuestion [ngx.components.UICompEvent-1775200000103]: 
+  attrName: RunQuestion
+↓VoiceRequest [ngx.components.UICompEvent-1775200000104]: 
+  attrName: VoiceRequest
+↓Question [ngx.components.UICompVariable-1775200000105]: 
+  autoEmit: true
+  value: 
+↓EnableChat [ngx.components.UICompVariable-1775200000106]: 
+  value: true
+↓IsProcessing [ngx.components.UICompVariable-1775200000107]: 
+  value: false
+↓SpeechRecognitionAvailable [ngx.components.UICompVariable-1775200000108]: 
+  value: true
+↓Suggestions [ngx.components.UICompVariable-1775800000113]: 
+  value: null
+↓Placeholder [ngx.components.UICompVariable-1775800000114]: 
+  value: '''Ask how to build something...'''
+↓EnableAssetInputs [ngx.components.UICompVariable-1776201000029]: 
+  value: false
+↓EnableAttachmentInputs [ngx.components.UICompVariable-1776401000001]: 
+  value: true
+↓PageEvent [ngx.components.UIPageEvent-1775200000109]: 
+  ↓Init [ngx.components.UICustomAction-1775200000110]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		resolve();
+            
+    local_module_ng_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonToolbar
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonButton
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonButtons
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonIcon
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonItem
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonTextarea
+    local_module_ts_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ IonToolbar, IonButton, IonButtons, IonIcon, IonItem, IonTextarea}'
+              - java.lang.String: 
+                - ↑value: '@ionic/angular/standalone'

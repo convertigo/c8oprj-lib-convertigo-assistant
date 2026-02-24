@@ -18,16 +18,29 @@ scriptContent:
         		}
         	}
         	
-        	public getProjectHeading() {
-        		if (this.global.studio) {
-        			if (this.global.projectName == undefined || this.global.projectName === "") {
-        				return ": Please select an NGX project !"
+        		public getProjectHeading() {
+        			if (this.global.studio) {
+        				if (this.global.projectName == undefined || this.global.projectName === "") {
+        					return ": Please select an NGX project !"
+        				}
+        				return ": creation for " + this.global.projectName;
         			}
-        			return ": creation for " + this.global.projectName;
+        			return "";
         		}
-        		return "";
-        	}
-        	/*End_c8o_PageFunction*/
+        		
+        		public getProjectSubtitle() {
+        			let heading = "" + this.getProjectHeading();
+        			while (heading.length > 0) {
+        				let c = heading.charAt(0);
+        				if (c === ":" || c === " ") {
+        					heading = heading.substring(1);
+        					continue;
+        				}
+        				break;
+        			}
+        			return "Project: " + heading;
+        		}
+        		/*End_c8o_PageFunction*/
         '
 segment: path-to-figma
 title: Title for Figma
@@ -105,6 +118,12 @@ title: Title for Figma
 ↓Header [ngx.components.UIDynamicElement-1752572046166]: 
   beanData: '{"ionBean":"Header"}'
   tagName: ion-header
+  ↓Class [ngx.components.UIAttribute-1774702000001]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:modern-header
   ↓ToolBar [ngx.components.UIDynamicElement-1752572046168]: 
     beanData: '{"ionBean":"ToolBar"}'
     tagName: ion-toolbar
@@ -114,9 +133,31 @@ title: Title for Figma
       ↓BackButton [ngx.components.UIDynamicElement-1752572046172]: 
         beanData: '{"ionBean":"BackButton"}'
         tagName: ion-back-button
+        ↓Class [ngx.components.UIAttribute-1774702000002]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-header-btn
       ↓MenuButton [ngx.components.UIDynamicElement-1752572046174]: 
         beanData: '{"ionBean":"MenuButton"}'
         tagName: ion-menu-button
+        ↓Class [ngx.components.UIAttribute-1774702000003]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-header-btn
+      ↓Image [ngx.components.UIDynamicElement-1774702000004]: 
+        beanData: '{"ionBean":"Image","url":"source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+        selfClose: true
+        tagName: img
+        ↓Class [ngx.components.UIAttribute-1774702000005]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-logo-btn
     ↓ButtonSet1 [ngx.components.UIDynamicElement-1752572046176]: 
       beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
       tagName: ion-buttons
@@ -124,6 +165,12 @@ title: Title for Figma
         beanData: '{"ionBean":"Button"}'
         isEnabled: false
         tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1774702000006]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-header-btn
         ↓Icon [ngx.components.UIDynamicElement-1752572046180]: 
           beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''construct-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
@@ -220,19 +267,170 @@ title: Title for Figma
               ↓Event [ngx.components.UIControlEvent-1752844433645]: 
                 ↓ClosePopover [ngx.components.UIDynamicAction-1752844433647]: 
                   beanData: '{"ionBean":"ClosePopoverAction"}'
+      ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774704000001]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1774704000002]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:toolbar-theme-button
+        ↓Aria [ngx.components.UIAttribute-1774704000003]: 
+          attrName: aria-label
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? this.translate.instant(''Theme_Switch_To_Light'') : this.translate.instant(''Theme_Switch_To_Dark'')'
+        ↓Event [ngx.components.UIControlEvent-1774704000004]: 
+          ↓SetTheme [ngx.components.UIDynamicAction-1774704000005]: 
+            beanData: '{"ionBean":"SetThemeAction","dark":"script:!(this.global && this.global.themeDark)"}'
+        ↓ThemeIcon [ngx.components.UIDynamicElement-1774704000006]: 
+          beanData: '{"ionBean":"Icon","IconName":"script:this?.global?.themeDark ? ''sunny-outline'' : ''moon-outline''"}'
+          tagName: ion-icon
+          ↓IconName [ngx.components.UIAttribute-1774704000007]: 
+            attrName: '[name]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? ''sunny-outline'' : ''moon-outline'''
+      ↓LanguageSelector [ngx.components.UIDynamicElement-1774704000010]: 
+        beanData: |
+          '{
+           "ionBean": "Select",
+           "ControlName": "plain:name1774704000010",
+           "Justify": "plain:start"
+          }'
+        tagName: ion-select
+        ↓Class [ngx.components.UIAttribute-1774704000011]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:toolbar-lang-select
+        ↓Aria [ngx.components.UIAttribute-1774704000012]: 
+          attrName: aria-label
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:'Language' | translate
+        ↓Interface [ngx.components.UIAttribute-1774704000013]: 
+          attrName: '[interface]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:'popover'
+        ↓Value [ngx.components.UIAttribute-1774704000014]: 
+          attrName: '[value]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.global.currentLanguage() ?? 'en'
+        ↓SelectedText [ngx.components.UIAttribute-1774704000015]: 
+          attrName: '[selectedText]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:(this.global?.getLanguageLabelKey() ??  'Lang_English') | translate
+        ↓ChangeEvent [ngx.components.UIControlEvent-1774704000016]: 
+          attrName: (ionChange)
+          eventName: ionChange
+          ↓SetLanguage [ngx.components.UIDynamicAction-1774704000017]: 
+            beanData: |
+              '{
+               "ionBean": "SetLanguageAction",
+               "language": "script:event.detail.value",
+               "storageKey": "plain:c8o-lang",
+               "globalProperty": "plain:currentLanguage"
+              }'
+        ↓LangEN [ngx.components.UIDynamicElement-1774704000018]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1774704000019]: 
+            i18n: true
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Lang_English
+        ↓LangFR [ngx.components.UIDynamicElement-1774704000020]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:fr"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1774704000021]: 
+            i18n: true
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Lang_French
+        ↓LangIT [ngx.components.UIDynamicElement-1774704000022]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:it"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1774704000023]: 
+            i18n: true
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Lang_Italian
+        ↓LangES [ngx.components.UIDynamicElement-1774704000024]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:es"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1774704000025]: 
+            i18n: true
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Lang_Spanish
     ↓BarTitle [ngx.components.UIDynamicElement-1752572046184]: 
       beanData: '{"ionBean":"BarTitle"}'
       tagName: ion-title
       ↓Text [ngx.components.UIText-1752572046186]: 
+        isEnabled: false
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:Figma assistant
+            - MobileSmartSourceType: plain:Figma Import Assistant
       ↓Text5 [ngx.components.UIText-1752668031555]: 
+        isEnabled: false
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:this.getProjectHeading()
+            - MobileSmartSourceType: script:this.getProjectSubtitle()
+      ↓TitleWrap [ngx.components.UIDynamicElement-1774702000007]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1774702000008]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-title-wrap
+        ↓TitleText [ngx.components.UIDynamicElement-1774702000009]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1774702000010]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-title-main
+          ↓Text [ngx.components.UIText-1774702000011]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Figma Import Assistant
+        ↓SubtitleText [ngx.components.UIDynamicElement-1774702000012]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1774702000013]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-title-sub
+          ↓Text [ngx.components.UIText-1774702000014]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getProjectSubtitle()
 ↓Content [ngx.components.UIDynamicElement-1752572046188]: 
   beanData: '{"ionBean":"Content"}'
   tagName: ion-content
@@ -370,4 +568,134 @@ title: Title for Figma
           →: |
             		page.setEnableChat();	
             		resolve();
-            
+            		
+↓Style [ngx.components.UIStyle-1774702000100]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host {
+            --modern-surface-soft: rgba(15, 23, 42, 0.5);
+            --modern-border: #1e293b;
+            --modern-text: #f1f5f9;
+            --modern-muted: #94a3b8;
+          }
+          
+          :host-context(:root.force-light),
+          :host-context(html.force-light),
+          :host-context(body.force-light),
+          :host-context(.force-light) {
+            --modern-surface-soft: rgba(248, 250, 252, 0.92);
+            --modern-border: #cbd5e1;
+            --modern-text: #0f172a;
+            --modern-muted: #475569;
+          }
+          
+          @media (prefers-color-scheme: light) {
+            :host-context(:root:not(.force-dark)),
+            :host-context(html:not(.force-dark)) {
+              --modern-surface-soft: rgba(248, 250, 252, 0.92);
+              --modern-border: #cbd5e1;
+              --modern-text: #0f172a;
+              --modern-muted: #475569;
+            }
+          }
+          
+          ion-header.modern-header,
+          ion-header.modern-header ion-toolbar {
+            --background: var(--modern-surface-soft);
+            --color: var(--modern-text);
+          }
+          
+          ion-header.modern-header ion-toolbar {
+            --min-height: 76px;
+            --padding-start: 24px;
+            --padding-end: 24px;
+            --padding-top: 0;
+            --padding-bottom: 0;
+          }
+          
+          ion-header.modern-header ion-toolbar::part(container) {
+            min-height: 76px;
+            padding: 0 24px;
+          }
+          
+          ion-header.modern-header ion-buttons {
+            margin: 0;
+            gap: 8px;
+          }
+          
+          ion-header.modern-header ion-buttons[slot=start] {
+            gap: 12px;
+          }
+          
+          .modern-header-btn {
+            --color: var(--modern-muted);
+            --background: transparent;
+            --padding-start: 0;
+            --padding-end: 0;
+            --padding-top: 0;
+            --padding-bottom: 0;
+            --border-radius: 10px;
+            width: 34px;
+            height: 34px;
+            min-height: 34px;
+            margin: 0;
+          }
+          
+          .modern-header-btn::part(native) {
+            border-radius: 10px;
+            padding: 8px;
+            color: var(--modern-muted);
+          }
+          
+          ion-header.modern-header ion-button.modern-header-btn ion-icon {
+            color: var(--modern-muted);
+            font-size: 18px;
+          }
+          
+          ion-header.modern-header ion-menu-button.modern-header-btn,
+          ion-header.modern-header ion-back-button.modern-header-btn {
+            --color: var(--modern-muted);
+            --icon-font-size: 20px;
+            width: 36px;
+            height: 36px;
+            min-height: 36px;
+          }
+          
+          .modern-logo-btn {
+            --border-radius: 10px;
+            --padding-start: 0;
+            --padding-end: 0;
+            height: 28px;
+            margin: 0;
+          }
+          
+          .modern-title-wrap {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 0;
+            height: 44px;
+            line-height: 1;
+          }
+          
+          .modern-title-main,
+          .modern-title-sub {
+            margin: 0;
+          }
+          
+          .modern-title-main {
+            color: var(--modern-text);
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 28px;
+          }
+          
+          .modern-title-sub {
+            color: var(--modern-muted);
+            font-size: 12px;
+            line-height: 16px;
+          }
+          '

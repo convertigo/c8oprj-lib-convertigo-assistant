@@ -27,6 +27,7 @@ For more technical informations : [documentation](./project.md)
         - [AssitantMessage](#assitantmessage)
         - [FigmaInputComponent](#figmainputcomponent)
         - [ImagePreviewer](#imagepreviewer)
+        - [LightRagFooterComponent](#lightragfootercomponent)
         - [LightRagInputComponent](#lightraginputcomponent)
         - [Markdown](#markdown)
         - [MdReader](#mdreader)
@@ -92,6 +93,12 @@ AI Component Assistant Page
 </tr>
 <tr>
 <td>author</td><td></td>
+</tr>
+<tr>
+<td>file</td><td></td>
+</tr>
+<tr>
+<td>files</td><td></td>
 </tr>
 <tr>
 <td>message</td><td></td>
@@ -172,6 +179,54 @@ AI Component Assistant Page
 </tr>
 <tr>
 <td>Files</td><td></td>
+</tr>
+</table>
+
+#### LightRagFooterComponent
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>EnableAssetInputs</td><td></td>
+</tr>
+<tr>
+<td>EnableAttachmentInputs</td><td></td>
+</tr>
+<tr>
+<td>EnableChat</td><td></td>
+</tr>
+<tr>
+<td>IsProcessing</td><td></td>
+</tr>
+<tr>
+<td>Placeholder</td><td></td>
+</tr>
+<tr>
+<td>Question</td><td></td>
+</tr>
+<tr>
+<td>SpeechRecognitionAvailable</td><td></td>
+</tr>
+<tr>
+<td>Suggestions</td><td></td>
+</tr>
+</table>
+
+**events**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>RunQuestion</td><td></td>
+</tr>
+<tr>
+<td>VoiceRequest</td><td></td>
 </tr>
 </table>
 
