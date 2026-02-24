@@ -1,0 +1,265 @@
+↓SharedComponent_Event [ngx.components.UISharedComponentEvent-1771949858716]: 
+  ↓InstallMarkdown [ngx.components.UICustomAction-1771949858719]: 
+    build_scripts: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/prismjs/prism.js
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/prismjs/components/prism-csharp.min.js
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/prismjs/components/prism-css.min.js
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/prismjs/plugins/line-numbers/prism-line-numbers.js
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/clipboard/dist/clipboard.min.js
+    build_styles: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/prismjs/themes/prism-coy.min.css
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: node_modules/prismjs/plugins/line-numbers/prism-line-numbers.css
+    local_module_ng_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: MarkdownModule
+    local_module_ts_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ MarkdownModule }'
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+    module_ng_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 'MarkdownModule.forRoot({markedOptions: {provide: MARKED_OPTIONS,useFactory: () => {const renderer = new MarkedRenderer();const originalLinkRenderer = renderer.link;renderer.link = function (link) {const html = originalLinkRenderer.call(this, link);return html.replace(/^<a /,''<a role="link" tabindex="0" target="_blank" rel="nofollow noopener noreferrer" '',);};return {renderer,gfm: true,breaks: false,pedantic: false};}}})'
+    module_ts_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ MarkdownModule }'
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ MarkedRenderer }'
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ MARKED_OPTIONS}'
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+    package_dependencies: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: ngx-markdown
+              - java.lang.String: 
+                - ↑value: 19.1.1
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: marked
+              - java.lang.String: 
+                - ↑value: 15.0.0
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: prismjs
+              - java.lang.String: 
+                - ↑value: 1.30.0
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: clipboard
+              - java.lang.String: 
+                - ↑value: 2.0.11
+↓Fragment [ngx.components.UICustom-1771949858722]: 
+  htmlTemplate: |
+    <!-- variable binding -->
+    <markdown
+      lineNumbers
+      clipboard
+      [data]="this.data"
+      (ready)="ready.emit()">
+    </markdown>
+↓data [ngx.components.UICompVariable-1771949858725]: 
+↓ready [ngx.components.UICompEvent-1771949858728]: 
+  attrName: ready
+↓Style [ngx.components.UIStyle-1771949858731]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host {
+            display: block;
+            width: 100%;
+          }
+          
+          :host ::ng-deep markdown,
+          :host ::ng-deep markdown p,
+          :host ::ng-deep markdown li,
+          :host ::ng-deep markdown ul,
+          :host ::ng-deep markdown ol,
+          :host ::ng-deep markdown h1,
+          :host ::ng-deep markdown h2,
+          :host ::ng-deep markdown h3,
+          :host ::ng-deep markdown h4,
+          :host ::ng-deep markdown h5,
+          :host ::ng-deep markdown h6,
+          :host ::ng-deep markdown strong,
+          :host ::ng-deep markdown em {
+            color: var(--modern-text, #f1f5f9);
+          }
+          
+          :host ::ng-deep markdown p,
+          :host ::ng-deep markdown li {
+            margin: 0 0 8px;
+            font-size: 16px;
+            line-height: 26px;
+            letter-spacing: -0.3125px;
+          }
+          
+          :host ::ng-deep markdown p:last-child,
+          :host ::ng-deep markdown li:last-child {
+            margin-bottom: 0;
+          }
+          
+          :host ::ng-deep markdown ul,
+          :host ::ng-deep markdown ol {
+            margin: 0 0 8px 20px;
+            padding: 0;
+          }
+          
+          :host ::ng-deep markdown a {
+            color: var(--modern-cyan, #06b6d4);
+            text-decoration: underline;
+          }
+          
+          :host ::ng-deep markdown blockquote {
+            margin: 8px 0;
+            padding: 4px 0 4px 12px;
+            border-left: 2px solid var(--modern-border, #1e293b);
+            color: var(--modern-muted, #94a3b8);
+          }
+          
+          :host ::ng-deep markdown code,
+          :host ::ng-deep markdown pre {
+            color: var(--modern-text, #f1f5f9);
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 8px;
+          }
+          
+          :host ::ng-deep markdown pre[class*="language-"],
+          :host ::ng-deep markdown code[class*="language-"] {
+            color: var(--modern-text, #f1f5f9) !important;
+            background: rgba(15, 23, 42, 0.5) !important;
+            border-color: rgba(148, 163, 184, 0.25) !important;
+          }
+          
+          :host ::ng-deep markdown code {
+            padding: 1px 6px;
+            font-size: 0.92em;
+          }
+          
+          :host ::ng-deep markdown pre {
+            margin: 8px 0;
+            padding: 10px 12px;
+            overflow-x: auto;
+          }
+          
+          :host ::ng-deep markdown pre code {
+            padding: 0;
+            border: 0;
+            background: transparent;
+          }
+          
+          :host ::ng-deep markdown pre.line-numbers .line-numbers-rows {
+            border-right: 1px solid rgba(148, 163, 184, 0.3);
+          }
+          
+          :host ::ng-deep markdown pre.line-numbers .line-numbers-rows > span:before {
+            color: var(--modern-muted, #94a3b8);
+          }
+          
+          :host-context(:root.force-light) ::ng-deep markdown code,
+          :host-context(:root.force-light) ::ng-deep markdown pre,
+          :host-context(html.force-light) ::ng-deep markdown code,
+          :host-context(html.force-light) ::ng-deep markdown pre,
+          :host-context(body.force-light) ::ng-deep markdown code,
+          :host-context(body.force-light) ::ng-deep markdown pre,
+          :host-context(.force-light) ::ng-deep markdown code,
+          :host-context(.force-light) ::ng-deep markdown pre {
+            background: rgba(226, 232, 240, 0.8);
+            border-color: rgba(148, 163, 184, 0.4);
+          }
+          
+          :host-context(:root.force-light) ::ng-deep markdown pre[class*="language-"],
+          :host-context(:root.force-light) ::ng-deep markdown code[class*="language-"],
+          :host-context(html.force-light) ::ng-deep markdown pre[class*="language-"],
+          :host-context(html.force-light) ::ng-deep markdown code[class*="language-"],
+          :host-context(body.force-light) ::ng-deep markdown pre[class*="language-"],
+          :host-context(body.force-light) ::ng-deep markdown code[class*="language-"],
+          :host-context(.force-light) ::ng-deep markdown pre[class*="language-"],
+          :host-context(.force-light) ::ng-deep markdown code[class*="language-"] {
+            background: rgba(226, 232, 240, 0.8) !important;
+            border-color: rgba(148, 163, 184, 0.4) !important;
+          }
+          '

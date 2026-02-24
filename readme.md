@@ -23,14 +23,17 @@ For more technical informations : [documentation](./project.md)
         - [LightRag](#lightrag)
         - [Page](#page)
     - [Shared Components](#shared-components)
+        - [AssistantMessageComponent](#assistantmessagecomponent)
         - [AssitantMessage](#assitantmessage)
         - [FigmaInputComponent](#figmainputcomponent)
         - [ImagePreviewer](#imagepreviewer)
         - [LightRagInputComponent](#lightraginputcomponent)
         - [Markdown](#markdown)
+        - [MdReader](#mdreader)
         - [QuestionInputComponent](#questioninputcomponent)
         - [TypeWriterComponent](#typewritercomponent)
         - [UserMessage](#usermessage)
+        - [UserMessageComponent](#usermessagecomponent)
 
 
 ## Installation
@@ -78,6 +81,40 @@ IT Support Page
 AI Component Assistant Page
 
 ### Shared Components
+
+#### AssistantMessageComponent
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>author</td><td></td>
+</tr>
+<tr>
+<td>message</td><td></td>
+</tr>
+<tr>
+<td>status</td><td></td>
+</tr>
+<tr>
+<td>tag1</td><td></td>
+</tr>
+<tr>
+<td>tag2</td><td></td>
+</tr>
+<tr>
+<td>tag3</td><td></td>
+</tr>
+<tr>
+<td>time</td><td></td>
+</tr>
+<tr>
+<td>writing</td><td></td>
+</tr>
+</table>
 
 #### AssitantMessage
 
@@ -186,6 +223,30 @@ AI Component Assistant Page
 </tr>
 </table>
 
+#### MdReader
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>data</td><td></td>
+</tr>
+</table>
+
+**events**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>ready</td><td></td>
+</tr>
+</table>
+
 #### QuestionInputComponent
 
 **variables**
@@ -247,6 +308,25 @@ AI Component Assistant Page
 </tr>
 <tr>
 <td>Text</td><td></td>
+</tr>
+</table>
+
+#### UserMessageComponent
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>author</td><td></td>
+</tr>
+<tr>
+<td>message</td><td></td>
+</tr>
+<tr>
+<td>time</td><td></td>
 </tr>
 </table>
 

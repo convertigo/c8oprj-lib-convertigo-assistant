@@ -1,0 +1,313 @@
+↓Wrapper [ngx.components.UIDynamicElement-1771949858737]: 
+  beanData: '{"ionBean":"DivTag"}'
+  tagName: div
+  ↓Class [ngx.components.UIAttribute-1771949858740]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:chat-assistant-message
+  ↓Avatar [ngx.components.UIDynamicElement-1771949858743]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1771949858746]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:chat-assistant-avatar
+    ↓Icon [ngx.components.UIDynamicElement-1771949858749]: 
+      beanData: '{"ionBean":"Icon","IconName":"plain:sparkles-outline"}'
+      tagName: ion-icon
+      ↓Class [ngx.components.UIAttribute-1771949858752]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:chat-assistant-avatar-icon
+  ↓Body [ngx.components.UIDynamicElement-1771949858755]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1771949858758]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:chat-assistant-body
+    ↓Meta [ngx.components.UIDynamicElement-1771949858761]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1771949858764]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:chat-message-meta
+      ↓Author [ngx.components.UIDynamicElement-1771949858767]: 
+        beanData: '{"ionBean":"Paragraph"}'
+        tagName: p
+        ↓Class [ngx.components.UIAttribute-1771949858770]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:chat-message-author
+        ↓Text [ngx.components.UIText-1771949858773]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.author
+      ↓Time [ngx.components.UIDynamicElement-1771949858776]: 
+        beanData: '{"ionBean":"Paragraph"}'
+        tagName: p
+        ↓Class [ngx.components.UIAttribute-1771949858779]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:chat-message-time
+        ↓Text [ngx.components.UIText-1771949858782]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.time
+    ↓Bubble [ngx.components.UIDynamicElement-1771949858785]: 
+      beanData: '{"ionBean":"Card"}'
+      tagName: ion-card
+      ↓Class [ngx.components.UIAttribute-1771949858788]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:chat-assistant-bubble
+      ↓CardContent [ngx.components.UIDynamicElement-1771949858791]: 
+        beanData: '{"ionBean":"CardContent"}'
+        tagName: ion-card-content
+        ↓MdReader [ngx.components.UIUseShared-1771949858794]: 
+          sharedcomponent: ConvertigoAssistantV2.Application.NgxApp.MdReader
+          ↓data [ngx.components.UIUseVariable-1771949858797]: 
+            varValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.message
+        ↓IfWriting [ngx.components.UIControlDirective-1771949858800]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.writing
+          ↓WritingState [ngx.components.UIDynamicElement-1771949858803]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1771949858806]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:chat-writing-state
+            ↓Text [ngx.components.UIText-1771949858809]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:''Assistant is '' + ((((this.status || '''') + '''').trim().length ? (((this.status || '''') + '''').trim().charAt(0).toLowerCase() + ((this.status || '''') + '''').trim().slice(1)) : ''writing'')) + (((((this.status || '''') + '''').trim().length ? (((this.status || '''') + '''').trim().charAt(0).toLowerCase() + ((this.status || '''') + '''').trim().slice(1)) : ''writing'') === ''writing'') ? ''...'' : '''')'
+        ↓IfTags [ngx.components.UIControlDirective-1771949858812]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.writing
+          ↓Tags [ngx.components.UIDynamicElement-1771949858815]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1771949858818]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:chat-assistant-tags
+            ↓Tag1 [ngx.components.UIDynamicElement-1771949858821]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1771949858824]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:chat-assistant-tag
+              ↓Text [ngx.components.UIText-1771949858827]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.tag1
+            ↓Tag2 [ngx.components.UIDynamicElement-1771949858830]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1771949858833]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:chat-assistant-tag
+              ↓Text [ngx.components.UIText-1771949858836]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.tag2
+            ↓Tag3 [ngx.components.UIDynamicElement-1771949858839]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1771949858842]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:chat-assistant-tag
+              ↓Text [ngx.components.UIText-1771949858845]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.tag3
+↓message [ngx.components.UICompVariable-1771949858848]: 
+  value: '''I am here to help with Convertigo development. I can guide you through forms, APIs and sequences.'''
+↓author [ngx.components.UICompVariable-1771949858851]: 
+  value: '''Assistant'''
+↓time [ngx.components.UICompVariable-1771949858854]: 
+  value: '''14:00'''
+↓tag1 [ngx.components.UICompVariable-1771949858857]: 
+  value: '''Code'''
+↓tag2 [ngx.components.UICompVariable-1771949858860]: 
+  value: '''Backend'''
+↓tag3 [ngx.components.UICompVariable-1771949858863]: 
+  value: '''Mobile'''
+↓writing [ngx.components.UICompVariable-1771949858866]: 
+  value: false
+↓status [ngx.components.UICompVariable-1771949858869]: 
+  value: '''writing'''
+↓Style [ngx.components.UIStyle-1771949858872]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.chat-assistant-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            width: 100%;
+          }
+          .chat-assistant-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            //background: linear-gradient(180deg, var(--modern-cyan, #06b6d4), var(--modern-teal, #14b8a6));
+            //box-shadow: 0 4px 6px rgba(6, 182, 212, 0.2), 0 2px 4px rgba(6, 182, 212, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+          }
+          .chat-assistant-avatar-icon {
+            color: var(--modern-text, #f1f5f9);
+            font-size: 16px;
+          }
+          .chat-assistant-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: min(100%, 768px);
+          }
+          .chat-message-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            height: 16px;
+          }
+          .chat-message-author {
+            margin: 0;
+            color: var(--modern-muted, #94a3b8);
+            font-size: 12px;
+            line-height: 16px;
+          }
+          .chat-message-time {
+            margin: 0;
+            color: var(--modern-muted-soft, rgba(148, 163, 184, 0.6));
+            font-size: 12px;
+            line-height: 16px;
+          }
+          .chat-assistant-bubble {
+            margin: 0;
+            border-radius: 16px;
+            border: 1px solid var(--modern-border, #1e293b);
+            background: var(--modern-surface, #0f172a);
+            box-shadow: none;
+          }
+          .chat-assistant-bubble ion-card-content {
+            padding: 15px 21px 12px;
+          }
+          .chat-message-text {
+            margin: 0;
+            color: var(--modern-text, #f1f5f9);
+            font-size: 16px;
+            line-height: 26px;
+            letter-spacing: -0.3125px;
+          }
+          .chat-assistant-bubble markdown,
+          .chat-assistant-bubble markdown p,
+          .chat-assistant-bubble markdown li {
+            color: var(--modern-text, #f1f5f9);
+            font-size: 16px;
+            line-height: 26px;
+            letter-spacing: -0.3125px;
+          }
+          .chat-assistant-bubble markdown p {
+            margin: 0 0 8px;
+          }
+          .chat-assistant-bubble markdown p:last-child {
+            margin-bottom: 0;
+          }
+          .chat-writing-state {
+            margin: 8px 0 0;
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            color: var(--modern-cyan, #06b6d4);
+            background: rgba(6, 182, 212, 0.12);
+            //border: 1px solid rgba(6, 182, 212, 0.32);
+            //box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.06), 0 0 12px rgba(6, 182, 212, 0.2);
+            font-size: 12px;
+            line-height: 16px;
+            letter-spacing: 0.1px;
+            animation: chat-writing-glow 1.6s ease-in-out infinite;
+          }
+          @keyframes chat-writing-glow {
+            0%, 100% {
+              box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.06), 0 0 8px rgba(6, 182, 212, 0.14);
+            }
+            50% {
+              box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.1), 0 0 16px rgba(6, 182, 212, 0.26);
+            }
+          }
+          .chat-assistant-tags {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+            padding-top: 9px;
+            border-top: 1px solid rgba(30, 41, 59, 0.4);
+          }
+          .chat-assistant-tag {
+            margin: 0;
+            color: var(--modern-muted, #94a3b8);
+            font-size: 12px;
+            line-height: 16px;
+          }
+          @media (max-width: 768px) {
+            .chat-assistant-message {
+              gap: 12px;
+            }
+            .chat-assistant-body {
+              width: 100%;
+            }
+          }
+          '
