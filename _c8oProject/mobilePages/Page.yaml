@@ -545,7 +545,7 @@ title: Component assistant
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.global.currentLanguage() ?? 'en'
+              - MobileSmartSourceType: script:this.global?.currentLanguage() ?? 'en'
         ↓SelectedText [ngx.components.UIAttribute-1774703000015]: 
           attrName: '[selectedText]'
           attrValue: 
@@ -1227,19 +1227,18 @@ title: Component assistant
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.CreateConversation","marker":""}],"path":"?.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
-  ↓GetTheme [ngx.components.UIDynamicAction-1772036531066]: 
-    beanData: '{"ionBean":"GetThemeAction","emitResizeWhenApply":"plain:true"}'
-    comment: Restores and applies the persisted theme preference
-    ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
-      actionValue: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-          - com.twinsoft.convertigo.beans.common.FormatedContent: 
-            →: |
-              		page.refreshFooterLocale();
-              		page.ref.detectChanges();
-              		resolve();
-              
+  ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		setTimeout(()=>{
+            			page.refreshFooterLocale();
+            			page.ref.detectChanges();
+            		},100);
+            		resolve();
+            
 ↓Subscribe_Handler [ngx.components.UIEventSubscriber-1744356866759]: 
   topic: AssistantResponse
   ↓AddAssistantMessages [ngx.components.UICustomAction-1744304995983]: 

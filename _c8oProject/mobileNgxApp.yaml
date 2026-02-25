@@ -14,8 +14,6 @@ componentScriptContent:
         /*Begin_c8o_AppInitialization*/
                         /* Uncomment the following lines to enable the i18n feature.
                          * You should add a json per language in the assets/i18n folder. */
-                        translate.setDefaultLang(''en'');
-                        translate.use(translate.getBrowserLang());
                         
                         /* Uncomment the following lines to enable the custom status bar color. */
                         // statusBar.overlaysWebView(false);
@@ -127,6 +125,54 @@ componentScriptContent:
         		return null;
         	}
         	/*End_c8o_AppFunction*/
+        /*Begin_c8o_function:CTS1747213325348*/
+        		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+        		
+        
+        		if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
+        			page.global.studio = true;
+        		}
+        		
+        		window[''sendToHost''] = (message) => {
+        			if (page.global.studio) {
+        				window[''java''].receiveFromJS(JSON.stringify(message));
+        			} else if (window.parent && window != window.parent) {
+        				window.parent.postMessage(message, ''*'');
+        			}
+        		};
+        		
+        		window[''setupMessageListener''] = (callback) => {
+        			if (page.global.studio) {
+        				window[''receiveFromJava''] = function(msg) {
+        					callback(msg);
+        				};
+        			} else {
+        				window.addEventListener(''message'', (event) => {
+        					callback(event.data);
+        				});
+        			}
+        		};
+        		
+        		window[''setupMessageListener'']((msg) => {
+        			if (''init'' == msg.type) {
+        				page.global.studio = true;
+        			}
+        			
+        			if (page.global.studio) {
+        				if (''select'' == msg.type) {
+        					page.global.projectName = msg.projectName;
+        					page.global.threadQname = msg.threadQname;
+        					page.tick();
+        					page.getInstance(Events).publish("JavaMessage",{}, false);
+        				}
+        				if (''capture'' == msg.type) {
+        					page.getInstance(Events).publish("JavaCapture", msg, false);
+        				}
+        			}
+        		});
+        
+        		resolve();
+        		/*End_c8o_function:CTS1747213325348*/
         '
 tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓Menu [ngx.components.UIDynamicMenu-1500890597895]: 🗏 mobileMenus/Menu.yaml

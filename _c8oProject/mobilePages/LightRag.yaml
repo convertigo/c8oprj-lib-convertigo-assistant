@@ -616,19 +616,18 @@ title: Title for LightRag
             		page.scrollChatBottom(280, true);
             		resolve();
             
-  ↓GetTheme [ngx.components.UIDynamicAction-1772036448683]: 
-    beanData: '{"ionBean":"GetThemeAction","emitResizeWhenApply":"plain:true"}'
-    comment: Restores and applies the persisted theme preference
-    ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036465132]: 
-      actionValue: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-          - com.twinsoft.convertigo.beans.common.FormatedContent: 
-            →: |
-              		page.refreshFooterLocale();
-              		page.ref.detectChanges();
-              		resolve();
-              
+  ↓RefreshFooterLocale [ngx.components.UICustomAction-1772039534170]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		setTimeout(()=>{
+            			page.refreshFooterLocale();
+            			page.ref.detectChanges();
+            		},100);
+            		resolve();
+            
 ↓Subscribe_EnableChat [ngx.components.UIEventSubscriber-1771949749178]: 
   topic: JavaMessage
   ↓EnableChat [ngx.components.UICustomAction-1771949749181]: 
@@ -819,7 +818,7 @@ title: Title for LightRag
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.global.currentLanguage() ?? 'en'
+              - MobileSmartSourceType: script:this.global?.currentLanguage() ?? 'en'
           comment: Current selected language bound to global state
         ↓SelectedText [ngx.components.UIAttribute-1771937738006]: 
           attrName: '[selectedText]'
