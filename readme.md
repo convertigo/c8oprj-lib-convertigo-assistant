@@ -25,6 +25,7 @@ For more technical informations : [documentation](./project.md)
     - [Shared Components](#shared-components)
         - [AssistantMessageComponent](#assistantmessagecomponent)
         - [AssitantMessage](#assitantmessage)
+        - [FigmaFooterComponent](#figmafootercomponent)
         - [FigmaInputComponent](#figmainputcomponent)
         - [ImagePreviewer](#imagepreviewer)
         - [LightRagFooterComponent](#lightragfootercomponent)
@@ -133,6 +134,39 @@ AI Component Assistant Page
 </tr>
 <tr>
 <td>Text</td><td></td>
+</tr>
+</table>
+
+#### FigmaFooterComponent
+
+**variables**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>EnableChat</td><td></td>
+</tr>
+<tr>
+<td>Files</td><td></td>
+</tr>
+<tr>
+<td>IsProcessing</td><td></td>
+</tr>
+<tr>
+<td>Question</td><td></td>
+</tr>
+</table>
+
+**events**
+
+<table>
+<tr>
+<th>name</th><th>comment</th>
+</tr>
+<tr>
+<td>RunQuestion</td><td></td>
 </tr>
 </table>
 

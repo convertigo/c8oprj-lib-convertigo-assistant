@@ -1,0 +1,638 @@
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_CompImport*/
+        import { HostListener } from ''@angular/core'';
+        /*End_c8o_CompImport*/
+        /*Begin_c8o_CompDeclaration*/
+        	disabled = false;
+        	isDragging = false;
+        	attachInputEl = null;
+        	attachInputChangeHandler = null;
+        	/*End_c8o_CompDeclaration*/
+        /*Begin_c8o_CompConstructor*/
+        		/*End_c8o_CompConstructor*/
+        /*Begin_c8o_CompInitialization*/
+        		/*End_c8o_CompInitialization*/
+        /*Begin_c8o_CompFinalization*/
+        		this.unbindAttachInputChange();
+        		/*End_c8o_CompFinalization*/
+        /*Begin_c8o_CompChanges*/
+        		/*End_c8o_CompChanges*/
+        /*Begin_c8o_CompDoCheck*/
+        		/*End_c8o_CompDoCheck*/
+        /*Begin_c8o_CompAfterContentInit*/
+        		/*End_c8o_CompAfterContentInit*/
+        /*Begin_c8o_CompAfterContentChecked*/
+        		/*End_c8o_CompAfterContentChecked*/
+        /*Begin_c8o_CompAfterViewInit*/
+        		this.bindAttachInputChange(80);
+        		/*End_c8o_CompAfterViewInit*/
+        /*Begin_c8o_CompAfterViewChecked*/
+        		/*End_c8o_CompAfterViewChecked*/
+        /*Begin_c8o_CompFunction*/
+        	refresh(timeout) {
+        		var wait = timeout == null ? 0 : timeout;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				self.tick();
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	setEnable(enable) {
+        		this.disabled = !enable;
+        		this.refresh(0);
+        	}
+        	
+        	isComponentEnabled() {
+        		return this.disabled !== true && this.EnableChat !== false && this.IsProcessing !== true;
+        	}
+        	
+        	getAttachInputElement() {
+        		try {
+        			if (this.attachInput && this.attachInput.nativeElement) {
+        				return this.attachInput.nativeElement;
+        			}
+        		} catch (e) {}
+        		return null;
+        	}
+        	
+        	bindAttachInputChange(delay) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				self.unbindAttachInputChange();
+        				var inputEl = self.getAttachInputElement();
+        				if (!inputEl || !inputEl.addEventListener) {
+        					return;
+        				}
+        				var handler = function(ev) {
+        					self.onAttachSelected(ev);
+        				};
+        				inputEl.addEventListener(''change'', handler);
+        				self.attachInputEl = inputEl;
+        				self.attachInputChangeHandler = handler;
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	unbindAttachInputChange() {
+        		try {
+        			if (this.attachInputEl && this.attachInputChangeHandler && this.attachInputEl.removeEventListener) {
+        				this.attachInputEl.removeEventListener(''change'', this.attachInputChangeHandler);
+        			}
+        		} catch (e) {}
+        		this.attachInputEl = null;
+        		this.attachInputChangeHandler = null;
+        	}
+        	
+        	isZipFile(file) {
+        		if (!file) {
+        			return false;
+        		}
+        		var name = '''' + (file.name == null ? '''' : file.name);
+        		var type = '''' + (file.type == null ? '''' : file.type);
+        		name = name.toLowerCase();
+        		type = type.toLowerCase();
+        		return name.lastIndexOf(''.zip'') === name.length - 4 || type.indexOf(''zip'') !== -1;
+        	}
+        	
+        	openAttachPicker(event) {
+        		try {
+        			if (event && event.preventDefault) {
+        				event.preventDefault();
+        			}
+        			if (event && event.stopPropagation) {
+        				event.stopPropagation();
+        			}
+        			if (!this.isComponentEnabled()) {
+        				return;
+        			}
+        			var input = this.getAttachInputElement();
+        			if (input && input.click) {
+        				input.click();
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	onAttachSelected(event) {
+        		var files = event && event.target ? event.target.files : null;
+        		this.addFiles(files, false);
+        	}
+        	
+        	addInputFiles(files) {
+        		try {
+        			if (!files || files.length == null || files.length === 0) {
+        				return;
+        			}
+        			var input = this.getAttachInputElement();
+        			if (!input) {
+        				return;
+        			}
+        			
+        			var byName = {};
+        			var current = input.files;
+        			var i = 0;
+        			
+        			if (current && current.length != null) {
+        				for (i = 0; i < current.length; i++) {
+        					if (this.isZipFile(current[i])) {
+        						byName['''' + current[i].name] = current[i];
+        					}
+        				}
+        			}
+        			
+        			for (i = 0; i < files.length; i++) {
+        				if (this.isZipFile(files[i])) {
+        					byName['''' + files[i].name] = files[i];
+        				}
+        			}
+        			
+        			var dt = new DataTransfer();
+        			for (var name in byName) {
+        				if (!byName.hasOwnProperty(name)) {
+        					continue;
+        				}
+        				dt.items.add(byName[name]);
+        			}
+        			input.files = dt.files;
+        		} catch (e) {}
+        	}
+        	
+        	addFiles(files, dropped) {
+        		try {
+        			if (!this.isComponentEnabled()) {
+        				return;
+        			}
+        			
+        			if (dropped) {
+        				this.addInputFiles(files);
+        			}
+        			
+        			var input = this.getAttachInputElement();
+        			var attachments = input && input.files != null ? input.files : files;
+        			if (!attachments || attachments.length == null || attachments.length === 0) {
+        				return;
+        			}
+        			
+        			this.Files = attachments;
+        			this.sendMessage();
+        		} catch (e) {
+        			try {
+        				this.c8o.log.warn(''FigmaFooterComponent addFiles failed: '' + e.message);
+        			} catch (e2) {}
+        		}
+        	}
+        	
+        	sendMessage() {
+        		try {
+        			var input = this.getAttachInputElement();
+        			var attachments = input && input.files != null ? input.files : this.Files;
+        			if (!attachments || attachments.length == null || attachments.length === 0) {
+        				return;
+        			}
+        			this.RunQuestion.emit({
+        				question: '''',
+        				images: [],
+        				attachments: attachments
+        			});
+        		} catch (e) {}
+        	}
+        	
+        	reset() {
+        		try {
+        			var input = this.getAttachInputElement();
+        			if (input) {
+        				var dt = new DataTransfer();
+        				input.files = dt.files;
+        				input.value = '''';
+        			}
+        		} catch (e) {
+        			try {
+        				var fallback = this.getAttachInputElement();
+        				if (fallback) {
+        					fallback.value = '''';
+        				}
+        			} catch (e2) {}
+        		}
+        		
+        		this.Files = null;
+        		this.Question = '''';
+        		this.isDragging = false;
+        		this.refresh(0);
+        	}
+        	
+        	@HostListener(''window:dragenter'', [''$event''])
+        	onDragEnter(event) {
+        		if (!this.isComponentEnabled()) {
+        			return;
+        		}
+        		this.isDragging = true;
+        	}
+        	
+        	@HostListener(''window:dragleave'', [''$event''])
+        	onDragLeave(event) {
+        		if (!this.isComponentEnabled()) {
+        			return;
+        		}
+        		this.isDragging = false;
+        	}
+        	
+        	@HostListener(''window:dragover'', [''$event''])
+        	onDragOver(event) {
+        		if (!this.isComponentEnabled()) {
+        			return;
+        		}
+        		if (event && event.preventDefault) {
+        			event.preventDefault();
+        		}
+        	}
+        	
+        	@HostListener(''window:drop'', [''$event''])
+        	onDrop(event) {
+        		if (!this.isComponentEnabled()) {
+        			return;
+        		}
+        		if (event && event.preventDefault) {
+        			event.preventDefault();
+        		}
+        		this.isDragging = false;
+        		try {
+        			var dt = event && event.dataTransfer ? event.dataTransfer : null;
+        			if (dt && dt.files && dt.files.length > 0) {
+        				this.addFiles(dt.files, true);
+        			}
+        		} catch (e) {}
+        	}
+        	/*End_c8o_CompFunction*/
+        '
+↓InputToolBar [ngx.components.UIDynamicElement-1781100000201]: 
+  beanData: '{"ionBean":"ToolBar"}'
+  tagName: ion-toolbar
+  ↓Class [ngx.components.UIAttribute-1781100000202]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:figma-footer-toolbar
+  ↓DropButton [ngx.components.UIDynamicElement-1781100000203]: 
+    beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+    tagName: ion-button
+    ↓Class [ngx.components.UIAttribute-1781100000204]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:figma-drop-button
+    ↓Disabled [ngx.components.UIAttribute-1781100000205]: 
+      attrName: '[disabled]'
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.disabled || this.EnableChat === false || this.IsProcessing === true
+    ↓Dragging [ngx.components.UIAttribute-1781100000206]: 
+      attrName: '[class.figma-drop-button-dragging]'
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.isDragging
+    ↓Event [ngx.components.UIControlEvent-1781100000207]: 
+      ↓OpenAttachPicker [ngx.components.UICustomAction-1781100000208]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		page.openAttachPicker(event);
+                		resolve();
+                
+    ↓Content [ngx.components.UIDynamicElement-1781100000209]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1781100000210]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:figma-drop-content
+      ↓IconWrap [ngx.components.UIDynamicElement-1781100000211]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1781100000212]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:figma-drop-icon-wrap
+        ↓Icon [ngx.components.UIDynamicElement-1781100000213]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:cloud-upload-outline"}'
+          tagName: ion-icon
+          ↓Class [ngx.components.UIAttribute-1781100000214]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:figma-drop-icon
+      ↓TextWrap [ngx.components.UIDynamicElement-1781100000215]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1781100000216]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:figma-drop-text-wrap
+        ↓Title [ngx.components.UIDynamicElement-1781100000217]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1781100000218]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:figma-drop-title
+          ↓Text [ngx.components.UIText-1781100000219]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Drop your Figma ZIP file here
+        ↓SubTitle [ngx.components.UIDynamicElement-1781100000220]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1781100000221]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:figma-drop-subtitle
+          ↓Text [ngx.components.UIText-1781100000222]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:or click to browse your files
+        ↓Hint [ngx.components.UIDynamicElement-1781100000223]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1781100000224]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:figma-drop-hint
+          ↓Text [ngx.components.UIText-1781100000225]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Accepts .zip files from AutoHTML plugin
+  ↓HiddenInputs [ngx.components.UIDynamicElement-1781100000226]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1781100000227]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:figma-hidden-inputs
+    ↓AttachInput [ngx.components.UIDynamicElement-1781100000228]: 
+      beanData: '{"ionBean":"DivTag"}'
+      identifier: attachInput
+      selfClose: true
+      tagName: input
+      ↓Type [ngx.components.UIAttribute-1781100000229]: 
+        attrName: type
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:file
+      ↓Accept [ngx.components.UIAttribute-1781100000230]: 
+        attrName: accept
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:.zip
+      ↓Change [ngx.components.UIControlEvent-1781100000231]: 
+        attrName: change
+        eventName: change
+        ↓OnAttachSelected [ngx.components.UICustomAction-1781100000232]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  		page.onAttachSelected(event);
+                  		resolve();
+                  
+↓Style [ngx.components.UIStyle-1781100000299]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host {
+            display: block;
+          }
+          
+          .figma-footer-toolbar {
+            --background: transparent;
+            --padding-start: 0;
+            --padding-end: 0;
+            --min-height: auto;
+            padding: 0;
+          }
+          
+          .figma-drop-button {
+            width: 100%;
+            margin: 0;
+            --padding-start: 0;
+            --padding-end: 0;
+            --padding-top: 0;
+            --padding-bottom: 0;
+            --background: transparent;
+            --background-hover: transparent;
+            --background-activated: transparent;
+            --background-focused: transparent;
+            --box-shadow: none;
+            --border-radius: 16px;
+            text-transform: none;
+            color: inherit;
+          }
+          
+          .figma-drop-button::part(native) {
+            width: 100%;
+            min-height: 123px;
+            padding: 2px;
+            border-radius: 16px;
+            border: 2px dashed #1e293b;
+            background: #0f172a;
+            box-shadow: none;
+            justify-content: center;
+            align-items: center;
+            &:hover{
+          	border-color: #06b6d480;
+            }
+          }
+          
+          .figma-drop-button.figma-drop-button-dragging::part(native) {
+            border-color: #06b6d4;
+            background: #12203a;
+          }
+          
+          .figma-drop-content {
+            width: 100%;
+            min-height: 119px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 0 16px;
+          }
+          
+          .figma-drop-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+          }
+          
+          .figma-drop-icon {
+            color: #06b6d4;
+            font-size: 28px;
+          }
+          
+          .figma-drop-text-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            max-width: 320px;
+            min-width: 0;
+            text-align: left;
+          }
+          
+          .figma-drop-title,
+          .figma-drop-subtitle,
+          .figma-drop-hint {
+            margin: 0;
+          }
+          
+          .figma-drop-title {
+            color: #f1f5f9;
+            font-size: 18px;
+            font-weight: 500;
+            line-height: 27px;
+            letter-spacing: -0.4395px;
+          }
+          
+          .figma-drop-subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 20px;
+            letter-spacing: -0.1504px;
+          }
+          
+          .figma-drop-hint {
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 16px;
+          }
+          
+          .figma-hidden-inputs {
+            display: none;
+          }
+          
+          @media (max-width: 768px) {
+            .figma-drop-button::part(native) {
+              min-height: 108px;
+            }
+          
+            .figma-drop-content {
+              min-height: 104px;
+              gap: 12px;
+              padding: 0 10px;
+            }
+          
+            .figma-drop-icon-wrap {
+              width: 48px;
+              height: 48px;
+              border-radius: 12px;
+            }
+          
+            .figma-drop-icon {
+              font-size: 24px;
+            }
+          
+            .figma-drop-title {
+              font-size: 16px;
+              line-height: 22px;
+            }
+          
+            .figma-drop-subtitle {
+              font-size: 13px;
+              line-height: 18px;
+            }
+          
+            .figma-drop-hint {
+              font-size: 11px;
+              line-height: 14px;
+            }
+          }'
+↓RunQuestion [ngx.components.UICompEvent-1781100000300]: 
+  attrName: RunQuestion
+↓Question [ngx.components.UICompVariable-1781100000301]: 
+  autoEmit: true
+↓EnableChat [ngx.components.UICompVariable-1781100000302]: 
+  value: true
+↓IsProcessing [ngx.components.UICompVariable-1781100000303]: 
+  value: false
+↓PageEvent [ngx.components.UIPageEvent-1781100000304]: 
+  ↓Reset [ngx.components.UICustomAction-1781100000305]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.reset();
+            		resolve();
+            
+    local_module_ng_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonToolbar
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonButton
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: IonIcon
+    local_module_ts_imports: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ IonToolbar, IonButton, IonIcon }'
+              - java.lang.String: 
+                - ↑value: '@ionic/angular/standalone'
+↓Files [ngx.components.UICompVariable-1781100000306]: 
+  autoEmit: true
+  value: null

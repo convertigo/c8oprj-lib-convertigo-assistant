@@ -18,6 +18,63 @@ scriptContent:
         		}
         	}
         	
+        	scrollChatBottom(delay, force = false) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				if (!self.local) {
+        					self.local = {};
+        				}
+        				if (!force && self.local && self.local.AutoScrollEnabled === false) {
+        					return;
+        				}
+        				if (force) {
+        					self.local.AutoScrollLockUntil = Date.now() + 1200;
+        				}
+        				if (self.content && self.content.scrollToBottom) {
+        					self.content.scrollToBottom(220);
+        				}
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	
+        	handleContentScroll(event) {
+        		try {
+        			if (!this.local) {
+        				this.local = {};
+        			}
+        			var detail = event && event.detail ? event.detail : {};
+        			var scrollTop = Number(detail.scrollTop || 0);
+        			var previousTop = Number(this.local.LastScrollTop);
+        			var lockUntil = Number(this.local.AutoScrollLockUntil || 0);
+        			if (isNaN(previousTop)) {
+        				previousTop = scrollTop;
+        			}
+        			if (isNaN(lockUntil)) {
+        				lockUntil = 0;
+        			}
+        			this.local.LastScrollTop = scrollTop;
+        			if (Date.now() < lockUntil) {
+        				return;
+        			}
+        			if ((previousTop - scrollTop) > 10 && this.local.AutoScrollEnabled !== false) {
+        				this.local.AutoScrollEnabled = false;
+        				this.tick();
+        			}
+        		} catch (e) {}
+        	}
+        	
+        	enableAutoScroll() {
+        		if (!this.local) {
+        			this.local = {};
+        		}
+        		this.local.AutoScrollEnabled = true;
+        		this.local.AutoScrollLockUntil = Date.now() + 1400;
+        		this.tick();
+        		this.scrollChatBottom(0, true);
+        	}
+        	
         		public getProjectHeading() {
         			if (this.global.studio) {
         				if (this.global.projectName == undefined || this.global.projectName === "") {
@@ -39,6 +96,20 @@ scriptContent:
         				break;
         			}
         			return "Project: " + heading;
+        		}
+        		
+        		public getTargetProjectLabel() {
+        			if (this.global && this.global.projectName != undefined && this.global.projectName !== "") {
+        				return "Target project: " + this.global.projectName;
+        			}
+        			return "Target project: Please select an NGX project";
+        		}
+        		
+        		public getTargetProjectName() {
+        			if (this.global && this.global.projectName != undefined && this.global.projectName !== "") {
+        				return this.global.projectName;
+        			}
+        			return "Please select an NGX project";
         		}
         		/*End_c8o_PageFunction*/
         '
@@ -108,6 +179,7 @@ title: Title for Figma
               		
               		resolve();
               '
+      isEnabled: false
   ↓SetLocal [ngx.components.UIDynamicAction-1752846164110]: 
     beanData: |
       '{
@@ -115,6 +187,36 @@ title: Title for Figma
        "Property": "plain:Configuration",
        "Value": "script:{divMapping: ''class''}"
       }'
+  ↓AutoScrollEnabled [ngx.components.UIDynamicAction-1782600000001]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AutoScrollEnabled",
+       "Value": "script:true"
+      }'
+  ↓LastScrollTop [ngx.components.UIDynamicAction-1782600000002]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:LastScrollTop",
+       "Value": "script:0"
+      }'
+  ↓AutoScrollLockUntil [ngx.components.UIDynamicAction-1782600000003]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AutoScrollLockUntil",
+       "Value": "script:0"
+      }'
+  ↓ScrollBottomOnEnter [ngx.components.UICustomAction-1782600000004]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            		page.scrollChatBottom(280, true);
+            		resolve();
+            
 ↓Header [ngx.components.UIDynamicElement-1752572046166]: 
   beanData: '{"ionBean":"Header"}'
   tagName: ion-header
@@ -432,69 +534,873 @@ title: Title for Figma
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:this.getProjectSubtitle()
 ↓Content [ngx.components.UIDynamicElement-1752572046188]: 
-  beanData: '{"ionBean":"Content"}'
+  beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
+  identifier: content
   tagName: ion-content
-  ↓Directive [ngx.components.UIControlDirective-1752675921566]: 
-    directiveItemName: item
+  ↓Class [ngx.components.UIAttribute-1777803000001]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:modern-content
+  ↓ScrollEvents [ngx.components.UIAttribute-1782600000201]: 
+    attrName: '[scrollEvents]'
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: script:true
+  ↓ScrollEvent [ngx.components.UIControlEvent-1782600000202]: 
+    attrName: (ionScroll)
+    eventName: ionScroll
+    ↓HandleScroll [ngx.components.UICustomAction-1782600000203]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              		page.handleContentScroll(event);
+              		resolve();
+              
+  ↓Main [ngx.components.UIDynamicElement-1777803000002]: 
+    beanData: '{"ionBean":"DivTag"}'
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1777803000003]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:modern-main
+    ↓Center [ngx.components.UIDynamicElement-1777803000004]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1777803000005]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-center
+      ↓Div [ngx.components.UIDynamicElement-1777803000006]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓IntroTitle [ngx.components.UIDynamicElement-1777803000007]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1777803000008]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-intro-title
+          ↓Text [ngx.components.UIText-1777803000009]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Welcome to the Figma import assistant!
+        ↓IntroCopy1 [ngx.components.UIDynamicElement-1777803000010]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1777803000011]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-copy
+          ↓Text [ngx.components.UIText-1777803000012]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Import your Figma designs as Convertigo Shared Components in a few clicks!
+      ↓HowCard [ngx.components.UIDynamicElement-1777803000016]: 
+        beanData: '{"ionBean":"Card"}'
+        tagName: ion-card
+        ↓Class [ngx.components.UIAttribute-1777803000017]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-card figma-how-card
+        ↓CardContent [ngx.components.UIDynamicElement-1777803000018]: 
+          beanData: '{"ionBean":"CardContent"}'
+          tagName: ion-card-content
+          ↓Head [ngx.components.UIDynamicElement-1777803000019]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1777803000020]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:figma-card-head
+            ↓IconWrap [ngx.components.UIDynamicElement-1779803000015]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000016]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-card-icon figma-card-icon-teal
+              ↓Icon [ngx.components.UIDynamicElement-1779803000017]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:flash-outline"}'
+                tagName: ion-icon
+            ↓Title [ngx.components.UIDynamicElement-1777803000021]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1779803000018]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-card-title
+              ↓Text [ngx.components.UIText-1779803000019]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:How to use it?
+          ↓StepList [ngx.components.UIDynamicElement-1779803000020]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1779803000021]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:figma-step-list
+            ↓Step1 [ngx.components.UIDynamicElement-1779803000022]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000023]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-step-row
+              ↓Num [ngx.components.UIDynamicElement-1779803000024]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000025]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-num
+                ↓Text [ngx.components.UIText-1779803000026]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:1
+              ↓Body [ngx.components.UIDynamicElement-1779803000027]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000028]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-body
+                ↓Text [ngx.components.UIDynamicElement-1779803000029]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000030]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-text
+                  ↓Text [ngx.components.UIText-1779803000031]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Open your Figma design
+            ↓Step2 [ngx.components.UIDynamicElement-1779803000032]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000033]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-step-row
+              ↓Num [ngx.components.UIDynamicElement-1779803000034]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000035]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-num
+                ↓Text [ngx.components.UIText-1779803000036]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:2
+              ↓Body [ngx.components.UIDynamicElement-1779803000037]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000038]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-body
+                ↓Text [ngx.components.UIDynamicElement-1779803000039]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000040]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-text
+                  ↓Text [ngx.components.UIText-1779803000041]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Install the AutoHTML plugin in Figma
+                ↓Link [ngx.components.UIDynamicElement-1779803000042]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: a
+                  ↓Class [ngx.components.UIAttribute-1779803000043]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-link
+                  ↓Href [ngx.components.UIAttribute-1779803000140]: 
+                    attrName: href
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:https://www.figma.com/community/plugin/1077172952654000760/autohtml-components-to-code
+                  ↓Target [ngx.components.UIAttribute-1779803000141]: 
+                    attrName: target
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:_blank
+                  ↓Rel [ngx.components.UIAttribute-1779803000142]: 
+                    attrName: rel
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:noopener noreferrer
+                  ↓Text [ngx.components.UIText-1779803000044]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:→ Get AutoHTML plugin
+            ↓Step3 [ngx.components.UIDynamicElement-1779803000045]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000046]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-step-row
+              ↓Num [ngx.components.UIDynamicElement-1779803000047]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000048]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-num
+                ↓Text [ngx.components.UIText-1779803000049]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:3
+              ↓Body [ngx.components.UIDynamicElement-1779803000050]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000051]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-body
+                ↓Text [ngx.components.UIDynamicElement-1779803000052]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000053]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-text
+                  ↓Text [ngx.components.UIText-1779803000054]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Select the component you want to export
+                ↓Hint [ngx.components.UIDynamicElement-1779803000055]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000056]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-subtext
+                  ↓Text [ngx.components.UIText-1779803000057]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Best results are achieved with components using Autolayout. Do not export a whole page but instead several components used to build the page.
+            ↓Step4 [ngx.components.UIDynamicElement-1779803000058]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000059]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-step-row
+              ↓Num [ngx.components.UIDynamicElement-1779803000060]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000061]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-num
+                ↓Text [ngx.components.UIText-1779803000062]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:4
+              ↓Body [ngx.components.UIDynamicElement-1779803000063]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000064]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-body
+                ↓Text [ngx.components.UIDynamicElement-1779803000065]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000066]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-text
+                  ↓Text [ngx.components.UIText-1779803000067]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Run the AutoHTML plugin (Works in Dev or Design mode)
+            ↓Step5 [ngx.components.UIDynamicElement-1779803000068]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000069]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-step-row
+              ↓Num [ngx.components.UIDynamicElement-1779803000070]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000071]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-num
+                ↓Text [ngx.components.UIText-1779803000072]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:5
+              ↓Body [ngx.components.UIDynamicElement-1779803000073]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000074]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-body
+                ↓Text [ngx.components.UIDynamicElement-1779803000075]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000076]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-text
+                  ↓Text [ngx.components.UIText-1779803000077]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Click the "download ZIP" button
+            ↓Step6 [ngx.components.UIDynamicElement-1779803000078]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000079]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-step-row
+              ↓Num [ngx.components.UIDynamicElement-1779803000080]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000081]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-num
+                ↓Text [ngx.components.UIText-1779803000082]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:6
+              ↓Body [ngx.components.UIDynamicElement-1779803000083]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000084]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-step-body
+                ↓Text [ngx.components.UIDynamicElement-1779803000085]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1779803000086]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:figma-step-text
+                  ↓Text [ngx.components.UIText-1779803000087]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Drag and drop the ZIP file on this assistant window
+          ↓HowNote [ngx.components.UIDynamicElement-1779803000088]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1779803000089]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:figma-how-note
+            ↓Text [ngx.components.UIDynamicElement-1779803000090]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1779803000091]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-note-text
+              ↓Text [ngx.components.UIText-1779803000092]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:The Figma import assistant will create a new SharedComponent named from the Figma component name. All text nodes become variables, and image assets are copied to your project's assets folder.
+      ↓LayerCard [ngx.components.UIDynamicElement-1777803000049]: 
+        beanData: '{"ionBean":"Card"}'
+        tagName: ion-card
+        ↓Class [ngx.components.UIAttribute-1777803000050]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-card figma-layer-card
+        ↓CardContent [ngx.components.UIDynamicElement-1777803000051]: 
+          beanData: '{"ionBean":"CardContent"}'
+          tagName: ion-card-content
+          ↓Head [ngx.components.UIDynamicElement-1777803000052]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1777803000053]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:figma-card-head
+            ↓IconWrap [ngx.components.UIDynamicElement-1779803000093]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000094]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-card-icon figma-card-icon-cyan
+              ↓Icon [ngx.components.UIDynamicElement-1779803000095]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:layers-outline"}'
+                tagName: ion-icon
+            ↓Title [ngx.components.UIDynamicElement-1779803000096]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1779803000097]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:modern-card-title
+              ↓Text [ngx.components.UIText-1779803000098]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:Layer naming
+          ↓Copy1 [ngx.components.UIDynamicElement-1777803000055]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1777803000056]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:modern-copy
+            ↓Text [ngx.components.UIText-1777803000057]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:By default the imported component is based on DIV Convertigo elements with text nodes converted to variables. You can also use layer names to create specific Convertigo elements.
+          ↓TipList [ngx.components.UIDynamicElement-1779803000099]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1779803000100]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:figma-tip-list
+            ↓Tip1 [ngx.components.UIDynamicElement-1779803000101]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000102]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-tip-row
+              ↓Dot [ngx.components.UIDynamicElement-1779803000103]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000104]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-dot figma-tip-dot-cyan
+              ↓Lead [ngx.components.UIDynamicElement-1779803000105]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000106]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-lead
+                ↓Text [ngx.components.UIText-1779803000107]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Name a layer
+              ↓Code [ngx.components.UIDynamicElement-1779803000108]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000109]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-code figma-tip-code-cyan
+                ↓Text [ngx.components.UIText-1779803000110]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:input-something
+              ↓Tail [ngx.components.UIDynamicElement-1779803000111]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000112]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-tail
+                ↓Text [ngx.components.UIText-1779803000113]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:to create a Convertigo Input Field
+            ↓Tip2 [ngx.components.UIDynamicElement-1779803000114]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1779803000115]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-tip-row
+              ↓Dot [ngx.components.UIDynamicElement-1779803000116]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1779803000117]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-dot figma-tip-dot-teal
+              ↓Lead [ngx.components.UIDynamicElement-1779803000118]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000119]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-lead
+                ↓Text [ngx.components.UIText-1779803000120]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Name a layer
+              ↓Code [ngx.components.UIDynamicElement-1779803000121]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000122]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-code figma-tip-code-teal
+                ↓Text [ngx.components.UIText-1779803000123]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:button-something
+              ↓Tail [ngx.components.UIDynamicElement-1779803000124]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1779803000125]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:figma-tip-tail
+                ↓Text [ngx.components.UIText-1779803000126]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:to create a Convertigo Button
+          ↓LayerNote [ngx.components.UIDynamicElement-1779803000127]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1779803000128]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:figma-layer-note
+            ↓Icon [ngx.components.UIDynamicElement-1779803000129]: 
+              beanData: '{"ionBean":"Icon","IconName":"plain:information-circle-outline"}'
+              tagName: ion-icon
+              ↓Class [ngx.components.UIAttribute-1779803000130]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-layer-note-icon
+            ↓Text [ngx.components.UIDynamicElement-1779803000131]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1779803000132]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:figma-note-text
+              ↓Text [ngx.components.UIText-1779803000133]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:The assistant automatically creates matching Convertigo elements in the Shared Component and applies the correct CSS classes.
+      ↓Results [ngx.components.UIControlDirective-1777803000079]: 
+        directiveName: If
+        directiveSource: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:local && local.Messages && local.Messages.length > 0
+        ↓ChatPreview [ngx.components.UIDynamicElement-1777803000080]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: div
+          ↓Class [ngx.components.UIAttribute-1777803000081]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-chat-preview
+          ↓Messages [ngx.components.UIControlDirective-1777803000082]: 
+            directiveItemName: item
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
+            ↓IsUser [ngx.components.UIControlDirective-1777803000083]: 
+              directiveName: If
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:item.type == 'user'
+              ↓UserMessage [ngx.components.UIUseShared-1777803000084]: 
+                sharedcomponent: ConvertigoAssistant.Application.NgxApp.UserMessageComponent
+                ↓message [ngx.components.UIUseVariable-1777803000085]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.msg
+                ↓author [ngx.components.UIUseVariable-1777803000086]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.author || 'You'
+                ↓time [ngx.components.UIUseVariable-1777803000087]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.time || ''
+            ↓IsAssistant [ngx.components.UIControlDirective-1777803000088]: 
+              directiveName: If
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:item.type == 'assistant' || item.type == 'image'
+              ↓AssistantMessage [ngx.components.UIUseShared-1777803000089]: 
+                sharedcomponent: ConvertigoAssistant.Application.NgxApp.AssistantMessageComponent
+                ↓message [ngx.components.UIUseVariable-1777803000090]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.msg
+                ↓file [ngx.components.UIUseVariable-1777803000091]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.file
+                ↓files [ngx.components.UIUseVariable-1777803000092]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.files
+                ↓author [ngx.components.UIUseVariable-1777803000093]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.author || 'Assistant'
+                ↓time [ngx.components.UIUseVariable-1777803000094]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.time || ''
+                ↓tag1 [ngx.components.UIUseVariable-1777803000095]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.tag1 || 'Figma'
+                ↓tag2 [ngx.components.UIUseVariable-1777803000096]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.tag2 || 'Import'
+                ↓tag3 [ngx.components.UIUseVariable-1777803000097]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.tag3 || 'Result'
+  ↓IfScrollBottomButton [ngx.components.UIControlDirective-1782600000210]: 
+    directiveName: If
     directiveSource: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
-    ↓Directive [ngx.components.UIControlDirective-1752675921569]: 
-      directiveName: If
-      directiveSource: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: script:item.type == 'user'
-      isEnabled: false
-      ↓UseSharedComponent [ngx.components.UIUseShared-1752675921572]: 
-        sharedcomponent: ConvertigoAssistant.Application.NgxApp.UserMessage
-        ↓Text [ngx.components.UIUseVariable-1752675921575]: 
-          varValue: 
+        - MobileSmartSourceType: script:this.local && this.local.AutoScrollEnabled === false
+    ↓ScrollBottomButton [ngx.components.UIDynamicElement-1782600000211]: 
+      beanData: |
+        '{
+         "ionBean": "Button",
+         "IonColor": "plain:light",
+         "IonShape": "plain:round"
+        }'
+      tagName: ion-button
+      ↓Slot [ngx.components.UIAttribute-1782600000212]: 
+        attrName: slot
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:fixed
+      ↓Class [ngx.components.UIAttribute-1782600000213]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-scroll-bottom-btn
+      ↓Aria [ngx.components.UIAttribute-1782600000214]: 
+        attrName: aria-label
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Scroll to bottom
+      ↓Event [ngx.components.UIControlEvent-1782600000215]: 
+        ↓EnableAutoScroll [ngx.components.UICustomAction-1782600000216]: 
+          actionValue: 
             - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:item.msg
-    ↓Directive1 [ngx.components.UIControlDirective-1752675921578]: 
-      directiveName: If
-      directiveSource: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: script:item.type == 'assistant' && item.id == -1
-      ↓UseSharedComponent2 [ngx.components.UIUseShared-1752675921581]: 
-        sharedcomponent: ConvertigoAssistant.Application.NgxApp.AssitantMessage
-        ↓Text [ngx.components.UIUseVariable-1752675921584]: 
-          varValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:item.msg
-    ↓Directive2 [ngx.components.UIControlDirective-1752675921587]: 
-      directiveName: If
-      directiveSource: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: script:item.type == 'image'
-      isEnabled: false
-      ↓UseSharedComponent [ngx.components.UIUseShared-1752675921590]: 
-        sharedcomponent: ConvertigoAssistant.Application.NgxApp.ImagePreviewer
-        ↓Files [ngx.components.UIUseVariable-1752675921593]: 
-          varValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:chatinput.Files
-        ↓file [ngx.components.UIUseVariable-1752675921596]: 
-          varValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:item.file
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  		page.enableAutoScroll();
+                  		resolve();
+                  
+      ↓Icon [ngx.components.UIDynamicElement-1782600000217]: 
+        beanData: |
+          '{
+           "ionBean": "Icon",
+           "IonColor": "plain:dark",
+           "IconName": "plain:arrow-down-outline",
+           "IonSize": "plain:large",
+           "IconSlot": "plain:icon-only"
+          }'
+        tagName: ion-icon
 ↓Footer [ngx.components.UIDynamicElement-1752572046190]: 
   beanData: '{"ionBean":"Footer"}'
   tagName: ion-footer
+  ↓Class [ngx.components.UIAttribute-1777803000098]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: plain:modern-footer
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1752575630364]: 
     identifier: chatinput
-    sharedcomponent: ConvertigoAssistant.Application.NgxApp.FigmaInputComponent
+    sharedcomponent: ConvertigoAssistant.Application.NgxApp.FigmaFooterComponent
     ↓Event [ngx.components.UIControlEvent-1752575630367]: 
       attrName: (RunQuestion)
       eventName: RunQuestion
+      ↓EnableAutoScroll [ngx.components.UICustomAction-1782600000101]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		page.enableAutoScroll();
+                		resolve();
+                
       ↓CallSequence [ngx.components.UIDynamicAction-1752575630370]: 
         beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.CreateFigmaComp"}'
         ↓zipfiles [ngx.components.UIControlVariable-1752575720168]: 
@@ -524,6 +1430,7 @@ title: Title for Figma
                     				id: -1,
                     			}
                     			page.local.Messages.push(msg);
+                    			page.scrollChatBottom(0);
                     			
                     			window[''sendToHost'']({
                     				type: vars.data.type,
@@ -558,6 +1465,14 @@ title: Title for Figma
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:''
+  ↓Style [ngx.components.UIStyle-1772032721066]: 
+    styleContent: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '	padding: 32px;
+            '
 ↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1752667873571]: 
   topic: JavaMessage
   ↓enableChat [ngx.components.UICustomAction-1752667873574]: 
