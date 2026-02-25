@@ -73,12 +73,31 @@ scriptContent:
         		];
         	}
         	
+        	getNoProjectSelectedMessage() {
+        		return this.t(''Project_Select_Required'', ''Project: Please select an NGX project !'');
+        	}
+        	
+        	syncFooterPlaceholder() {
+        		if (!this.local) {
+        			this.local = {};
+        		}
+        		if (this.local.EnableChat === false) {
+        			this.local.QuestionPlaceholder = this.getNoProjectSelectedMessage();
+        			return;
+        		}
+        		var placeholder = '''' + (this.local.QuestionPlaceholder == null ? '''' : this.local.QuestionPlaceholder);
+        		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage()) {
+        			this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
+        		}
+        	}
+        	
         	refreshFooterLocale() {
         		if (!this.local) {
         			this.local = {};
         		}
         		this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
         		this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
+        		this.syncFooterPlaceholder();
         		this.tick();
         	}
         	
@@ -89,10 +108,7 @@ scriptContent:
         		if (!(this.local.QuickSuggestions && this.local.QuickSuggestions.length != null && this.local.QuickSuggestions.length > 0)) {
         			this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
         		}
-        		var placeholder = '''' + (this.local.QuestionPlaceholder == null ? '''' : this.local.QuestionPlaceholder);
-        		if (!placeholder.trim().length) {
-        			this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
-        		}
+        		this.syncFooterPlaceholder();
         		this.local.EnableVisionForPage = false;
         	}
         	
@@ -126,14 +142,50 @@ scriptContent:
         			var scrollTop = Number(detail.scrollTop || 0);
         			var previousTop = Number(this.local.LastScrollTop);
         			var lockUntil = Number(this.local.AutoScrollLockUntil || 0);
+        			var maxTop = Number(this.local.AutoScrollMaxTop);
+        			var scrollHeight = Number(detail.scrollHeight || 0);
+        			var contentHeight = Number(detail.contentHeight || detail.clientHeight || 0);
+        			var distanceToBottom = -1;
         			if (isNaN(previousTop)) {
         				previousTop = scrollTop;
         			}
         			if (isNaN(lockUntil)) {
         				lockUntil = 0;
         			}
+        			if (isNaN(maxTop)) {
+        				maxTop = scrollTop;
+        			}
+        			if (scrollHeight > 0 && contentHeight > 0) {
+        				distanceToBottom = scrollHeight - (scrollTop + contentHeight);
+        			}
         			this.local.LastScrollTop = scrollTop;
+        			if (scrollTop > maxTop) {
+        				this.local.AutoScrollMaxTop = scrollTop;
+        				maxTop = scrollTop;
+        			}
+        			var isGoingUp = scrollTop < (previousTop - 1);
+        			var isGoingDown = scrollTop > (previousTop + 1);
+        			if (this.local.AutoScrollEnabled !== false && isGoingUp) {
+        				this.local.AutoScrollEnabled = false;
+        				this.local.AutoScrollLockUntil = Date.now() + 250;
+        				this.tick();
+        				return;
+        			}
         			if (Date.now() < lockUntil) {
+        				return;
+        			}
+        			if (this.local.AutoScrollEnabled === false) {
+        				var nearBottom = false;
+        				if (distanceToBottom >= 0) {
+        					nearBottom = distanceToBottom <= 24;
+        				} else {
+        					nearBottom = scrollTop >= (maxTop - 24);
+        				}
+        				if (nearBottom && (isGoingDown || scrollTop >= (maxTop - 2))) {
+        					this.local.AutoScrollEnabled = true;
+        					this.local.AutoScrollLockUntil = Date.now() + 300;
+        					this.tick();
+        				}
         				return;
         			}
         			if ((previousTop - scrollTop) > 10 && this.local.AutoScrollEnabled !== false) {
@@ -212,6 +264,7 @@ scriptContent:
         				this.local = {};
         			}
         			this.local.EnableChat = enable;
+        			this.syncFooterPlaceholder();
         			try {
         				if (this.chatfooter && this.chatfooter.setEnable) {
         					this.chatfooter.setEnable(enable);
@@ -331,7 +384,7 @@ title: Component assistant
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-title-sub
+                - MobileSmartSourceType: plain:modern-title-sub modern-title-sub-project
           ↓Text [ngx.components.UIText-1774701000020]: 
             i18n: true
             textValue: 
@@ -1986,6 +2039,20 @@ title: Component assistant
       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
       - com.twinsoft.convertigo.beans.common.FormatedContent: 
         →: |
-          '/* Shared styles moved to Application AssistantStyle (mobileNgxApp).
-          */
+          'ion-header.modern-header ion-title,
+          ion-header.modern-header .modern-title-wrap {
+            min-width: 0;
+          }
+          
+          @media (max-width: 768px) {
+            ion-header.modern-header .modern-title-sub.modern-title-sub-project {
+              display: block !important;
+              font-size: 10px;
+              line-height: 14px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              max-width: 100%;
+            }
+          }
           '

@@ -48,14 +48,50 @@ scriptContent:
         			var scrollTop = Number(detail.scrollTop || 0);
         			var previousTop = Number(this.local.LastScrollTop);
         			var lockUntil = Number(this.local.AutoScrollLockUntil || 0);
+        			var maxTop = Number(this.local.AutoScrollMaxTop);
+        			var scrollHeight = Number(detail.scrollHeight || 0);
+        			var contentHeight = Number(detail.contentHeight || detail.clientHeight || 0);
+        			var distanceToBottom = -1;
         			if (isNaN(previousTop)) {
         				previousTop = scrollTop;
         			}
         			if (isNaN(lockUntil)) {
         				lockUntil = 0;
         			}
+        			if (isNaN(maxTop)) {
+        				maxTop = scrollTop;
+        			}
+        			if (scrollHeight > 0 && contentHeight > 0) {
+        				distanceToBottom = scrollHeight - (scrollTop + contentHeight);
+        			}
         			this.local.LastScrollTop = scrollTop;
+        			if (scrollTop > maxTop) {
+        				this.local.AutoScrollMaxTop = scrollTop;
+        				maxTop = scrollTop;
+        			}
+        			var isGoingUp = scrollTop < (previousTop - 1);
+        			var isGoingDown = scrollTop > (previousTop + 1);
+        			if (this.local.AutoScrollEnabled !== false && isGoingUp) {
+        				this.local.AutoScrollEnabled = false;
+        				this.local.AutoScrollLockUntil = Date.now() + 250;
+        				this.tick();
+        				return;
+        			}
         			if (Date.now() < lockUntil) {
+        				return;
+        			}
+        			if (this.local.AutoScrollEnabled === false) {
+        				var nearBottom = false;
+        				if (distanceToBottom >= 0) {
+        					nearBottom = distanceToBottom <= 24;
+        				} else {
+        					nearBottom = scrollTop >= (maxTop - 24);
+        				}
+        				if (nearBottom && (isGoingDown || scrollTop >= (maxTop - 2))) {
+        					this.local.AutoScrollEnabled = true;
+        					this.local.AutoScrollLockUntil = Date.now() + 300;
+        					this.tick();
+        				}
         				return;
         			}
         			if ((previousTop - scrollTop) > 10 && this.local.AutoScrollEnabled !== false) {

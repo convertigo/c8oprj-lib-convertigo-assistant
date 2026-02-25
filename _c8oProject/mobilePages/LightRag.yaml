@@ -129,6 +129,11 @@ scriptContent:
         					this.local = {};
         				}
         				this.ensureFooterInputs();
+        				if (this.local.ProcessingWatchdogId) {
+        					window.clearTimeout(this.local.ProcessingWatchdogId);
+        				}
+        				this.local.ProcessingWatchdogId = null;
+        				this.local.ProcessingToken = null;
         				if (this.local.Buffer && this.local.Buffer.intId) {
         					window.clearInterval(this.local.Buffer.intId);
         				}
@@ -164,14 +169,50 @@ scriptContent:
         				var scrollTop = Number(detail.scrollTop || 0);
         				var previousTop = Number(this.local.LastScrollTop);
         				var lockUntil = Number(this.local.AutoScrollLockUntil || 0);
+        				var maxTop = Number(this.local.AutoScrollMaxTop);
+        				var scrollHeight = Number(detail.scrollHeight || 0);
+        				var contentHeight = Number(detail.contentHeight || detail.clientHeight || 0);
+        				var distanceToBottom = -1;
         				if (isNaN(previousTop)) {
         					previousTop = scrollTop;
         				}
         				if (isNaN(lockUntil)) {
         					lockUntil = 0;
         				}
+        				if (isNaN(maxTop)) {
+        					maxTop = scrollTop;
+        				}
+        				if (scrollHeight > 0 && contentHeight > 0) {
+        					distanceToBottom = scrollHeight - (scrollTop + contentHeight);
+        				}
         				this.local.LastScrollTop = scrollTop;
+        				if (scrollTop > maxTop) {
+        					this.local.AutoScrollMaxTop = scrollTop;
+        					maxTop = scrollTop;
+        				}
+        				var isGoingUp = scrollTop < (previousTop - 1);
+        				var isGoingDown = scrollTop > (previousTop + 1);
+        				if (this.local.AutoScrollEnabled !== false && isGoingUp) {
+        					this.local.AutoScrollEnabled = false;
+        					this.local.AutoScrollLockUntil = Date.now() + 250;
+        					this.tick();
+        					return;
+        				}
         				if (Date.now() < lockUntil) {
+        					return;
+        				}
+        				if (this.local.AutoScrollEnabled === false) {
+        					var nearBottom = false;
+        					if (distanceToBottom >= 0) {
+        						nearBottom = distanceToBottom <= 24;
+        					} else {
+        						nearBottom = scrollTop >= (maxTop - 24);
+        					}
+        					if (nearBottom && (isGoingDown || scrollTop >= (maxTop - 2))) {
+        						this.local.AutoScrollEnabled = true;
+        						this.local.AutoScrollLockUntil = Date.now() + 300;
+        						this.tick();
+        					}
         					return;
         				}
         				if ((previousTop - scrollTop) > 10 && this.local.AutoScrollEnabled !== false) {
@@ -543,7 +584,7 @@ title: Title for LightRag
       '{
        "ionBean": "SetLocalAction",
        "Property": "plain:EnableChat",
-       "Value": "script:!(this.global && this.global.studio)"
+       "Value": "script:true"
       }'
   ↓spinner [ngx.components.UIDynamicAction-1771949749172]: 
     beanData: |
@@ -1382,6 +1423,9 @@ title: Title for LightRag
             - com.twinsoft.convertigo.beans.common.FormatedContent: 
               →: |
                 '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                		if (!this.local) {
+                			this.local = {};
+                		}
                 		var message = ('''' + (vars.message || '''')).trim();
                 		if (this.local && this.local.IsProcessing === true) {
                 			resolve(null);
@@ -1405,6 +1449,35 @@ title: Title for LightRag
                 		this.local.AutoScrollEnabled = true;
                 		this.local.AutoScrollLockUntil = Date.now() + 1400;
                 		this.local.IsProcessing = true;
+                		var processingToken = Date.now() + ''-'' + Math.floor(Math.random() * 1000000);
+                		this.local.ProcessingToken = processingToken;
+                		if (this.local.ProcessingWatchdogId) {
+                			window.clearTimeout(this.local.ProcessingWatchdogId);
+                		}
+                		this.local.ProcessingWatchdogId = window.setTimeout(function() {
+                			try {
+                				if (!page.local) {
+                					return;
+                				}
+                				if (page.local.IsProcessing !== true) {
+                					return;
+                				}
+                				if (page.local.ProcessingToken !== processingToken) {
+                					return;
+                				}
+                				if (page.local.Buffer && page.local.Buffer.intId) {
+                					window.clearInterval(page.local.Buffer.intId);
+                				}
+                				page.local.Buffer = {};
+                				page.local.StreamingIndex = null;
+                				page.local.IsProcessing = false;
+                				page.local.spinner = false;
+                				page.local.ProcessingWatchdogId = null;
+                				page.local.ProcessingToken = null;
+                				page.c8o.log.warn(''[MB] Processing watchdog released blocked input state'');
+                				page.tick();
+                			} catch (e) {}
+                		}, 90000);
                 		page.tick();
                 		
                 		var history = [];
@@ -1580,10 +1653,15 @@ title: Title for LightRag
                       		if (this.local.Buffer && this.local.Buffer.intId) {
                       			window.clearInterval(this.local.Buffer.intId);
                       		}
+                      		if (this.local.ProcessingWatchdogId) {
+                      			window.clearTimeout(this.local.ProcessingWatchdogId);
+                      		}
                       		if (!this.local.Buffer) {
                       			this.local.Buffer = {};
                       		}
                       		this.local.Buffer.intId = null;
+                      		this.local.ProcessingWatchdogId = null;
+                      		this.local.ProcessingToken = null;
                       		this.local.IsProcessing = false;
                       		page.tick();
                       		resolve();
@@ -1626,6 +1704,11 @@ title: Title for LightRag
                         		target.writing = false;
                         		this.local.StreamingIndex = null;
                         		this.local.Buffer = {};
+                        		if (this.local.ProcessingWatchdogId) {
+                        			window.clearTimeout(this.local.ProcessingWatchdogId);
+                        		}
+                        		this.local.ProcessingWatchdogId = null;
+                        		this.local.ProcessingToken = null;
                         		this.local.IsProcessing = false;
                         		page.tick();
                         		page.scrollChatBottom(0);
@@ -1685,6 +1768,11 @@ title: Title for LightRag
                         		target.writing = false;
                         		this.local.StreamingIndex = null;
                         		this.local.Buffer = {};
+                        		if (this.local.ProcessingWatchdogId) {
+                        			window.clearTimeout(this.local.ProcessingWatchdogId);
+                        		}
+                        		this.local.ProcessingWatchdogId = null;
+                        		this.local.ProcessingToken = null;
                         		this.local.IsProcessing = false;
                         		page.tick();
                         		page.scrollChatBottom(0);
