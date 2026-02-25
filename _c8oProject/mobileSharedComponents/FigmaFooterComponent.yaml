@@ -357,6 +357,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:figma-drop-title
           ↓Text [ngx.components.UIText-1781100000219]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -371,6 +372,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:figma-drop-subtitle
           ↓Text [ngx.components.UIText-1781100000222]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -385,6 +387,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:figma-drop-hint
           ↓Text [ngx.components.UIText-1781100000225]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -435,14 +438,20 @@ scriptContent:
         →: |
           ':host {
             display: block;
+            --figma-drop-border: var(--modern-border, #1e293b);
+            --figma-drop-bg: var(--modern-surface, #0f172a);
+            --figma-drop-bg-dragging: color-mix(in srgb, var(--modern-cyan, #06b6d4) 10%, var(--modern-surface, #0f172a) 90%);
+            --figma-drop-hover-border: color-mix(in srgb, var(--modern-cyan, #06b6d4) 45%, var(--modern-border, #1e293b) 55%);
           }
           
           .figma-footer-toolbar {
-            --background: transparent;
+            --background: var(--modern-surface-soft, rgba(15, 23, 42, 0.5));
+            --color: var(--modern-muted, #94a3b8);
             --padding-start: 0;
             --padding-end: 0;
             --min-height: auto;
             padding: 0;
+            border-top: 1px solid var(--modern-border, #1e293b);
           }
           
           .figma-drop-button {
@@ -459,7 +468,7 @@ scriptContent:
             --box-shadow: none;
             --border-radius: 16px;
             text-transform: none;
-            color: inherit;
+            color: var(--modern-text, #f1f5f9);
           }
           
           .figma-drop-button::part(native) {
@@ -467,19 +476,20 @@ scriptContent:
             min-height: 123px;
             padding: 2px;
             border-radius: 16px;
-            border: 2px dashed #1e293b;
-            background: #0f172a;
+            border: 2px dashed var(--figma-drop-border);
+            background: var(--figma-drop-bg);
             box-shadow: none;
             justify-content: center;
             align-items: center;
-            &:hover{
-          	border-color: #06b6d480;
-            }
+          }
+          .figma-drop-button:hover::part(native),
+          .figma-drop-button:focus-visible::part(native) {
+            border-color: var(--figma-drop-hover-border);
           }
           
           .figma-drop-button.figma-drop-button-dragging::part(native) {
-            border-color: #06b6d4;
-            background: #12203a;
+            border-color: var(--modern-cyan, #06b6d4);
+            background: var(--figma-drop-bg-dragging);
           }
           
           .figma-drop-content {
@@ -497,6 +507,7 @@ scriptContent:
             height: 56px;
             border-radius: 14px;
             background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+            border: 1px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 25%, var(--modern-border, #1e293b) 75%);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -504,7 +515,7 @@ scriptContent:
           }
           
           .figma-drop-icon {
-            color: #06b6d4;
+            color: var(--modern-cyan, #06b6d4);
             font-size: 28px;
           }
           
@@ -525,7 +536,7 @@ scriptContent:
           }
           
           .figma-drop-title {
-            color: #f1f5f9;
+            color: var(--modern-text, #f1f5f9);
             font-size: 18px;
             font-weight: 500;
             line-height: 27px;
@@ -533,14 +544,14 @@ scriptContent:
           }
           
           .figma-drop-subtitle {
-            color: #94a3b8;
+            color: var(--modern-muted, #94a3b8);
             font-size: 14px;
             line-height: 20px;
             letter-spacing: -0.1504px;
           }
           
           .figma-drop-hint {
-            color: #94a3b8;
+            color: var(--modern-muted, #94a3b8);
             font-size: 12px;
             line-height: 16px;
           }

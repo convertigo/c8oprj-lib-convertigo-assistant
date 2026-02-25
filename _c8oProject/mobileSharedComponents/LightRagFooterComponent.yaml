@@ -136,14 +136,26 @@ scriptContent:
         		this.attachInputChangeHandler = null;
         	}
         	
+        	t(key, fallback) {
+        		try {
+        			if (this.translate && this.translate.instant) {
+        				var translated = '''' + this.translate.instant(key);
+        				if (translated && translated !== key) {
+        					return translated;
+        				}
+        			}
+        		} catch (e) {}
+        		return '''' + (fallback == null ? key : fallback);
+        	}
+        	
         	getDefaultSuggestions() {
         		return [
-        			{ label: ''REST/SOAP web service'', question: ''How do I consume a REST or SOAP web service?'', icon: ''code-slash-outline'' },
-        			{ label: ''Center a button'', question: ''How can I create a button centered on a page?'', icon: ''move-outline'' },
-        			{ label: ''Call backend sequence'', question: ''How do I call a backend sequence from a UI component?'', icon: ''git-network-outline'' },
-        			{ label: ''Connect to database'', question: ''How can I connect to a database or an external API?'', icon: ''server-outline'' },
-        			{ label: ''Handle authentication'', question: ''How do I handle authentication, variables, or events?'', icon: ''lock-closed-outline'' },
-        			{ label: ''Responsive design'', question: ''How do I design responsive pages or reusable components?'', icon: ''phone-portrait-outline'' }
+        			{ label: this.t(''HowTo_Suggestion_1_Label'', ''REST/SOAP web service''), question: this.t(''HowTo_Suggestion_1_Question'', ''How do I consume a REST or SOAP web service?''), icon: ''code-slash-outline'' },
+        			{ label: this.t(''HowTo_Suggestion_2_Label'', ''Center a button''), question: this.t(''HowTo_Suggestion_2_Question'', ''How can I create a button centered on a page?''), icon: ''move-outline'' },
+        			{ label: this.t(''HowTo_Suggestion_3_Label'', ''Call backend sequence''), question: this.t(''HowTo_Suggestion_3_Question'', ''How do I call a backend sequence from a UI component?''), icon: ''git-network-outline'' },
+        			{ label: this.t(''HowTo_Suggestion_4_Label'', ''Connect to database''), question: this.t(''HowTo_Suggestion_4_Question'', ''How can I connect to a database or an external API?''), icon: ''server-outline'' },
+        			{ label: this.t(''HowTo_Suggestion_5_Label'', ''Handle authentication''), question: this.t(''HowTo_Suggestion_5_Question'', ''How do I handle authentication, variables, or events?''), icon: ''lock-closed-outline'' },
+        			{ label: this.t(''HowTo_Suggestion_6_Label'', ''Responsive design''), question: this.t(''HowTo_Suggestion_6_Question'', ''How do I design responsive pages or reusable components?''), icon: ''phone-portrait-outline'' }
         		];
         	}
         	
@@ -259,7 +271,7 @@ scriptContent:
         	getPlaceholder() {
         		var text = '''' + (this.Placeholder == null ? '''' : this.Placeholder);
         		text = text.trim();
-        		return text.length ? text : ''Ask how to build something...'';
+        		return text.length ? text : this.t(''Question_Placeholder'', ''Ask how to build something...'');
         	}
         	
         	setEnable(enable) {
@@ -1009,6 +1021,7 @@ scriptContent:
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:modern-suggestions-label
       ↓Text [ngx.components.UIText-1772100000110]: 
+        i18n: true
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1058,6 +1071,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-suggestion-icon
         ↓Text [ngx.components.UIText-1772100000115]: 
+          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1107,6 +1121,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-suggestion-icon
         ↓Text [ngx.components.UIText-1772100000118]: 
+          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1156,6 +1171,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-suggestion-icon
         ↓Text [ngx.components.UIText-1772100000121]: 
+          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1205,6 +1221,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-suggestion-icon
         ↓Text [ngx.components.UIText-1772100000227]: 
+          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1254,6 +1271,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-suggestion-icon
         ↓Text [ngx.components.UIText-1772100000230]: 
+          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1303,6 +1321,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-suggestion-icon
         ↓Text [ngx.components.UIText-1772100000233]: 
+          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1404,6 +1423,7 @@ scriptContent:
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:modern-selected-image-name
               ↓Text [ngx.components.UIText-1776301000016]: 
+                i18n: true
                 textValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1491,6 +1511,7 @@ scriptContent:
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:modern-selected-attachment-text
               ↓Value [ngx.components.UIText-1776301000028]: 
+                i18n: true
                 textValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1855,6 +1876,7 @@ scriptContent:
       beanData: '{"ionBean":"Paragraph"}'
       tagName: p
       ↓Text [ngx.components.UIText-1772100000142]: 
+        i18n: true
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1863,6 +1885,7 @@ scriptContent:
       beanData: '{"ionBean":"Paragraph"}'
       tagName: p
       ↓Text [ngx.components.UIText-1772100000144]: 
+        i18n: true
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1943,30 +1966,9 @@ scriptContent:
             font-weight: 500;
             margin: 0;
             flex: 0 0 auto;
-          }
-          
-          .modern-suggestion-btn-s1 {
-            width: 180.781px;
-          }
-          
-          .modern-suggestion-btn-s2 {
-            width: 132.578px;
-          }
-          
-          .modern-suggestion-btn-s3 {
-            width: 175.672px;
-          }
-          
-          .modern-suggestion-btn-s4 {
-            width: 162.313px;
-          }
-          
-          .modern-suggestion-btn-s5 {
-            width: 169.25px;
-          }
-          
-          .modern-suggestion-btn-s6 {
-            width: 150.063px;
+            //min-width: 196px;
+            width: max-content;
+            max-width: none;
           }
           
           .modern-suggestion-btn::part(native) {
@@ -1975,9 +1977,14 @@ scriptContent:
             background: var(--modern-surface);
             color: var(--modern-text);
             box-shadow: none;
-            padding: 1px 11px;
+            padding: 1px 13px;
             gap: 6px;
             line-height: 16px;
+            white-space: nowrap;
+            width: max-content;
+            max-width: none;
+            overflow: visible;
+            text-overflow: clip;
           }
           
           .modern-suggestion-icon {
@@ -2284,7 +2291,7 @@ scriptContent:
 ↓Suggestions [ngx.components.UICompVariable-1775800000113]: 
   value: null
 ↓Placeholder [ngx.components.UICompVariable-1775800000114]: 
-  value: '''Ask how to build something...'''
+  value: null
 ↓EnableAssetInputs [ngx.components.UICompVariable-1776201000029]: 
   value: false
 ↓EnableAttachmentInputs [ngx.components.UICompVariable-1776401000001]: 

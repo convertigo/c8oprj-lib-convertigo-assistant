@@ -60,6 +60,72 @@ componentScriptContent:
         				
         			/*End_c8o_AppInitialization*/
         /*Begin_c8o_AppFunction*/
+        	getUrlDarkThemeOverride() {
+        		try {
+        			if (!(window && window.location)) {
+        				return null;
+        			}
+        			
+        			var queryChunks = [];
+        			var search = String(window.location.search == null ? "" : window.location.search);
+        			if (search.length) {
+        				if (search.charAt(0) === ''?'') {
+        					search = search.substring(1);
+        				}
+        				queryChunks.push(search);
+        			}
+        			
+        			var hash = String(window.location.hash == null ? "" : window.location.hash);
+        			var qIndex = hash.indexOf(''?'');
+        			if (qIndex >= 0 && qIndex < hash.length - 1) {
+        				queryChunks.push(hash.substring(qIndex + 1));
+        			}
+        			
+        			var rawQuery = queryChunks.join(''&'');
+        			if (!rawQuery.length) {
+        				return null;
+        			}
+        			
+        			var parts = rawQuery.split(''&'');
+        			for (var i = 0; i < parts.length; i++) {
+        				var part = '''' + parts[i];
+        				if (!part.length) {
+        					continue;
+        				}
+        				var eq = part.indexOf(''='');
+        				var rawKey = eq >= 0 ? part.substring(0, eq) : part;
+        				var rawValue = eq >= 0 ? part.substring(eq + 1) : '''';
+        				var key = '''';
+        				var value = '''';
+        				
+        				try {
+        					key = decodeURIComponent(('''' + rawKey).replace(/\+/g, ''%20''));
+        				} catch (e1) {
+        					key = '''' + rawKey;
+        				}
+        				try {
+        					value = decodeURIComponent(('''' + rawValue).replace(/\+/g, ''%20''));
+        				} catch (e2) {
+        					value = '''' + rawValue;
+        				}
+        				
+        				key = ('''' + key).trim().toLowerCase();
+        				if (key !== ''dark-theme'') {
+        					continue;
+        				}
+        				
+        				value = ('''' + value).trim().toLowerCase();
+        				if (value === ''1'' || value === ''true'' || value === ''dark'') {
+        					return true;
+        				}
+        				if (value === ''0'' || value === ''false'' || value === ''light'') {
+        					return false;
+        				}
+        				return null;
+        			}
+        		} catch (e3) {}
+        		return null;
+        	}
         	/*End_c8o_AppFunction*/
         '
 tplProjectName: mobilebuilder_tpl_8_4_0_ngx
@@ -145,6 +211,8 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
        "emitResizeWhenApply": "plain:true"
       }'
     comment: Restores and applies the persisted theme preference
+    ↓PublishEvent [ngx.components.UIDynamicAction-1772036299092]: 
+      beanData: '{"ionBean":"PublishEventAction","topic":"plain:ThemeSet"}'
   ↓SetLanguage [ngx.components.UIDynamicAction-1771929741651]: 
     beanData: |
       '{

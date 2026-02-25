@@ -54,15 +54,36 @@ scriptContent:
         /*Begin_c8o_PageFinalization*/
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
+        		t(key, fallback) {
+        			try {
+        				if (this.translate && this.translate.instant) {
+        					var translated = '''' + this.translate.instant(key);
+        					if (translated && translated !== key) {
+        						return translated;
+        					}
+        				}
+        			} catch (e) {}
+        			return '''' + (fallback == null ? key : fallback);
+        		}
+        		
         		getDefaultFooterSuggestions() {
         			return [
-        				{ label: ''REST/SOAP web service'', question: ''How do I consume a REST or SOAP web service?'', icon: ''code-slash-outline'' },
-        				{ label: ''Center a button'', question: ''How can I create a button centered on a page?'', icon: ''move-outline'' },
-        				{ label: ''Call backend sequence'', question: ''How do I call a backend sequence from a UI component?'', icon: ''git-network-outline'' },
-        				{ label: ''Connect to database'', question: ''How can I connect to a database or an external API?'', icon: ''server-outline'' },
-        				{ label: ''Handle authentication'', question: ''How do I handle authentication, variables, or events?'', icon: ''lock-closed-outline'' },
-        				{ label: ''Responsive design'', question: ''How do I design responsive pages or reusable components?'', icon: ''phone-portrait-outline'' }
+        				{ label: this.t(''HowTo_Suggestion_1_Label'', ''REST/SOAP web service''), question: this.t(''HowTo_Suggestion_1_Question'', ''How do I consume a REST or SOAP web service?''), icon: ''code-slash-outline'' },
+        				{ label: this.t(''HowTo_Suggestion_2_Label'', ''Center a button''), question: this.t(''HowTo_Suggestion_2_Question'', ''How can I create a button centered on a page?''), icon: ''move-outline'' },
+        				{ label: this.t(''HowTo_Suggestion_3_Label'', ''Call backend sequence''), question: this.t(''HowTo_Suggestion_3_Question'', ''How do I call a backend sequence from a UI component?''), icon: ''git-network-outline'' },
+        				{ label: this.t(''HowTo_Suggestion_4_Label'', ''Connect to database''), question: this.t(''HowTo_Suggestion_4_Question'', ''How can I connect to a database or an external API?''), icon: ''server-outline'' },
+        				{ label: this.t(''HowTo_Suggestion_5_Label'', ''Handle authentication''), question: this.t(''HowTo_Suggestion_5_Question'', ''How do I handle authentication, variables, or events?''), icon: ''lock-closed-outline'' },
+        				{ label: this.t(''HowTo_Suggestion_6_Label'', ''Responsive design''), question: this.t(''HowTo_Suggestion_6_Question'', ''How do I design responsive pages or reusable components?''), icon: ''phone-portrait-outline'' }
         			];
+        		}
+        		
+        		refreshFooterLocale() {
+        			if (!this.local) {
+        				this.local = {};
+        			}
+        			this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
+        			this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
+        			this.tick();
         		}
         		
         		ensureFooterInputs() {
@@ -74,7 +95,7 @@ scriptContent:
         			}
         			var placeholder = '''' + (this.local.QuestionPlaceholder == null ? '''' : this.local.QuestionPlaceholder);
         			if (!placeholder.trim().length) {
-        				this.local.QuestionPlaceholder = ''Ask how to build something...'';
+        				this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
         			}
         			if (this.local.EnableVisionForPage == null) {
         				this.local.EnableVisionForPage = false;
@@ -554,6 +575,19 @@ title: Title for LightRag
             		page.scrollChatBottom(280, true);
             		resolve();
             
+  ↓GetTheme [ngx.components.UIDynamicAction-1772036448683]: 
+    beanData: '{"ionBean":"GetThemeAction","emitResizeWhenApply":"plain:true"}'
+    comment: Restores and applies the persisted theme preference
+    ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036465132]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              		page.refreshFooterLocale();
+              		page.ref.detectChanges();
+              		resolve();
+              
 ↓Subscribe_EnableChat [ngx.components.UIEventSubscriber-1771949749178]: 
   topic: JavaMessage
   ↓EnableChat [ngx.components.UICustomAction-1771949749181]: 
@@ -630,6 +664,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-title-main
           ↓Text [ngx.components.UIText-1772100000015]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -644,6 +679,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-title-sub
           ↓Text [ngx.components.UIText-1772100000018]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -764,6 +800,15 @@ title: Title for LightRag
                "globalProperty": "plain:currentLanguage"
               }'
             comment: Persists and applies the selected language
+            ↓RefreshFooterLocale [ngx.components.UICustomAction-1782803000102]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.refreshFooterLocale();
+                      		resolve();
+                      
         ↓LangEN [ngx.components.UIDynamicElement-1771937738015]: 
           beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
           comment: English language option
@@ -867,6 +912,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-intro-title
           ↓Text [ngx.components.UIText-1782600000228]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -881,6 +927,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-copy
           ↓Text [ngx.components.UIText-1782600000231]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -895,6 +942,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-copy
           ↓Text [ngx.components.UIText-1782600000234]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -921,6 +969,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-card-title
             ↓Text [ngx.components.UIText-1782600000240]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -935,6 +984,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1782600000243]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -949,6 +999,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1782600000264]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -963,6 +1014,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1782600000267]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -977,6 +1029,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1782600000270]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -991,6 +1044,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1782600000273]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1005,6 +1059,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1782600000246]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1019,6 +1074,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1782600000249]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1033,6 +1089,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1782600000252]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1047,6 +1104,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1782600000276]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1073,6 +1131,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-card-title
             ↓Text [ngx.components.UIText-1782600000258]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1087,6 +1146,7 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1782600000261]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType

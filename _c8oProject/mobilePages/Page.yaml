@@ -50,15 +50,36 @@ scriptContent:
         		return this.threadid === this.local.Conversation;
         	}
         	
+        	t(key, fallback) {
+        		try {
+        			if (this.translate && this.translate.instant) {
+        				var translated = '''' + this.translate.instant(key);
+        				if (translated && translated !== key) {
+        					return translated;
+        				}
+        			}
+        		} catch (e) {}
+        		return '''' + (fallback == null ? key : fallback);
+        	}
+        	
         	getDefaultFooterSuggestions() {
         		return [
-        			{ label: ''Login form'', question: ''Create a login form component with email/password validation, error messages, and submit loading state.'', icon: ''log-in-outline'' },
-        			{ label: ''Data table'', question: ''Create a reusable data table component with sorting, pagination, search, and row actions.'', icon: ''grid-outline'' },
-        			{ label: ''Dashboard cards'', question: ''Create KPI dashboard card components with icon, trend indicator, and responsive layout.'', icon: ''stats-chart-outline'' },
-        			{ label: ''File uploader'', question: ''Create a drag-and-drop file uploader component with progress, type validation, and preview list.'', icon: ''cloud-upload-outline'' },
-        			{ label: ''Modal dialog'', question: ''Create a reusable modal dialog component with title, content slot, and confirm/cancel actions.'', icon: ''browsers-outline'' },
-        			{ label: ''Step wizard'', question: ''Create a multi-step wizard component with stepper navigation, validation per step, and final summary.'', icon: ''list-outline'' }
+        			{ label: this.t(''Component_Suggestion_1_Label'', ''Login form''), question: this.t(''Component_Suggestion_1_Question'', ''Create a login form component with email/password validation, error messages, and submit loading state.''), icon: ''log-in-outline'' },
+        			{ label: this.t(''Component_Suggestion_2_Label'', ''Data table''), question: this.t(''Component_Suggestion_2_Question'', ''Create a reusable data table component with sorting, pagination, search, and row actions.''), icon: ''grid-outline'' },
+        			{ label: this.t(''Component_Suggestion_3_Label'', ''Dashboard cards''), question: this.t(''Component_Suggestion_3_Question'', ''Create KPI dashboard card components with icon, trend indicator, and responsive layout.''), icon: ''stats-chart-outline'' },
+        			{ label: this.t(''Component_Suggestion_4_Label'', ''File uploader''), question: this.t(''Component_Suggestion_4_Question'', ''Create a drag-and-drop file uploader component with progress, type validation, and preview list.''), icon: ''cloud-upload-outline'' },
+        			{ label: this.t(''Component_Suggestion_5_Label'', ''Modal dialog''), question: this.t(''Component_Suggestion_5_Question'', ''Create a reusable modal dialog component with title, content slot, and confirm/cancel actions.''), icon: ''browsers-outline'' },
+        			{ label: this.t(''Component_Suggestion_6_Label'', ''Step wizard''), question: this.t(''Component_Suggestion_6_Question'', ''Create a multi-step wizard component with stepper navigation, validation per step, and final summary.''), icon: ''list-outline'' }
         		];
+        	}
+        	
+        	refreshFooterLocale() {
+        		if (!this.local) {
+        			this.local = {};
+        		}
+        		this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
+        		this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
+        		this.tick();
         	}
         	
         	ensureFooterInputs() {
@@ -70,7 +91,7 @@ scriptContent:
         		}
         		var placeholder = '''' + (this.local.QuestionPlaceholder == null ? '''' : this.local.QuestionPlaceholder);
         		if (!placeholder.trim().length) {
-        			this.local.QuestionPlaceholder = ''Ask how to build something...'';
+        			this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
         		}
         		this.local.EnableVisionForPage = false;
         	}
@@ -297,6 +318,7 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-title-main
           ↓Text [ngx.components.UIText-1774701000017]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -311,6 +333,7 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-title-sub
           ↓Text [ngx.components.UIText-1774701000020]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -487,6 +510,15 @@ title: Component assistant
                "storageKey": "plain:c8o-lang",
                "globalProperty": "plain:currentLanguage"
               }'
+            ↓RefreshFooterLocale [ngx.components.UICustomAction-1782803000101]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.refreshFooterLocale();
+                      		resolve();
+                      
         ↓LangEN [ngx.components.UIDynamicElement-1774703000018]: 
           beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
           tagName: ion-select-option
@@ -582,6 +614,7 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-intro-title
           ↓Text [ngx.components.UIText-1772100000038]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -596,6 +629,7 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-copy
           ↓Text [ngx.components.UIText-1772100000041]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -610,6 +644,7 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-copy
           ↓Text [ngx.components.UIText-1772100000044]: 
+            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -636,6 +671,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-card-title
             ↓Text [ngx.components.UIText-1772100000050]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -650,6 +686,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000053]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -664,6 +701,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1772100000203]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -678,6 +716,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1772100000206]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -692,6 +731,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1772100000209]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -706,6 +746,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000212]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -720,6 +761,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1772100000056]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -734,6 +776,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1772100000059]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -748,6 +791,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1772100000062]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -763,6 +807,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000215]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -789,6 +834,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-card-title
             ↓Text [ngx.components.UIText-1772100000098]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -803,6 +849,7 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000101]: 
+              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -1127,6 +1174,19 @@ title: Component assistant
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.CreateConversation","marker":""}],"path":"?.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+  ↓GetTheme [ngx.components.UIDynamicAction-1772036531066]: 
+    beanData: '{"ionBean":"GetThemeAction","emitResizeWhenApply":"plain:true"}'
+    comment: Restores and applies the persisted theme preference
+    ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              		page.refreshFooterLocale();
+              		page.ref.detectChanges();
+              		resolve();
+              
 ↓Subscribe_Handler [ngx.components.UIEventSubscriber-1744356866759]: 
   topic: AssistantResponse
   ↓AddAssistantMessages [ngx.components.UICustomAction-1744304995983]: 
