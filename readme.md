@@ -24,17 +24,10 @@ For more technical informations : [documentation](./project.md)
         - [Page](#page)
     - [Shared Components](#shared-components)
         - [AssistantMessageComponent](#assistantmessagecomponent)
-        - [AssitantMessage](#assitantmessage)
         - [FigmaFooterComponent](#figmafootercomponent)
-        - [FigmaInputComponent](#figmainputcomponent)
-        - [ImagePreviewer](#imagepreviewer)
         - [LightRagFooterComponent](#lightragfootercomponent)
-        - [LightRagInputComponent](#lightraginputcomponent)
         - [Markdown](#markdown)
         - [MdReader](#mdreader)
-        - [QuestionInputComponent](#questioninputcomponent)
-        - [TypeWriterComponent](#typewritercomponent)
-        - [UserMessage](#usermessage)
         - [UserMessageComponent](#usermessagecomponent)
 
 
@@ -124,19 +117,6 @@ AI Component Assistant Page
 </tr>
 </table>
 
-#### AssitantMessage
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>Text</td><td></td>
-</tr>
-</table>
-
 #### FigmaFooterComponent
 
 **variables**
@@ -167,52 +147,6 @@ AI Component Assistant Page
 </tr>
 <tr>
 <td>RunQuestion</td><td></td>
-</tr>
-</table>
-
-#### FigmaInputComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>Files</td><td></td>
-</tr>
-<tr>
-<td>Question</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>FilesAdded</td><td></td>
-</tr>
-<tr>
-<td>RunQuestion</td><td></td>
-</tr>
-</table>
-
-#### ImagePreviewer
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>file</td><td></td>
-</tr>
-<tr>
-<td>Files</td><td></td>
 </tr>
 </table>
 
@@ -264,30 +198,6 @@ AI Component Assistant Page
 </tr>
 </table>
 
-#### LightRagInputComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>Question</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>RunQuestion</td><td></td>
-</tr>
-</table>
-
 #### Markdown
 
 **variables**
@@ -333,70 +243,6 @@ AI Component Assistant Page
 </tr>
 <tr>
 <td>ready</td><td></td>
-</tr>
-</table>
-
-#### QuestionInputComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>Files</td><td></td>
-</tr>
-<tr>
-<td>Question</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>FilesAdded</td><td></td>
-</tr>
-<tr>
-<td>RequestCapture</td><td></td>
-</tr>
-<tr>
-<td>RunQuestion</td><td></td>
-</tr>
-</table>
-
-#### TypeWriterComponent
-
--- AI generated: thread_zyoWPdeukv4cHqxxXKCz6Dbh---
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>speed</td><td></td>
-</tr>
-<tr>
-<td>text</td><td></td>
-</tr>
-</table>
-
-#### UserMessage
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>Text</td><td></td>
 </tr>
 </table>
 
