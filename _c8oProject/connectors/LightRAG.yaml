@@ -1,5 +1,6 @@
-port: 9621
-server: 51.77.17.146
+https: true
+port: 443
+server: ${assistant.lrag.host.url}
 ↓query_text [transactions.JsonHttpTransaction]: 
   ↑default: true
   comment: Query Text
@@ -30,7 +31,8 @@ server: 51.77.17.146
             - java.lang.String: 
               - ↑value: ${assistant.lrag.apikey.secret}
   httpVerb: POST
-  subDir: query
+  responseTimeout: 300
+  subDir: ${assistant.lrag.host.url}/query
   ↓Test_Case [core.TestCase]: 
     ↓__body [variables.TestCaseVariable-1767111929491]: 
       required: true
@@ -102,7 +104,7 @@ server: 51.77.17.146
             - java.lang.String: 
               - ↑value: ${assistant.lrag.apikey.secret}
   httpVerb: POST
-  subDir: query/stream
+  subDir: ${assistant.lrag.host.url}/query/stream
   ↓Test_Case [core.TestCase]: 
     ↓__body [variables.TestCaseVariable-1767112085428]: 
       required: true
