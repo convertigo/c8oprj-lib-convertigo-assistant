@@ -98,6 +98,9 @@ AI Component Assistant Page
 <td>message</td><td></td>
 </tr>
 <tr>
+<td>rawStreamTicker</td><td></td>
+</tr>
+<tr>
 <td>status</td><td></td>
 </tr>
 <tr>

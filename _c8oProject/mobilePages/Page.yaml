@@ -53,28 +53,28 @@ scriptContent:
         	t(key, fallback) {
         		try {
         			if (this.translate && this.translate.instant) {
-        				var translated = '''' + this.translate.instant(key);
+        				var translated = "" + this.translate.instant(key);
         				if (translated && translated !== key) {
         					return translated;
         				}
         			}
         		} catch (e) {}
-        		return '''' + (fallback == null ? key : fallback);
+        		return "" + (fallback == null ? key : fallback);
         	}
         	
         	getDefaultFooterSuggestions() {
         		return [
-        			{ label: this.t(''Component_Suggestion_1_Label'', ''Login form''), question: this.t(''Component_Suggestion_1_Question'', ''Create a login form component with email/password validation, error messages, and submit loading state.''), icon: ''log-in-outline'' },
-        			{ label: this.t(''Component_Suggestion_2_Label'', ''Data table''), question: this.t(''Component_Suggestion_2_Question'', ''Create a reusable data table component with sorting, pagination, search, and row actions.''), icon: ''grid-outline'' },
-        			{ label: this.t(''Component_Suggestion_3_Label'', ''Dashboard cards''), question: this.t(''Component_Suggestion_3_Question'', ''Create KPI dashboard card components with icon, trend indicator, and responsive layout.''), icon: ''stats-chart-outline'' },
-        			{ label: this.t(''Component_Suggestion_4_Label'', ''File uploader''), question: this.t(''Component_Suggestion_4_Question'', ''Create a drag-and-drop file uploader component with progress, type validation, and preview list.''), icon: ''cloud-upload-outline'' },
-        			{ label: this.t(''Component_Suggestion_5_Label'', ''Modal dialog''), question: this.t(''Component_Suggestion_5_Question'', ''Create a reusable modal dialog component with title, content slot, and confirm/cancel actions.''), icon: ''browsers-outline'' },
-        			{ label: this.t(''Component_Suggestion_6_Label'', ''Step wizard''), question: this.t(''Component_Suggestion_6_Question'', ''Create a multi-step wizard component with stepper navigation, validation per step, and final summary.''), icon: ''list-outline'' }
+        			{ label: this.t("Component_Suggestion_1_Label", "Login form"), question: this.t("Component_Suggestion_1_Question", "Create a login form component with email/password validation, error messages, and submit loading state."), icon: "log-in-outline" },
+        			{ label: this.t("Component_Suggestion_2_Label", "Data table"), question: this.t("Component_Suggestion_2_Question", "Create a reusable data table component with sorting, pagination, search, and row actions."), icon: "grid-outline" },
+        			{ label: this.t("Component_Suggestion_3_Label", "Dashboard cards"), question: this.t("Component_Suggestion_3_Question", "Create KPI dashboard card components with icon, trend indicator, and responsive layout."), icon: "stats-chart-outline" },
+        			{ label: this.t("Component_Suggestion_4_Label", "File uploader"), question: this.t("Component_Suggestion_4_Question", "Create a drag-and-drop file uploader component with progress, type validation, and preview list."), icon: "cloud-upload-outline" },
+        			{ label: this.t("Component_Suggestion_5_Label", "Modal dialog"), question: this.t("Component_Suggestion_5_Question", "Create a reusable modal dialog component with title, content slot, and confirm/cancel actions."), icon: "browsers-outline" },
+        			{ label: this.t("Component_Suggestion_6_Label", "Step wizard"), question: this.t("Component_Suggestion_6_Question", "Create a multi-step wizard component with stepper navigation, validation per step, and final summary."), icon: "list-outline" }
         		];
         	}
         	
         	getNoProjectSelectedMessage() {
-        		return this.t(''Project_Select_Required'', ''Project: Please select an NGX project !'');
+        		return this.t("Project_Select_Required", "Project: Please select an NGX project !");
         	}
         	
         	syncFooterPlaceholder() {
@@ -85,9 +85,9 @@ scriptContent:
         			this.local.QuestionPlaceholder = this.getNoProjectSelectedMessage();
         			return;
         		}
-        		var placeholder = '''' + (this.local.QuestionPlaceholder == null ? '''' : this.local.QuestionPlaceholder);
+        		var placeholder = "" + (this.local.QuestionPlaceholder == null ? "" : this.local.QuestionPlaceholder);
         		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage()) {
-        			this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
+        			this.local.QuestionPlaceholder = this.t("Question_Placeholder", "Ask how to build something...");
         		}
         	}
         	
@@ -96,7 +96,7 @@ scriptContent:
         			this.local = {};
         		}
         		this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
-        		this.local.QuestionPlaceholder = this.t(''Question_Placeholder'', ''Ask how to build something...'');
+        		this.local.QuestionPlaceholder = this.t("Question_Placeholder", "Ask how to build something...");
         		this.syncFooterPlaceholder();
         		this.tick();
         	}
@@ -234,7 +234,7 @@ scriptContent:
         	}
         	
         	setSuggestion(question) {
-        		var text = '''' + (question == null ? '''' : question);
+        		var text = "" + (question == null ? "" : question);
         		try {
         			if (!this.local) {
         				this.local = {};
@@ -300,6 +300,10 @@ scriptContent:
         				break;
         			}
         			return "Project: " + heading;
+        		}
+        		
+        		public GetProjectSubtitle() {
+        			return this.getProjectSubtitle();
         		}
         		/*End_c8o_PageFunction*/
         '
@@ -479,10 +483,10 @@ title: Component assistant
                       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                         →: |
-                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                          		page.local.Question = '''';
+                          '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+                          		page.local.Question = "";
                           		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                          			page.chatfooter.setQuestionText('''', false);
+                          			page.chatfooter.setQuestionText("", false);
                           		}
                           		page.enableAutoScroll();
                           		resolve();
@@ -1010,6 +1014,11 @@ title: Component assistant
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:item.status || 'writing'
+              ↓rawStreamTicker [ngx.components.UIUseVariable-1772200844904]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:true
         ↓SpinnerWrap [ngx.components.UIDynamicElement-1773100000015]: 
           beanData: '{"ionBean":"DivTag"}'
           tagName: div
@@ -1254,10 +1263,10 @@ title: Component assistant
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-            		var status = '''' + (vars.status == null ? '''' : vars.status);
-            		var isCompleted = status === ''completed'';
-            		var isFailed = status === ''failed'' || status === ''cancelled'' || status === ''expired'';
+            '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+            		var status = "" + (vars.status == null ? "" : vars.status);
+            		var isCompleted = status === "completed";
+            		var isFailed = status === "failed" || status === "cancelled" || status === "expired";
             		if (!isCompleted && !isFailed) {
             			resolve();
             			return;
@@ -1268,7 +1277,7 @@ title: Component assistant
             		if (!target) {
             			var j = page.local.Messages ? page.local.Messages.length - 1 : -1;
             			for (; j >= 0; j--) {
-            				if (page.local.Messages[j] && page.local.Messages[j].type === ''assistant'' && page.local.Messages[j].writing === true) {
+            				if (page.local.Messages[j] && page.local.Messages[j].type === "assistant" && page.local.Messages[j].writing === true) {
             					target = page.local.Messages[j];
             					break;
             				}
@@ -1276,7 +1285,7 @@ title: Component assistant
             		}
             		if (!target) {
             			target = {
-            				type: ''assistant'',
+            				type: "assistant",
             				id: -1
             			};
             			if (!page.local.Messages) {
@@ -1286,28 +1295,28 @@ title: Component assistant
             		}
             		
             		var responseId = null;
-            		var finalMessage = '''';
+            		var finalMessage = "";
             		var parseMessage = function(candidate) {
             			if (candidate == null) {
-            				return '''';
+            				return "";
             			}
-            			if (typeof candidate === ''string'') {
+            			if (typeof candidate === "string") {
             				return candidate;
             			}
-            			if (candidate.text != null && ('''' + candidate.text).length) {
-            				return '''' + candidate.text;
+            			if (candidate.text != null && ("" + candidate.text).length) {
+            				return "" + candidate.text;
             			}
-            			if (candidate.msg != null && ('''' + candidate.msg).length) {
-            				return '''' + candidate.msg;
+            			if (candidate.msg != null && ("" + candidate.msg).length) {
+            				return "" + candidate.msg;
             			}
-            			if (candidate.response != null && ('''' + candidate.response).length) {
-            				return '''' + candidate.response;
+            			if (candidate.response != null && ("" + candidate.response).length) {
+            				return "" + candidate.response;
             			}
-            			return '''';
+            			return "";
             		};
             		
-            		if (vars.aiData && vars.aiData.explanation != null && ('''' + vars.aiData.explanation).trim().length) {
-            			finalMessage = '''' + vars.aiData.explanation;
+            		if (vars.aiData && vars.aiData.explanation != null && ("" + vars.aiData.explanation).trim().length) {
+            			finalMessage = "" + vars.aiData.explanation;
             		}
             		
             		var response = vars.response;
@@ -1318,7 +1327,7 @@ title: Component assistant
             			response = response.Message;
             		}
             		if (!finalMessage.length) {
-            			if (typeof response === ''string'') {
+            			if (typeof response === "string") {
             				finalMessage = response;
             			} else if (response && response.length != null) {
             				for (var i = 0; i < response.length; i++) {
@@ -1326,9 +1335,9 @@ title: Component assistant
             					if (!item) {
             						continue;
             					}
-            					var role = '''' + (item.role != null ? item.role : (item.type != null ? item.type : ''''));
+            					var role = "" + (item.role != null ? item.role : (item.type != null ? item.type : ""));
             					var text = parseMessage(item);
-            					if (role === ''assistant'' && text.length) {
+            					if (role === "assistant" && text.length) {
             						finalMessage = text;
             						if (item.id != null) {
             							responseId = item.id;
@@ -1344,35 +1353,35 @@ title: Component assistant
             		}
             		
             		if (!finalMessage.length) {
-            			finalMessage = '''' + (target.msg == null ? '''' : target.msg);
+            			finalMessage = "" + (target.msg == null ? "" : target.msg);
             		}
             		if (!finalMessage.length && page.local && page.local.Buffer && page.local.Buffer.content != null) {
-            			finalMessage = '''' + page.local.Buffer.content;
+            			finalMessage = "" + page.local.Buffer.content;
             		}
             		if (isFailed) {
-            			var failedPreview = '''' + (finalMessage == null ? '''' : finalMessage);
+            			var failedPreview = "" + (finalMessage == null ? "" : finalMessage);
             			var failedTrimmed = failedPreview.trim();
-            			if (!failedTrimmed.length || failedTrimmed.indexOf(''Sending data to the AI assistant'') === 0 || failedTrimmed.indexOf(''"JsonResponse"'') !== -1) {
-            				finalMessage = '''';
+            			if (!failedTrimmed.length || failedTrimmed.indexOf("Sending data to the AI assistant") === 0 || failedTrimmed.indexOf("\"JsonResponse\"") !== -1) {
+            				finalMessage = "";
             			}
             		}
             		if (!finalMessage.length && isFailed) {
-            			finalMessage = ''Assistant request failed ('' + (status.length ? status : ''unknown'') + ''). Please retry.'';
+            			finalMessage = "Assistant request failed (" + (status.length ? status : "unknown") + "). Please retry.";
             		}
             		if (finalMessage.length) {
             			target.msg = finalMessage;
             		}
-            		target.type = ''assistant'';
+            		target.type = "assistant";
             		target.id = responseId != null ? responseId : (target.id != null ? target.id : -1);
             		target.writing = false;
-            		target.status = '''';
+            		target.status = "";
             		if (!target.author) {
-            			target.author = ''Assistant'';
+            			target.author = "Assistant";
             		}
             		if (isFailed) {
-            			target.tag1 = ''Error'';
-            			target.tag2 = ''Run'';
-            			target.tag3 = status.length ? status : ''failed'';
+            			target.tag1 = "Error";
+            			target.tag2 = "Run";
+            			target.tag3 = status.length ? status : "failed";
             		}
             		page.local.StreamingIndex = null;
             		page.tick();
@@ -1434,7 +1443,7 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                 →: |
-                  '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                  '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                   		if (page.local.Buffer && page.local.Buffer.intId) {
                   			window.clearInterval(page.local.Buffer.intId);
                   		}
@@ -1493,7 +1502,7 @@ title: Component assistant
                     //				} catch (e) {}
                     //			}
                     			
-                    			window[''sendToHost'']({
+                    			window["sendToHost"]({
                     				type: vars.data.type,
                     				clipboard: vars.data.clipboard,
                     				threadid: vars.data.threadid
@@ -1528,7 +1537,7 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                 →: |
-                  '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                  '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                   		page.local.AIFiles = [];
                   		page.local.UploadImageCursor = 0;
                   		console.log("page.local.AIFiles", page.local.AIFiles);
@@ -1545,7 +1554,7 @@ title: Component assistant
                       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                         →: |
-                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                          '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                           		page.local.AIFiles.push(vars.file);
                           		console.log("page.local.AIFiles", page.local.AIFiles);
                           		resolve();
@@ -1561,13 +1570,13 @@ title: Component assistant
                       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                         →: |
-                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                          '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                           		var displayFile = null;
                           		var imageSnapshot = [];
                           		try {
-                          			var name = '''';
+                          			var name = "";
                           			if (vars.file && vars.file.filename != null) {
-                          				name = '''' + vars.file.filename;
+                          				name = "" + vars.file.filename;
                           			}
                           			var selectedImages = page.chatfooter && page.chatfooter.getImageFiles ? page.chatfooter.getImageFiles() : [];
                           			if (selectedImages && selectedImages.length != null) {
@@ -1577,7 +1586,7 @@ title: Component assistant
                           						continue;
                           					}
                           					imageSnapshot.push(current);
-                          					if (name.length && ('''' + current.name) === name) {
+                          					if (name.length && ("" + current.name) === name) {
                           						displayFile = current;
                           					}
                           				}
@@ -1625,7 +1634,7 @@ title: Component assistant
                       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                         →: |
-                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                          '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                           		this.local.Messages.push({
                           			id : -1,
                           			msg : vars.file.filename + " successfully uploaded",
@@ -1646,7 +1655,7 @@ title: Component assistant
                       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                         →: |
-                          '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                          '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                           		this.local.Messages.push({
                           			msg : ''<span class="red">**''+vars.file.error.message+''**'',
                           			type: "assistant",
@@ -1667,7 +1676,7 @@ title: Component assistant
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                        '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                         		console.log("iterate done !!")
                         		resolve();
                         '
@@ -1685,7 +1694,7 @@ title: Component assistant
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
                         '		try {
-                        			page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                        			page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                         			
                         			if (!page.local.Buffer) {
                         				page.local.Buffer = {};
@@ -1701,64 +1710,68 @@ title: Component assistant
                         				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
                         					"__context": "byside"
                         				}).async().then(function(r) {
-                        					var text = '''' + (r && r.C8OAiAssistantBuffer ? r.C8OAiAssistantBuffer : '''');
-                        					if (!text.length) {
+                        					var rawBuffer = r ? r.C8OAiAssistantBuffer : null;
+                        					if (rawBuffer == null) {
                         						return;
                         					}
+                        					var buffer = null;
+                        					if (typeof rawBuffer === "string") {
+                        						if (!rawBuffer.length) {
+                        							return;
+                        						}
+                        						try {
+                        							buffer = JSON.parse(rawBuffer);
+                        						} catch (e1) {
+                        							return;
+                        						}
+                        					} else if (typeof rawBuffer === "object") {
+                        						buffer = rawBuffer;
+                        					}
                         					try {
-                        						var buffer = JSON.parse(text);
                         						if (!buffer) {
                         							return;
                         						}
-                        						var previousRaw = '''' + ((page.local.Buffer && page.local.Buffer.lastRaw) ? page.local.Buffer.lastRaw : '''');
+                        						var previousChunk = "" + ((page.local.Buffer && page.local.Buffer.lastRaw) ? page.local.Buffer.lastRaw : "");
                         						page.local.Buffer = buffer;
                         						page.local.Buffer.intId = intervalId;
-                        						page.local.Buffer.lastRaw = previousRaw;
+                        						page.local.Buffer.lastRaw = previousChunk;
                         						
                         						var idx = page.local.StreamingIndex;
                         						if (idx != null && page.local.Messages && page.local.Messages[idx]) {
                         							var current = page.local.Messages[idx];
-                        							var content = '''';
+                        							var content = "";
                         							if (buffer.content != null) {
-                        								content = '''' + buffer.content;
+                        								content = "" + buffer.content;
                         							} else if (buffer.text != null) {
-                        								content = '''' + buffer.text;
+                        								content = "" + buffer.text;
                         							}
-                        							var currentText = '''' + (current.msg || '''');
-                        							var previousRaw = '''' + (page.local.Buffer.lastRaw || '''');
+                        							var currentText = "" + (current.msg || "");
                         							var part = content;
-                        							if (previousRaw.length && content.indexOf(previousRaw) === 0) {
-                        								part = content.substring(previousRaw.length);
-                        							} else if (content === previousRaw) {
-                        								part = '''';
+                        							if (previousChunk.length && content.indexOf(previousChunk) === 0) {
+                        								part = content.substring(previousChunk.length);
+                        							} else if (content === previousChunk) {
+                        								part = "";
                         							}
-                        							var preview = ('''' + content).trim();
-                        							var hideRawPayload = false;
-                        							if (!preview.length) {
-                        								hideRawPayload = true;
+                        							var preview = ("" + content).trim();
+                        							if (preview.indexOf("Sending data to the AI assistant") === 0) {
+                        								page.local.Buffer.lastRaw = content;
+                        								return;
                         							}
-                        							if (!hideRawPayload && preview.indexOf(''Sending data to the AI assistant'') === 0) {
-                        								hideRawPayload = true;
-                        							}
-                        							if (!hideRawPayload && (preview.indexOf(''{'') === 0 || preview.indexOf(''"JsonResponse"'') !== -1)) {
-                        								hideRawPayload = true;
-                        							}
-                        							if (!hideRawPayload && part.length) {
-                        								var partText = '''' + part;
-                        								if (/\.\.\.\s*$/.test(partText)) {
-                        									current.status = partText.trim();
+                        							if (part.length) {
+                        								if (/\.\.\.\s*$/.test(part)) {
+                        									current.status = part.trim();
                         								} else {
-                        									current.msg = currentText + partText;
-                        									current.status = ''writing'';
+                        									current.msg = currentText + part;
+                        									current.status = "writing";
                         								}
                         							} else if (/\.\.\.\s*$/.test(content)) {
-                        								current.status = ('''' + content).trim();
+                        								current.status = ("" + content).trim();
                         							} else {
-                        								current.status = ''writing'';
+                        								current.status = "writing";
                         							}
                         							page.local.Buffer.lastRaw = content;
                         							if (!current.status || !current.status.length) {
-                        								current.status = ''writing'';
+                        								current.status = "writing";
                         							}
                         							current.writing = true;
                         							page.tick();
@@ -1772,7 +1785,7 @@ title: Component assistant
                         			intervalId = window.setInterval(pullBuffer, 600);
                         			page.local.Buffer.intId = intervalId;
                         		} catch (e) {
-                        			page.c8o.log.warn(''[MB] ERROR : ''+ e.message);
+                        			page.c8o.log.warn("[MB] ERROR : " + e.message);
                         		} finally {
                         			return;
                         		}
@@ -1783,8 +1796,8 @@ title: Component assistant
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                        		var message = ('''' + (vars.message || '''')).trim();
+                        '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+                        		var message = ("" + (vars.message || "")).trim();
                         		if (this.local && this.local.IsProcessing === true) {
                         			resolve(null);
                         			return;
@@ -1797,22 +1810,19 @@ title: Component assistant
                         		var attachments = vars.attachments && vars.attachments.length != null ? vars.attachments : [];
                         		for (var a = 0; a < attachments.length; a++) {
                         			var file = attachments[a];
-                        			if (file && file.name != null && ('''' + file.name).trim().length) {
-                        				attachmentNames.push(('''' + file.name).trim());
+                        			if (file && file.name != null && ("" + file.name).trim().length) {
+                        				attachmentNames.push(("" + file.name).trim());
                         			}
                         		}
                         		var messageForDisplay = message;
                         		if (attachmentNames.length) {
-                        			messageForDisplay = message + ''\n\nAttached files:\n- '' + attachmentNames.join(''\n- '');
+                        			messageForDisplay = message + "\n\nAttached files:\n- " + attachmentNames.join("\n- ");
                         		}
                         		if (!this.local) {
                         			this.local = {};
                         		}
                         		if (!this.local.Messages) {
                         			this.local.Messages = [];
-                        		}
-                        		if (this.local.Buffer && this.local.Buffer.intId) {
-                        			window.clearInterval(this.local.Buffer.intId);
                         		}
                         		this.local.Buffer = {};
                         		this.local.StreamingIndex = null;
@@ -1821,31 +1831,31 @@ title: Component assistant
                         		this.local.IsProcessing = true;
                         		
                         		var now = new Date();
-                        		var hh = (''0'' + now.getHours()).slice(-2);
-                        		var mm = (''0'' + now.getMinutes()).slice(-2);
+                        		var hh = ("0" + now.getHours()).slice(-2);
+                        		var mm = ("0" + now.getMinutes()).slice(-2);
                         		
                         		this.local.Messages.push({
                         			msg: messageForDisplay,
-                        			type: ''user'',
-                        			author: ''You'',
-                        			time: hh + '':'' + mm
+                        			type: "user",
+                        			author: "You",
+                        			time: hh + ":" + mm
                         		});
                         		
                         		this.local.Messages.push({
-                        			msg: '''',
-                        			type: ''assistant'',
-                        			author: ''Assistant'',
-                        			time: hh + '':'' + mm,
-                        			tag1: ''How-To'',
-                        			tag2: ''Convertigo'',
-                        			tag3: ''Guide'',
-                        			status: ''writing'',
+                        			msg: "",
+                        			type: "assistant",
+                        			author: "Assistant",
+                        			time: hh + ":" + mm,
+                        			tag1: "How-To",
+                        			tag2: "Convertigo",
+                        			tag3: "Guide",
+                        			status: "writing",
                         			writing: true
                         		});
                         		this.local.StreamingIndex = this.local.Messages.length - 1;
-                        		this.local.Question = '''';
+                        		this.local.Question = "";
                         		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                        			page.chatfooter.setQuestionText('''', false);
+                        			page.chatfooter.setQuestionText("", false);
                         		}
                         		if (page.chatfooter && page.chatfooter.clearAssetInputs) {
                         			page.chatfooter.clearAssetInputs();
@@ -1894,9 +1904,9 @@ title: Component assistant
                         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                         - com.twinsoft.convertigo.beans.common.FormatedContent: 
                           →: |
-                            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                            '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                             		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                            			page.chatfooter.setQuestionText('''', false);
+                            			page.chatfooter.setQuestionText("", false);
                             		}
                             		resolve();
                             '
@@ -1908,12 +1918,12 @@ title: Component assistant
                           - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                           - com.twinsoft.convertigo.beans.common.FormatedContent: 
                             →: |
-                              '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                              '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                               		var idx = this.local.StreamingIndex;
                               		var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
                               		if (!target) {
                               			target = {
-                              				type: ''assistant'',
+                              				type: "assistant",
                               				id: -1
                               			};
                               			if (!this.local.Messages) {
@@ -1921,10 +1931,10 @@ title: Component assistant
                               			}
                               			this.local.Messages.push(target);
                               		}
-                              		target.msg = ''<span class="red">**'' + (vars.error && vars.error.message ? vars.error.message : ''SendMessage error'') + ''**'';
-                              		target.type = ''assistant'';
+                              		target.msg = "<span class=\"red\">**" + (vars.error && vars.error.message ? vars.error.message : "SendMessage error") + "**";
+                              		target.type = "assistant";
                               		target.writing = false;
-                              		target.status = '''';
+                              		target.status = "";
                               		this.local.StreamingIndex = null;
                               		this.local.IsProcessing = false;
                               		this.local.Buffer = {};
@@ -2033,7 +2043,7 @@ title: Component assistant
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+            '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
             		if ("capture" == event.type) {
             			page.setChatImage(event.filedata, event.filename, event.filetype);
             		}

@@ -6,7 +6,7 @@ scriptContent:
         '/*Begin_c8o_CompImport*/
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
-        	previewUrl = '''';
+        	previewUrl = "";
         	previewFile = null;
         	/*End_c8o_CompDeclaration*/
         /*Begin_c8o_CompConstructor*/
@@ -31,18 +31,18 @@ scriptContent:
         /*Begin_c8o_CompFunction*/
         	releasePreviewUrl() {
         		try {
-        			if (this.previewUrl && this.previewUrl.indexOf(''blob:'') === 0 && window && window.URL && window.URL.revokeObjectURL) {
+        			if (this.previewUrl && this.previewUrl.indexOf("blob:") === 0 && window && window.URL && window.URL.revokeObjectURL) {
         				window.URL.revokeObjectURL(this.previewUrl);
         			}
         		} catch (e) {}
-        		this.previewUrl = '''';
+        		this.previewUrl = "";
         		this.previewFile = null;
         	}
         	
         	looksLikeImageName(name) {
-        		var value = '''' + (name == null ? '''' : name);
+        		var value = "" + (name == null ? "" : name);
         		value = value.toLowerCase();
-        		var exts = [''.png'', ''.jpg'', ''.jpeg'', ''.gif'', ''.webp'', ''.bmp'', ''.svg'', ''.heic'', ''.heif'', ''.avif''];
+        		var exts = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".heic", ".heif", ".avif"];
         		for (var i = 0; i < exts.length; i++) {
         			var ext = exts[i];
         			if (value.length >= ext.length && value.lastIndexOf(ext) === value.length - ext.length) {
@@ -53,7 +53,7 @@ scriptContent:
         	}
         	
         	findImageFileByName(name) {
-        		var target = '''' + (name == null ? '''' : name);
+        		var target = "" + (name == null ? "" : name);
         		if (!target.length) {
         			return null;
         		}
@@ -67,7 +67,7 @@ scriptContent:
         				if (!current) {
         					continue;
         				}
-        				if (('''' + (current.name == null ? '''' : current.name)) === target) {
+        				if (("" + (current.name == null ? "" : current.name)) === target) {
         					return current;
         				}
         			}
@@ -78,23 +78,23 @@ scriptContent:
         	getImageSource() {
         		var value = this.file;
         		if (!value) {
-        			return '''';
+        			return "";
         		}
-        		if (typeof value === ''string'') {
+        		if (typeof value === "string") {
         			return value;
         		}
         		try {
-        			if (value.url != null && ('''' + value.url).length) {
-        				return '''' + value.url;
+        			if (value.url != null && ("" + value.url).length) {
+        				return "" + value.url;
         			}
-        			if (value.src != null && ('''' + value.src).length) {
-        				return '''' + value.src;
+        			if (value.src != null && ("" + value.src).length) {
+        				return "" + value.src;
         			}
-        			if (value.imageUrl != null && ('''' + value.imageUrl).length) {
-        				return '''' + value.imageUrl;
+        			if (value.imageUrl != null && ("" + value.imageUrl).length) {
+        				return "" + value.imageUrl;
         			}
-        			if (value.preview != null && ('''' + value.preview).length) {
-        				return '''' + value.preview;
+        			if (value.preview != null && ("" + value.preview).length) {
+        				return "" + value.preview;
         			}
         		} catch (e1) {}
         		
@@ -106,11 +106,11 @@ scriptContent:
         		} catch (e2) {}
         		
         		try {
-        			var fileName = '''';
+        			var fileName = "";
         			if (value && value.filename != null) {
-        				fileName = '''' + value.filename;
+        				fileName = "" + value.filename;
         			} else if (candidate && candidate.filename != null) {
-        				fileName = '''' + candidate.filename;
+        				fileName = "" + candidate.filename;
         			}
         			if (fileName.length) {
         				var matched = this.findImageFileByName(fileName);
@@ -121,7 +121,7 @@ scriptContent:
         		} catch (e22) {}
         		
         		try {
-        			if (candidate && typeof Blob !== ''undefined'' && candidate instanceof Blob && window && window.URL && window.URL.createObjectURL) {
+        			if (candidate && typeof Blob !== "undefined" && candidate instanceof Blob && window && window.URL && window.URL.createObjectURL) {
         				if (this.previewFile !== candidate || !this.previewUrl.length) {
         					this.releasePreviewUrl();
         					this.previewFile = candidate;
@@ -131,7 +131,7 @@ scriptContent:
         			}
         		} catch (e3) {}
         		
-        		return '''';
+        		return "";
         	}
         	
         	hasImageContent() {
@@ -146,22 +146,42 @@ scriptContent:
         			}
         		} catch (e1) {}
         		try {
-        			var name = '''';
+        			var name = "";
         			if (value && value.name != null) {
-        				name = '''' + value.name;
+        				name = "" + value.name;
         			} else if (value && value.filename != null) {
-        				name = '''' + value.filename;
+        				name = "" + value.filename;
         			}
         			if (name.length) {
         				return name;
         			}
         		} catch (e2) {}
-        		return ''image'';
+        		return "image";
         	}
         	
         	hasTextMessage() {
-        		var text = '''' + (this.message == null ? '''' : this.message);
+        		var text = "" + (this.message == null ? "" : this.message);
         		return text.trim().length > 0;
+        	}
+        	
+        	isRawStreamTickerActive() {
+        		return this.rawStreamTicker === true && this.writing === true;
+        	}
+        	
+        	getRawStreamTickerText() {
+        		var text = "" + (this.message == null ? "" : this.message);
+        		text = text.replace(/\s+/g, " ").trim();
+        		if (!text.length) {
+        			text = "" + (this.status == null ? "" : this.status);
+        			text = text.trim();
+        		}
+        		if (!text.length) {
+        			text = "streaming...";
+        		}
+        		if (text.length > 220) {
+        			text = text.substring(text.length - 220);
+        		}
+        		return text + "   |   " + text;
         	}
         	/*End_c8o_CompFunction*/
         '
@@ -280,12 +300,42 @@ scriptContent:
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: script:this.getImageAlt()
+        ↓IfRawTicker [ngx.components.UIControlDirective-1772200873838]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.isRawStreamTickerActive()
+          ↓RawTickerWrap [ngx.components.UIDynamicElement-1772200880210]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1772200882974]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:chat-raw-stream-wrap
+            ↓RawTickerLine [ngx.components.UIDynamicElement-1772200884212]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1772200887282]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:chat-raw-stream-line
+              ↓Text [ngx.components.UIText-1772200888520]: 
+                i18n: true
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getRawStreamTickerText()
         ↓IfMessage [ngx.components.UIControlDirective-1777601000007]: 
           directiveName: If
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.hasTextMessage() || this.writing === true
+              - MobileSmartSourceType: script:!this.isRawStreamTickerActive() && (this.hasTextMessage() || this.writing === true)
           ↓MdReader [ngx.components.UIUseShared-1771949858794]: 
             sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
             ↓data [ngx.components.UIUseVariable-1771949858797]: 
@@ -394,6 +444,7 @@ scriptContent:
   value: false
 ↓status [ngx.components.UICompVariable-1771949858869]: 
   value: '''writing'''
+↓rawStreamTicker [ngx.components.UICompVariable-1772200869858]: 
 ↓Style [ngx.components.UIStyle-1771949858872]: 
   styleContent: 
     - xmlizable: 
@@ -487,14 +538,42 @@ scriptContent:
           .chat-assistant-bubble markdown p:last-child {
             margin-bottom: 0;
           }
+          .chat-raw-stream-wrap {
+            width: 100%;
+            overflow: hidden;
+            border-radius: 10px;
+            border: 1px dashed color-mix(in srgb, var(--modern-cyan, #06b6d4) 34%, var(--modern-border, #1e293b) 66%);
+            background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 10%, var(--modern-surface, #0f172a) 90%);
+            padding: 6px 0;
+            margin: 2px 0 4px;
+          }
+          .chat-raw-stream-line {
+            margin: 0;
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 54%, var(--modern-text, #f1f5f9) 46%);
+            font-size: 12px;
+            line-height: 18px;
+            letter-spacing: 0.2px;
+            animation: chat-raw-stream-marquee 10s linear infinite;
+          }
+          @keyframes chat-raw-stream-marquee {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-100%);
+            }
+          }
           .chat-writing-state {
             margin: 8px 0 0;
             display: inline-flex;
             align-items: center;
             padding: 4px 10px;
             border-radius: 999px;
-            color: var(--modern-cyan, #06b6d4);
-            background: rgba(6, 182, 212, 0.12);
+            color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 58%, var(--modern-text, #f1f5f9) 42%);
+            background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 12%, var(--modern-surface, #0f172a) 88%);
             //border: 1px solid rgba(6, 182, 212, 0.32);
             //box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.06), 0 0 12px rgba(6, 182, 212, 0.2);
             font-size: 12px;
