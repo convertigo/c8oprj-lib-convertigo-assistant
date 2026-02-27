@@ -1,4 +1,4 @@
-responseTimeout: 80
+responseTimeout: 300
 ↓inputVars [steps.InputVariablesStep-1767364410194]: 
 ↓jIfThenElse [steps.IfThenElseStep-1767180603000]: 
   condition: stream == "true"
@@ -171,20 +171,6 @@ responseTimeout: 80
             - SmartType: 
               - ↑mode: JS
               - →→: Question
-      ↓conversation_history [steps.JsonFieldStep-1767698369273]: 
-        key: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-            - SmartType: 
-              - ↑mode: PLAIN
-              - →→: conversation_history
-        output: false
-        value: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-            - SmartType: 
-              - ↑mode: JS
-              - →→: History
       ↓response_type [steps.JsonFieldStep-1767113403362]: 
         key: 
           - xmlizable: 
@@ -243,6 +229,20 @@ responseTimeout: 80
             - SmartType: 
               - ↑mode: JS
               - →→: stream
+      ↓conversation_history [steps.JsonToXmlStep-1772102827665]: 
+        jsonObject: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: 'History ? JSON.parse(History) : []'
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: conversation_history
+        output: false
     ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
       sourceTransaction: ConvertigoAssistant.LightRAG.query_text
       ↓__body [variables.StepVariable-1767113549281]: 
