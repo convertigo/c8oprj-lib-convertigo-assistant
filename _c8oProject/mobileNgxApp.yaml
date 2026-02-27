@@ -257,6 +257,26 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
        "emitResizeWhenApply": "plain:true"
       }'
     comment: Restores and applies the persisted theme preference
+    ↓ApplyUrlThemeOverride [ngx.components.UIDynamicAction-1772191600101]: 
+      beanData: '{"ionBean":"IfAction","condition":"script:this.getUrlDarkThemeOverride() !== null"}'
+      comment: Applies explicit dark-theme query parameter when present
+      ↓SetThemeFromUrl [ngx.components.UIDynamicAction-1772191600102]: 
+        beanData: |
+          '{
+           "ionBean": "SetThemeAction",
+           "dark": "script:this.getUrlDarkThemeOverride()",
+           "persist": "plain:false"
+          }'
+    ↓SetThemeLockGlobal [ngx.components.UICustomAction-1772192100101]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              		page.global.themeLockedFromUrl = page.getUrlDarkThemeOverride() !== null;
+              		resolve();
+              
+      comment: Stores whether the URL explicitly forces the theme
     ↓PublishEvent [ngx.components.UIDynamicAction-1772036299092]: 
       beanData: '{"ionBean":"PublishEventAction","topic":"plain:ThemeSet"}'
   ↓SetLanguage [ngx.components.UIDynamicAction-1771929741651]: 
