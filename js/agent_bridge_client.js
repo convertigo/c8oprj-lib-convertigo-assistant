@@ -26,6 +26,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return System.currentTimeMillis();
   }
 
+  function makeRunId(requestId) {
+    return String(now()) + "-" + String(requestId || 0);
+  }
+
   function trim(value) {
     if (value === null || typeof value === "undefined") {
       return "";
@@ -1570,7 +1574,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
 
       state.status = "in_progress";
-      state.runid = String(prompt.requestId || now());
+      state.runid = makeRunId(prompt.requestId);
       state.cursor = typeof prompt.cursor !== "undefined" ? Number(prompt.cursor) : 0;
       appendTranscript(state, "user", state.userQuestion || question);
       appendProgress(state, lang(state).thinking);
