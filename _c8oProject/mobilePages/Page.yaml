@@ -1328,7 +1328,8 @@ title: Component assistant
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                '        page.setAgentModel(agentModel ? agentModel.id : '''');
+                                '        var agentModel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.agentModel : null;
+                                        page.setAgentModel(agentModel ? agentModel.id : '''');
                                         resolve();
                                 '
                     ↓Text [ngx.components.UIText-1781700500035]: 
