@@ -33,9 +33,9 @@ scriptContent:
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
         	public debug() {
-        		if (this.global.studio) {
+        		if (this.global && this.global.studio) {
         			this.c8o.log.debug("[Page] this.threadid: "+ this.threadid);
-        			this.c8o.log.debug("[Page] this.local.Conversation: "+ this.local.Conversation);
+        			this.c8o.log.debug("[Page] this.local.Conversation: "+ (this.local ? this.local.Conversation : ""));
         			this.c8o.log.debug("[Page] this.isEditionMode: "+ this.isEditionMode());
         			this.c8o.log.debug("[Page] local: "+ JSON.stringify(this.local));
         			this.c8o.log.debug("[Page] global: "+ JSON.stringify(this.global));
@@ -47,7 +47,7 @@ scriptContent:
         	}
         	
         	public isEditionMode() {
-        		return this.threadid === this.local.Conversation;
+        		return this.local && this.threadid === this.local.Conversation;
         	}
         	
         	t(key, fallback) {
@@ -75,6 +75,83 @@ scriptContent:
         	
         	getNoProjectSelectedMessage() {
         		return this.t("Project_Select_Required", "Project: Please select an NGX project !");
+        	}
+        
+        	private cleanProjectName(value) {
+        		return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+        	}
+        
+        	private projectNameFromRecord(record) {
+        		if (!record) {
+        			return "";
+        		}
+        		var project = this.cleanProjectName(record.primaryProject || record.projectId || record.targetProject || record.projectName);
+        		if (project.length) {
+        			return project;
+        		}
+        		try {
+        			if (record.projectNames && record.projectNames.length) {
+        				return this.cleanProjectName(record.projectNames[0]);
+        			}
+        		} catch (e) {}
+        		return "";
+        	}
+        
+        	private getConversationProjectFromList(conversationId) {
+        		try {
+        			var conversations = this.local && this.local.AgentConversations ? this.local.AgentConversations : [];
+        			var id = this.cleanProjectName(conversationId || (this.local ? this.local.Conversation : ""));
+        			for (var i = 0; i < conversations.length; i++) {
+        				var item = conversations[i];
+        				if (!id.length || (item && item.conversationId === id)) {
+        					var project = this.projectNameFromRecord(item);
+        					if (project.length) {
+        						return project;
+        					}
+        				}
+        			}
+        		} catch (e) {}
+        		return "";
+        	}
+        
+        	public getEffectiveProjectName() {
+        		var project = "";
+        		try {
+        			project = this.cleanProjectName(this.global && this.global.projectName);
+        			if (project.length) {
+        				return project;
+        			}
+        		} catch (e) {}
+        		try {
+        			project = this.cleanProjectName(this.local && this.local.ConversationProject);
+        			if (project.length) {
+        				return project;
+        			}
+        		} catch (e2) {}
+        		return this.getConversationProjectFromList(null);
+        	}
+        
+        	public setConversationProject(project) {
+        		if (!this.local) {
+        			this.local = {};
+        		}
+        		var value = this.cleanProjectName(project);
+        		if (value.length) {
+        			this.local.ConversationProject = value;
+        		}
+        		return value;
+        	}
+        
+        	public setConversationProjectFromData(data, state) {
+        		var project = this.projectNameFromRecord(state) || this.projectNameFromRecord(data) || this.projectNameFromRecord(data && data.state);
+        		if (!project.length) {
+        			project = this.getConversationProjectFromList(data && data.id ? data.id : null);
+        		}
+        		if (project.length) {
+        			this.setConversationProject(project);
+        			this.setEnableChat();
+        		}
+        		return project;
         	}
         	
         	syncFooterPlaceholder() {
@@ -108,6 +185,9 @@ scriptContent:
         		if (!(this.local.QuickSuggestions && this.local.QuickSuggestions.length != null && this.local.QuickSuggestions.length > 0)) {
         			this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
         		}
+        		if (this.local.ShowConversationPanel == null) {
+        			this.local.ShowConversationPanel = false;
+        		}
         		this.syncFooterPlaceholder();
         		this.local.EnableVisionForPage = false;
         	}
@@ -132,6 +212,25 @@ scriptContent:
         			} catch (e) {}
         		}, wait);
         	}
+        
+        	scrollChatTop(delay, force = false) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				if (!self.local) {
+        					self.local = {};
+        				}
+        				if (force) {
+        					self.local.AutoScrollEnabled = false;
+        					self.local.AutoScrollLockUntil = Date.now() + 500;
+        				}
+        				if (self.content && self.content.scrollToTop) {
+        					self.content.scrollToTop(220);
+        				}
+        			} catch (e) {}
+        		}, wait);
+        	}
         	
         	handleContentScroll(event) {
         		try {
@@ -146,6 +245,11 @@ scriptContent:
         			var scrollHeight = Number(detail.scrollHeight || 0);
         			var contentHeight = Number(detail.contentHeight || detail.clientHeight || 0);
         			var distanceToBottom = -1;
+        			var showTop = scrollTop > 160;
+        			if (this.local.ShowScrollTopButton !== showTop) {
+        				this.local.ShowScrollTopButton = showTop;
+        				this.tick();
+        			}
         			if (isNaN(previousTop)) {
         				previousTop = scrollTop;
         			}
@@ -256,10 +360,7 @@ scriptContent:
         	
         	public setEnableChat() {
         		if (this.global && this.global.studio) {
-        			var enable = this.isEditionMode();
-        			if (!enable) {
-        				enable = this.global.projectName != undefined && this.global.projectName !== "";
-        			}
+        			var enable = this.isEditionMode() || this.getEffectiveProjectName().length > 0;
         			if (!this.local) {
         				this.local = {};
         			}
@@ -274,38 +375,55 @@ scriptContent:
         		}
         	}
         	
-        		public getProjectHeading() {
-        			if (this.global.studio) {
-        				if (this.isEditionMode()) {
-        					let compname = this.global.threadQname;
-        					try {compname = compname.substring(compname.lastIndexOf(".")+1)} catch (e) {}
-        					return ": edition of " + compname;
-        				}
-        				if (this.global.projectName == undefined || this.global.projectName === "") {
-        					return ": Please select an NGX project !"
-        				}
-        				return ": creation for " + this.global.projectName;
+        	public getProjectHeading() {
+        		if (this.global && this.global.studio) {
+        			if (this.isEditionMode()) {
+        				let compname = this.global.threadQname;
+        				try { compname = compname.substring(compname.lastIndexOf(".")+1); } catch (e) {}
+        				return ": edition of " + compname;
         			}
-        			return ": " + this.local.Conversation;
-        		}
-        		
-        		public getProjectSubtitle() {
-        			let heading = "" + this.getProjectHeading();
-        			while (heading.length > 0) {
-        				let c = heading.charAt(0);
-        				if (c === ":" || c === " ") {
-        					heading = heading.substring(1);
-        					continue;
-        				}
-        				break;
+        			var project = this.getEffectiveProjectName();
+        			if (!project.length) {
+        				return ": Please select an NGX project !";
         			}
-        			return "Project: " + heading;
+        			return ": creation for " + project;
         		}
-        		
-        		public GetProjectSubtitle() {
-        			return this.getProjectSubtitle();
+        		return ": " + (this.local ? this.local.Conversation : "");
+        	}
+        	
+        	public getProjectSubtitle() {
+        		let heading = "" + this.getProjectHeading();
+        		while (heading.length > 0) {
+        			let c = heading.charAt(0);
+        			if (c === ":" || c === " ") {
+        				heading = heading.substring(1);
+        				continue;
+        			}
+        			break;
         		}
-        		/*End_c8o_PageFunction*/
+        		return "Project: " + heading;
+        	}
+        	
+        	public GetProjectSubtitle() {
+        		return this.getProjectSubtitle();
+        	}
+        
+        	public toggleConversationsPanel() {
+        		if (!this.local) {
+        			this.local = {};
+        		}
+        		this.local.ShowConversationPanel = !this.local.ShowConversationPanel;
+        		this.tick();
+        	}
+        
+        	public closeConversationsPanel() {
+        		if (!this.local) {
+        			this.local = {};
+        		}
+        		this.local.ShowConversationPanel = false;
+        		this.tick();
+        	}
+        	/*End_c8o_PageFunction*/
         '
 segment: path-to-xfirst/:threadid
 title: Component assistant
@@ -408,7 +526,7 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''refresh''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
           ↓RunID [ngx.components.UIDynamicAction-1744701686206]: 
@@ -458,7 +576,7 @@ title: Component assistant
                 beanData: |
                   '{
                    "ionBean": "CallSequenceAction",
-                   "requestable": "plain:ConvertigoAssistant.CreateConversation",
+                   "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
                    "noLoading": "plain:true"
                   }'
                 ↓SetLocal [ngx.components.UIDynamicAction-1744701686203]: 
@@ -466,7 +584,7 @@ title: Component assistant
                     '{
                      "ionBean": "SetLocalAction",
                      "Property": "plain:Conversation",
-                     "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                     "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                     }'
                   ↓enableChat [ngx.components.UICustomAction-1750760389223]: 
                     actionValue: 
@@ -491,6 +609,52 @@ title: Component assistant
                           		page.enableAutoScroll();
                           		resolve();
                           '
+                ↓targetProject [ngx.components.UIControlVariable-1781590189093]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+                ↓forceNew [ngx.components.UIControlVariable-1781603737270]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:true
+                ↓SetConversations [ngx.components.UIDynamicAction-1781604127877]: 
+                  beanData: |
+                    '{
+                     "ionBean": "SetLocalAction",
+                     "Property": "plain:AgentConversations",
+                     "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                    }'
+                ↓SetConversationResumed [ngx.components.UIDynamicAction-1781604853209]: 
+                  beanData: |
+                    '{
+                     "ionBean": "SetLocalAction",
+                     "Property": "plain:AgentConversationResumed",
+                     "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.resumed\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                    }'
+                ↓SetConversationProject [ngx.components.UIDynamicAction-1781676318094]: 
+                  beanData: |
+                    '{
+                     "ionBean": "SetLocalAction",
+                     "Property": "plain:ConversationProject",
+                     "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                    }'
+                  ↓RefreshEnableChat [ngx.components.UICustomAction-1781676461395]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.setEnableChat();
+                            		resolve();
+                            
+        ↓AriaNewConversation [ngx.components.UIAttribute-1781604857325]: 
+          attrName: aria-label
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:New conversation
       ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774703000001]: 
         beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
         tagName: ion-button
@@ -918,6 +1082,707 @@ title: Component assistant
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:Describe the component you need, and let the Convertigo Component Assistant generate it for you.
+          ↓AgentSessionStrip [ngx.components.UIDynamicElement-1781604896725]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1781604896727]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-session-strip
+            ↓SessionIcon [ngx.components.UIDynamicElement-1781604896729]: 
+              beanData: '{"ionBean":"Icon","IconName":"script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''"}'
+              tagName: ion-icon
+            ↓SessionCopy [ngx.components.UIDynamicElement-1781604896731]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1781604896733]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-session-copy
+              ↓State [ngx.components.UIDynamicElement-1781604896735]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1781604896737]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-session-title
+                ↓Text [ngx.components.UIText-1781604896739]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:(this.local && this.local.AgentConversationResumed) ? ''Conversation reprise'' : ''Nouvelle conversation active'''
+              ↓Meta [ngx.components.UIDynamicElement-1781604896741]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1781604896743]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-session-meta
+                ↓Text [ngx.components.UIText-1781604896745]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:((this.local && this.local.Conversation) ? (''Session '' + (((('''' + this.local.Conversation).indexOf(''agent-'') === 0) ? ('''' + this.local.Conversation).substring(6, 14) : ('''' + this.local.Conversation).substring(0, 8)))) : ''Initialisation'') + '' - '' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) + '' conversation'' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) > 1 ? ''s'' : ''''))'
+            ↓Chevron [ngx.components.UIDynamicElement-1781676585879]: 
+              beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
+              tagName: ion-icon
+              ↓Class [ngx.components.UIAttribute-1781676585881]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-session-chevron
+            ↓Role [ngx.components.UIAttribute-1781676341026]: 
+              attrName: role
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:button
+            ↓TabIndex [ngx.components.UIAttribute-1781676355260]: 
+              attrName: tabindex
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:0
+            ↓Event [ngx.components.UIControlEvent-1781676364383]: 
+              attrName: click
+              eventName: click
+              ↓ToggleConversations [ngx.components.UICustomAction-1781676365869]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        		page.toggleConversationsPanel();
+                        		resolve();
+                        
+          ↓AgentConversationsPanelIf [ngx.components.UIControlDirective-1781608114975]: 
+            directiveName: If
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.local && this.local.ShowConversationPanel === true && this.local.AgentConversations && this.local.AgentConversations.length > 0
+            ↓Panel [ngx.components.UIDynamicElement-1781608119091]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1781608119093]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-conversations-panel
+              ↓Title [ngx.components.UIDynamicElement-1781608119095]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1781608119097]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-conversations-title
+                ↓Text [ngx.components.UIText-1781608119099]: 
+                  i18n: true
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Conversations
+              ↓CloseButton [ngx.components.UIDynamicElement-1781676493781]: 
+                beanData: |
+                  '{
+                   "ionBean": "Button",
+                   "IonFill": "plain:clear",
+                   "IonSize": "plain:small"
+                  }'
+                tagName: ion-button
+                ↓Class [ngx.components.UIAttribute-1781676493783]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-conversations-close
+                ↓Aria [ngx.components.UIAttribute-1781676493785]: 
+                  attrName: aria-label
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Fermer les conversations
+                ↓Event [ngx.components.UIControlEvent-1781676493787]: 
+                  ↓CloseConversations [ngx.components.UICustomAction-1781676495273]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.closeConversationsPanel();
+                            		resolve();
+                            
+                ↓Icon [ngx.components.UIDynamicElement-1781676495275]: 
+                  beanData: |
+                    '{
+                     "ionBean": "Icon",
+                     "IconName": "plain:close-outline",
+                     "IconSlot": "plain:icon-only"
+                    }'
+                  tagName: ion-icon
+              ↓NewConversationButton [ngx.components.UIDynamicElement-1781676410893]: 
+                beanData: |
+                  '{
+                   "ionBean": "Button",
+                   "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
+                   "IonFill": "plain:clear",
+                   "IonSize": "plain:small"
+                  }'
+                tagName: ion-button
+                ↓Class [ngx.components.UIAttribute-1781676410895]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-new-conversation-button
+                ↓Aria [ngx.components.UIAttribute-1781676410897]: 
+                  attrName: aria-label
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Démarrer une nouvelle conversation
+                ↓Icon [ngx.components.UIDynamicElement-1781676410899]: 
+                  beanData: |
+                    '{
+                     "ionBean": "Icon",
+                     "IconName": "plain:add-circle-outline",
+                     "IconSlot": "plain:start"
+                    }'
+                  tagName: ion-icon
+                ↓Text [ngx.components.UIText-1781676410901]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:''Démarrer une nouvelle conversation pour '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''le projet sélectionné'')'
+                ↓Event [ngx.components.UIControlEvent-1781676410903]: 
+                  ↓CreateConversation [ngx.components.UICustomAction-1781676412389]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            '		var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
+                            		if (!project.length) {
+                            			page.setEnableChat();
+                            			resolve();
+                            			return;
+                            		}
+                            		if (!page.local) {
+                            			page.local = {};
+                            		}
+                            		page.local.Question = '''';
+                            		page.local.Messages = [];
+                            		page.local.RunID = '''';
+                            		page.local.Buffer = {};
+                            		page.local.StreamingIndex = null;
+                            		page.local.IsProcessing = false;
+                            		page.local.AgentProgressHistory = [];
+                            		page.local.AgentProgressHistoryRunId = '''';
+                            		if (page.chatfooter && page.chatfooter.setQuestionText) {
+                            			page.chatfooter.setQuestionText('''', false);
+                            		}
+                            		page.c8o.callJsonObject(''ConvertigoAssistant.AgentCreateConversation'', {
+                            			''targetProject'': project,
+                            			''forceNew'': true,
+                            			''__context'': ''byside''
+                            		}).async().then(function(response) {
+                            			var result = response && response.result ? response.result : {};
+                            			page.local.Conversation = result.id || page.local.Conversation;
+                            			if (result.conversations) {
+                            				page.local.AgentConversations = result.conversations;
+                            			}
+                            			page.local.AgentConversationResumed = result.resumed === true;
+                            			page.setConversationProject((result.state && result.state.primaryProject) || project);
+                            			page.local.ShowConversationPanel = false;
+                            			page.setEnableChat();
+                            			page.tick();
+                            			page.enableAutoScroll();
+                            			resolve();
+                            		}).catch(function(error) {
+                            			try {
+                            				page.c8o.log.warn(''[Assistant] Unable to create agent conversation: '' + error);
+                            			} catch (e) {}
+                            			page.tick();
+                            			resolve();
+                            		});
+                            '
+              ↓Conversations [ngx.components.UIControlDirective-1781608119101]: 
+                directiveItemName: conversation
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentConversations","prefix":"","suffix":"","custom":"","useCustom":false}}
+                ↓Row [ngx.components.UIDynamicElement-1781608119103]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1781608119105]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-row active'' : ''agent-conversation-row'''
+                  ↓Info [ngx.components.UIDynamicElement-1781608119107]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1781608119109]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-conversation-info
+                    ↓Name [ngx.components.UIDynamicElement-1781608119111]: 
+                      beanData: '{"ionBean":"Paragraph"}'
+                      tagName: p
+                      ↓Class [ngx.components.UIAttribute-1781608119113]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-conversation-name
+                      ↓Text [ngx.components.UIText-1781608119115]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''Conversation active'' : ''Conversation disponible'''
+                    ↓Meta [ngx.components.UIDynamicElement-1781608119117]: 
+                      beanData: '{"ionBean":"Paragraph"}'
+                      tagName: p
+                      ↓Class [ngx.components.UIAttribute-1781608119119]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-conversation-meta
+                      ↓Text [ngx.components.UIText-1781608119121]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:((conversation && conversation.conversationId) ? (''Session '' + (((('''' + conversation.conversationId).indexOf(''agent-'') === 0) ? ('''' + conversation.conversationId).substring(6, 14) : ('''' + conversation.conversationId).substring(0, 8)))) : '''') + ((conversation && conversation.status) ? '' - '' + conversation.status : '''')'
+                  ↓Actions [ngx.components.UIDynamicElement-1781608119123]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1781608119125]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-conversation-actions
+                    ↓ResumeButton [ngx.components.UIDynamicElement-1781608119127]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Button",
+                         "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
+                         "IonFill": "plain:clear",
+                         "IonSize": "plain:small"
+                        }'
+                      tagName: ion-button
+                      ↓Class [ngx.components.UIAttribute-1781608119129]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-conversation-action
+                      ↓Aria [ngx.components.UIAttribute-1781608119131]: 
+                        attrName: aria-label
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:Reprendre la conversation
+                      ↓Icon [ngx.components.UIDynamicElement-1781608119133]: 
+                        beanData: '{"ionBean":"Icon","IconName":"plain:return-down-back-outline"}'
+                        tagName: ion-icon
+                      ↓Text [ngx.components.UIText-1781676432698]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''Active'' : ''Reprendre'''
+                      ↓Event [ngx.components.UIControlEvent-1781608119135]: 
+                        ↓RunID [ngx.components.UIDynamicAction-1781608120621]: 
+                          beanData: |
+                            '{
+                             "ionBean": "SetLocalAction",
+                             "Property": "plain:RunID",
+                             "Value": "script:''''"
+                            }'
+                        ↓Buffer [ngx.components.UIDynamicAction-1781608120623]: 
+                          beanData: |
+                            '{
+                             "ionBean": "SetLocalAction",
+                             "Property": "plain:Buffer",
+                             "Value": "script:{}"
+                            }'
+                        ↓Messages [ngx.components.UIDynamicAction-1781608120625]: 
+                          beanData: |
+                            '{
+                             "ionBean": "SetLocalAction",
+                             "Property": "plain:Messages",
+                             "Value": "script:[]"
+                            }'
+                        ↓ResumeConversation [ngx.components.UIDynamicAction-1781608120627]: 
+                          beanData: |
+                            '{
+                             "ionBean": "CallSequenceAction",
+                             "requestable": "plain:ConvertigoAssistant.AgentResumeConversation",
+                             "noLoading": "plain:true"
+                            }'
+                          ↓threadid [ngx.components.UIControlVariable-1781608122133]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:conversation.conversationId
+                          ↓targetProject [ngx.components.UIControlVariable-1781608122135]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(conversation, this)
+                          ↓SetConversation [ngx.components.UIDynamicAction-1781608122137]: 
+                            beanData: |
+                              '{
+                               "ionBean": "SetLocalAction",
+                               "Property": "plain:Conversation",
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                              }'
+                          ↓SetConversations [ngx.components.UIDynamicAction-1781608122139]: 
+                            beanData: |
+                              '{
+                               "ionBean": "SetLocalAction",
+                               "Property": "plain:AgentConversations",
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                              }'
+                          ↓SetConversationResumed [ngx.components.UIDynamicAction-1781608122141]: 
+                            beanData: |
+                              '{
+                               "ionBean": "SetLocalAction",
+                               "Property": "plain:AgentConversationResumed",
+                               "Value": "script:true"
+                              }'
+                          ↓LoadHistoryMessages [ngx.components.UICustomAction-1781612471043]: 
+                            actionValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                  →: |
+                                    '		var data = vars.data || {};
+                                    		var state = vars.state || {};
+                                    		var history = data.messages || [];
+                                    		if (!page.local) {
+                                    			page.local = {};
+                                    		}
+                                    		if (page.local.Buffer && page.local.Buffer.intId) {
+                                    			window.clearInterval(page.local.Buffer.intId);
+                                    		}
+                                    		page.local.Messages = [];
+                                    		if (history && history.length != null) {
+                                    			for (var i = 0; i < history.length; i++) {
+                                    				var msg = history[i];
+                                    				if (!msg || !msg.msg) {
+                                    					continue;
+                                    				}
+                                    				page.local.Messages.push({
+                                    					type: msg.type || ''assistant'',
+                                    					msg: msg.msg,
+                                    					author: msg.author || (msg.type === ''user'' ? ''You'' : ''Assistant''),
+                                    					time: msg.time || '''',
+                                    					id: msg.id || -1,
+                                    					tag1: msg.tag1 || (msg.type === ''assistant'' ? ''History'' : ''''),
+                                    					tag2: msg.tag2 || (msg.type === ''assistant'' ? ''Vibe'' : ''''),
+                                    					tag3: msg.tag3 || (msg.type === ''assistant'' ? ''Resume'' : ''''),
+                                    					writing: false,
+                                    					status: ''''
+                                    				});
+                                    			}
+                                    		}
+                                    
+                                    		var clean = function(value) {
+                                    			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                                    		};
+                                    		var localize = function(value) {
+                                    			var line = clean(value);
+                                    			var map = {
+                                    				"i am preparing the local agent.": "Je prépare l''agent local.",
+                                    				"i am analyzing the request.": "J''analyse la demande.",
+                                    				"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
+                                    				"i am applying a change in the project.": "J''applique une modification dans le projet.",
+                                    				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
+                                    				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
+                                    				"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                                    				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
+                                    				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
+                                    			};
+                                    			return map[line.toLowerCase()] || line;
+                                    		};
+                                    		var isGeneric = function(value) {
+                                    			var text = clean(value).toLowerCase();
+                                    			return !text.length || text === ''writing'' || text === ''agent is working'' || text === ''agent is working...'' || text === ''assistant is writing'' || text === ''assistant is writing...'' || text === ''traitement en cours'' || text === ''traitement en cours...'';
+                                    		};
+                                    		var isLowSignal = function(value) {
+                                    			var text = clean(value).toLowerCase();
+                                    			return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
+                                    		};
+                                    		var linesFrom = function(progress, phase) {
+                                    			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+                                    			var lines = [];
+                                    			for (var i = 0; i < raw.length; i++) {
+                                    				var line = localize(raw[i]);
+                                    				if (isGeneric(line) || line.indexOf(''Sending data to the AI assistant'') === 0) {
+                                    					continue;
+                                    				}
+                                    				if (lines.length && lines[lines.length - 1] === line) {
+                                    					continue;
+                                    				}
+                                    				if (lines.indexOf(line) === -1) {
+                                    					lines.push(line);
+                                    				}
+                                    			}
+                                    			var p = localize(phase);
+                                    			if (!isGeneric(p) && lines.indexOf(p) === -1) {
+                                    				lines.push(p);
+                                    			}
+                                    			if (lines.length > 1) {
+                                    				var filtered = [];
+                                    				for (var j = 0; j < lines.length; j++) {
+                                    					if (!isLowSignal(lines[j])) {
+                                    						filtered.push(lines[j]);
+                                    					}
+                                    				}
+                                    				if (filtered.length) {
+                                    					lines = filtered;
+                                    				}
+                                    			}
+                                    			return lines;
+                                    		};
+                                    		var snapshotFrom = function(progress, phase) {
+                                    			var lines = linesFrom(progress, phase);
+                                    			if (lines.length > 12) {
+                                    				lines = lines.slice(lines.length - 12);
+                                    			}
+                                    			return { text: lines.join(''\n\n''), status: lines.length ? lines[lines.length - 1] : '''', lines: lines, hasLines: lines.length > 0 };
+                                    		};
+                                    		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
+                                    		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
+                                    		var append = function(snapshot) {
+                                    			var key = runid || page.local.RunID || ''pending'';
+                                    			if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
+                                    				page.local.AgentProgressHistory = [];
+                                    				page.local.AgentProgressHistoryRunId = key;
+                                    			}
+                                    			var history = page.local.AgentProgressHistory;
+                                    			var lines = snapshot && snapshot.lines ? snapshot.lines : [];
+                                    			for (var i = 0; i < lines.length; i++) {
+                                    				var line = localize(lines[i]);
+                                    				if (!isGeneric(line) && history.indexOf(line) === -1) {
+                                    					history.push(line);
+                                    				}
+                                    			}
+                                    			while (history.length > 12) {
+                                    				history.shift();
+                                    			}
+                                    			return { text: history.join(''\n\n''), status: history.length ? history[history.length - 1] : '''', hasLines: history.length > 0 };
+                                    		};
+                                    		var render = function(buffer) {
+                                    			var idx = page.local.StreamingIndex;
+                                    			if (idx == null || !page.local.Messages || !page.local.Messages[idx]) {
+                                    				return;
+                                    			}
+                                    			var current = page.local.Messages[idx];
+                                    			var progress = buffer && buffer.progress != null ? buffer.progress : (buffer && buffer.content != null ? buffer.content : (buffer && buffer.text != null ? buffer.text : ''''));
+                                    			var snap = append(snapshotFrom(progress, buffer ? buffer.phase : ''''));
+                                    			if (!snap.hasLines) {
+                                    				if (clean(current.msg).length || clean(current.status).length) {
+                                    					return;
+                                    				}
+                                    				snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
+                                    			}
+                                    			page.local.Messages[idx].msg = snap.text;
+                                    			page.local.Messages[idx].status = snap.status;
+                                    			page.local.Messages[idx].writing = true;
+                                    		};
+                                    
+                                    		page.local.StreamingIndex = null;
+                                    		page.local.IsProcessing = false;
+                                    		page.local.Buffer = {};
+                                    
+                                    		var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
+                                    		if (active) {
+                                    			page.local.RunID = runid;
+                                    			page.local.IsProcessing = true;
+                                    			var progress = state.progress != null ? state.progress : (data.progress != null ? data.progress : '''');
+                                    			var phase = state.phase != null ? state.phase : (data.phase != null ? data.phase : '''');
+                                    			var snap = append(snapshotFrom(progress, phase));
+                                    			if (!snap.hasLines) {
+                                    				snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
+                                    			}
+                                    			var nowDate = new Date();
+                                    			var hh = (''0'' + nowDate.getHours()).slice(-2);
+                                    			var mm = (''0'' + nowDate.getMinutes()).slice(-2);
+                                    			page.local.Messages.push({
+                                    				msg: snap.text,
+                                    				type: ''assistant'',
+                                    				author: ''Assistant'',
+                                    				time: hh + '':'' + mm,
+                                    				id: -1,
+                                    				tag1: ''How-To'',
+                                    				tag2: ''Convertigo'',
+                                    				tag3: ''Guide'',
+                                    				status: snap.status,
+                                    				writing: true
+                                    			});
+                                    			page.local.StreamingIndex = page.local.Messages.length - 1;
+                                    			page.local.Buffer = { progress: progress, phase: phase || snap.status };
+                                    			render(page.local.Buffer);
+                                    
+                                    			var intervalId = null;
+                                    			var pull = function() {
+                                    				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', { ''__context'': ''byside'' }).async().then(function(r) {
+                                    					var raw = r ? r.C8OAiAssistantBuffer : null;
+                                    					if (raw == null) {
+                                    						return;
+                                    					}
+                                    					var buffer = null;
+                                    					if (typeof raw === ''string'') {
+                                    						if (!raw.length) {
+                                    							return;
+                                    						}
+                                    						try {
+                                    							buffer = JSON.parse(raw);
+                                    						} catch (e1) {
+                                    							return;
+                                    						}
+                                    					} else if (typeof raw === ''object'') {
+                                    						buffer = raw;
+                                    					}
+                                    					if (!buffer) {
+                                    						return;
+                                    					}
+                                    					page.local.Buffer = buffer;
+                                    					page.local.Buffer.intId = intervalId;
+                                    					render(buffer);
+                                    					page.tick();
+                                    					page.scrollChatBottom(0);
+                                    				}).catch(function() {});
+                                    			};
+                                    			pull();
+                                    			intervalId = window.setInterval(pull, 600);
+                                    			page.local.Buffer.intId = intervalId;
+                                    		}
+                                    		page.tick();
+                                    		page.scrollChatBottom(0);
+                                    		resolve();
+                                    '
+                            ↓data [ngx.components.UIControlVariable-1781612472549]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+                            ↓state [ngx.components.UIControlVariable-1781621339608]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
+                          ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
+                            beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+                            ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "CallSequenceAction",
+                                 "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
+                                 "noLoading": "plain:true"
+                                }'
+                              ↓threadid [ngx.components.UIControlVariable-1781621341118]: 
+                                varValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                              ↓runid [ngx.components.UIControlVariable-1781621341120]: 
+                                varValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                              ↓PublishEvent [ngx.components.UIDynamicAction-1781621341122]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "PublishEventAction",
+                                   "topic": "plain:AssistantResponse",
+                                   "async": "plain:false"
+                                  }'
+                          ↓SetConversationProject [ngx.components.UIDynamicAction-1781676328041]: 
+                            beanData: |
+                              '{
+                               "ionBean": "SetLocalAction",
+                               "Property": "plain:ConversationProject",
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                              }'
+                            ↓RefreshEnableChat [ngx.components.UICustomAction-1781676472462]: 
+                              actionValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                    →: |
+                                      		page.setEnableChat();
+                                      		page.closeConversationsPanel();
+                                      		resolve();
+                                      
+                    ↓DeleteButton [ngx.components.UIDynamicElement-1781608122143]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Button",
+                         "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
+                         "IonFill": "plain:clear",
+                         "IonSize": "plain:small"
+                        }'
+                      tagName: ion-button
+                      ↓Class [ngx.components.UIAttribute-1781608122145]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-conversation-action danger
+                      ↓Aria [ngx.components.UIAttribute-1781608122147]: 
+                        attrName: aria-label
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:Supprimer la conversation
+                      ↓Icon [ngx.components.UIDynamicElement-1781608122149]: 
+                        beanData: '{"ionBean":"Icon","IconName":"plain:trash-outline"}'
+                        tagName: ion-icon
+                      ↓Event [ngx.components.UIControlEvent-1781608122151]: 
+                        ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
+                          beanData: |
+                            '{
+                             "ionBean": "CallSequenceAction",
+                             "requestable": "plain:ConvertigoAssistant.AgentDeleteConversation",
+                             "noLoading": "plain:true"
+                            }'
+                          ↓threadid [ngx.components.UIControlVariable-1781608122155]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:conversation.conversationId
+                          ↓targetProject [ngx.components.UIControlVariable-1781608122157]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(conversation, this)
+                          ↓SetConversations [ngx.components.UIDynamicAction-1781608610654]: 
+                            beanData: |
+                              '{
+                               "ionBean": "SetLocalAction",
+                               "Property": "plain:AgentConversations",
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentDeleteConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                              }'
       ↓ChatPreview [ngx.components.UIDynamicElement-1771942200001]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
@@ -1037,6 +1902,58 @@ title: Component assistant
             ↓Spinner [ngx.components.UIDynamicElement-1773100000018]: 
               beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
               tagName: ion-spinner
+  ↓IfScrollTopButton [ngx.components.UIControlDirective-1781676529458]: 
+    directiveName: If
+    directiveSource: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: script:this.local && this.local.ShowScrollTopButton === true
+    ↓ScrollTopButton [ngx.components.UIDynamicElement-1781676533574]: 
+      beanData: |
+        '{
+         "ionBean": "Button",
+         "IonColor": "plain:light",
+         "IonShape": "plain:round"
+        }'
+      tagName: ion-button
+      ↓Slot [ngx.components.UIAttribute-1781676533576]: 
+        attrName: slot
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:fixed
+      ↓Class [ngx.components.UIAttribute-1781676533578]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:modern-scroll-top-btn
+      ↓Aria [ngx.components.UIAttribute-1781676533580]: 
+        attrName: aria-label
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:Scroll to top
+      ↓Event [ngx.components.UIControlEvent-1781676533582]: 
+        ↓ScrollTop [ngx.components.UICustomAction-1781676535068]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  		page.scrollChatTop(0, true);
+                  		resolve();
+                  
+      ↓Icon [ngx.components.UIDynamicElement-1781676535070]: 
+        beanData: |
+          '{
+           "ionBean": "Icon",
+           "IonColor": "plain:dark",
+           "IconName": "plain:arrow-up-outline",
+           "IonSize": "plain:large",
+           "IconSlot": "plain:icon-only"
+          }'
+        tagName: ion-icon
   ↓IfScrollBottomButton [ngx.components.UIControlDirective-1773900000010]: 
     directiveName: If
     directiveSource: 
@@ -1195,7 +2112,7 @@ title: Component assistant
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.CreateConversation",
+           "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
            "noLoading": "plain:true"
           }'
         ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
@@ -1203,7 +2120,7 @@ title: Component assistant
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:Conversation",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
           ↓enableChat [ngx.components.UICustomAction-1750760591426]: 
             actionValue: 
@@ -1218,31 +2135,288 @@ title: Component assistant
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getLocalThreadId()
+              - MobileSmartSourceType: 'script:(function(page) { var id = page && page.getLocalThreadId ? page.getLocalThreadId() : null; if (!id || id === '':threadid'') { try { if (page && page.route && page.route.snapshot && page.route.snapshot.paramMap) { id = page.route.snapshot.paramMap.get(''threadid''); } } catch (e) {} } if (!id || id === '':threadid'') { try { var path = window.location.pathname || ''''; var marker = ''/path-to-xfirst/''; var pos = path.indexOf(marker); if (pos !== -1) { id = decodeURIComponent(path.substring(pos + marker.length).split(''/'')[0] || ''''); } } catch (e2) {} } if (!id || id === '':threadid'') { return null; } page.threadid = id; return id; })(this)'
         ↓If [ngx.components.UIDynamicAction-1749567852407]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.CreateConversation\",\"marker\":\"\"}],\"path\":\"?.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           ↓AddHistoryMessages [ngx.components.UICustomAction-1749567905830]: 
             actionValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    		if (vars.data != null) {
-                    			page.c8o.log.debug("AIData:\n"+ JSON.stringify(vars.data));
-                    			if (vars.data.messages) {
-                    				vars.data.messages.forEach((msg) => {
-                    					page.c8o.log.debug("Msg:\n"+ JSON.stringify(msg));
+                    '		var actionResponse = null;
+                    		try {
+                    			if (props && props.stack && props.stack[''1744302843894'']) {
+                    				actionResponse = props.stack[''1744302843894''].out;
+                    			}
+                    		} catch (e0) {}
+                    		var actionResult = actionResponse && actionResponse.result ? actionResponse.result : {};
+                    		var data = actionResult.AIData || vars.data || {};
+                    		if (data != null) {
+                    			page.c8o.log.debug("AIData:\n" + JSON.stringify(data));
+                    			if (data.messages) {
+                    				data.messages.forEach((msg) => {
+                    					page.c8o.log.debug("Msg:\n" + JSON.stringify(msg));
                     					page.local.Messages.push(msg);
                     				});
                     			}
                     		}
-                    		resolve();
+                    		var state = actionResult.state || data.state || vars.state || {};
+                    		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
+                    		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
+                    		var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
+                    		if (!active) {
+                    			resolve();
+                    			return;
+                    		}
+                    		if (!page.local) {
+                    			page.local = {};
+                    		}
+                    		if (!page.local.Messages) {
+                    			page.local.Messages = [];
+                    		}
+                    		if (page.local.Buffer && page.local.Buffer.intId) {
+                    			window.clearInterval(page.local.Buffer.intId);
+                    		}
                     
+                    		var clean = function(value) {
+                    			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                    		};
+                    		var localize = function(value) {
+                    			var line = clean(value);
+                    			var map = {
+                    				"i am preparing the local agent.": "Je prépare l''agent local.",
+                    				"i am analyzing the request.": "J''analyse la demande.",
+                    				"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
+                    				"i am applying a change in the project.": "J''applique une modification dans le projet.",
+                    				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
+                    				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
+                    				"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                    				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
+                    				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
+                    			};
+                    			return map[line.toLowerCase()] || line;
+                    		};
+                    		var isGeneric = function(value) {
+                    			var text = clean(value).toLowerCase();
+                    			return !text.length || text === ''writing'' || text === ''agent is working'' || text === ''agent is working...'' || text === ''assistant is writing'' || text === ''assistant is writing...'' || text === ''traitement en cours'' || text === ''traitement en cours...'';
+                    		};
+                    		var isLowSignal = function(value) {
+                    			var text = clean(value).toLowerCase();
+                    			return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
+                    		};
+                    		var linesFrom = function(progress, phase) {
+                    			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+                    			var lines = [];
+                    			for (var i = 0; i < raw.length; i++) {
+                    				var line = localize(raw[i]);
+                    				if (isGeneric(line) || line.indexOf(''Sending data to the AI assistant'') === 0) {
+                    					continue;
+                    				}
+                    				if (lines.length && lines[lines.length - 1] === line) {
+                    					continue;
+                    				}
+                    				if (lines.indexOf(line) === -1) {
+                    					lines.push(line);
+                    				}
+                    			}
+                    			var p = localize(phase);
+                    			if (!isGeneric(p) && lines.indexOf(p) === -1) {
+                    				lines.push(p);
+                    			}
+                    			if (lines.length > 1) {
+                    				var filtered = [];
+                    				for (var j = 0; j < lines.length; j++) {
+                    					if (!isLowSignal(lines[j])) {
+                    						filtered.push(lines[j]);
+                    					}
+                    				}
+                    				if (filtered.length) {
+                    					lines = filtered;
+                    				}
+                    			}
+                    			return lines;
+                    		};
+                    		var snapshotFrom = function(progress, phase) {
+                    			var lines = linesFrom(progress, phase);
+                    			if (lines.length > 12) {
+                    				lines = lines.slice(lines.length - 12);
+                    			}
+                    			return { text: lines.join(''\n\n''), status: lines.length ? lines[lines.length - 1] : '''', lines: lines, hasLines: lines.length > 0 };
+                    		};
+                    		var append = function(snapshot) {
+                    			var key = runid || page.local.RunID || ''pending'';
+                    			if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
+                    				page.local.AgentProgressHistory = [];
+                    				page.local.AgentProgressHistoryRunId = key;
+                    			}
+                    			var history = page.local.AgentProgressHistory;
+                    			var lines = snapshot && snapshot.lines ? snapshot.lines : [];
+                    			for (var i = 0; i < lines.length; i++) {
+                    				var line = localize(lines[i]);
+                    				if (!isGeneric(line) && history.indexOf(line) === -1) {
+                    					history.push(line);
+                    				}
+                    			}
+                    			while (history.length > 12) {
+                    				history.shift();
+                    			}
+                    			return { text: history.join(''\n\n''), status: history.length ? history[history.length - 1] : '''', hasLines: history.length > 0 };
+                    		};
+                    		var render = function(buffer) {
+                    			var idx = page.local.StreamingIndex;
+                    			if (idx == null || !page.local.Messages || !page.local.Messages[idx]) {
+                    				return;
+                    			}
+                    			var current = page.local.Messages[idx];
+                    			var progress = buffer && buffer.progress != null ? buffer.progress : (buffer && buffer.content != null ? buffer.content : (buffer && buffer.text != null ? buffer.text : ''''));
+                    			var snap = append(snapshotFrom(progress, buffer ? buffer.phase : ''''));
+                    			if (!snap.hasLines) {
+                    				if (clean(current.msg).length || clean(current.status).length) {
+                    					return;
+                    				}
+                    				snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
+                    			}
+                    			page.local.Messages[idx].msg = snap.text;
+                    			page.local.Messages[idx].status = snap.status;
+                    			page.local.Messages[idx].writing = true;
+                    		};
+                    
+                    		page.local.RunID = runid;
+                    		page.local.IsProcessing = true;
+                    		var progress = state.progress != null ? state.progress : (data.progress != null ? data.progress : '''');
+                    		var phase = state.phase != null ? state.phase : (data.phase != null ? data.phase : '''');
+                    		var snap = append(snapshotFrom(progress, phase));
+                    		if (!snap.hasLines) {
+                    			snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
+                    		}
+                    		var nowDate = new Date();
+                    		var hh = (''0'' + nowDate.getHours()).slice(-2);
+                    		var mm = (''0'' + nowDate.getMinutes()).slice(-2);
+                    		page.local.Messages.push({
+                    			msg: snap.text,
+                    			type: ''assistant'',
+                    			author: ''Assistant'',
+                    			time: hh + '':'' + mm,
+                    			id: -1,
+                    			tag1: ''How-To'',
+                    			tag2: ''Convertigo'',
+                    			tag3: ''Guide'',
+                    			status: snap.status,
+                    			writing: true
+                    		});
+                    		page.local.StreamingIndex = page.local.Messages.length - 1;
+                    		page.local.Buffer = { progress: progress, phase: phase || snap.status };
+                    		render(page.local.Buffer);
+                    
+                    		var intervalId = null;
+                    		var pull = function() {
+                    			page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', { ''__context'': ''byside'' }).async().then(function(r) {
+                    				var raw = r ? r.C8OAiAssistantBuffer : null;
+                    				if (raw == null) {
+                    					return;
+                    				}
+                    				var buffer = null;
+                    				if (typeof raw === ''string'') {
+                    					if (!raw.length) {
+                    						return;
+                    					}
+                    					try {
+                    						buffer = JSON.parse(raw);
+                    					} catch (e1) {
+                    						return;
+                    					}
+                    				} else if (typeof raw === ''object'') {
+                    					buffer = raw;
+                    				}
+                    				if (!buffer) {
+                    					return;
+                    				}
+                    				page.local.Buffer = buffer;
+                    				page.local.Buffer.intId = intervalId;
+                    				render(buffer);
+                    				page.tick();
+                    				page.scrollChatBottom(0);
+                    			}).catch(function() {});
+                    		};
+                    		pull();
+                    		intervalId = window.setInterval(pull, 600);
+                    		page.local.Buffer.intId = intervalId;
+                    		page.tick();
+                    		page.scrollChatBottom(0);
+                    		resolve();
+                    '
             ↓data [ngx.components.UIControlVariable-1749567905833]: 
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.CreateConversation","marker":""}],"path":"?.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversation","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+            ↓state [ngx.components.UIControlVariable-1781622093063]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
+            ↓PollActiveRunOnEnter [ngx.components.UIDynamicAction-1781622093065]: 
+              beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.IsProcessing === true && !!this.local.RunID"}'
+              ↓CallSequence [ngx.components.UIDynamicAction-1781622094571]: 
+                beanData: |
+                  '{
+                   "ionBean": "CallSequenceAction",
+                   "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
+                   "noLoading": "plain:true"
+                  }'
+                ↓threadid [ngx.components.UIControlVariable-1781622094573]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                ↓runid [ngx.components.UIControlVariable-1781622094575]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                ↓PublishEvent [ngx.components.UIDynamicAction-1781622094577]: 
+                  beanData: |
+                    '{
+                     "ionBean": "PublishEventAction",
+                     "topic": "plain:AssistantResponse",
+                     "async": "plain:false"
+                    }'
+        ↓targetProject [ngx.components.UIControlVariable-1781590187587]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+        ↓SetConversations [ngx.components.UIDynamicAction-1781604126371]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:AgentConversations",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
+        ↓SetConversationResumed [ngx.components.UIDynamicAction-1781604851703]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:AgentConversationResumed",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.resumed\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
+        ↓SetConversationProject [ngx.components.UIDynamicAction-1781676293645]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:ConversationProject",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
+          ↓RefreshEnableChat [ngx.components.UICustomAction-1781676448770]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.setEnableChat();
+                    		resolve();
+                    
   ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
     actionValue: 
       - xmlizable: 
@@ -1264,36 +2438,185 @@ title: Component assistant
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
             '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+            		if (!page.local) {
+            			page.local = {};
+            		}
+            		if (!page.local.Messages) {
+            			page.local.Messages = [];
+            		}
+            
             		var status = "" + (vars.status == null ? "" : vars.status);
             		var isCompleted = status === "completed";
             		var isFailed = status === "failed" || status === "cancelled" || status === "expired";
+            		var response = vars.response || {};
+            		var aiData = vars.aiData || {};
+            		var state = response.state || aiData.state || {};
+            		var runid = state.runid != null ? state.runid : response.id;
+            		if (runid != null && ("" + runid).length) {
+            			page.local.RunID = "" + runid;
+            		}
+            
+            		var trimText = function(value) {
+            			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+            		};
+            		var localizeProgress = function(value) {
+            			var line = trimText(value);
+            			var key = line.toLowerCase();
+            			var map = {
+            				"i am preparing the local agent.": "Je prépare l''agent local.",
+            				"i am analyzing the request.": "J''analyse la demande.",
+            				"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
+            				"i am applying a change in the project.": "J''applique une modification dans le projet.",
+            				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
+            				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
+            				"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+            				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
+            				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction.",
+            				"i am reading files.": "Je lis les fichiers du projet.",
+            				"i am searching code.": "Je recherche dans le code.",
+            				"i am writing.": "J''écris la réponse."
+            			};
+            			return map[key] || line;
+            		};
+            		var isGenericProgress = function(value) {
+            			var text = trimText(value).toLowerCase();
+            			return !text.length || text === "writing" || text === "agent is working" || text === "agent is working..." || text === "assistant is writing" || text === "assistant is writing..." || text === "traitement en cours" || text === "traitement en cours...";
+            		};
+            		var isLowSignalProgress = function(value) {
+            			var text = trimText(value).toLowerCase();
+            			return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
+            		};
+            		var normalizeProgressLines = function(progress, phase) {
+            			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+            			var lines = [];
+            			for (var i = 0; i < raw.length; i++) {
+            				var line = localizeProgress(raw[i]);
+            				if (isGenericProgress(line) || line.indexOf("Sending data to the AI assistant") === 0) {
+            					continue;
+            				}
+            				if (lines.length && lines[lines.length - 1] === line) {
+            					continue;
+            				}
+            				if (lines.indexOf(line) === -1) {
+            					lines.push(line);
+            				}
+            			}
+            			var p = localizeProgress(phase);
+            			if (!isGenericProgress(p) && lines.indexOf(p) === -1) {
+            				lines.push(p);
+            			}
+            			if (lines.length > 1) {
+            				var filtered = [];
+            				for (var j = 0; j < lines.length; j++) {
+            					if (!isLowSignalProgress(lines[j])) {
+            						filtered.push(lines[j]);
+            					}
+            				}
+            				if (filtered.length) {
+            					lines = filtered;
+            				}
+            			}
+            			return lines;
+            		};
+            		var progressSnapshot = function(progress, phase) {
+            			var lines = normalizeProgressLines(progress, phase);
+            			if (lines.length > 12) {
+            				lines = lines.slice(lines.length - 12);
+            			}
+            			return {
+            				text: lines.join("\n\n"),
+            				status: lines.length ? lines[lines.length - 1] : "",
+            				lines: lines,
+            				hasLines: lines.length > 0
+            			};
+            		};
+            		var appendProgressSnapshot = function(snapshot, runKey) {
+            			var key = "" + (runKey || page.local.RunID || "pending");
+            			if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
+            				page.local.AgentProgressHistory = [];
+            				page.local.AgentProgressHistoryRunId = key;
+            			}
+            			var history = page.local.AgentProgressHistory;
+            			var lines = snapshot && snapshot.lines ? snapshot.lines : [];
+            			for (var i = 0; i < lines.length; i++) {
+            				var line = localizeProgress(lines[i]);
+            				if (!isGenericProgress(line) && history.indexOf(line) === -1) {
+            					history.push(line);
+            				}
+            			}
+            			while (history.length > 12) {
+            				history.shift();
+            			}
+            			return {
+            				text: history.join("\n\n"),
+            				status: history.length ? history[history.length - 1] : "",
+            				hasLines: history.length > 0
+            			};
+            		};
+            
+            		var currentProgress = state.progress != null ? state.progress : (aiData.progress != null ? aiData.progress : (page.local.Buffer && page.local.Buffer.progress != null ? page.local.Buffer.progress : ""));
+            		var currentPhase = state.phase != null ? state.phase : (aiData.phase != null ? aiData.phase : (page.local.Buffer && page.local.Buffer.phase != null ? page.local.Buffer.phase : ""));
+            		var currentSnapshot = appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid);
+            
+            		var findTarget = function() {
+            			var idx = page.local.StreamingIndex;
+            			if (idx != null && page.local.Messages[idx]) {
+            				return { target: page.local.Messages[idx], index: idx };
+            			}
+            			for (var j = page.local.Messages.length - 1; j >= 0; j--) {
+            				if (page.local.Messages[j] && page.local.Messages[j].type === "assistant" && page.local.Messages[j].writing === true) {
+            					return { target: page.local.Messages[j], index: j };
+            				}
+            			}
+            			return { target: null, index: -1 };
+            		};
+            		var ensureTarget = function(writing) {
+            			var found = findTarget();
+            			if (found.target) {
+            				return found;
+            			}
+            			var now = new Date();
+            			var hh = ("0" + now.getHours()).slice(-2);
+            			var mm = ("0" + now.getMinutes()).slice(-2);
+            			var target = {
+            				msg: writing && currentSnapshot.hasLines ? currentSnapshot.text : "",
+            				type: "assistant",
+            				author: "Assistant",
+            				time: hh + ":" + mm,
+            				id: -1,
+            				tag1: "How-To",
+            				tag2: "Convertigo",
+            				tag3: "Guide",
+            				status: writing && currentSnapshot.hasLines ? currentSnapshot.status : "",
+            				writing: writing === true
+            			};
+            			page.local.Messages.push(target);
+            			return { target: target, index: page.local.Messages.length - 1 };
+            		};
+            
             		if (!isCompleted && !isFailed) {
+            			var active = ensureTarget(true);
+            			if (currentSnapshot.hasLines) {
+            				active.target.msg = currentSnapshot.text;
+            				active.target.status = currentSnapshot.status;
+            			} else if (!trimText(active.target.msg).length && !trimText(active.target.status).length) {
+            				active.target.msg = "Traitement en cours.";
+            				active.target.status = "Traitement en cours.";
+            			}
+            			active.target.writing = true;
+            			active.target.type = "assistant";
+            			active.target.id = runid != null ? runid : active.target.id;
+            			page.local.StreamingIndex = active.index;
+            			page.local.IsProcessing = true;
+            			page.local.Buffer = { progress: currentProgress || active.target.msg, phase: currentPhase || active.target.status };
+            			page.tick();
+            			page.scrollChatBottom(0);
             			resolve();
             			return;
             		}
-            		
-            		var idx = page.local.StreamingIndex;
-            		var target = idx != null && page.local.Messages && page.local.Messages[idx] ? page.local.Messages[idx] : null;
-            		if (!target) {
-            			var j = page.local.Messages ? page.local.Messages.length - 1 : -1;
-            			for (; j >= 0; j--) {
-            				if (page.local.Messages[j] && page.local.Messages[j].type === "assistant" && page.local.Messages[j].writing === true) {
-            					target = page.local.Messages[j];
-            					break;
-            				}
-            			}
-            		}
-            		if (!target) {
-            			target = {
-            				type: "assistant",
-            				id: -1
-            			};
-            			if (!page.local.Messages) {
-            				page.local.Messages = [];
-            			}
-            			page.local.Messages.push(target);
-            		}
-            		
+            
+            		var finalTarget = ensureTarget(false);
+            		var target = finalTarget.target;
             		var responseId = null;
             		var finalMessage = "";
             		var parseMessage = function(candidate) {
@@ -1314,24 +2637,22 @@ title: Component assistant
             			}
             			return "";
             		};
-            		
-            		if (vars.aiData && vars.aiData.explanation != null && ("" + vars.aiData.explanation).trim().length) {
-            			finalMessage = "" + vars.aiData.explanation;
+            		if (aiData && aiData.explanation != null && ("" + aiData.explanation).trim().length) {
+            			finalMessage = "" + aiData.explanation;
             		}
-            		
-            		var response = vars.response;
-            		if (!finalMessage.length && response && response.object && response.object.Message != null) {
-            			response = response.object.Message;
+            		var responsePayload = response;
+            		if (!finalMessage.length && responsePayload && responsePayload.object && responsePayload.object.Message != null) {
+            			responsePayload = responsePayload.object.Message;
             		}
-            		if (!finalMessage.length && response && response.Message != null) {
-            			response = response.Message;
+            		if (!finalMessage.length && responsePayload && responsePayload.Message != null) {
+            			responsePayload = responsePayload.Message;
             		}
             		if (!finalMessage.length) {
-            			if (typeof response === "string") {
-            				finalMessage = response;
-            			} else if (response && response.length != null) {
-            				for (var i = 0; i < response.length; i++) {
-            					var item = response[i];
+            			if (typeof responsePayload === "string") {
+            				finalMessage = responsePayload;
+            			} else if (responsePayload && responsePayload.length != null) {
+            				for (var k = 0; k < responsePayload.length; k++) {
+            					var item = responsePayload[k];
             					if (!item) {
             						continue;
             					}
@@ -1344,14 +2665,37 @@ title: Component assistant
             						}
             					}
             				}
-            			} else if (response != null) {
-            				finalMessage = parseMessage(response);
-            				if (response.id != null) {
-            					responseId = response.id;
+            			} else if (responsePayload != null) {
+            				finalMessage = parseMessage(responsePayload);
+            				if (responsePayload.id != null) {
+            					responseId = responsePayload.id;
             				}
             			}
             		}
-            		
+            
+            		var progressText = trimText(currentProgress);
+            		var looksIncomplete = function(value) {
+            			var text = trimText(value).replace(/\s+/g, " ");
+            			if (!text.length) {
+            				return true;
+            			}
+            			if (text.indexOf("Sending data to the AI assistant") === 0 || text.indexOf("\"JsonResponse\"") !== -1 || text.indexOf("<tool_error>") !== -1) {
+            				return true;
+            			}
+            			if (!progressText.length) {
+            				return false;
+            			}
+            			return text.length < 24 && text.split(/\s+/).length <= 3;
+            		};
+            		if (isCompleted && looksIncomplete(finalMessage)) {
+            			finalMessage = "L''agent a terminé, mais sa réponse finale est incomplète.";
+            			if (trimText(currentPhase).length) {
+            				finalMessage += "\n\nDernière action observée : " + localizeProgress(currentPhase);
+            			}
+            			if (aiData.warnings && aiData.warnings.length) {
+            				finalMessage += "\n\nUne tentative d''outil a échoué pendant le traitement.";
+            			}
+            		}
             		if (!finalMessage.length) {
             			finalMessage = "" + (target.msg == null ? "" : target.msg);
             		}
@@ -1359,20 +2703,19 @@ title: Component assistant
             			finalMessage = "" + page.local.Buffer.content;
             		}
             		if (isFailed) {
-            			var failedPreview = "" + (finalMessage == null ? "" : finalMessage);
-            			var failedTrimmed = failedPreview.trim();
+            			var failedTrimmed = trimText(finalMessage);
             			if (!failedTrimmed.length || failedTrimmed.indexOf("Sending data to the AI assistant") === 0 || failedTrimmed.indexOf("\"JsonResponse\"") !== -1) {
             				finalMessage = "";
             			}
             		}
             		if (!finalMessage.length && isFailed) {
-            			finalMessage = "Assistant request failed (" + (status.length ? status : "unknown") + "). Please retry.";
+            			finalMessage = "La demande de l''assistant a échoué (" + (status.length ? status : "unknown") + "). Vous pouvez réessayer.";
             		}
             		if (finalMessage.length) {
             			target.msg = finalMessage;
             		}
             		target.type = "assistant";
-            		target.id = responseId != null ? responseId : (target.id != null ? target.id : -1);
+            		target.id = responseId != null ? responseId : (runid != null ? runid : (target.id != null ? target.id : -1));
             		target.writing = false;
             		target.status = "";
             		if (!target.author) {
@@ -1384,6 +2727,9 @@ title: Component assistant
             			target.tag3 = status.length ? status : "failed";
             		}
             		page.local.StreamingIndex = null;
+            		page.local.IsProcessing = false;
+            		page.local.AgentProgressHistory = [];
+            		page.local.AgentProgressHistoryRunId = "";
             		page.tick();
             		page.scrollChatBottom(0);
             		resolve();
@@ -1392,24 +2738,24 @@ title: Component assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.ReadResponse","marker":""}],"path":"","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓status [ngx.components.UIControlVariable-1777701000001]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.ReadResponse","marker":""}],"path":"?.status","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.status","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓aiData [ngx.components.UIControlVariable-1777701000002]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.ReadResponse","marker":""}],"path":"?.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓IfElse [ngx.components.UIDynamicIf-1744357030892]: 
-      beanData: '{"ionBean":"IfElseAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.ReadResponse\",\"marker\":\"\"}],\"path\":\"?.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+      beanData: '{"ionBean":"IfElseAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}"}'
       ↓CallSequence [ngx.components.UIDynamicAction-1744367857710]: 
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.ReadResponse",
+           "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
            "noLoading": "plain:true"
           }'
         ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
@@ -1463,7 +2809,7 @@ title: Component assistant
              "level": "plain:warn"
             }'
         ↓If1 [ngx.components.UIDynamicAction-1747229858672]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.ReadResponse\",\"marker\":\"\"}],\"path\":\"?.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           ↓AddAssistantMessage [ngx.components.UICustomAction-1747229858675]: 
             actionValue: 
               - xmlizable: 
@@ -1514,7 +2860,7 @@ title: Component assistant
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.ReadResponse","marker":""}],"path":"?.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
 ↓Footer [ngx.components.UIDynamicElement-1750415662453]: 
   beanData: '{"ionBean":"Footer"}'
   tagName: ion-footer
@@ -1695,17 +3041,141 @@ title: Component assistant
                       →: |
                         '		try {
                         			page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
-                        			
+                        			if (!page.local) {
+                        				page.local = {};
+                        			}
                         			if (!page.local.Buffer) {
                         				page.local.Buffer = {};
                         			}
-                        			
                         			if (page.local.Buffer.intId) {
                         				window.clearInterval(page.local.Buffer.intId);
                         			}
-                        			
+                        
+                        			var trimText = function(value) {
+                        				return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                        			};
+                        			var localizeProgress = function(value) {
+                        				var line = trimText(value);
+                        				var key = line.toLowerCase();
+                        				var map = {
+                        					"i am preparing the local agent.": "Je prépare l''agent local.",
+                        					"i am analyzing the request.": "J''analyse la demande.",
+                        					"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
+                        					"i am applying a change in the project.": "J''applique une modification dans le projet.",
+                        					"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
+                        					"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
+                        					"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                        					"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
+                        					"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction.",
+                        					"i am reading files.": "Je lis les fichiers du projet.",
+                        					"i am searching code.": "Je recherche dans le code.",
+                        					"i am writing.": "J''écris la réponse."
+                        				};
+                        				return map[key] || line;
+                        			};
+                        			var isGenericProgress = function(value) {
+                        				var text = trimText(value).toLowerCase();
+                        				return !text.length || text === "writing" || text === "agent is working" || text === "agent is working..." || text === "assistant is writing" || text === "assistant is writing..." || text === "traitement en cours" || text === "traitement en cours...";
+                        			};
+                        			var isLowSignalProgress = function(value) {
+                        				var text = trimText(value).toLowerCase();
+                        				return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
+                        			};
+                        			var normalizeProgressLines = function(progress, phase) {
+                        				var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+                        				var lines = [];
+                        				for (var i = 0; i < raw.length; i++) {
+                        					var line = localizeProgress(raw[i]);
+                        					if (isGenericProgress(line) || line.indexOf("Sending data to the AI assistant") === 0) {
+                        						continue;
+                        					}
+                        					if (lines.length && lines[lines.length - 1] === line) {
+                        						continue;
+                        					}
+                        					if (lines.indexOf(line) === -1) {
+                        						lines.push(line);
+                        					}
+                        				}
+                        				var p = localizeProgress(phase);
+                        				if (!isGenericProgress(p) && lines.indexOf(p) === -1) {
+                        					lines.push(p);
+                        				}
+                        				if (lines.length > 1) {
+                        					var filtered = [];
+                        					for (var j = 0; j < lines.length; j++) {
+                        						if (!isLowSignalProgress(lines[j])) {
+                        							filtered.push(lines[j]);
+                        						}
+                        					}
+                        					if (filtered.length) {
+                        						lines = filtered;
+                        					}
+                        				}
+                        				return lines;
+                        			};
+                        			var progressSnapshot = function(progress, phase) {
+                        				var lines = normalizeProgressLines(progress, phase);
+                        				if (lines.length > 12) {
+                        					lines = lines.slice(lines.length - 12);
+                        				}
+                        				return {
+                        					text: lines.join("\n\n"),
+                        					status: lines.length ? lines[lines.length - 1] : "",
+                        					lines: lines,
+                        					hasLines: lines.length > 0
+                        				};
+                        			};
+                        			var appendProgressSnapshot = function(snapshot, runKey) {
+                        				var key = "" + (runKey || page.local.RunID || "pending");
+                        				if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
+                        					page.local.AgentProgressHistory = [];
+                        					page.local.AgentProgressHistoryRunId = key;
+                        				}
+                        				var history = page.local.AgentProgressHistory;
+                        				var lines = snapshot && snapshot.lines ? snapshot.lines : [];
+                        				for (var i = 0; i < lines.length; i++) {
+                        					var line = localizeProgress(lines[i]);
+                        					if (!isGenericProgress(line) && history.indexOf(line) === -1) {
+                        						history.push(line);
+                        					}
+                        				}
+                        				while (history.length > 12) {
+                        					history.shift();
+                        				}
+                        				return {
+                        					text: history.join("\n\n"),
+                        					status: history.length ? history[history.length - 1] : "",
+                        					hasLines: history.length > 0
+                        				};
+                        			};
+                        			var renderProgress = function(buffer) {
+                        				var idx = page.local.StreamingIndex;
+                        				if (idx == null || !page.local.Messages || !page.local.Messages[idx]) {
+                        					return;
+                        				}
+                        				var current = page.local.Messages[idx];
+                        				var phase = buffer && buffer.phase != null ? trimText(buffer.phase) : "";
+                        				var progress = "";
+                        				if (buffer && buffer.progress != null) {
+                        					progress = "" + buffer.progress;
+                        				} else if (buffer && buffer.content != null) {
+                        					progress = "" + buffer.content;
+                        				} else if (buffer && buffer.text != null) {
+                        					progress = "" + buffer.text;
+                        				}
+                        				var snapshot = appendProgressSnapshot(progressSnapshot(progress, phase), buffer && buffer.runid);
+                        				if (!snapshot.hasLines) {
+                        					if (trimText(current.msg).length || trimText(current.status).length) {
+                        						return;
+                        					}
+                        					snapshot = { text: "Traitement en cours.", status: "Traitement en cours.", hasLines: true };
+                        				}
+                        				current.msg = snapshot.text;
+                        				current.status = snapshot.status;
+                        				current.writing = true;
+                        			};
+                        
                         			var intervalId = null;
-                        			
                         			var pullBuffer = function() {
                         				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
                         					"__context": "byside"
@@ -1731,56 +3201,14 @@ title: Component assistant
                         						if (!buffer) {
                         							return;
                         						}
-                        						var previousChunk = "" + ((page.local.Buffer && page.local.Buffer.lastRaw) ? page.local.Buffer.lastRaw : "");
                         						page.local.Buffer = buffer;
                         						page.local.Buffer.intId = intervalId;
-                        						page.local.Buffer.lastRaw = previousChunk;
-                        						
-                        						var idx = page.local.StreamingIndex;
-                        						if (idx != null && page.local.Messages && page.local.Messages[idx]) {
-                        							var current = page.local.Messages[idx];
-                        							var content = "";
-                        							if (buffer.content != null) {
-                        								content = "" + buffer.content;
-                        							} else if (buffer.text != null) {
-                        								content = "" + buffer.text;
-                        							}
-                        							var currentText = "" + (current.msg || "");
-                        							var part = content;
-                        							if (previousChunk.length && content.indexOf(previousChunk) === 0) {
-                        								part = content.substring(previousChunk.length);
-                        							} else if (content === previousChunk) {
-                        								part = "";
-                        							}
-                        							var preview = ("" + content).trim();
-                        							if (preview.indexOf("Sending data to the AI assistant") === 0) {
-                        								page.local.Buffer.lastRaw = content;
-                        								return;
-                        							}
-                        							if (part.length) {
-                        								if (/\.\.\.\s*$/.test(part)) {
-                        									current.status = part.trim();
-                        								} else {
-                        									current.msg = currentText + part;
-                        									current.status = "writing";
-                        								}
-                        							} else if (/\.\.\.\s*$/.test(content)) {
-                        								current.status = ("" + content).trim();
-                        							} else {
-                        								current.status = "writing";
-                        							}
-                        							page.local.Buffer.lastRaw = content;
-                        							if (!current.status || !current.status.length) {
-                        								current.status = "writing";
-                        							}
-                        							current.writing = true;
-                        							page.tick();
-                        							page.scrollChatBottom(0);
-                        						}
+                        						renderProgress(buffer);
+                        						page.tick();
+                        						page.scrollChatBottom(0);
                         					} catch (e) {}
                         				}).catch(function() {});
                         			};
-                        			
                         			pullBuffer();
                         			intervalId = window.setInterval(pullBuffer, 600);
                         			page.local.Buffer.intId = intervalId;
@@ -1825,6 +3253,8 @@ title: Component assistant
                         			this.local.Messages = [];
                         		}
                         		this.local.Buffer = {};
+                        		this.local.AgentProgressHistory = [];
+                        		this.local.AgentProgressHistoryRunId = "";
                         		this.local.StreamingIndex = null;
                         		this.local.AutoScrollEnabled = true;
                         		this.local.AutoScrollLockUntil = Date.now() + 1400;
@@ -1880,7 +3310,7 @@ title: Component assistant
                   beanData: |
                     '{
                      "ionBean": "CallSequenceAction",
-                     "requestable": "plain:ConvertigoAssistant.SendMessage",
+                     "requestable": "plain:ConvertigoAssistant.AgentSendMessage",
                      "noLoading": "plain:true"
                     }'
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
@@ -1911,7 +3341,7 @@ title: Component assistant
                             		resolve();
                             '
                   ↓If [ngx.components.UIDynamicAction-1751354620911]: 
-                    beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.SendMessage\",\"marker\":\"\"}],\"path\":\"?.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+                    beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
                     ↓AddAssistantMessage [ngx.components.UICustomAction-1751354620914]: 
                       actionValue: 
                         - xmlizable: 
@@ -1946,19 +3376,19 @@ title: Component assistant
                         varValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.SendMessage","marker":""}],"path":"?.error","prefix":"","suffix":"","custom":"","useCustom":false}}
+                            - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentSendMessage","marker":""}],"path":"?.result.error","prefix":"","suffix":"","custom":"","useCustom":false}}
                   ↓SetLocal [ngx.components.UIDynamicAction-1751354620920]: 
                     beanData: |
                       '{
                        "ionBean": "SetLocalAction",
                        "Property": "plain:RunID",
-                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.SendMessage\",\"marker\":\"\"}],\"path\":\"?.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                       }'
                     ↓CallSequence [ngx.components.UIDynamicAction-1751354620923]: 
                       beanData: |
                         '{
                          "ionBean": "CallSequenceAction",
-                         "requestable": "plain:ConvertigoAssistant.ReadResponse",
+                         "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
                          "noLoading": "plain:true"
                         }'
                       ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
@@ -1978,6 +3408,11 @@ title: Component assistant
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  ↓targetProject [ngx.components.UIControlVariable-1781590190599]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
         ↓attachments [ngx.components.UIControlVariable-1751373371973]: 
           varValue: 
             - xmlizable: 
@@ -2060,15 +3495,253 @@ title: Component assistant
             min-width: 0;
           }
           
+          .agent-session-strip {
+            align-items: center;
+            background: rgba(8, 145, 178, 0.14);
+            border: 1px solid rgba(34, 211, 238, 0.28);
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            min-height: 44px;
+            padding: 9px 12px;
+            user-select: none;
+          }
+          
+          .agent-session-strip:hover,
+          .agent-session-strip:focus {
+            background: rgba(8, 145, 178, 0.2);
+            border-color: rgba(34, 211, 238, 0.42);
+            outline: none;
+          }
+          
+          .agent-session-strip ion-icon {
+            color: #22d3ee;
+            flex: 0 0 auto;
+            font-size: 20px;
+          }
+          
+          .agent-session-copy {
+            min-width: 0;
+          }
+          
+          .agent-session-chevron {
+            margin-left: auto;
+            opacity: 0.86;
+          }
+          
+          .agent-session-title {
+            color: #e2f8ff;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 18px;
+            margin: 0;
+          }
+          
+          .agent-session-meta {
+            color: #9fb3c8;
+            font-size: 11px;
+            line-height: 15px;
+            margin: 1px 0 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          
+          .agent-conversations-panel {
+            background: rgba(2, 8, 23, 0.98);
+            border: 1px solid rgba(34, 211, 238, 0.26);
+            border-radius: 8px;
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: calc(100vh - 150px);
+            overflow: auto;
+            padding: 12px;
+            position: fixed;
+            right: 16px;
+            top: 84px;
+            width: min(380px, calc(100vw - 32px));
+            z-index: 65;
+          }
+          
+          .agent-conversations-title {
+            color: #b6c4d5;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 16px;
+            margin: 0 34px 0 0;
+          }
+          
+          .agent-conversations-close {
+            --border-radius: 6px;
+            --color: #9fb3c8;
+            --padding-end: 4px;
+            --padding-start: 4px;
+            height: 28px;
+            margin: 0;
+            min-width: 28px;
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            width: 28px;
+          }
+          
+          .agent-new-conversation-button {
+            --background: rgba(8, 145, 178, 0.18);
+            --border-color: rgba(34, 211, 238, 0.28);
+            --border-radius: 7px;
+            --border-style: solid;
+            --border-width: 1px;
+            --color: #dff8ff;
+            --padding-bottom: 8px;
+            --padding-end: 10px;
+            --padding-start: 10px;
+            --padding-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            height: auto;
+            margin: 4px 0 2px;
+            min-height: 36px;
+            text-transform: none;
+            width: 100%;
+          }
+          
+          .agent-new-conversation-button ion-icon {
+            font-size: 16px;
+          }
+          
+          .agent-conversation-row {
+            align-items: center;
+            background: rgba(15, 23, 42, 0.54);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 8px;
+            display: grid;
+            gap: 8px;
+            grid-template-columns: minmax(0, 1fr) auto;
+            min-height: 44px;
+            padding: 8px 10px;
+          }
+          
+          .agent-conversation-row:hover {
+            border-color: rgba(148, 163, 184, 0.36);
+          }
+          
+          .agent-conversation-row.active {
+            background: rgba(8, 145, 178, 0.2);
+            border-color: rgba(34, 211, 238, 0.45);
+          }
+          
+          .agent-conversation-info {
+            min-width: 0;
+          }
+          
+          .agent-conversation-name {
+            color: #e2e8f0;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 17px;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          
+          .agent-conversation-meta {
+            color: #94a3b8;
+            font-size: 11px;
+            line-height: 15px;
+            margin: 2px 0 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          
+          .agent-conversation-actions {
+            align-items: center;
+            display: flex;
+            gap: 4px;
+          }
+          
+          .agent-conversation-action {
+            --background: rgba(15, 23, 42, 0.72);
+            --border-color: rgba(148, 163, 184, 0.2);
+            --border-radius: 6px;
+            --border-style: solid;
+            --border-width: 1px;
+            --color: #cce8f2;
+            --padding-end: 8px;
+            --padding-start: 8px;
+            font-size: 12px;
+            height: 30px;
+            margin: 0;
+            min-width: 34px;
+            text-transform: none;
+            width: auto;
+          }
+          
+          .agent-conversation-action ion-icon {
+            font-size: 16px;
+            margin-right: 4px;
+          }
+          
+          .agent-conversation-action.danger {
+            --background: rgba(127, 29, 29, 0.12);
+            --color: #fda4af;
+            width: 32px;
+          }
+          
+          .agent-conversation-action.danger ion-icon {
+            margin-right: 0;
+          }
+          
+          .agent-conversation-action[disabled] {
+            opacity: 0.55;
+          }
+          
+          .modern-scroll-top-btn {
+            bottom: 72px;
+            position: absolute;
+            right: 20px;
+            z-index: 40;
+          }
+          
+          .modern-scroll-top-btn ion-icon {
+            font-size: 22px;
+          }
+          
           @media (max-width: 768px) {
             ion-header.modern-header .modern-title-sub.modern-title-sub-project {
               display: block !important;
               font-size: 10px;
               line-height: 14px;
-              white-space: nowrap;
+              max-width: 100%;
               overflow: hidden;
               text-overflow: ellipsis;
-              max-width: 100%;
+              white-space: nowrap;
+            }
+          
+            .agent-session-strip {
+              min-height: 42px;
+              padding: 8px 10px;
+            }
+          
+            .agent-conversations-panel {
+              right: 8px;
+              top: 72px;
+              width: calc(100vw - 16px);
+            }
+          
+            .agent-conversation-row {
+              padding: 7px 8px;
+            }
+          
+            .agent-conversation-action {
+              font-size: 11px;
+              --padding-end: 7px;
+              --padding-start: 7px;
             }
           }
           '

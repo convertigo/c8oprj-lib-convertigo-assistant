@@ -1,0 +1,47 @@
+comment: List durable local agent conversations for one Studio/NoCode user.
+↓Run [steps.SimpleStep-1781602411844]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    var _targetProject = typeof targetProject === "undefined" ? "" : targetProject;
+    if (!_targetProject && typeof projectName !== "undefined") {
+      _targetProject = projectName;
+    }
+    result = C8O.assistantAgentBridge.listConversations({
+      provider: typeof provider === "undefined" ? "" : provider,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      targetProject: _targetProject,
+      projectName: typeof projectName === "undefined" ? "" : projectName,
+      userId: typeof userId === "undefined" ? "" : userId,
+      includeDeleted: typeof includeDeleted === "undefined" ? "" : includeDeleted
+    });'
+↓result [steps.JsonToXmlStep-1781602411871]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓provider [variables.RequestableVariable-1781602411903]: 
+  comment: Agent provider. Defaults to vibe.
+  description: Agent provider. Defaults to vibe.
+↓workspaceRoot [variables.RequestableVariable-1781602411907]: 
+  comment: Optional Convertigo workspace root. Defaults to parent folder of this project.
+  description: Optional Convertigo workspace root. Defaults to parent folder of this project.
+↓projectName [variables.RequestableVariable-1781602411920]: 
+  comment: Optional project filter. Conversations may contain several projects.
+  description: Optional project filter. Conversations may contain several projects.
+↓userId [variables.RequestableVariable-1781602411928]: 
+  comment: Optional user id. Defaults to studio.
+  description: Optional user id. Defaults to studio.
+↓includeDeleted [variables.RequestableVariable-1781602411935]: 
+  comment: Set true to include deleted records if retained.
+  description: Set true to include deleted records if retained.
+↓targetProject [variables.RequestableVariable-1781602646281]: 
+  comment: Optional project filter. Preferred over projectName.
+  description: Optional project filter. Preferred over projectName.

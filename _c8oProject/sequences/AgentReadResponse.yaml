@@ -1,0 +1,36 @@
+comment: Poll a local agent conversation and update the existing assistant streaming buffer.
+responseTimeout: 120
+↓Run [steps.SimpleStep-1781650000301]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.readResponse({
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      runid: typeof runid === "undefined" ? "" : runid,
+      waitMs: typeof waitMs === "undefined" ? "" : waitMs,
+      limit: typeof limit === "undefined" ? "" : limit
+    });'
+↓result [steps.JsonToXmlStep-1781650000302]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓threadid [variables.RequestableVariable-1781650000303]: 
+  comment: Agent conversation id returned by AgentCreateConversation.
+  description: Agent conversation id returned by AgentCreateConversation.
+↓runid [variables.RequestableVariable-1781650000304]: 
+  comment: Agent run id returned by AgentSendMessage.
+  description: Agent run id returned by AgentSendMessage.
+↓waitMs [variables.RequestableVariable-1781650000305]: 
+  comment: Long-poll wait for bridge events. Defaults to 1000.
+  description: Long-poll wait for bridge events. Defaults to 1000.
+↓limit [variables.RequestableVariable-1781650000306]: 
+  comment: Maximum bridge events to read. Defaults to 100.
+  description: Maximum bridge events to read. Defaults to 100.

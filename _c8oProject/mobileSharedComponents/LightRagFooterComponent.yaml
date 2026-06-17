@@ -2315,8 +2315,124 @@ scriptContent:
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
+            '		try {
+            			var pageRef = page;
+            			var extensionForType = function(type) {
+            				var value = ('''' + (type || '''')).toLowerCase();
+            				if (value.indexOf(''png'') !== -1) return ''.png'';
+            				if (value.indexOf(''jpeg'') !== -1 || value.indexOf(''jpg'') !== -1) return ''.jpg'';
+            				if (value.indexOf(''webp'') !== -1) return ''.webp'';
+            				if (value.indexOf(''gif'') !== -1) return ''.gif'';
+            				if (value.indexOf(''svg'') !== -1) return ''.svg'';
+            				return ''.png'';
+            			};
+            			var normalizeClipboardFile = function(file, index, type) {
+            				if (!file) {
+            					return null;
+            				}
+            				try {
+            					var now = new Date().getTime();
+            					var name = '''' + (file.name || '''');
+            					if (!name.length || name === ''image.png'' || name === ''image'') {
+            						name = ''clipboard-image-'' + now + ''-'' + index + extensionForType(file.type || type);
+            					}
+            					if (typeof File !== ''undefined'') {
+            						return new File([file], name, { type: file.type || type || ''image/png'', lastModified: now });
+            					}
+            				} catch (e1) {}
+            				return file;
+            			};
+            			var extractClipboardImageFiles = function(event) {
+            				var files = [];
+            				var data = event && event.clipboardData ? event.clipboardData : null;
+            				if (data && data.items && data.items.length) {
+            					for (var i = 0; i < data.items.length; i++) {
+            						var item = data.items[i];
+            						var type = '''' + (item && item.type ? item.type : '''');
+            						if (item && item.kind === ''file'' && type.toLowerCase().indexOf(''image/'') === 0 && item.getAsFile) {
+            							var pastedFile = normalizeClipboardFile(item.getAsFile(), i, type);
+            							if (pastedFile) {
+            								files.push(pastedFile);
+            							}
+            						}
+            					}
+            				}
+            				if (!files.length && data && data.files && data.files.length) {
+            					for (var j = 0; j < data.files.length; j++) {
+            						var file = data.files[j];
+            						if (pageRef.isImageFile && pageRef.isImageFile(file)) {
+            							files.push(normalizeClipboardFile(file, j, file.type));
+            						}
+            					}
+            				}
+            				return files;
+            			};
+            			var handlePaste = function(event) {
+            				try {
+            					if (!pageRef.isAssetInputEnabled || !pageRef.isAssetInputEnabled()) {
+            						return;
+            					}
+            					if (pageRef.EnableChat === false || pageRef.IsProcessing === true) {
+            						return;
+            					}
+            					var files = extractClipboardImageFiles(event);
+            					if (files.length) {
+            						if (event && event.preventDefault) {
+            							event.preventDefault();
+            						}
+            						if (event && event.stopPropagation) {
+            							event.stopPropagation();
+            						}
+            						pageRef.addFiles(files, true);
+            					}
+            				} catch (e2) {}
+            			};
+            			try {
+            				if (typeof window !== ''undefined'' && window.addEventListener) {
+            					if (pageRef[''windowPasteHandler''] && window.removeEventListener) {
+            						window.removeEventListener(''paste'', pageRef[''windowPasteHandler''], true);
+            					}
+            					pageRef[''windowPasteHandler''] = handlePaste;
+            					window.addEventListener(''paste'', handlePaste, true);
+            				}
+            			} catch (e3) {}
+            			var bindPasteHandler = function(attempt) {
+            				setTimeout(function() {
+            					try {
+            						if (!(pageRef.questionInput && pageRef.questionInput.getInputElement)) {
+            							if (attempt < 6) {
+            								bindPasteHandler(attempt + 1);
+            							}
+            							return;
+            						}
+            						var applyToInput = function(inputEl) {
+            							try {
+            								if (!inputEl || !inputEl.addEventListener) {
+            									return;
+            								}
+            								if (pageRef[''questionInputPasteEl''] && pageRef[''questionInputPasteHandler''] && pageRef[''questionInputPasteEl''].removeEventListener) {
+            									pageRef[''questionInputPasteEl''].removeEventListener(''paste'', pageRef[''questionInputPasteHandler'']);
+            								}
+            								pageRef[''questionInputPasteEl''] = inputEl;
+            								pageRef[''questionInputPasteHandler''] = handlePaste;
+            								inputEl.addEventListener(''paste'', handlePaste);
+            							} catch (e4) {}
+            						};
+            						var inputPromise = pageRef.questionInput.getInputElement();
+            						if (inputPromise && inputPromise.then) {
+            							inputPromise.then(function(inputEl) {
+            								applyToInput(inputEl);
+            							}).catch(function() {});
+            						} else {
+            							applyToInput(inputPromise);
+            						}
+            					} catch (e5) {}
+            				}, attempt === 0 ? 120 : 250);
+            			};
+            			bindPasteHandler(0);
+            		} catch (e) {}
             		resolve();
-            
+            '
     local_module_ng_imports: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector

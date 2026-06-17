@@ -1,0 +1,174 @@
+comment: Submit a user prompt to a local agent conversation through ConvertigoAgentBridge.
+responseTimeout: 120
+↓Run [steps.SimpleStep-1781650000201]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    
+    function _agentTrim(value) {
+      if (value === null || typeof value === "undefined") {
+        return "";
+      }
+      return String(value).replace(/^\s+|\s+$/g, "");
+    }
+    
+    function _agentIsArray(value) {
+      return value && Object.prototype.toString.call(value) === "[object Array]";
+    }
+    
+    function _agentParseFiles(value) {
+      var text = _agentTrim(value);
+      if (!text.length) {
+        return [];
+      }
+      try {
+        var parsed = JSON.parse(text);
+        if (_agentIsArray(parsed)) {
+          return parsed;
+        }
+        if (parsed && _agentIsArray(parsed.files)) {
+          return parsed.files;
+        }
+        if (parsed) {
+          return [parsed];
+        }
+      } catch (e) {}
+      return [{ raw: text }];
+    }
+    
+    function _agentFileValue(file, names) {
+      if (!file) {
+        return "";
+      }
+      for (var i = 0; i < names.length; i++) {
+        var name = names[i];
+        if (file[name] !== null && typeof file[name] !== "undefined") {
+          var value = _agentTrim(file[name]);
+          if (value.length) {
+            return value;
+          }
+        }
+      }
+      return "";
+    }
+    
+    function _agentAttachmentLine(file, index) {
+      var label = _agentFileValue(file, ["filename", "name", "file_name", "id", "object"]);
+      var path = _agentFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath", "file"]);
+      var type = _agentFileValue(file, ["type", "mime", "mimeType", "content_type", "contentType"]);
+      var id = _agentFileValue(file, ["id", "file_id", "fileId"]);
+      var size = _agentFileValue(file, ["bytes", "size", "length"]);
+      var raw = _agentFileValue(file, ["raw"]);
+      var parts = [];
+      parts.push("attachment " + (index + 1));
+      if (label.length) parts.push("name=" + label);
+      if (path.length) parts.push("path=" + path);
+      if (type.length) parts.push("type=" + type);
+      if (id.length) parts.push("id=" + id);
+      if (size.length) parts.push("size=" + size);
+      if (raw.length) parts.push("raw=" + raw);
+      return parts.join("; ");
+    }
+    
+    var rawQuestion = typeof Question === "undefined" ? "" : String(Question);
+    var _targetProject = _agentTrim(typeof targetProject === "undefined" ? "" : targetProject);
+    if (!_targetProject.length) {
+      _targetProject = _agentTrim(typeof projectName === "undefined" ? "" : projectName);
+    }
+    var selectedThread = _agentTrim(typeof threadid === "undefined" ? "" : threadid);
+    var uploadedFiles = _agentParseFiles(typeof AIFiles === "undefined" ? "" : AIFiles);
+    var promptParts = [];
+    
+    promptParts.push("You are an AI coding agent integrated in Convertigo Studio.");
+    promptParts.push("Your job is to help the user by inspecting, editing, and validating Convertigo projects when the request requires project work.");
+    promptParts.push("Reply to the user in the same language as their message. The system and operational instructions are in English, but the user-facing answer must follow the user''s language.");
+    promptParts.push("While working, provide short user-facing progress updates when the agent interface supports streamed updates. Keep them factual, one or two sentences, in the user''s language, and do not reveal hidden chain-of-thought; summarize what you are doing, what you found, or what you will try next.");
+    promptParts.push("");
+    promptParts.push("Convertigo Studio context:");
+    promptParts.push("- Selected project: " + (_targetProject.length ? _targetProject : "none"));
+    promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
+    promptParts.push("- MCP endpoint: " + _agentTrim(typeof mcpEndpoint === "undefined" ? "" : mcpEndpoint));
+    promptParts.push("");
+    promptParts.push("Operational rules:");
+    promptParts.push("- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
+    promptParts.push("- Work only on the selected Convertigo project unless the user explicitly asks for another project.");
+    promptParts.push("- If no project is selected and the user asks for project changes, ask them to select a project first.");
+    promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
+    promptParts.push("- If the user asks for advice only, answer without modifying the project.");
+    promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
+    promptParts.push("- Do not expose secrets, credentials, API keys, or private environment values.");
+    promptParts.push("- If installation, credentials, network access, or permissions block the work, explain the blocker and the next action clearly.");
+    if (uploadedFiles.length) {
+      promptParts.push("");
+      promptParts.push("User attachments:");
+      promptParts.push("The user attached file metadata through Convertigo Assistant. Image attachments are usually screenshots or UI evidence; inspect the referenced local file/path when one is available before acting on visual issues.");
+      promptParts.push("If this provider or bridge cannot access the binary image content, say it clearly and use the attachment metadata plus the user''s description instead of pretending you saw the image.");
+      for (var fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
+        promptParts.push("- " + _agentAttachmentLine(uploadedFiles[fileIndex], fileIndex));
+      }
+    }
+    promptParts.push("");
+    promptParts.push("User message:");
+    promptParts.push(rawQuestion);
+    
+    result = C8O.assistantAgentBridge.sendMessage({
+      Question: promptParts.join("\n"),
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      provider: typeof provider === "undefined" ? "" : provider,
+      bridgeBaseUrl: typeof bridgeBaseUrl === "undefined" ? "" : bridgeBaseUrl,
+      mcpEndpoint: typeof mcpEndpoint === "undefined" ? "" : mcpEndpoint,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      cwd: typeof cwd === "undefined" ? "" : cwd,
+      vibeHome: typeof vibeHome === "undefined" ? "" : vibeHome,
+      targetProject: _targetProject,
+      projectName: typeof projectName === "undefined" ? "" : projectName,
+      userId: typeof userId === "undefined" ? "" : userId
+    });'
+↓result [steps.JsonToXmlStep-1781650000202]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓Question [variables.RequestableVariable-1781650000203]: 
+  comment: User prompt sent to the agent.
+  description: User prompt sent to the agent.
+↓threadid [variables.RequestableVariable-1781650000204]: 
+  comment: Agent conversation id returned by AgentCreateConversation.
+  description: Agent conversation id returned by AgentCreateConversation.
+↓provider [variables.RequestableVariable-1781650000205]: 
+  comment: Agent provider. Defaults to vibe.
+  description: Agent provider. Defaults to vibe.
+↓bridgeBaseUrl [variables.RequestableVariable-1781650000206]: 
+  comment: ConvertigoAgentBridge project endpoint. Defaults to localhost:18082.
+  description: ConvertigoAgentBridge project endpoint. Defaults to localhost:18082.
+↓mcpEndpoint [variables.RequestableVariable-1781650000207]: 
+  comment: Convertigo MCP endpoint passed to the agent bridge.
+  description: Convertigo MCP endpoint passed to the agent bridge.
+↓workspaceRoot [variables.RequestableVariable-1781650000208]: 
+  comment: Optional Convertigo workspace root. Defaults to parent folder of this project.
+  description: Optional Convertigo workspace root. Defaults to parent folder of this project.
+↓cwd [variables.RequestableVariable-1781650000209]: 
+  comment: Agent working directory. Defaults to workspaceRoot.
+  description: Agent working directory. Defaults to workspaceRoot.
+↓vibeHome [variables.RequestableVariable-1781650000210]: 
+  comment: Optional explicit VIBE_HOME. Defaults to an assistant conversation scoped home.
+  description: Optional explicit VIBE_HOME. Defaults to an assistant conversation scoped home.
+↓projectName [variables.RequestableVariable-1781650000211]: 
+  comment: Optional target Convertigo project name.
+  description: Optional target Convertigo project name.
+↓userId [variables.RequestableVariable-1781650000212]: 
+  comment: Optional user id used for future scoped policies.
+  description: Optional user id used for future scoped policies.
+↓targetProject [variables.RequestableVariable-1781602632678]: 
+  comment: Optional target Convertigo project name. Preferred over projectName.
+  description: Optional target Convertigo project name. Preferred over projectName.
+↓AIFiles [variables.RequestableVariable-1781628789739]: 
+  comment: JSON metadata for files/images uploaded through the assistant UI.
+  description: JSON metadata for files/images uploaded through the assistant UI.

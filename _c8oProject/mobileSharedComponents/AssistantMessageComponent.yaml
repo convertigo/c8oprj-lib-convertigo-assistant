@@ -325,11 +325,22 @@ scriptContent:
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:chat-raw-stream-line
               ↓Text [ngx.components.UIText-1772200888520]: 
-                i18n: true
                 textValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:this.getRawStreamTickerText()
+                    - MobileSmartSourceType: script:this.message || this.status || 'Traitement en cours.'
+              ↓Style [ngx.components.UIAttribute-1781611914254]: 
+                attrName: style
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'plain:margin: 0; display: block; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; padding-left: 0; color: color-mix(in srgb, var(--modern-text, #f1f5f9) 72%, transparent 28%); font-size: 13px; line-height: 20px; letter-spacing: 0; animation: none; transform: none;'
+            ↓Style [ngx.components.UIAttribute-1781611927225]: 
+              attrName: style
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'plain:width: 100%; overflow: visible; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--modern-border, #1e293b) 70%, var(--modern-text, #f1f5f9) 30%); background: color-mix(in srgb, var(--modern-surface, #0f172a) 90%, var(--modern-text, #f1f5f9) 10%); padding: 9px 12px; margin: 2px 0 8px;'
         ↓IfMessage [ngx.components.UIControlDirective-1777601000007]: 
           directiveName: If
           directiveSource: 
@@ -348,7 +359,7 @@ scriptContent:
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.writing
+              - MobileSmartSourceType: script:this.writing && !this.isRawStreamTickerActive()
           ↓WritingState [ngx.components.UIDynamicElement-1771949858803]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -359,11 +370,10 @@ scriptContent:
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:chat-writing-state
             ↓Text [ngx.components.UIText-1771949858809]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:''Assistant is '' + ((((this.status || '''') + '''').trim().length ? (((this.status || '''') + '''').trim().charAt(0).toLowerCase() + ((this.status || '''') + '''').trim().slice(1)) : ''writing'')) + (((((this.status || '''') + '''').trim().length ? (((this.status || '''') + '''').trim().charAt(0).toLowerCase() + ((this.status || '''') + '''').trim().slice(1)) : ''writing'') === ''writing'') ? ''...'' : '''')'
+                  - MobileSmartSourceType: script:this.status || 'Agent is working...'
         ↓IfTags [ngx.components.UIControlDirective-1771949858812]: 
           directiveName: If
           directiveSource: 

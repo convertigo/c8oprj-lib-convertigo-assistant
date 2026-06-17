@@ -1,0 +1,23 @@
+comment: Close a local agent conversation and its backing process.
+↓Run [steps.SimpleStep-1781650000401]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.closeConversation({
+      threadid: typeof threadid === "undefined" ? "" : threadid
+    });'
+↓result [steps.JsonToXmlStep-1781650000402]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓threadid [variables.RequestableVariable-1781650000403]: 
+  comment: Agent conversation id returned by AgentCreateConversation.
+  description: Agent conversation id returned by AgentCreateConversation.
