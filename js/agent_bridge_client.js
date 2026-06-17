@@ -415,6 +415,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return provider.length ? safePathPart(provider) : "vibe";
   }
 
+  function normalizeProviderSelector(value) {
+    var raw = trim(value).toLowerCase();
+    if (!raw.length || raw === "all" || raw === "*" || raw === "any") {
+      return "all";
+    }
+    return normalizeProvider(raw);
+  }
+
+  function providerSearchList(value) {
+    var provider = normalizeProviderSelector(value);
+    if (provider === "all") {
+      return ["codex", "vibe"];
+    }
+    return [provider];
+  }
+
   function providerLabel(value) {
     var provider = normalizeProvider(value);
     if (provider === "codex") {
@@ -494,9 +510,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function readConversationRecord(workspaceRoot, userKey, conversationId, provider) {
-    var file = conversationRecordFile(conversationDirectory(workspaceRoot, userKey, conversationId, provider));
-    var record = readJsonFile(file);
-    return record && record.deleted !== true ? record : null;
+    var providers = providerSearchList(provider);
+    for (var i = 0; i < providers.length; i++) {
+      var file = conversationRecordFile(conversationDirectory(workspaceRoot, userKey, conversationId, providers[i]));
+      var record = readJsonFile(file);
+      if (record && record.deleted !== true) {
+        return record;
+      }
+    }
+    return null;
   }
 
   function publicConversation(record) {
@@ -523,37 +545,65 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
-  function conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider) {
-    var root = conversationsRoot(workspaceRoot, userKey, provider);
-    var records = [];
-    var children = root.exists() ? root.listFiles() : null;
-    var filter = trim(projectFilter);
-    var providerFilter = normalizeProvider(provider);
-    if (children === null) {
-      return records;
+  function conversationActivityScore(record) {
+    if (!record || record.deleted === true) {
+      return 0;
     }
-    for (var i = 0; i < children.length; i++) {
-      var dir = children[i];
-      if (!dir || !dir.isDirectory()) {
+    var status = trim(record.status).toLowerCase();
+    if (status === "in_progress" || status === "running" || status === "starting" || status === "queued") {
+      return 4;
+    }
+    if (trim(record.lastRunId).length || trim(record.lastAnswerPreview).length || trim(record.progress).length) {
+      return 3;
+    }
+    if (status === "completed" || status === "failed" || status === "cancelled" || status === "closed") {
+      return 2;
+    }
+    return 1;
+  }
+
+  function conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider) {
+    var records = [];
+    var filter = trim(projectFilter);
+    var providers = providerSearchList(provider);
+    for (var p = 0; p < providers.length; p++) {
+      var providerFilter = providers[p];
+      var root = conversationsRoot(workspaceRoot, userKey, providerFilter);
+      var children = root.exists() ? root.listFiles() : null;
+      if (children === null) {
         continue;
       }
-      var record = readJsonFile(conversationRecordFile(dir));
-      if (!record || (record.deleted === true && includeDeleted !== true)) {
-        continue;
-      }
-      if (normalizeProvider(record.provider || providerFilter) !== providerFilter) {
-        continue;
-      }
-      if (filter.length) {
-        var names = record.projectNames || [];
-        if (trim(record.primaryProject || record.projectId) !== filter && !hasArrayValue(names, filter)) {
+      for (var i = 0; i < children.length; i++) {
+        var dir = children[i];
+        if (!dir || !dir.isDirectory()) {
           continue;
         }
+        var record = readJsonFile(conversationRecordFile(dir));
+        if (!record || (record.deleted === true && includeDeleted !== true)) {
+          continue;
+        }
+        if (normalizeProvider(record.provider || providerFilter) !== providerFilter) {
+          continue;
+        }
+        if (filter.length) {
+          var names = record.projectNames || [];
+          if (trim(record.primaryProject || record.projectId) !== filter && !hasArrayValue(names, filter)) {
+            continue;
+          }
+        }
+        records.push(record);
       }
-      records.push(record);
     }
     records.sort(function (a, b) {
-      return Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+      var score = conversationActivityScore(b) - conversationActivityScore(a);
+      if (score !== 0) {
+        return score;
+      }
+      var updated = Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+      if (updated !== 0) {
+        return updated;
+      }
+      return Number(b.createdAt || 0) - Number(a.createdAt || 0);
     });
     return records;
   }
@@ -569,6 +619,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function latestConversationRecord(workspaceRoot, userKey, projectFilter, provider) {
     var records = conversationRecords(workspaceRoot, userKey, projectFilter, false, provider);
+    for (var i = 0; i < records.length; i++) {
+      if (conversationActivityScore(records[i]) > 1) {
+        return records[i];
+      }
+    }
     return records.length ? records[0] : null;
   }
 
@@ -1211,10 +1266,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var threadid = normalizeConversationId(options.threadid) || makeConversationId();
-    var provider = normalizeProvider(options.provider || "vibe");
+    var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
     var record = readConversationRecord(workspaceRoot, userKey, threadid, provider);
     if (record && record.provider) {
       provider = normalizeProvider(record.provider);
+    }
+    if (provider === "all") {
+      provider = "vibe";
     }
     if (record && trim(record.workspaceRoot).length) {
       workspaceRoot = trim(record.workspaceRoot);
@@ -1355,7 +1413,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options = options || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
-    var provider = normalizeProvider(options.provider);
+    var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
     var requestedThreadId = normalizeThreadId(options.threadid);
     var resumedLatest = false;
     if (!requestedThreadId.length && !boolValue(options.forceNew, false)) {
@@ -1384,7 +1442,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       resumed: resumedLatest || requestedThreadId.length > 0,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
-      conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, state.provider),
+      conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all"),
       AIData: conversationAIData(state, options.historyLimit)
     };
   };
@@ -1687,8 +1745,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options = options || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
-    var provider = normalizeProvider(options.provider);
-    var root = conversationsRoot(workspaceRoot, userKey, provider);
+    var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
+    var root = provider === "all" ? new File(workspaceRoot, "agents") : conversationsRoot(workspaceRoot, userKey, provider);
     var includeDeleted = boolValue(options.includeDeleted, false);
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var conversations = publicConversations(workspaceRoot, userKey, projectFilter, includeDeleted, provider);
@@ -1745,7 +1803,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
-      conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, state.provider),
+      conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all"),
       AIData: conversationAIData(state, options.historyLimit)
     };
   };
@@ -1786,7 +1844,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     removeState(threadid);
     var dir = new File(state.conversationDir);
     var deleted = deleteRecursively(dir);
-    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, state.provider);
+    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all");
     setBuffer("", "");
     return {
       ok: deleted,

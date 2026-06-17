@@ -74,15 +74,20 @@ scriptContent:
         	private cleanProjectName(value) {
         		return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
         	}
-        public getAgentProvider() {
+        private normalizeAgentProviderValue(provider) {
+            provider = provider.toLowerCase();
+            if (provider === "codex-cli" || provider === "openai-codex") {
+                return "codex";
+            }
+            if (provider === "mistral-vibe" || provider === "vibe-acp") {
+                return "vibe";
+            }
+            return provider.length ? provider : "";
+        }
+        public getConfiguredAgentProvider() {
             var provider = "";
             try {
-                provider = this.cleanProjectName(this.local && this.local.AgentProvider);
-            } catch (e0) {}
-            try {
-                if (!provider.length) {
-                    provider = this.cleanProjectName(this.global && (this.global.agentProvider || this.global.aiAgentProvider || this.global.provider));
-                }
+                provider = this.cleanProjectName(this.global && (this.global.agentProvider || this.global.aiAgentProvider || this.global.provider));
             } catch (e) {}
             try {
                 if (!provider.length && this.navParams && this.navParams.data) {
@@ -95,13 +100,27 @@ scriptContent:
                     provider = this.cleanProjectName(params.get("agentProvider") || params.get("aiAgentProvider") || params.get("provider") || params.get("agent"));
                 }
             } catch (e3) {}
-            provider = provider.toLowerCase();
-            if (provider === "codex-cli" || provider === "openai-codex") {
-                return "codex";
-            }
-            if (provider === "mistral-vibe" || provider === "vibe-acp") {
-                return "vibe";
-            }
+            return this.normalizeAgentProviderValue(provider);
+        }
+        public getExplicitAgentProvider() {
+            var provider = "";
+            try {
+                provider = this.cleanProjectName(this.local && this.local.AgentProvider);
+            } catch (e0) {}
+            try {
+                if (!provider.length) {
+                    provider = this.getConfiguredAgentProvider();
+                }
+            } catch (e) {}
+            try {
+                if (!provider.length && typeof window !== "undefined" && window.localStorage) {
+                    provider = this.cleanProjectName(window.localStorage.getItem("ConvertigoAssistant.AgentProvider"));
+                }
+            } catch (e4) {}
+            return this.normalizeAgentProviderValue(provider);
+        }
+        public getAgentProvider() {
+            var provider = this.getExplicitAgentProvider();
             return provider.length ? provider : "vibe";
         }
         public getAgentProviderLabel(provider = null) {
@@ -172,12 +191,67 @@ scriptContent:
             var model = conversation && conversation.model != null ? this.cleanProjectName(conversation.model) : this.getDefaultAgentModel(provider);
             return this.getAgentProviderLabel(provider) + " · " + this.getAgentModelLabel(model, provider);
         }
+        public getConversationShortId(conversationId) {
+            var id = this.cleanProjectName(conversationId);
+            if (!id.length) {
+                return "";
+            }
+            return id.indexOf("agent-") === 0 ? id.substring(6, 14) : id.substring(0, 8);
+        }
+        public formatConversationDate(value) {
+            var time = Number(value || 0);
+            if (!time || isNaN(time)) {
+                return "";
+            }
+            var d = new Date(time);
+            var dd = ("0" + d.getDate()).slice(-2);
+            var mm = ("0" + (d.getMonth() + 1)).slice(-2);
+            var hh = ("0" + d.getHours()).slice(-2);
+            var mn = ("0" + d.getMinutes()).slice(-2);
+            return dd + "/" + mm + " " + hh + ":" + mn;
+        }
+        public getConversationMetaLabel(conversation) {
+            if (!conversation) {
+                return "";
+            }
+            var parts = [];
+            var shortId = this.getConversationShortId(conversation.conversationId);
+            if (shortId.length) {
+                parts.push("Session " + shortId);
+            }
+            if (conversation.status) {
+                parts.push("" + conversation.status);
+            }
+            parts.push(this.getConversationAgentLabel(conversation));
+            var created = this.formatConversationDate(conversation.createdAt);
+            if (created.length) {
+                parts.push("créée " + created);
+            }
+            return parts.join(" - ");
+        }
+        public getCurrentConversationMetaLabel() {
+            var conversations = this.local && this.local.AgentConversations ? this.local.AgentConversations : [];
+            var current = this.local ? this.cleanProjectName(this.local.Conversation) : "";
+            var count = conversations && conversations.length ? conversations.length : 0;
+            for (var i = 0; i < count; i++) {
+                if (conversations[i] && conversations[i].conversationId === current) {
+                    return this.getConversationMetaLabel(conversations[i]) + " - " + count + " conversation" + (count > 1 ? "s" : "");
+                }
+            }
+            var prefix = current.length ? ("Session " + this.getConversationShortId(current)) : "Initialisation";
+            return prefix + " - " + count + " conversation" + (count > 1 ? "s" : "");
+        }
         public setAgentProvider(provider) {
             if (!this.local) {
                 this.local = {};
             }
             this.local.AgentProvider = this.cleanProjectName(provider).toLowerCase() || "vibe";
             this.local.AgentModel = this.getDefaultAgentModel(this.local.AgentProvider);
+            try {
+                if (typeof window !== "undefined" && window.localStorage) {
+                    window.localStorage.setItem("ConvertigoAssistant.AgentProvider", this.local.AgentProvider);
+                }
+            } catch (e) {}
             this.tick();
         }
         public setAgentModel(model) {
@@ -287,8 +361,8 @@ scriptContent:
                 if (this.local.ShowConversationPanel == null) {
                     this.local.ShowConversationPanel = false;
                 }
-                if (!this.local.AgentProvider) {
-                    this.local.AgentProvider = this.getAgentProvider();
+                if (this.local.AgentProvider == null) {
+                    this.local.AgentProvider = this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : "";
                 }
                 if (this.local.AgentModel == null) {
                     this.local.AgentModel = this.getAgentModel();
@@ -1112,7 +1186,7 @@ title: Component assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:((this.local && this.local.Conversation) ? (''Session '' + (((('''' + this.local.Conversation).indexOf(''agent-'') === 0) ? ('''' + this.local.Conversation).substring(6, 14) : ('''' + this.local.Conversation).substring(0, 8)))) : ''Initialisation'') + '' - '' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) + '' conversation'' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) > 1 ? ''s'' : ''''))'
+                      - MobileSmartSourceType: 'script:this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (((this.local && this.local.Conversation) ? (''Session '' + (((('''' + this.local.Conversation).indexOf(''agent-'') === 0) ? ('''' + this.local.Conversation).substring(6, 14) : ('''' + this.local.Conversation).substring(0, 8)))) : ''Initialisation'') + '' - '' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) + '' conversation'' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) > 1 ? ''s'' : '''')))'
             ↓Chevron [ngx.components.UIDynamicElement-1781676585879]: 
               beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
               tagName: ion-icon
@@ -1476,7 +1550,7 @@ title: Component assistant
                         textValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:((conversation && conversation.conversationId) ? (''Session '' + (((('''' + conversation.conversationId).indexOf(''agent-'') === 0) ? ('''' + conversation.conversationId).substring(6, 14) : ('''' + conversation.conversationId).substring(0, 8)))) : '''') + ((conversation && conversation.status) ? '' - '' + conversation.status : '''') + ((this.getConversationAgentLabel && conversation) ? '' - '' + this.getConversationAgentLabel(conversation) : '''')'
+                            - MobileSmartSourceType: 'script:this.getConversationMetaLabel ? this.getConversationMetaLabel(conversation) : (((conversation && conversation.conversationId) ? (''Session '' + (((('''' + conversation.conversationId).indexOf(''agent-'') === 0) ? ('''' + conversation.conversationId).substring(6, 14) : ('''' + conversation.conversationId).substring(0, 8)))) : '''') + ((conversation && conversation.status) ? '' - '' + conversation.status : '''') + ((this.getConversationAgentLabel && conversation) ? '' - '' + this.getConversationAgentLabel(conversation) : ''''))'
                   ↓Actions [ngx.components.UIDynamicElement-1781608119123]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: div
@@ -2273,12 +2347,12 @@ title: Component assistant
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
+              - MobileSmartSourceType: 'script:this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''''
         ↓model [ngx.components.UIControlVariable-1781700500037]: 
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:this.getAgentModel ? this.getAgentModel() : '''''
+              - MobileSmartSourceType: 'script:(this.getConfiguredAgentProvider && this.getConfiguredAgentProvider().length && this.getAgentModel) ? this.getAgentModel() : '''''
         ↓If [ngx.components.UIDynamicAction-1749567852407]: 
           beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           ↓AddHistoryMessages [ngx.components.UICustomAction-1749567905830]: 
