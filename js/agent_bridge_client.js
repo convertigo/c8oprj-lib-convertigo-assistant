@@ -426,6 +426,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return provider;
   }
 
+  function defaultModelForProvider(provider) {
+    return normalizeProvider(provider) === "vibe" ? "vibe-thinking" : "";
+  }
+
+  function normalizeModel(provider, value) {
+    var model = trim(value);
+    var lower = model.toLowerCase();
+    if (!model.length || lower === "default" || lower === "auto") {
+      return defaultModelForProvider(provider);
+    }
+    return model;
+  }
+
   function agentsRoot(workspaceRoot, provider) {
     return new File(workspaceRoot, "agents/" + normalizeProvider(provider));
   }
@@ -501,6 +514,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lastAnswerPreview: String(record.lastAnswerPreview || ""),
       progress: String(record.progress || ""),
       phase: String(record.phase || ""),
+      model: String(record.model || ""),
       warnings: record.warnings || [],
       vibeHome: String(record.vibeHome || ""),
       agentHome: String(record.agentHome || record.vibeHome || ""),
@@ -571,6 +585,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userKey: state.userKey || "studio",
       handle: state.handle || state.threadid,
       status: state.status || "created",
+      model: state.model || "",
       primaryProject: state.primaryProject || state.projectId || "",
       projectNames: state.projectNames || [],
       workspaceRoot: state.workspaceRoot || "",
@@ -1086,6 +1101,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state.language) {
       state.language = detectLanguage(state.userQuestion || state.answer || "");
     }
+    if (typeof state.model === "undefined" || state.model === null) {
+      state.model = normalizeModel(state.provider, "");
+    }
     return state;
   }
 
@@ -1125,11 +1143,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!vibeHome.length) {
       vibeHome = record && trim(record.agentHome || record.vibeHome).length ? trim(record.agentHome || record.vibeHome) : childPath(conversationDir, homeLeafForProvider(provider));
     }
+    var model = normalizeModel(provider, options.model || options.agentModel || (record && record.model));
     return {
       conversationId: threadid,
       threadid: threadid,
       handle: record && trim(record.handle).length ? trim(record.handle) : threadid,
       provider: provider,
+      model: model,
       bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || DEFAULT_BRIDGE_URL,
       mcpEndpoint: trim(options.mcpEndpoint) || (record && trim(record.mcpEndpoint)) || DEFAULT_MCP_ENDPOINT,
       workspaceRoot: workspaceRoot,
@@ -1168,6 +1188,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       handle: state.handle,
       provider: state.provider,
+      model: state.model || "",
       status: state.status,
       runid: state.runid,
       cursor: state.cursor,
@@ -1219,6 +1240,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       object: "agent.run",
       status: state.status,
       provider: state.provider,
+      model: state.model || "",
       threadid: state.threadid,
       AIData: {
         type: "agent",
@@ -1269,6 +1291,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       id: state.threadid,
       object: "agent.conversation",
       provider: state.provider,
+      model: state.model || "",
       status: state.status,
       resumed: resumedLatest || requestedThreadId.length > 0,
       state: publicState(state),
@@ -1297,6 +1320,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    if (trim(options.model || options.agentModel).length) {
+      state.model = normalizeModel(state.provider, options.model || options.agentModel);
+    } else if (!trim(state.model).length) {
+      state.model = normalizeModel(state.provider, "");
+    }
     state.status = "starting";
     state.answer = "";
     state.error = "";
@@ -1325,12 +1353,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var setupPayload = provider === "codex" ? {
         codexHome: trim(options.codexHome || options.agentHome),
         codexHomeScope: trim(options.codexHomeScope || options.homeScope),
-        mcpEndpoint: state.mcpEndpoint
+        mcpEndpoint: state.mcpEndpoint,
+        model: state.model || ""
       } : {
         install: "false",
         configure: "true",
         vibeHome: state.vibeHome,
-        mcpEndpoint: state.mcpEndpoint
+        mcpEndpoint: state.mcpEndpoint,
+        model: state.model || ""
       };
       var setup = bridgeCall(state, setupSequence, setupPayload, 70000);
       if (setup.ok === false) {
@@ -1345,12 +1375,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         codexHomeScope: trim(options.codexHomeScope || options.homeScope),
         mcpEndpoint: state.mcpEndpoint,
         env: JSON.stringify(env),
-        codexThreadId: state.externalSessionId || ""
+        codexThreadId: state.externalSessionId || "",
+        model: state.model || ""
       } : {
         handle: state.handle,
         cwd: state.cwd,
         vibeHome: state.vibeHome,
         mcpEndpoint: state.mcpEndpoint,
+        model: state.model || "",
         env: JSON.stringify(env),
         requestTimeoutMs: "60000"
       };
@@ -1376,12 +1408,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         handle: state.handle,
         prompt: question,
         codexThreadId: state.externalSessionId || "",
-        model: trim(options.model),
+        model: state.model || "",
         bypassApprovalsAndSandbox: typeof options.bypassApprovalsAndSandbox === "undefined" ? "true" : options.bypassApprovalsAndSandbox,
         sandbox: trim(options.sandbox)
       } : {
         handle: state.handle,
         prompt: question,
+        model: state.model || "",
         waitForCompletion: "false"
       };
       var prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
@@ -1602,6 +1635,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       ok: state.status !== "deleted",
       id: state.threadid,
       object: "agent.conversation",
+      provider: state.provider,
+      model: state.model || "",
       status: state.status,
       threadid: state.threadid,
       state: publicState(state),
