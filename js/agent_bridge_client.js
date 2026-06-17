@@ -621,6 +621,72 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }) + "\n");
   }
 
+  function latestTranscriptContent(state, role, runid) {
+    if (!state || !state.transcriptFile) {
+      return "";
+    }
+    var file = new File(state.transcriptFile);
+    if (!file.exists()) {
+      return "";
+    }
+    var wantedRole = trim(role).toLowerCase();
+    var wantedRunid = String(runid || "");
+    var lines = readTextFile(file).split(/\r?\n/);
+    for (var i = lines.length - 1; i >= 0; i--) {
+      var line = trim(lines[i]);
+      if (!line.length) {
+        continue;
+      }
+      try {
+        var item = JSON.parse(line);
+        if (trim(item.role).toLowerCase() !== wantedRole) {
+          continue;
+        }
+        if (wantedRunid.length && String(item.runid || "") !== wantedRunid) {
+          continue;
+        }
+        return trim(item.content);
+      } catch (_ignoreTranscriptContent) {}
+    }
+    return "";
+  }
+
+  function isTerminalStatus(status) {
+    status = String(status || "");
+    return status === "completed" || status === "failed" || status === "cancelled" || status === "closed" || status === "deleted";
+  }
+
+  function refreshTerminalStateFromRecord(state) {
+    if (!state || !state.conversationFile || !isTerminalStatus(state.status)) {
+      return state;
+    }
+    var record = readJsonFile(new File(state.conversationFile));
+    if (!record || record.deleted === true) {
+      return state;
+    }
+    var recordUpdatedAt = Number(record.updatedAt || 0);
+    var stateUpdatedAt = Number(state.updatedAt || 0);
+    var recordIsNewer = recordUpdatedAt && (!stateUpdatedAt || recordUpdatedAt >= stateUpdatedAt);
+    if (recordIsNewer) {
+      state.status = String(record.status || state.status || "");
+      state.model = String(record.model || state.model || "");
+      state.cursor = Number(record.lastCursor || state.cursor || 0);
+      state.runid = String(record.lastRunId || state.runid || "");
+      state.externalSessionId = String(record.externalSessionId || state.externalSessionId || "");
+      state.progressLog = String(record.progress || "");
+      state.lastStatusText = String(record.phase || "");
+      state.warnings = record.warnings || [];
+      state.updatedAt = recordUpdatedAt;
+    }
+    var answer = latestTranscriptContent(state, "assistant", record.lastRunId || state.runid);
+    if (answer.length) {
+      state.answer = answer;
+    } else if (recordIsNewer || !trim(state.answer).length) {
+      state.answer = String(record.lastAnswerPreview || "");
+    }
+    return state;
+  }
+
   function transcriptTime(value) {
     var time = Number(value || 0);
     if (!time || isNaN(time)) {
@@ -911,6 +977,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var progress = String(state.progressLog || "");
     var answer = String(state.answer || "");
     if (answer.length) {
+      if (state && (state.status === "completed" || state.status === "failed" || state.status === "cancelled" || state.status === "closed")) {
+        return answer;
+      }
       return progress.length ? progress + "\n\n" + answer : answer;
     }
     return progress.length ? progress : String(state.lastStatusText || "");
@@ -1104,7 +1173,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.model === "undefined" || state.model === null) {
       state.model = normalizeModel(state.provider, "");
     }
-    return state;
+    return refreshTerminalStateFromRecord(state);
   }
 
   function recoverState(options, threadid) {
@@ -1508,6 +1577,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (data.threadId || data.sessionId) {
             state.externalSessionId = String(data.threadId || data.sessionId);
           }
+        } else if (type === "progress/message" || type === "status/message") {
+          appendProgress(state, eventText(data));
         } else if (type === "answer/chunk") {
           state.answer += eventText(data);
         } else if (type === "reasoning/chunk") {
