@@ -576,7 +576,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state || !state.conversationFile) {
       return;
     }
-    var answer = String(state.answer || "");
+    var answer = state.answerIsFinal === true || state.status === "completed" || state.status === "closed" ? String(state.answer || "") : "";
     var record = {
       version: 1,
       conversationId: state.conversationId || state.threadid,
@@ -681,8 +681,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var answer = latestTranscriptContent(state, "assistant", record.lastRunId || state.runid);
     if (answer.length) {
       state.answer = answer;
+      state.answerIsFinal = true;
     } else if (recordIsNewer || !trim(state.answer).length) {
       state.answer = String(record.lastAnswerPreview || "");
+      state.answerIsFinal = trim(state.answer).length > 0;
     }
     return state;
   }
@@ -1066,6 +1068,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  function codexAnswerChunkIsProgress(state, data) {
+    if (normalizeProvider(state && state.provider) !== "codex" || !data) {
+      return false;
+    }
+    if (String(data.phase || "") === "commentary") {
+      return true;
+    }
+    if (data.item && String(data.item.type || "").toLowerCase() === "agent_message") {
+      return true;
+    }
+    return false;
+  }
+
   function sameCanonicalPath(left, right) {
     try {
       return filePath(new File(left)) === filePath(new File(right));
@@ -1151,6 +1166,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.projectNames = addArrayValue(state.projectNames, state.primaryProject || state.projectId);
     if (typeof state.answer === "undefined" || state.answer === null) {
       state.answer = "";
+    }
+    if (typeof state.answerIsFinal === "undefined" || state.answerIsFinal === null) {
+      state.answerIsFinal = false;
     }
     if (typeof state.error === "undefined" || state.error === null) {
       state.error = "";
@@ -1241,6 +1259,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       cursor: record && record.lastCursor ? Number(record.lastCursor) : 0,
       runid: record && record.lastRunId ? String(record.lastRunId) : "",
       answer: record && trim(record.status) === "completed" ? String(record.lastAnswerPreview || "") : "",
+      answerIsFinal: record && trim(record.status) === "completed" && trim(record.lastAnswerPreview).length > 0,
       progressLog: record && record.progress ? String(record.progress) : "",
       lastProgressLine: "",
       lastStatusText: record && record.phase ? String(record.phase) : "",
@@ -1396,6 +1415,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state.status = "starting";
     state.answer = "";
+    state.answerIsFinal = false;
     state.error = "";
     state.warnings = [];
     state.readErrors = 0;
@@ -1546,13 +1566,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = recoverState(options, threadid);
     }
     state = ensureState(state);
+    if (!isTerminalStatus(state.status) && normalizeProvider(state.provider) === "codex" && trim(state.answer).length && state.answerIsFinal !== true) {
+      state.answer = "";
+    }
     if (state.status === "completed" || state.status === "failed" || state.status === "cancelled" || state.status === "closed" || state.status === "deleted") {
       if (state.status === "completed") {
         if (!trim(state.answer).length) {
           state.answer = trim(state.progressLog).length ? incompleteFinalAnswer(state) : lang(state).completedNoAnswer;
+          state.answerIsFinal = true;
           saveState(state);
         } else if (answerLooksIncomplete(state, state.answer)) {
           state.answer = incompleteFinalAnswer(state);
+          state.answerIsFinal = true;
           saveState(state);
         }
       }
@@ -1580,7 +1605,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         } else if (type === "progress/message" || type === "status/message") {
           appendProgress(state, eventText(data));
         } else if (type === "answer/chunk") {
-          state.answer += eventText(data);
+          if (codexAnswerChunkIsProgress(state, data)) {
+            appendProgress(state, eventText(data));
+          } else {
+            state.answer += eventText(data);
+            state.answerIsFinal = true;
+          }
         } else if (type === "reasoning/chunk") {
           if (!state.answer.length) {
             appendProgress(state, lang(state).thinking);
@@ -1602,8 +1632,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           state.error = "";
           if (!trim(state.answer).length) {
             state.answer = lang(state).completedNoAnswer;
+            state.answerIsFinal = true;
           } else if (answerLooksIncomplete(state, state.answer)) {
             state.answer = incompleteFinalAnswer(state);
+            state.answerIsFinal = true;
           }
           if (state.answerTranscriptRunid !== state.runid) {
             appendTranscript(state, "assistant", state.answer);
@@ -1616,6 +1648,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         } else if (type === "system/closed" && state.status !== "completed") {
           if (trim(state.answer).length) {
             state.status = "completed";
+            state.answerIsFinal = true;
             appendProgress(state, lang(state).closedAfterAnswer);
           } else {
             state.status = "failed";
