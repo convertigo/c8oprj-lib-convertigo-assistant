@@ -1,5 +1,5 @@
 comment: Create or reuse a local agent conversation through ConvertigoAgentBridge.
-↓Run [steps.SimpleStep-1781650000101]: 
+↓Run [steps.SimpleStep-1781650000101]:
   expression: |
     'include("js/agent_bridge_client.js");
     var _targetProject = typeof targetProject === "undefined" ? "" : targetProject;
@@ -14,55 +14,71 @@ comment: Create or reuse a local agent conversation through ConvertigoAgentBridg
       workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
       cwd: typeof cwd === "undefined" ? "" : cwd,
       vibeHome: typeof vibeHome === "undefined" ? "" : vibeHome,
+      agentHome: typeof agentHome === "undefined" ? "" : agentHome,
+      codexHome: typeof codexHome === "undefined" ? "" : codexHome,
+      codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
+      homeScope: typeof homeScope === "undefined" ? "" : homeScope,
       targetProject: _targetProject,
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId,
       forceNew: typeof forceNew === "undefined" ? "" : forceNew
     });'
-↓result [steps.JsonToXmlStep-1781650000102]: 
-  jsonObject: 
-    - xmlizable: 
+↓result [steps.JsonToXmlStep-1781650000102]:
+  jsonObject:
+    - xmlizable:
       - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-      - SmartType: 
+      - SmartType:
         - ↑mode: JS
         - →→: result
-  key: 
-    - xmlizable: 
+  key:
+    - xmlizable:
       - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
-      - SmartType: 
+      - SmartType:
         - ↑mode: PLAIN
         - →→: result
-↓threadid [variables.RequestableVariable-1781650000103]: 
+↓threadid [variables.RequestableVariable-1781650000103]:
   comment: Optional existing agent conversation id.
   description: Optional existing agent conversation id.
-↓provider [variables.RequestableVariable-1781650000104]: 
+↓provider [variables.RequestableVariable-1781650000104]:
   comment: Agent provider. Defaults to vibe.
   description: Agent provider. Defaults to vibe.
-↓bridgeBaseUrl [variables.RequestableVariable-1781650000105]: 
+↓bridgeBaseUrl [variables.RequestableVariable-1781650000105]:
   comment: ConvertigoAgentBridge project endpoint. Defaults to localhost:18082.
   description: ConvertigoAgentBridge project endpoint. Defaults to localhost:18082.
-↓mcpEndpoint [variables.RequestableVariable-1781650000106]: 
+↓mcpEndpoint [variables.RequestableVariable-1781650000106]:
   comment: Convertigo MCP endpoint passed to the agent bridge.
   description: Convertigo MCP endpoint passed to the agent bridge.
-↓workspaceRoot [variables.RequestableVariable-1781650000107]: 
+↓workspaceRoot [variables.RequestableVariable-1781650000107]:
   comment: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
   description: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
-↓cwd [variables.RequestableVariable-1781650000108]: 
+↓cwd [variables.RequestableVariable-1781650000108]:
   comment: Agent working directory. Defaults to workspaceRoot.
   description: Agent working directory. Defaults to workspaceRoot.
-↓vibeHome [variables.RequestableVariable-1781650000109]: 
+↓vibeHome [variables.RequestableVariable-1781650000109]:
   comment: Optional explicit VIBE_HOME. Defaults to an assistant conversation scoped home.
   description: Optional explicit VIBE_HOME. Defaults to an assistant conversation scoped home.
-↓projectName [variables.RequestableVariable-1781650000110]: 
+↓agentHome [variables.RequestableVariable-1781700300112]:
+  comment: Optional explicit provider home directory.
+  description: Optional explicit provider home directory.
+↓codexHome [variables.RequestableVariable-1781700300113]:
+  comment: Optional explicit CODEX_HOME.
+  description: Optional explicit CODEX_HOME.
+↓codexHomeScope [variables.RequestableVariable-1781700300114]:
+  comment: Optional Codex home scope: default, shared, user, conversation, or explicit.
+  description: Optional Codex home scope: default, shared, user, conversation, or explicit.
+↓homeScope [variables.RequestableVariable-1781700300115]:
+  comment: Optional generic provider home scope.
+  description: Optional generic provider home scope.
+↓projectName [variables.RequestableVariable-1781650000110]:
   comment: Optional target Convertigo project name.
   description: Optional target Convertigo project name.
-↓userId [variables.RequestableVariable-1781650000111]: 
+↓userId [variables.RequestableVariable-1781650000111]:
   comment: Optional user id used for future scoped policies.
   description: Optional user id used for future scoped policies.
-↓targetProject [variables.RequestableVariable-1781602611857]: 
+↓targetProject [variables.RequestableVariable-1781602611857]:
   comment: Optional target Convertigo project name. Preferred over projectName.
   description: Optional target Convertigo project name. Preferred over projectName.
-↓forceNew [variables.RequestableVariable-1781603724188]: 
+↓forceNew [variables.RequestableVariable-1781603724188]:
   comment: When true, always starts a new conversation instead of resuming the latest one.
   description: When true, always starts a new conversation instead of resuming the latest one.
   schemaType: xsd:boolean
