@@ -66,16 +66,112 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return filePath(new File(parent, name));
   }
 
-  function defaultWorkspaceRoot() {
+  function normalizeWorkspaceRootPath(value) {
+    var text = trim(value);
+    if (!text.length) {
+      return "";
+    }
+    var root = new File(text);
+    var studioWorkspace = new File(root, ".metadata/.plugins/com.twinsoft.convertigo.studio");
+    if (studioWorkspace.isDirectory()) {
+      return filePath(studioWorkspace);
+    }
+    return filePath(root);
+  }
+
+  function engineWorkspaceRoot() {
+    try {
+      var workspace = normalizeWorkspaceRootPath(Packages.com.twinsoft.convertigo.engine.Engine.USER_WORKSPACE_PATH);
+      if (workspace.length) {
+        return workspace;
+      }
+    } catch (_ignoreEngineWorkspace) {}
+    try {
+      var propertyWorkspace = normalizeWorkspaceRootPath(System.getProperty("convertigo.cems.user_workspace_path"));
+      if (propertyWorkspace.length) {
+        return propertyWorkspace;
+      }
+    } catch (_ignoreEngineWorkspaceProperty) {}
+    return "";
+  }
+
+  function workspaceRootFromProjectDir(projectDir) {
+    if (projectDir === null || typeof projectDir === "undefined") {
+      return "";
+    }
+    var dir = projectDir && projectDir.getParentFile ? projectDir : new File(String(projectDir));
+    var parent = dir.getParentFile();
+    if (parent === null) {
+      return "";
+    }
+    var studioWorkspace = new File(parent, ".metadata/.plugins/com.twinsoft.convertigo.studio");
+    if (studioWorkspace.isDirectory()) {
+      return filePath(studioWorkspace);
+    }
+    if (String(parent.getName()) === "projects" && parent.getParentFile() !== null) {
+      return filePath(parent.getParentFile());
+    }
+    return "";
+  }
+
+  function projectWorkspaceRoot(projectName) {
+    var name = trim(projectName);
+    if (!name.length) {
+      return "";
+    }
+    try {
+      var project = Packages.com.twinsoft.convertigo.engine.Engine.theApp.databaseObjectsManager.getProjectByName(name);
+      if (project && project.getDirFile) {
+        var workspace = workspaceRootFromProjectDir(project.getDirFile());
+        if (workspace.length) {
+          return workspace;
+        }
+      }
+    } catch (_ignoreTargetProjectDir) {}
+    try {
+      var project2 = Packages.com.twinsoft.convertigo.engine.Engine.theApp.databaseObjectsManager.getProjectByName(name);
+      if (project2 && project2.getDirPath) {
+        var workspace2 = workspaceRootFromProjectDir(project2.getDirPath());
+        if (workspace2.length) {
+          return workspace2;
+        }
+      }
+    } catch (_ignoreTargetProjectPath) {}
+    return "";
+  }
+
+  function defaultWorkspaceRoot(projectName) {
+    var engineWorkspace = engineWorkspaceRoot();
+    if (engineWorkspace.length) {
+      return engineWorkspace;
+    }
+    var targetWorkspace = projectWorkspaceRoot(projectName);
+    if (targetWorkspace.length) {
+      return targetWorkspace;
+    }
     try {
       if (context && context.project && context.project.getDirFile) {
-        var parent = context.project.getDirFile().getParentFile();
-        if (parent !== null) {
-          return filePath(parent);
+        var contextWorkspace = workspaceRootFromProjectDir(context.project.getDirFile());
+        if (contextWorkspace.length) {
+          return contextWorkspace;
         }
       }
     } catch (_ignoreProjectDir) {}
-    return filePath(new File(System.getProperty("user.home"), "git"));
+    return filePath(new File(System.getProperty("user.home"), "convertigo"));
+  }
+
+  function workspaceProjectName(options) {
+    options = options || {};
+    return trim(options.targetProject || options.projectName || options.projectId || options.primaryProject);
+  }
+
+  function resolveWorkspaceRoot(options) {
+    options = options || {};
+    var explicit = trim(options.workspaceRoot);
+    if (explicit.length) {
+      return normalizeWorkspaceRootPath(explicit);
+    }
+    return defaultWorkspaceRoot(workspaceProjectName(options));
   }
 
   function readTextFile(file) {
@@ -244,6 +340,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (Object.prototype.hasOwnProperty.call(params, key)) {
         payload[key] = params[key];
       }
+    }
+    if (!payload.workspaceRoot && options.workspaceRoot) {
+      payload.workspaceRoot = options.workspaceRoot;
+    }
+    if (!payload.projectId && (options.primaryProject || options.projectId)) {
+      payload.projectId = options.primaryProject || options.projectId;
+    }
+    if (!payload.userId && options.userId) {
+      payload.userId = options.userId;
+    }
+    if (!payload.conversationId && (options.conversationId || options.threadid)) {
+      payload.conversationId = options.conversationId || options.threadid;
     }
     var response = postForm(trim(options.bridgeBaseUrl) || DEFAULT_BRIDGE_URL, payload, timeoutMs || 70000);
     return response && typeof response.result !== "undefined" ? response.result : response;
@@ -839,18 +947,71 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  function sameCanonicalPath(left, right) {
+    try {
+      return filePath(new File(left)) === filePath(new File(right));
+    } catch (_ignoreSamePath) {
+      return trim(left) === trim(right);
+    }
+  }
+
+  function replacePathPrefix(value, oldPrefix, newPrefix) {
+    var text = trim(value);
+    var oldText = trim(oldPrefix);
+    if (!text.length || !oldText.length) {
+      return text;
+    }
+    if (text === oldText) {
+      return newPrefix;
+    }
+    if (text.indexOf(oldText + File.separator) === 0) {
+      return newPrefix + text.substring(oldText.length);
+    }
+    if (text.indexOf(oldText + "/") === 0) {
+      return newPrefix + text.substring(oldText.length);
+    }
+    return text;
+  }
+
+  function rebaseStateWorkspace(state, workspaceRoot) {
+    var previousWorkspace = trim(state.workspaceRoot);
+    var previousConversationDir = trim(state.conversationDir);
+    state.workspaceRoot = workspaceRoot;
+    if (!trim(state.cwd).length || (previousWorkspace.length && sameCanonicalPath(state.cwd, previousWorkspace))) {
+      state.cwd = workspaceRoot;
+    } else if (previousWorkspace.length) {
+      state.cwd = replacePathPrefix(state.cwd, previousWorkspace, workspaceRoot);
+    }
+    var dir = conversationDirectory(state.workspaceRoot, state.userKey, state.conversationId || state.threadid);
+    state.conversationDir = filePath(dir);
+    state.conversationFile = filePath(conversationRecordFile(dir));
+    state.transcriptFile = filePath(conversationTranscriptFile(dir));
+    state.summaryFile = filePath(conversationSummaryFile(dir));
+    if (!trim(state.vibeHome).length || (previousConversationDir.length && state.vibeHome.indexOf(previousConversationDir) === 0)) {
+      state.vibeHome = childPath(dir, "vibe-home");
+    } else if (previousWorkspace.length) {
+      state.vibeHome = replacePathPrefix(state.vibeHome, previousWorkspace, workspaceRoot);
+    }
+  }
+
   function ensureState(state) {
     if (!state) {
       return state;
     }
-    if (!state.workspaceRoot) {
-      state.workspaceRoot = defaultWorkspaceRoot();
+    if (!state.primaryProject) {
+      state.primaryProject = state.projectId || "";
     }
     if (!state.conversationId) {
       state.conversationId = state.threadid;
     }
     if (!state.userKey) {
       state.userKey = normalizeUserKey(state.userId);
+    }
+    var projectWorkspace = defaultWorkspaceRoot(state.primaryProject || state.projectId);
+    if (!state.workspaceRoot) {
+      state.workspaceRoot = projectWorkspace;
+    } else if (projectWorkspace.length && !sameCanonicalPath(state.workspaceRoot, projectWorkspace) && projectWorkspaceRoot(state.primaryProject || state.projectId).length) {
+      rebaseStateWorkspace(state, projectWorkspace);
     }
     if (!state.conversationDir) {
       var dir = conversationDirectory(state.workspaceRoot, state.userKey, state.conversationId || state.threadid);
@@ -861,9 +1022,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!state.vibeHome) {
       state.vibeHome = childPath(new File(state.conversationDir), "vibe-home");
-    }
-    if (!state.primaryProject) {
-      state.primaryProject = state.projectId || "";
     }
     if (!state.projectNames || typeof state.projectNames.length === "undefined") {
       state.projectNames = [];
@@ -907,7 +1065,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function createState(options) {
-    var workspaceRoot = trim(options.workspaceRoot) || defaultWorkspaceRoot();
+    var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var threadid = normalizeConversationId(options.threadid) || makeConversationId();
     var record = readConversationRecord(workspaceRoot, userKey, threadid);
@@ -972,6 +1130,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       cursor: state.cursor,
       conversationId: state.conversationId || state.threadid,
       userKey: state.userKey || "studio",
+      workspaceRoot: state.workspaceRoot || "",
       vibeHome: state.vibeHome,
       conversationDir: state.conversationDir || "",
       projectId: state.projectId,
@@ -1039,7 +1198,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   C8O.assistantAgentBridge.createConversation = function (options) {
     options = options || {};
-    var workspaceRoot = trim(options.workspaceRoot) || defaultWorkspaceRoot();
+    var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var requestedThreadId = normalizeThreadId(options.threadid);
     var resumedLatest = false;
@@ -1305,7 +1464,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   C8O.assistantAgentBridge.listConversations = function (options) {
     options = options || {};
-    var workspaceRoot = trim(options.workspaceRoot) || defaultWorkspaceRoot();
+    var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var root = conversationsRoot(workspaceRoot, userKey);
     var includeDeleted = boolValue(options.includeDeleted, false);
@@ -1335,7 +1494,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var state = readState(threadid);
     if (state === null) {
-      var workspaceRoot = trim(options.workspaceRoot) || defaultWorkspaceRoot();
+      var workspaceRoot = resolveWorkspaceRoot(options);
       var userKey = normalizeUserKey(options.userId);
       var record = readConversationRecord(workspaceRoot, userKey, threadid);
       if (!record) {
@@ -1421,7 +1580,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var state = threadid.length ? readState(threadid) : null;
     if (state === null) {
       if (threadid.length) {
-        var workspaceRoot = trim(options.workspaceRoot) || defaultWorkspaceRoot();
+        var workspaceRoot = resolveWorkspaceRoot(options);
         var userKey = normalizeUserKey(options.userId);
         var record = readConversationRecord(workspaceRoot, userKey, threadid);
         if (!record) {

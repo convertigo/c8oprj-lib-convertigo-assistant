@@ -7,7 +7,10 @@ responseTimeout: 120
       threadid: typeof threadid === "undefined" ? "" : threadid,
       runid: typeof runid === "undefined" ? "" : runid,
       waitMs: typeof waitMs === "undefined" ? "" : waitMs,
-      limit: typeof limit === "undefined" ? "" : limit
+      limit: typeof limit === "undefined" ? "" : limit,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      targetProject: typeof targetProject === "undefined" ? "" : targetProject,
+      projectName: typeof projectName === "undefined" ? "" : projectName
     });'
 ↓result [steps.JsonToXmlStep-1781650000302]: 
   jsonObject: 
@@ -34,3 +37,12 @@ responseTimeout: 120
 ↓limit [variables.RequestableVariable-1781650000306]: 
   comment: Maximum bridge events to read. Defaults to 100.
   description: Maximum bridge events to read. Defaults to 100.
+↓workspaceRoot [variables.RequestableVariable-1781689650982]: 
+  comment: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+  description: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+↓targetProject [variables.RequestableVariable-1781689656395]: 
+  comment: Optional target Convertigo project name. Used to resolve the Studio workspace.
+  description: Optional target Convertigo project name. Used to resolve the Studio workspace.
+↓projectName [variables.RequestableVariable-1781689661495]: 
+  comment: Alias for targetProject.
+  description: Alias for targetProject.
