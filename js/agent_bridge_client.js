@@ -1577,9 +1577,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var provider = normalizeProvider(state.provider);
     var install = typeof installOverride === "undefined" ? boolValue(options.install || options.installCodex || options.installVibe, false) : installOverride === true;
     if (provider === "codex") {
+      var codexScope = trim(options.codexHomeScope || options.homeScope);
+      if (!codexScope.length) {
+        codexScope = "shared";
+      }
       return {
-        codexHome: trim(options.codexHome || options.agentHome),
-        codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+        codexHome: trim(options.codexHome),
+        codexHomeScope: codexScope,
+        conversationId: state.threadid || state.conversationId || "",
+        projectId: state.primaryProject || state.projectId || "",
+        userId: state.userId || state.userKey || "",
         codexPath: trim(options.codexPath || options.commandPath),
         install: install ? "true" : "false",
         nodeVersion: trim(options.nodeVersion),
@@ -1657,7 +1664,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var installation = setup && setup.installation ? setup.installation : {};
     if (installation && installation.attempted === true) {
       if (installation.installed === true) {
-        lines.push(state.language === "fr" ? "Installation locale terminee." : "Local installation completed.");
+        lines.push(state.language === "fr" ? "Installation locale terminée." : "Local installation completed.");
       } else if (installation.reused === true) {
         lines.push(state.language === "fr" ? "Runtime local existant reutilise." : "Existing local runtime reused.");
       }
@@ -1675,7 +1682,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lines.push("VIBE_HOME: " + detail.vibeHome);
     }
     if (detail.installDir) {
-      lines.push((state.language === "fr" ? "Repertoire agent: " : "Agent directory: ") + detail.installDir);
+      lines.push((state.language === "fr" ? "Répertoire agent: " : "Agent directory: ") + detail.installDir);
     }
     if (setup && setup.skills && setup.skills.message) {
       lines.push(setup.skills.message);
@@ -1944,11 +1951,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.setupReport = publicSetupReport(setup);
 
       var env = credentialsEnv();
+      var codexScope = trim(options.codexHomeScope || options.homeScope);
+      if (!codexScope.length) {
+        codexScope = "shared";
+      }
       var startPayload = provider === "codex" ? {
         handle: state.handle,
         cwd: state.cwd,
-        codexHome: trim(options.codexHome || options.agentHome),
-        codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+        codexHome: trim(options.codexHome),
+        codexHomeScope: codexScope,
+        conversationId: state.threadid || state.conversationId || "",
+        projectId: state.primaryProject || state.projectId || "",
+        userId: state.userId || state.userKey || "",
         codexPath: trim(options.codexPath || options.commandPath),
         install: boolValue(options.install || options.installCodex, false) ? "true" : "false",
         nodeVersion: trim(options.nodeVersion),
@@ -1960,6 +1974,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
         codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
         forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
+        mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
+        skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
         mcpEndpoint: state.mcpEndpoint,
         env: JSON.stringify(env),
         codexThreadId: state.externalSessionId || "",

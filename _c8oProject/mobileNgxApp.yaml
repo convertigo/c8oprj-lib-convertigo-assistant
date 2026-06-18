@@ -240,18 +240,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             		resolve();
             '
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
-    beanData: |
-      '{
-       "ionBean": "CallSequenceAction",
-       "requestable": "plain:ConvertigoAssistant.GetVersion",
-       "marker": "plain:",
-       "cachePolicy": "plain",
-       "cacheTtl": "plain:3000",
-       "timeout": "plain",
-       "threshold": "plain",
-       "noLoading": "plain:false",
-       "noAutoLogin": "plain:false"
-      }'
+    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.GetVersion"}'
     ↓SetLocal [ngx.components.UIDynamicAction-1750662135534]: 
       beanData: |
         '{
@@ -3583,21 +3572,26 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           
           .modern-scroll-bottom-btn {
             position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: 20px;
+            right: 12px;
+            bottom: 42px;
             z-index: 40;
-            //--color: var(--ion-color-dark);
-            //box-shadow: 0 10px 24px rgba(2, 8, 23, 0.25);
+            opacity: 0.72;
+            --padding-start: 0;
+            --padding-end: 0;
+            width: 36px;
+            height: 36px;
+            min-height: 36px;
           }
-          
           .modern-scroll-bottom-btn::part(native) {
-            //border-radius: 999px;
-            //border: 1px solid rgba(255, 255, 255, 0.26);
+            border-radius: 10px;
+            padding: 7px;
           }
-          
           .modern-scroll-bottom-btn ion-icon {
-            font-size: 22px;
+            font-size: 19px;
+          }
+          .modern-scroll-bottom-btn:hover,
+          .modern-scroll-bottom-btn:focus {
+            opacity: 0.95;
           }
           
           .modern-intro-title {

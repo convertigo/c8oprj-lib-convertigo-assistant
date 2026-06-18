@@ -378,7 +378,7 @@ scriptContent:
         				if (!self.local) {
         					self.local = {};
         				}
-        				if (!force && self.local && self.local.AutoScrollEnabled === false) {
+                        if (self.local && self.local.AutoScrollEnabled === false) {
         					return;
         				}
         				if (force) {
@@ -611,13 +611,13 @@ scriptContent:
                     };
                     this.local.Messages.push(target);
                 }
-                target.msg = installing ? ("Installation de " + label + " dans le workspace Convertigo.\n\nCette operation peut prendre plusieurs minutes.") : ("Verification de " + label + " et de sa configuration locale.");
+                target.msg = installing ? ("Installation de " + label + " dans le workspace Convertigo.\n\nCette opération peut prendre plusieurs minutes.") : ("Vérification de " + label + " et de sa configuration locale.");
                 target.status = installing ? "Installation en cours" : "Diagnostic en cours";
                 target.writing = true;
                 this.local.AgentSetupMessageId = messageId;
                 this.local.IsProcessing = true;
                 this.tick();
-                this.scrollChatBottom(20, true);
+                this.scrollChatBottom(20);
             }
             public finishAgentSetupMessage(result, error = "") {
                 if (!this.local) {
@@ -648,16 +648,16 @@ scriptContent:
                     lines.push("Diagnostic impossible.");
                     lines.push("" + error);
                 } else if (result && result.ok === true) {
-                    lines.push("Agent " + label + " pret.");
+                    lines.push("Agent " + label + " prêt.");
                 } else {
-                    lines.push("Agent " + label + " non pret.");
+                    lines.push("Agent " + label + " non prêt.");
                 }
                 if (result && result.status) {
                     lines.push("Statut : " + result.status);
                 }
                 if (installation && installation.attempted === true) {
                     if (installation.installed === true) {
-                        lines.push("Installation locale terminee.");
+                        lines.push("Installation locale terminée.");
                     } else if (installation.reused === true) {
                         lines.push("Runtime local existant reutilise.");
                     } else {
@@ -677,7 +677,7 @@ scriptContent:
                     lines.push("VIBE_HOME : " + detail.vibeHome);
                 }
                 if (detail && detail.installDir) {
-                    lines.push("Repertoire agent : " + detail.installDir);
+                    lines.push("Répertoire agent : " + detail.installDir);
                 }
                 if (setup && setup.skills && setup.skills.message) {
                     lines.push(setup.skills.message);
@@ -694,11 +694,11 @@ scriptContent:
                     }
                 }
                 target.msg = lines.join("\n\n");
-                target.status = result && result.ok === true ? "Agent pret" : "Action requise";
+                target.status = result && result.ok === true ? "Agent prêt" : "Action requise";
                 target.writing = false;
                 this.local.IsProcessing = false;
                 this.tick();
-                this.scrollChatBottom(20, true);
+                this.scrollChatBottom(20);
             }
         	public closeConversationsPanel() {
         		if (!this.local) {
@@ -712,13 +712,7 @@ scriptContent:
 segment: path-to-xfirst/:threadid
 title: Agent assistant
 ↓Header [ngx.components.UIDynamicElement-1491634212350]: 
-  beanData: |
-    '{
-     "ionBean": "Header",
-     "IonMode": "plain",
-     "Collapse": "plain",
-     "Translucent": "plain:false"
-    }'
+  beanData: '{"ionBean":"Header"}'
   comment: Page header
   tagName: ion-header
   ↓Class [ngx.components.UIAttribute-1774701000008]: 
@@ -728,34 +722,13 @@ title: Agent assistant
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
         - MobileSmartSourceType: plain:modern-header
   ↓ToolBar [ngx.components.UIDynamicElement-1491634231108]: 
-    beanData: |
-      '{
-       "ionBean": "ToolBar",
-       "IonColor": "plain",
-       "BarMode": "plain",
-       "BarSlot": "plain"
-      }'
+    beanData: '{"ionBean":"ToolBar"}'
     tagName: ion-toolbar
     ↓ButtonSet1 [ngx.components.UIDynamicElement-1588171103814]: 
-      beanData: |
-        '{
-         "ionBean": "ButtonSet",
-         "SetPosition": "plain:start",
-         "Collapse": "plain:false"
-        }'
+      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:start"}'
       tagName: ion-buttons
       ↓BackButton [ngx.components.UIDynamicElement-1643993281257]: 
-        beanData: |
-          '{
-           "ionBean": "BackButton",
-           "ButtonFormType": "plain:button",
-           "Disabled": "plain:false",
-           "IonColor": "plain",
-           "IonIcon": "plain",
-           "IonMode": "plain",
-           "ButtonText": "plain",
-           "DefaultHref": "plain"
-          }'
+        beanData: '{"ionBean":"BackButton"}'
         tagName: ion-back-button
         ↓Class [ngx.components.UIAttribute-1774701000002]: 
           attrName: class
@@ -764,15 +737,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
       ↓MenuButton [ngx.components.UIDynamicElement-1588172846908]: 
-        beanData: |
-          '{
-           "ionBean": "MenuButton",
-           "ButtonFormType": "plain:button",
-           "Disabled": "plain:false",
-           "IonColor": "plain",
-           "AutoHide": "plain:true",
-           "MenuId": "plain"
-          }'
+        beanData: '{"ionBean":"MenuButton"}'
         tagName: ion-menu-button
         ↓Class [ngx.components.UIAttribute-1774701000003]: 
           attrName: class
@@ -781,14 +746,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
       ↓Image [ngx.components.UIDynamicElement-1774701000011]: 
-        beanData: |
-          '{
-           "ionBean": "Image",
-           "url": "source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-           "width": "plain:",
-           "height": "plain:",
-           "alt": "plain"
-          }'
+        beanData: '{"ionBean":"Image","url":"source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
         selfClose: true
         tagName: img
         ↓Class [ngx.components.UIAttribute-1774701000012]: 
@@ -798,12 +756,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-logo-btn
     ↓BarTitle [ngx.components.UIDynamicElement-1491634265317]: 
-      beanData: |
-        '{
-         "ionBean": "BarTitle",
-         "IonColor": "plain",
-         "IonSize": "plain"
-        }'
+      beanData: '{"ionBean":"BarTitle"}'
       tagName: ion-title
       ↓TitleWrap [ngx.components.UIDynamicElement-1774701000013]: 
         beanData: '{"ionBean":"DivTag"}'
@@ -844,35 +797,10 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:this.getProjectSubtitle()
     ↓ButtonSet2 [ngx.components.UIDynamicElement-1588170811054]: 
-      beanData: |
-        '{
-         "ionBean": "ButtonSet",
-         "SetPosition": "plain:end",
-         "Collapse": "plain:false"
-        }'
+      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
       tagName: ion-buttons
       ↓Button [ngx.components.UIDynamicElement-1588170817806]: 
-        beanData: |
-          '{
-           "ionBean": "Button",
-           "ButtonFormType": "plain:button",
-           "Disabled": "plain:false",
-           "IonColor": "plain",
-           "IonExpand": "plain",
-           "IonShape": "plain",
-           "IonFill": "plain",
-           "IonSize": "plain",
-           "IconSlot": "plain",
-           "IonMode": "plain",
-           "IonStrong": "plain",
-           "LinkUrl": "plain",
-           "LinkDownload": "plain",
-           "LinkTarget": "plain",
-           "LinkRel": "plain",
-           "LinkRouterPath": "plain",
-           "LinkRouterData": "plain",
-           "LinkRouterDirection": "plain"
-          }'
+        beanData: '{"ionBean":"Button"}'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1774701000004]: 
           attrName: class
@@ -881,17 +809,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IonColor": "plain",
-             "IconName": "source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-             "IconMdName": "source",
-             "IconIosName": "source",
-             "IonSize": "plain",
-             "IconSlot": "plain",
-             "IconSource": "plain"
-            }'
+          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
           ↓OpenConversationPanel [ngx.components.UICustomAction-1781700500001]: 
@@ -914,27 +832,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:New conversation
       ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774703000001]: 
-        beanData: |
-          '{
-           "ionBean": "Button",
-           "ButtonFormType": "plain:button",
-           "Disabled": "plain:false",
-           "IonColor": "plain",
-           "IonExpand": "plain",
-           "IonShape": "plain",
-           "IonFill": "plain:clear",
-           "IonSize": "plain",
-           "IconSlot": "plain",
-           "IonMode": "plain",
-           "IonStrong": "plain",
-           "LinkUrl": "plain",
-           "LinkDownload": "plain",
-           "LinkTarget": "plain",
-           "LinkRel": "plain",
-           "LinkRouterPath": "plain",
-           "LinkRouterData": "plain",
-           "LinkRouterDirection": "plain"
-          }'
+        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1774703000002]: 
           attrName: class
@@ -975,17 +873,7 @@ title: Agent assistant
                     		resolve();
                     '
         ↓ThemeIcon [ngx.components.UIDynamicElement-1774703000006]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IonColor": "plain",
-             "IconName": "script:this?.global?.themeDark ? ''sunny-outline'' : ''moon-outline''",
-             "IconMdName": "source",
-             "IconIosName": "source",
-             "IonSize": "plain",
-             "IconSlot": "plain",
-             "IconSource": "plain"
-            }'
+          beanData: '{"ionBean":"Icon","IconName":"script:this?.global?.themeDark ? ''sunny-outline'' : ''moon-outline''"}'
           tagName: ion-icon
           ↓IconName [ngx.components.UIAttribute-1774703000007]: 
             attrName: '[name]'
@@ -1005,26 +893,7 @@ title: Agent assistant
           '{
            "ionBean": "Select",
            "ControlName": "plain:name1774703000010",
-           "IonMode": "plain",
-           "Disabled": "plain:false",
-           "DoubleBinding": "plain",
-           "CancelText": "plain:Cancel",
-           "OkText": "plain:Ok",
-           "CompareWith": "plain",
-           "ExpandedIcon": "plain",
-           "Fill": "plain",
-           "Interface": "plain",
-           "InterfaceOptions": "plain",
-           "Justify": "plain:start",
-           "Label": "plain",
-           "LabelPlacement": "plain:start",
-           "Legacy": "plain:false",
-           "Placeholder": "plain",
-           "Multiple": "plain:false",
-           "SelectedText": "plain",
-           "Shape": "plain",
-           "ToggleIcon": "plain",
-           "Value": "plain"
+           "Justify": "plain:start"
           }'
         tagName: ion-select
         ↓Class [ngx.components.UIAttribute-1774703000011]: 
@@ -1079,12 +948,7 @@ title: Agent assistant
                     		resolve();
                     '
         ↓LangEN [ngx.components.UIDynamicElement-1774703000018]: 
-          beanData: |
-            '{
-             "ionBean": "SelectOption",
-             "Disabled": "plain:false",
-             "Value": "plain:en"
-            }'
+          beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000019]: 
             i18n: true
@@ -1093,12 +957,7 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_English
         ↓LangFR [ngx.components.UIDynamicElement-1774703000020]: 
-          beanData: |
-            '{
-             "ionBean": "SelectOption",
-             "Disabled": "plain:false",
-             "Value": "plain:fr"
-            }'
+          beanData: '{"ionBean":"SelectOption","Value":"plain:fr"}'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000021]: 
             i18n: true
@@ -1107,12 +966,7 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_French
         ↓LangIT [ngx.components.UIDynamicElement-1774703000022]: 
-          beanData: |
-            '{
-             "ionBean": "SelectOption",
-             "Disabled": "plain:false",
-             "Value": "plain:it"
-            }'
+          beanData: '{"ionBean":"SelectOption","Value":"plain:it"}'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000023]: 
             i18n: true
@@ -1121,12 +975,7 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Italian
         ↓LangES [ngx.components.UIDynamicElement-1774703000024]: 
-          beanData: |
-            '{
-             "ionBean": "SelectOption",
-             "Disabled": "plain:false",
-             "Value": "plain:es"
-            }'
+          beanData: '{"ionBean":"SelectOption","Value":"plain:es"}'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000025]: 
             i18n: true
@@ -1135,18 +984,7 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Spanish
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
-  beanData: |
-    '{
-     "ionBean": "Content",
-     "IonColor": "plain",
-     "IonSlot": "plain",
-     "Padding": "plain:ion-no-padding",
-     "Fullscreen": "plain:false",
-     "ForceOverScroll": "plain:false",
-     "ScrollEvents": "plain:false",
-     "ScrollX": "plain:false",
-     "ScrollY": "plain:true"
-    }'
+  beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
   identifier: content
   tagName: ion-content
   ↓Class [ngx.components.UIAttribute-1772100000031]: 
@@ -1236,23 +1074,7 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Il utilise vos sessions d'agent local et les outils MCP Convertigo.
       ↓HowCard [ngx.components.UIDynamicElement-1772100000045]: 
-        beanData: |
-          '{
-           "ionBean": "Card",
-           "Button": "plain:false",
-           "ButtonFormType": "plain:button",
-           "Disabled": "plain:false",
-           "IonColor": "plain",
-           "IonMode": "plain",
-           "LinkUrl": "plain",
-           "LinkDownload": "plain",
-           "LinkTarget": "plain",
-           "LinkRel": "plain",
-           "LinkRouterPath": "plain",
-           "LinkRouterData": "plain",
-           "LinkRouterAnimation": "plain",
-           "LinkRouterDirection": "plain"
-          }'
+        beanData: '{"ionBean":"Card"}'
         tagName: ion-card
         ↓Class [ngx.components.UIAttribute-1772100000046]: 
           attrName: class
@@ -1261,7 +1083,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-card
         ↓CardContent [ngx.components.UIDynamicElement-1772100000047]: 
-          beanData: '{"ionBean":"CardContent","IonMode":"plain"}'
+          beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
           ↓Title [ngx.components.UIDynamicElement-1772100000048]: 
             beanData: '{"ionBean":"Paragraph"}'
@@ -1406,23 +1228,7 @@ title: Agent assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: 'plain: '
       ↓StartCard [ngx.components.UIDynamicElement-1772100000093]: 
-        beanData: |
-          '{
-           "ionBean": "Card",
-           "Button": "plain:false",
-           "ButtonFormType": "plain:button",
-           "Disabled": "plain:false",
-           "IonColor": "plain",
-           "IonMode": "plain",
-           "LinkUrl": "plain",
-           "LinkDownload": "plain",
-           "LinkTarget": "plain",
-           "LinkRel": "plain",
-           "LinkRouterPath": "plain",
-           "LinkRouterData": "plain",
-           "LinkRouterAnimation": "plain",
-           "LinkRouterDirection": "plain"
-          }'
+        beanData: '{"ionBean":"Card"}'
         tagName: ion-card
         ↓Class [ngx.components.UIAttribute-1772100000094]: 
           attrName: class
@@ -1431,7 +1237,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-card modern-cta-card
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
-          beanData: '{"ionBean":"CardContent","IonMode":"plain"}'
+          beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
           ↓Title [ngx.components.UIDynamicElement-1772100000096]: 
             beanData: '{"ionBean":"Paragraph"}'
@@ -1471,17 +1277,7 @@ title: Agent assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:agent-session-strip
             ↓SessionIcon [ngx.components.UIDynamicElement-1781604896729]: 
-              beanData: |
-                '{
-                 "ionBean": "Icon",
-                 "IonColor": "plain",
-                 "IconName": "script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''",
-                 "IconMdName": "source",
-                 "IconIosName": "source",
-                 "IonSize": "plain",
-                 "IconSlot": "plain",
-                 "IconSource": "plain"
-                }'
+              beanData: '{"ionBean":"Icon","IconName":"script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''"}'
               tagName: ion-icon
             ↓SessionCopy [ngx.components.UIDynamicElement-1781604896731]: 
               beanData: '{"ionBean":"DivTag"}'
@@ -1521,17 +1317,7 @@ title: Agent assistant
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (((this.local && this.local.Conversation) ? (''Session '' + (((('''' + this.local.Conversation).indexOf(''agent-'') === 0) ? ('''' + this.local.Conversation).substring(6, 14) : ('''' + this.local.Conversation).substring(0, 8)))) : ''Initialisation'') + '' - '' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) + '' conversation'' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) > 1 ? ''s'' : '''')))'
             ↓Chevron [ngx.components.UIDynamicElement-1781676585879]: 
-              beanData: |
-                '{
-                 "ionBean": "Icon",
-                 "IonColor": "plain",
-                 "IconName": "script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''",
-                 "IconMdName": "source",
-                 "IconIosName": "source",
-                 "IonSize": "plain",
-                 "IconSlot": "plain",
-                 "IconSource": "plain"
-                }'
+              beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
               tagName: ion-icon
               ↓Class [ngx.components.UIAttribute-1781676585881]: 
                 attrName: class
@@ -1594,23 +1380,8 @@ title: Agent assistant
                 beanData: |
                   '{
                    "ionBean": "Button",
-                   "ButtonFormType": "plain:button",
-                   "Disabled": "plain:false",
-                   "IonColor": "plain",
-                   "IonExpand": "plain",
-                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small",
-                   "IconSlot": "plain",
-                   "IonMode": "plain",
-                   "IonStrong": "plain",
-                   "LinkUrl": "plain",
-                   "LinkDownload": "plain",
-                   "LinkTarget": "plain",
-                   "LinkRel": "plain",
-                   "LinkRouterPath": "plain",
-                   "LinkRouterData": "plain",
-                   "LinkRouterDirection": "plain"
+                   "IonSize": "plain:small"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781676493783]: 
@@ -1638,13 +1409,8 @@ title: Agent assistant
                   beanData: |
                     '{
                      "ionBean": "Icon",
-                     "IonColor": "plain",
                      "IconName": "plain:close-outline",
-                     "IconMdName": "source",
-                     "IconIosName": "source",
-                     "IonSize": "plain",
-                     "IconSlot": "plain:icon-only",
-                     "IconSource": "plain"
+                     "IconSlot": "plain:icon-only"
                     }'
                   tagName: ion-icon
               ↓CreateSettings [ngx.components.UIDynamicElement-1781700500010]: 
@@ -1683,23 +1449,8 @@ title: Agent assistant
                     beanData: |
                       '{
                        "ionBean": "Button",
-                       "ButtonFormType": "plain:button",
-                       "Disabled": "plain:false",
-                       "IonColor": "plain",
-                       "IonExpand": "plain",
-                       "IonShape": "plain",
                        "IonFill": "plain:clear",
-                       "IonSize": "plain:small",
-                       "IconSlot": "plain",
-                       "IonMode": "plain",
-                       "IonStrong": "plain",
-                       "LinkUrl": "plain",
-                       "LinkDownload": "plain",
-                       "LinkTarget": "plain",
-                       "LinkRel": "plain",
-                       "LinkRouterPath": "plain",
-                       "LinkRouterData": "plain",
-                       "LinkRouterDirection": "plain"
+                       "IonSize": "plain:small"
                       }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1781700500018]: 
@@ -1727,23 +1478,8 @@ title: Agent assistant
                     beanData: |
                       '{
                        "ionBean": "Button",
-                       "ButtonFormType": "plain:button",
-                       "Disabled": "plain:false",
-                       "IonColor": "plain",
-                       "IonExpand": "plain",
-                       "IonShape": "plain",
                        "IonFill": "plain:clear",
-                       "IonSize": "plain:small",
-                       "IconSlot": "plain",
-                       "IonMode": "plain",
-                       "IonStrong": "plain",
-                       "LinkUrl": "plain",
-                       "LinkDownload": "plain",
-                       "LinkTarget": "plain",
-                       "LinkRel": "plain",
-                       "LinkRouterPath": "plain",
-                       "LinkRouterData": "plain",
-                       "LinkRouterDirection": "plain"
+                       "IonSize": "plain:small"
                       }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1781700500023]: 
@@ -1791,23 +1527,8 @@ title: Agent assistant
                     beanData: |
                       '{
                        "ionBean": "Button",
-                       "ButtonFormType": "plain:button",
-                       "Disabled": "plain:false",
-                       "IonColor": "plain",
-                       "IonExpand": "plain",
-                       "IonShape": "plain",
                        "IonFill": "plain:clear",
-                       "IonSize": "plain:small",
-                       "IconSlot": "plain",
-                       "IonMode": "plain",
-                       "IonStrong": "plain",
-                       "LinkUrl": "plain",
-                       "LinkDownload": "plain",
-                       "LinkTarget": "plain",
-                       "LinkRel": "plain",
-                       "LinkRouterPath": "plain",
-                       "LinkRouterData": "plain",
-                       "LinkRouterDirection": "plain"
+                       "IonSize": "plain:small"
                       }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1781700500032]: 
@@ -1836,23 +1557,9 @@ title: Agent assistant
                 beanData: |
                   '{
                    "ionBean": "Button",
-                   "ButtonFormType": "plain:button",
                    "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
-                   "IonColor": "plain",
-                   "IonExpand": "plain",
-                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small",
-                   "IconSlot": "plain",
-                   "IonMode": "plain",
-                   "IonStrong": "plain",
-                   "LinkUrl": "plain",
-                   "LinkDownload": "plain",
-                   "LinkTarget": "plain",
-                   "LinkRel": "plain",
-                   "LinkRouterPath": "plain",
-                   "LinkRouterData": "plain",
-                   "LinkRouterDirection": "plain"
+                   "IonSize": "plain:small"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781676410895]: 
@@ -1871,13 +1578,8 @@ title: Agent assistant
                   beanData: |
                     '{
                      "ionBean": "Icon",
-                     "IonColor": "plain",
                      "IconName": "plain:add-circle-outline",
-                     "IconMdName": "source",
-                     "IconIosName": "source",
-                     "IonSize": "plain",
-                     "IconSlot": "plain:start",
-                     "IconSource": "plain"
+                     "IconSlot": "plain:start"
                     }'
                   tagName: ion-icon
                 ↓Text [ngx.components.UIText-1781676410901]: 
@@ -1969,23 +1671,9 @@ title: Agent assistant
                 beanData: |
                   '{
                    "ionBean": "Button",
-                   "ButtonFormType": "plain:button",
                    "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
-                   "IonColor": "plain",
-                   "IonExpand": "plain",
-                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small",
-                   "IconSlot": "plain",
-                   "IonMode": "plain",
-                   "IonStrong": "plain",
-                   "LinkUrl": "plain",
-                   "LinkDownload": "plain",
-                   "LinkTarget": "plain",
-                   "LinkRel": "plain",
-                   "LinkRouterPath": "plain",
-                   "LinkRouterData": "plain",
-                   "LinkRouterDirection": "plain"
+                   "IonSize": "plain:small"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781811000101]: 
@@ -2004,13 +1692,8 @@ title: Agent assistant
                   beanData: |
                     '{
                      "ionBean": "Icon",
-                     "IonColor": "plain",
                      "IconName": "plain:construct-outline",
-                     "IconMdName": "source",
-                     "IconIosName": "source",
-                     "IonSize": "plain",
-                     "IconSlot": "plain:start",
-                     "IconSource": "plain"
+                     "IconSlot": "plain:start"
                     }'
                   tagName: ion-icon
                 ↓Text [ngx.components.UIText-1781811000104]: 
@@ -2136,23 +1819,9 @@ title: Agent assistant
                       beanData: |
                         '{
                          "ionBean": "Button",
-                         "ButtonFormType": "plain:button",
                          "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
-                         "IonColor": "plain",
-                         "IonExpand": "plain",
-                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small",
-                         "IconSlot": "plain",
-                         "IonMode": "plain",
-                         "IonStrong": "plain",
-                         "LinkUrl": "plain",
-                         "LinkDownload": "plain",
-                         "LinkTarget": "plain",
-                         "LinkRel": "plain",
-                         "LinkRouterPath": "plain",
-                         "LinkRouterData": "plain",
-                         "LinkRouterDirection": "plain"
+                         "IonSize": "plain:small"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781608119129]: 
@@ -2168,17 +1837,7 @@ title: Agent assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:Reprendre la conversation
                       ↓Icon [ngx.components.UIDynamicElement-1781608119133]: 
-                        beanData: |
-                          '{
-                           "ionBean": "Icon",
-                           "IonColor": "plain",
-                           "IconName": "plain:return-down-back-outline",
-                           "IconMdName": "source",
-                           "IconIosName": "source",
-                           "IonSize": "plain",
-                           "IconSlot": "plain",
-                           "IconSource": "plain"
-                          }'
+                        beanData: '{"ionBean":"Icon","IconName":"plain:return-down-back-outline"}'
                         tagName: ion-icon
                       ↓Text [ngx.components.UIText-1781676432698]: 
                         textValue: 
@@ -2212,13 +1871,7 @@ title: Agent assistant
                             '{
                              "ionBean": "CallSequenceAction",
                              "requestable": "plain:ConvertigoAssistant.AgentResumeConversation",
-                             "marker": "plain:",
-                             "cachePolicy": "plain",
-                             "cacheTtl": "plain:3000",
-                             "timeout": "plain",
-                             "threshold": "plain",
-                             "noLoading": "plain:true",
-                             "noAutoLogin": "plain:false"
+                             "noLoading": "plain:true"
                             }'
                           ↓threadid [ngx.components.UIControlVariable-1781608122133]: 
                             varValue: 
@@ -2491,24 +2144,13 @@ title: Agent assistant
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
                           ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
-                            beanData: |
-                              '{
-                               "ionBean": "IfAction",
-                               "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}",
-                               "negate": "plain:false"
-                              }'
+                            beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}"}'
                             ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
                               beanData: |
                                 '{
                                  "ionBean": "CallSequenceAction",
                                  "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-                                 "marker": "plain:",
-                                 "cachePolicy": "plain",
-                                 "cacheTtl": "plain:3000",
-                                 "timeout": "plain",
-                                 "threshold": "plain",
-                                 "noLoading": "plain:true",
-                                 "noAutoLogin": "plain:false"
+                                 "noLoading": "plain:true"
                                 }'
                               ↓threadid [ngx.components.UIControlVariable-1781621341118]: 
                                 varValue: 
@@ -2528,10 +2170,9 @@ title: Agent assistant
                               ↓PublishEvent [ngx.components.UIDynamicAction-1781621341122]: 
                                 beanData: |
                                   '{
-                                   "async": "plain:false",
                                    "ionBean": "PublishEventAction",
                                    "topic": "plain:AssistantResponse",
-                                   "data": "script:{}"
+                                   "async": "plain:false"
                                   }'
                               ↓targetProject [ngx.components.UIControlVariable-1781689577838]: 
                                 varValue: 
@@ -2558,23 +2199,9 @@ title: Agent assistant
                       beanData: |
                         '{
                          "ionBean": "Button",
-                         "ButtonFormType": "plain:button",
                          "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
-                         "IonColor": "plain",
-                         "IonExpand": "plain",
-                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small",
-                         "IconSlot": "plain",
-                         "IonMode": "plain",
-                         "IonStrong": "plain",
-                         "LinkUrl": "plain",
-                         "LinkDownload": "plain",
-                         "LinkTarget": "plain",
-                         "LinkRel": "plain",
-                         "LinkRouterPath": "plain",
-                         "LinkRouterData": "plain",
-                         "LinkRouterDirection": "plain"
+                         "IonSize": "plain:small"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781608122145]: 
@@ -2590,17 +2217,7 @@ title: Agent assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:Supprimer la conversation
                       ↓Icon [ngx.components.UIDynamicElement-1781608122149]: 
-                        beanData: |
-                          '{
-                           "ionBean": "Icon",
-                           "IonColor": "plain",
-                           "IconName": "plain:trash-outline",
-                           "IconMdName": "source",
-                           "IconIosName": "source",
-                           "IonSize": "plain",
-                           "IconSlot": "plain",
-                           "IconSource": "plain"
-                          }'
+                        beanData: '{"ionBean":"Icon","IconName":"plain:trash-outline"}'
                         tagName: ion-icon
                       ↓Event [ngx.components.UIControlEvent-1781608122151]: 
                         ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
@@ -2608,13 +2225,7 @@ title: Agent assistant
                             '{
                              "ionBean": "CallSequenceAction",
                              "requestable": "plain:ConvertigoAssistant.AgentDeleteConversation",
-                             "marker": "plain:",
-                             "cachePolicy": "plain",
-                             "cacheTtl": "plain:3000",
-                             "timeout": "plain",
-                             "threshold": "plain",
-                             "noLoading": "plain:true",
-                             "noAutoLogin": "plain:false"
+                             "noLoading": "plain:true"
                             }'
                           ↓threadid [ngx.components.UIControlVariable-1781608122155]: 
                             varValue: 
@@ -2755,14 +2366,7 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓Spinner [ngx.components.UIDynamicElement-1773100000018]: 
-              beanData: |
-                '{
-                 "ionBean": "Spinner",
-                 "IonColor": "plain",
-                 "Duration": "plain",
-                 "Name": "plain:lines",
-                 "Paused": "plain:false"
-                }'
+              beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
               tagName: ion-spinner
   ↓IfScrollTopButton [ngx.components.UIControlDirective-1781676529458]: 
     directiveName: If
@@ -2774,23 +2378,8 @@ title: Agent assistant
       beanData: |
         '{
          "ionBean": "Button",
-         "ButtonFormType": "plain:button",
-         "Disabled": "plain:false",
          "IonColor": "plain:light",
-         "IonExpand": "plain",
-         "IonShape": "plain:round",
-         "IonFill": "plain",
-         "IonSize": "plain",
-         "IconSlot": "plain",
-         "IonMode": "plain",
-         "IonStrong": "plain",
-         "LinkUrl": "plain",
-         "LinkDownload": "plain",
-         "LinkTarget": "plain",
-         "LinkRel": "plain",
-         "LinkRouterPath": "plain",
-         "LinkRouterData": "plain",
-         "LinkRouterDirection": "plain"
+         "IonShape": "plain:round"
         }'
       tagName: ion-button
       ↓Slot [ngx.components.UIAttribute-1781676533576]: 
@@ -2826,11 +2415,8 @@ title: Agent assistant
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-up-outline",
-           "IconMdName": "source",
-           "IconIosName": "source",
            "IonSize": "plain:large",
-           "IconSlot": "plain:icon-only",
-           "IconSource": "plain"
+           "IconSlot": "plain:icon-only"
           }'
         tagName: ion-icon
   ↓IfScrollBottomButton [ngx.components.UIControlDirective-1773900000010]: 
@@ -2843,23 +2429,8 @@ title: Agent assistant
       beanData: |
         '{
          "ionBean": "Button",
-         "ButtonFormType": "plain:button",
-         "Disabled": "plain:false",
          "IonColor": "plain:light",
-         "IonExpand": "plain",
-         "IonShape": "plain:round",
-         "IonFill": "plain",
-         "IonSize": "plain",
-         "IconSlot": "plain",
-         "IonMode": "plain",
-         "IonStrong": "plain",
-         "LinkUrl": "plain",
-         "LinkDownload": "plain",
-         "LinkTarget": "plain",
-         "LinkRel": "plain",
-         "LinkRouterPath": "plain",
-         "LinkRouterData": "plain",
-         "LinkRouterDirection": "plain"
+         "IonShape": "plain:round"
         }'
       tagName: ion-button
       ↓Slot [ngx.components.UIAttribute-1774000000002]: 
@@ -2895,11 +2466,8 @@ title: Agent assistant
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-down-outline",
-           "IconMdName": "source",
-           "IconIosName": "source",
            "IonSize": "plain:large",
-           "IconSlot": "plain:icon-only",
-           "IconSource": "plain"
+           "IconSlot": "plain:icon-only"
           }'
         tagName: ion-icon
 ↓PageEvent [ngx.components.UIPageEvent-1744269061199]: 
@@ -3008,13 +2576,7 @@ title: Agent assistant
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
-           "marker": "plain:",
-           "cachePolicy": "plain",
-           "cacheTtl": "plain:3000",
-           "timeout": "plain",
-           "threshold": "plain",
-           "noLoading": "plain:true",
-           "noAutoLogin": "plain:false"
+           "noLoading": "plain:true"
           }'
         ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
           beanData: |
@@ -3047,12 +2609,7 @@ title: Agent assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.getConfiguredAgentProvider && this.getConfiguredAgentProvider().length && this.getAgentModel) ? this.getAgentModel() : '''''
         ↓If [ngx.components.UIDynamicAction-1749567852407]: 
-          beanData: |
-            '{
-             "ionBean": "IfAction",
-             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-             "negate": "plain:false"
-            }'
+          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           ↓AddHistoryMessages [ngx.components.UICustomAction-1749567905830]: 
             actionValue: 
               - xmlizable: 
@@ -3279,24 +2836,13 @@ title: Agent assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓PollActiveRunOnEnter [ngx.components.UIDynamicAction-1781622093065]: 
-              beanData: |
-                '{
-                 "ionBean": "IfAction",
-                 "condition": "script:this.local && this.local.IsProcessing === true && !!this.local.RunID",
-                 "negate": "plain:false"
-                }'
+              beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.IsProcessing === true && !!this.local.RunID"}'
               ↓CallSequence [ngx.components.UIDynamicAction-1781622094571]: 
                 beanData: |
                   '{
                    "ionBean": "CallSequenceAction",
                    "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-                   "marker": "plain:",
-                   "cachePolicy": "plain",
-                   "cacheTtl": "plain:3000",
-                   "timeout": "plain",
-                   "threshold": "plain",
-                   "noLoading": "plain:true",
-                   "noAutoLogin": "plain:false"
+                   "noLoading": "plain:true"
                   }'
                 ↓threadid [ngx.components.UIControlVariable-1781622094573]: 
                   varValue: 
@@ -3316,10 +2862,9 @@ title: Agent assistant
                 ↓PublishEvent [ngx.components.UIDynamicAction-1781622094577]: 
                   beanData: |
                     '{
-                     "async": "plain:false",
                      "ionBean": "PublishEventAction",
                      "topic": "plain:AssistantResponse",
-                     "data": "script:{}"
+                     "async": "plain:false"
                     }'
                 ↓targetProject [ngx.components.UIControlVariable-1781689586166]: 
                   varValue: 
@@ -3770,24 +3315,13 @@ title: Agent assistant
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓IfElse [ngx.components.UIDynamicIf-1744357030892]: 
-      beanData: |
-        '{
-         "ionBean": "IfElseAction",
-         "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}",
-         "negate": "plain:false"
-        }'
+      beanData: '{"ionBean":"IfElseAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}"}'
       ↓CallSequence [ngx.components.UIDynamicAction-1744367857710]: 
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-           "marker": "plain:",
-           "cachePolicy": "plain",
-           "cacheTtl": "plain:3000",
-           "timeout": "plain",
-           "threshold": "plain",
-           "noLoading": "plain:true",
-           "noAutoLogin": "plain:false"
+           "noLoading": "plain:true"
           }'
         ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
           varValue: 
@@ -3797,10 +3331,9 @@ title: Agent assistant
         ↓PublishEvent [ngx.components.UIDynamicAction-1744367857716]: 
           beanData: |
             '{
-             "async": "plain:false",
              "ionBean": "PublishEventAction",
              "topic": "plain:AssistantResponse",
-             "data": "script:{}"
+             "async": "plain:false"
             }'
         ↓runid [ngx.components.UIControlVariable-1744389800542]: 
           varValue: 
@@ -3851,12 +3384,7 @@ title: Agent assistant
              "level": "plain:warn"
             }'
         ↓If1 [ngx.components.UIDynamicAction-1747229858672]: 
-          beanData: |
-            '{
-             "ionBean": "IfAction",
-             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-             "negate": "plain:false"
-            }'
+          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           ↓AddAssistantMessage [ngx.components.UICustomAction-1747229858675]: 
             actionValue: 
               - xmlizable: 
@@ -3907,13 +3435,7 @@ title: Agent assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
 ↓Footer [ngx.components.UIDynamicElement-1750415662453]: 
-  beanData: |
-    '{
-     "ionBean": "Footer",
-     "IonMode": "plain",
-     "Collapse": "plain",
-     "Translucent": "plain:false"
-    }'
+  beanData: '{"ionBean":"Footer"}'
   tagName: ion-footer
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]: 
     identifier: chatfooter
@@ -3922,18 +3444,7 @@ title: Agent assistant
       attrName: (RunQuestion)
       eventName: RunQuestion
       ↓CallSequence [ngx.components.UIDynamicAction-1751354620842]: 
-        beanData: |
-          '{
-           "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.UploadFiles",
-           "marker": "plain:",
-           "cachePolicy": "plain",
-           "cacheTtl": "plain:3000",
-           "timeout": "plain",
-           "threshold": "plain",
-           "noLoading": "plain:false",
-           "noAutoLogin": "plain:false"
-          }'
+        beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.UploadFiles"}'
         ↓files [ngx.components.UIControlVariable-1751354620845]: 
           varValue: 
             - xmlizable: 
@@ -3955,12 +3466,7 @@ title: Agent assistant
             beanData: '{"ionBean":"IterateAction","items":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.UploadFiles\",\"marker\":\"\"}],\"path\":\"?.file\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
             ↓Loop_Handler [ngx.components.UIActionLoopEvent-1751354620854]: 
               ↓If [ngx.components.UIDynamicAction-1751354620857]: 
-                beanData: |
-                  '{
-                   "ionBean": "IfAction",
-                   "condition": "script:item.filename",
-                   "negate": "plain:false"
-                  }'
+                beanData: '{"ionBean":"IfAction","condition":"script:item.filename"}'
                 ↓PushAIFile [ngx.components.UICustomAction-1751354620860]: 
                   actionValue: 
                     - xmlizable: 
@@ -4061,12 +3567,7 @@ title: Agent assistant
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
               ↓If1 [ngx.components.UIDynamicAction-1751634630354]: 
-                beanData: |
-                  '{
-                   "ionBean": "IfAction",
-                   "condition": "script:item.error",
-                   "negate": "plain:false"
-                  }'
+                beanData: '{"ionBean":"IfAction","condition":"script:item.error"}'
                 ↓AddAssistantMessage [ngx.components.UICustomAction-1751634630369]: 
                   actionValue: 
                     - xmlizable: 
@@ -4087,12 +3588,7 @@ title: Agent assistant
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
             ↓If [ngx.components.UIDynamicAction-1751354620878]: 
-              beanData: |
-                '{
-                 "ionBean": "IfAction",
-                 "condition": "script:parent.out == ''done''",
-                 "negate": "plain:false"
-                }'
+              beanData: '{"ionBean":"IfAction","condition":"script:parent.out == ''done''"}'
               ↓ConsoleLog [ngx.components.UICustomAction-1751354620881]: 
                 actionValue: 
                   - xmlizable: 
@@ -4383,13 +3879,7 @@ title: Agent assistant
                     '{
                      "ionBean": "CallSequenceAction",
                      "requestable": "plain:ConvertigoAssistant.AgentSendMessage",
-                     "marker": "plain:",
-                     "cachePolicy": "plain",
-                     "cacheTtl": "plain:3000",
-                     "timeout": "plain",
-                     "threshold": "plain",
-                     "noLoading": "plain:true",
-                     "noAutoLogin": "plain:false"
+                     "noLoading": "plain:true"
                     }'
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
                     varValue: 
@@ -4424,12 +3914,7 @@ title: Agent assistant
                             		resolve();
                             '
                   ↓If [ngx.components.UIDynamicAction-1751354620911]: 
-                    beanData: |
-                      '{
-                       "ionBean": "IfAction",
-                       "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                       "negate": "plain:false"
-                      }'
+                    beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
                     ↓AddAssistantMessage [ngx.components.UICustomAction-1751354620914]: 
                       actionValue: 
                         - xmlizable: 
@@ -4477,13 +3962,7 @@ title: Agent assistant
                         '{
                          "ionBean": "CallSequenceAction",
                          "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-                         "marker": "plain:",
-                         "cachePolicy": "plain",
-                         "cacheTtl": "plain:3000",
-                         "timeout": "plain",
-                         "threshold": "plain",
-                         "noLoading": "plain:true",
-                         "noAutoLogin": "plain:false"
+                         "noLoading": "plain:true"
                         }'
                       ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
                         varValue: 
@@ -4498,10 +3977,9 @@ title: Agent assistant
                       ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
                         beanData: |
                           '{
-                           "async": "plain:false",
                            "ionBean": "PublishEventAction",
                            "topic": "plain:AssistantResponse",
-                           "data": "script:{}"
+                           "async": "plain:false"
                           }'
                       ↓runid [ngx.components.UIControlVariable-1751354620932]: 
                         varValue: 
@@ -4832,14 +4310,28 @@ title: Agent assistant
             opacity: 0.55;
           }
           .modern-scroll-top-btn {
-            bottom: 72px;
-            position: absolute;
-            right: 20px;
-            z-index: 40;
-          }
-          .modern-scroll-top-btn ion-icon {
-            font-size: 22px;
-          }
+                      bottom: 86px;
+                      position: absolute;
+                      right: 12px;
+                      z-index: 40;
+                      opacity: 0.72;
+                      --padding-start: 0;
+                      --padding-end: 0;
+                      width: 36px;
+                      height: 36px;
+                      min-height: 36px;
+                    }
+                    .modern-scroll-top-btn::part(native) {
+                      border-radius: 10px;
+                      padding: 7px;
+                    }
+                    .modern-scroll-top-btn ion-icon {
+                      font-size: 19px;
+                    }
+                    .modern-scroll-top-btn:hover,
+                    .modern-scroll-top-btn:focus {
+                      opacity: 0.95;
+                    }
           @media (max-width: 768px) {
             ion-header.modern-header .modern-title-sub.modern-title-sub-project {
               display: block !important;
