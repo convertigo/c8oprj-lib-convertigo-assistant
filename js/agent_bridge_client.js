@@ -5,8 +5,8 @@ if (typeof C8O === "undefined") {
 C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
 (function () {
-  var DEFAULT_BRIDGE_URL = "http://localhost:18082/convertigo/projects/ConvertigoAgentBridge/.json";
-  var DEFAULT_MCP_ENDPOINT = "http://localhost:18082/convertigo/api/mcp";
+  var DEFAULT_BRIDGE_PROJECT = "ConvertigoAgentBridge";
+  var FALLBACK_MCP_PATH = "/api/mcp";
   var STATE_PREFIX = "ConvertigoAssistant.agentConversation.";
   var BUFFER_KEY = "C8OAiAssistantBuffer";
 
@@ -68,6 +68,70 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function childPath(parent, name) {
     return filePath(new File(parent, name));
+  }
+
+  function normalizeConvertigoBaseUrl(value) {
+    var text = trim(value);
+    if (!text.length) {
+      return "";
+    }
+    text = text.replace(/\/+$/g, "");
+    var convertigoIndex = text.toLowerCase().indexOf("/convertigo");
+    if (convertigoIndex >= 0) {
+      return text.substring(0, convertigoIndex + "/convertigo".length);
+    }
+    var marker = "/projects/";
+    var projectIndex = text.indexOf(marker);
+    if (projectIndex >= 0) {
+      text = text.substring(0, projectIndex);
+    }
+    var jsonIndex = text.indexOf("/.json");
+    if (jsonIndex >= 0) {
+      text = text.substring(0, jsonIndex);
+    }
+    if (!/\/convertigo$/i.test(text)) {
+      text += "/convertigo";
+    }
+    return text;
+  }
+
+  function engineConvertigoBaseUrl() {
+    try {
+      var EnginePropertiesManager = Packages.com.twinsoft.convertigo.engine.EnginePropertiesManager;
+      var PropertyName = Packages.com.twinsoft.convertigo.engine.EnginePropertiesManager.PropertyName;
+      var url = normalizeConvertigoBaseUrl(EnginePropertiesManager.getProperty(PropertyName.APPLICATION_SERVER_CONVERTIGO_URL));
+      if (url.length) {
+        return url;
+      }
+      url = normalizeConvertigoBaseUrl(EnginePropertiesManager.getProperty(PropertyName.APPLICATION_SERVER_CONVERTIGO_ENDPOINT));
+      if (url.length) {
+        return url;
+      }
+    } catch (_ignoreConvertigoUrlProperty) {}
+    try {
+      var request = context && context.httpServletRequest ? context.httpServletRequest : null;
+      if (request !== null) {
+        var port = request.getServerPort();
+        var portPart = (port === 80 || port === 443) ? "" : ":" + port;
+        var requestUrl = normalizeConvertigoBaseUrl(request.getScheme() + "://" + request.getServerName() + portPart + request.getContextPath());
+        if (requestUrl.length) {
+          return requestUrl;
+        }
+      }
+    } catch (_ignoreRequestConvertigoUrl) {}
+    try {
+      return "http://localhost:" + (Packages.com.twinsoft.convertigo.engine.Engine.isStudioMode() ? "18080" : "28080") + "/convertigo";
+    } catch (_ignoreStudioMode) {
+      return "http://localhost:18080/convertigo";
+    }
+  }
+
+  function defaultBridgeUrl() {
+    return engineConvertigoBaseUrl().replace(/\/+$/g, "") + "/projects/" + DEFAULT_BRIDGE_PROJECT + "/.json";
+  }
+
+  function defaultMcpEndpoint() {
+    return engineConvertigoBaseUrl().replace(/\/+$/g, "") + FALLBACK_MCP_PATH;
   }
 
   function normalizeWorkspaceRootPath(value) {
@@ -357,7 +421,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!payload.conversationId && (options.conversationId || options.threadid)) {
       payload.conversationId = options.conversationId || options.threadid;
     }
-    var response = postForm(trim(options.bridgeBaseUrl) || DEFAULT_BRIDGE_URL, payload, timeoutMs || 70000);
+    var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(), payload, timeoutMs || 70000);
     return response && typeof response.result !== "undefined" ? response.result : response;
   }
 
@@ -1384,8 +1448,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       handle: record && trim(record.handle).length ? trim(record.handle) : threadid,
       provider: provider,
       model: model,
-      bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || DEFAULT_BRIDGE_URL,
-      mcpEndpoint: trim(options.mcpEndpoint) || (record && trim(record.mcpEndpoint)) || DEFAULT_MCP_ENDPOINT,
+      bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || defaultBridgeUrl(),
+      mcpEndpoint: trim(options.mcpEndpoint) || (record && trim(record.mcpEndpoint)) || defaultMcpEndpoint(),
       workspaceRoot: workspaceRoot,
       cwd: trim(options.cwd) || (record && trim(record.cwd)) || workspaceRoot,
       userKey: userKey,
@@ -1602,10 +1666,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var setupPayload = provider === "codex" ? {
         codexHome: trim(options.codexHome || options.agentHome),
         codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+        codexPath: trim(options.codexPath || options.commandPath),
+        install: boolValue(options.install || options.installCodex, false) ? "true" : "false",
+        nodeVersion: trim(options.nodeVersion),
+        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
+        npmPath: trim(options.npmPath),
+        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
+        codexPackage: trim(options.codexPackage || options.packageName),
+        codexVersion: trim(options.codexVersion || options.packageVersion),
+        codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
+        codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
+        forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
         mcpEndpoint: state.mcpEndpoint,
         model: state.model || ""
       } : {
-        install: "false",
+        install: boolValue(options.install || options.installVibe, false) ? "true" : "false",
         configure: "true",
         vibeHome: state.vibeHome,
         mcpEndpoint: state.mcpEndpoint,
@@ -1622,6 +1697,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         cwd: state.cwd,
         codexHome: trim(options.codexHome || options.agentHome),
         codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+        codexPath: trim(options.codexPath || options.commandPath),
+        install: boolValue(options.install || options.installCodex, false) ? "true" : "false",
+        nodeVersion: trim(options.nodeVersion),
+        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
+        npmPath: trim(options.npmPath),
+        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
+        codexPackage: trim(options.codexPackage || options.packageName),
+        codexVersion: trim(options.codexVersion || options.packageVersion),
+        codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
+        codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
+        forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
         mcpEndpoint: state.mcpEndpoint,
         env: JSON.stringify(env),
         codexThreadId: state.externalSessionId || "",
