@@ -135,7 +135,12 @@ responseTimeout: 120
       codexVersion: typeof codexVersion === "undefined" ? "" : codexVersion,
       codexInstallMethod: typeof codexInstallMethod === "undefined" ? "" : codexInstallMethod,
       codexInstallTimeoutMs: typeof codexInstallTimeoutMs === "undefined" ? "" : codexInstallTimeoutMs,
-      forceCodexInstall: typeof forceCodexInstall === "undefined" ? "" : forceCodexInstall
+      forceCodexInstall: typeof forceCodexInstall === "undefined" ? "" : forceCodexInstall,
+      forceVibeInstall: typeof forceVibeInstall === "undefined" ? "" : forceVibeInstall,
+      forcePythonInstall: typeof forcePythonInstall === "undefined" ? "" : forcePythonInstall,
+      allowPythonDownload: typeof allowPythonDownload === "undefined" ? "" : allowPythonDownload,
+      mcpSkillsSourceDir: typeof mcpSkillsSourceDir === "undefined" ? "" : mcpSkillsSourceDir,
+      skipSkillsInstall: typeof skipSkillsInstall === "undefined" ? "" : skipSkillsInstall
     });'
 ↓result [steps.JsonToXmlStep-1781650000202]: 
   jsonObject: 
@@ -251,4 +256,23 @@ responseTimeout: 120
 ↓forceCodexInstall [variables.RequestableVariable-1781791644325]: 
   comment: When true, reinstall Codex even when an executable is already found.
   description: When true, reinstall Codex even when an executable is already found.
+  schemaType: xsd:boolean
+↓forceVibeInstall [variables.RequestableVariable-1781791644327]:
+  comment: When true, install or update the workspace-local Vibe venv even when Vibe is found in PATH.
+  description: When true, install or update the workspace-local Vibe venv even when Vibe is found in PATH.
+  schemaType: xsd:boolean
+↓forcePythonInstall [variables.RequestableVariable-1781791644329]:
+  comment: When true, reinstall the standalone Python runtime.
+  description: When true, reinstall the standalone Python runtime.
+  schemaType: xsd:boolean
+↓allowPythonDownload [variables.RequestableVariable-1781791644331]:
+  comment: Set false to forbid Python downloads and only report missing runtime.
+  description: Set false to forbid Python downloads and only report missing runtime.
+  schemaType: xsd:boolean
+↓mcpSkillsSourceDir [variables.RequestableVariable-1781791644333]:
+  comment: Optional ConvertigoMCP project directory used to synchronize base agent skills.
+  description: Optional ConvertigoMCP project directory used to synchronize base agent skills.
+↓skipSkillsInstall [variables.RequestableVariable-1781791644335]:
+  comment: When true, skips synchronization of the ConvertigoMCP skill pack into the agent home.
+  description: When true, skips synchronization of the ConvertigoMCP skill pack into the agent home.
   schemaType: xsd:boolean

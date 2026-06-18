@@ -1814,9 +1814,49 @@ title: Agent assistant
                             			page.setConversationProject((result.state && result.state.primaryProject) || project);
                             			page.local.ShowConversationPanel = false;
                             			page.setEnableChat();
-                            			page.tick();
-                            			page.enableAutoScroll();
-                            			resolve();
+                                        var finish = function() {
+                                            page.tick();
+                                            page.enableAutoScroll();
+                                            resolve();
+                                        };
+                                        var setupPayload = {
+                                            ''threadid'': page.local.Conversation || '''',
+                                            ''targetProject'': project,
+                                            ''provider'': page.getAgentProvider ? page.getAgentProvider() : ''vibe'',
+                                            ''model'': page.getAgentModel ? page.getAgentModel() : '''',
+                                            ''install'': false,
+                                            ''__context'': ''byside''
+                                        };
+                                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', setupPayload).async().then(function(setupResponse) {
+                                            var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
+                                            page.local.AgentSetup = setupResult;
+                                            if (setupResult && setupResult.setupRequired === true) {
+                                                var providerLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel() : (setupResult.provider || ''agent'');
+                                                var ok = true;
+                                                try {
+                                                    ok = window.confirm(''L’agent '' + providerLabel + '' n’est pas prêt. Voulez-vous installer les composants locaux nécessaires dans le workspace Convertigo ?'');
+                                                } catch (e) {}
+                                                if (ok) {
+                                                    setupPayload.install = true;
+                                                    page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', setupPayload).async().then(function(installResponse) {
+                                                        page.local.AgentSetup = installResponse && installResponse.result ? installResponse.result : page.local.AgentSetup;
+                                                        finish();
+                                                    }).catch(function(error) {
+                                                        try {
+                                                            page.c8o.log.warn(''[Assistant] Unable to install agent runtime: '' + error);
+                                                        } catch (e) {}
+                                                        finish();
+                                                    });
+                                                    return;
+                                                }
+                                            }
+                                            finish();
+                                        }).catch(function(error) {
+                                            try {
+                                                page.c8o.log.warn(''[Assistant] Unable to diagnose agent runtime: '' + error);
+                                            } catch (e) {}
+                                            finish();
+                                        });
                             		}).catch(function(error) {
                             			try {
                             				page.c8o.log.warn(''[Assistant] Unable to create agent conversation: '' + error);
@@ -1824,6 +1864,145 @@ title: Agent assistant
                             			page.tick();
                             			resolve();
                             		});
+                            '
+              ↓AgentSetupButton [ngx.components.UIDynamicElement-1781811000100]:
+                beanData: |
+                  '{
+                   "ionBean": "Button",
+                   "ButtonFormType": "plain:button",
+                   "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
+                   "IonColor": "plain",
+                   "IonExpand": "plain",
+                   "IonShape": "plain",
+                   "IonFill": "plain:clear",
+                   "IonSize": "plain:small",
+                   "IconSlot": "plain",
+                   "IonMode": "plain",
+                   "IonStrong": "plain",
+                   "LinkUrl": "plain",
+                   "LinkDownload": "plain",
+                   "LinkTarget": "plain",
+                   "LinkRel": "plain",
+                   "LinkRouterPath": "plain",
+                   "LinkRouterData": "plain",
+                   "LinkRouterDirection": "plain"
+                  }'
+                tagName: ion-button
+                ↓Class [ngx.components.UIAttribute-1781811000101]:
+                  attrName: class
+                  attrValue:
+                    - xmlizable:
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-new-conversation-button
+                ↓Aria [ngx.components.UIAttribute-1781811000102]:
+                  attrName: aria-label
+                  attrValue:
+                    - xmlizable:
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Diagnostiquer ou installer l'agent
+                ↓Icon [ngx.components.UIDynamicElement-1781811000103]:
+                  beanData: |
+                    '{
+                     "ionBean": "Icon",
+                     "IonColor": "plain",
+                     "IconName": "plain:construct-outline",
+                     "IconMdName": "source",
+                     "IconIosName": "source",
+                     "IonSize": "plain",
+                     "IconSlot": "plain:start",
+                     "IconSource": "plain"
+                    }'
+                  tagName: ion-icon
+                ↓Text [ngx.components.UIText-1781811000104]:
+                  textValue:
+                    - xmlizable:
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:Diagnostiquer / installer l'agent
+                ↓Event [ngx.components.UIControlEvent-1781811000105]:
+                  ↓SetupAgent [ngx.components.UICustomAction-1781811000106]:
+                    actionValue:
+                      - xmlizable:
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent:
+                          →: |
+                            '        var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
+                                    if (!project.length) {
+                                        page.setEnableChat();
+                                        resolve();
+                                        return;
+                                    }
+                                    if (!page.local) {
+                                        page.local = {};
+                                    }
+                                    var provider = page.getAgentProvider ? page.getAgentProvider() : ''vibe'';
+                                    var providerLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(provider) : provider;
+                                    var payload = {
+                                        ''threadid'': page.local.Conversation || '''',
+                                        ''targetProject'': project,
+                                        ''provider'': provider,
+                                        ''model'': page.getAgentModel ? page.getAgentModel() : '''',
+                                        ''install'': false,
+                                        ''__context'': ''byside''
+                                    };
+                                    var finish = function(message) {
+                                        if (message) {
+                                            try {
+                                                window.alert(message);
+                                            } catch (e) {}
+                                        }
+                                        page.tick();
+                                        resolve();
+                                    };
+                                    var installNow = function(force) {
+                                        payload.install = true;
+                                        if (force === true) {
+                                            if (provider === ''codex'') {
+                                                payload.forceCodexInstall = true;
+                                            } else {
+                                                payload.forceVibeInstall = true;
+                                            }
+                                        }
+                                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(installResponse) {
+                                            var installResult = installResponse && installResponse.result ? installResponse.result : {};
+                                            page.local.AgentSetup = installResult;
+                                            finish(installResult.message || ''Diagnostic terminé.'');
+                                        }).catch(function(error) {
+                                            try {
+                                                page.c8o.log.warn(''[Assistant] Unable to install agent runtime: '' + error);
+                                            } catch (e) {}
+                                            finish(''Installation impossible : '' + error);
+                                        });
+                                    };
+                                    page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(setupResponse) {
+                                        var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
+                                        page.local.AgentSetup = setupResult;
+                                        if (setupResult.setupRequired === true) {
+                                            var ok = true;
+                                            try {
+                                                ok = window.confirm(''L’agent '' + providerLabel + '' n’est pas prêt. Voulez-vous installer les composants locaux nécessaires dans le workspace Convertigo ?'');
+                                            } catch (e) {}
+                                            if (ok) {
+                                                installNow(false);
+                                            } else {
+                                                finish(setupResult.message || ''Installation annulée.'');
+                                            }
+                                            return;
+                                        }
+                                        var force = false;
+                                        try {
+                                            force = window.confirm(''L’agent '' + providerLabel + '' est prêt. Voulez-vous forcer une installation ou mise à jour locale ?'');
+                                        } catch (e2) {}
+                                        if (force) {
+                                            installNow(true);
+                                        } else {
+                                            finish(setupResult.message || ''Agent prêt.'');
+                                        }
+                                    }).catch(function(error) {
+                                        try {
+                                            page.c8o.log.warn(''[Assistant] Unable to diagnose agent runtime: '' + error);
+                                        } catch (e) {}
+                                        finish(''Diagnostic impossible : '' + error);
+                                    });
                             '
               ↓Conversations [ngx.components.UIControlDirective-1781608119101]: 
                 directiveItemName: conversation

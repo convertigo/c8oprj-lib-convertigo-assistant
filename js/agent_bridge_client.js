@@ -776,7 +776,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function isTerminalStatus(status) {
     status = String(status || "");
-    return status === "completed" || status === "failed" || status === "cancelled" || status === "closed" || status === "deleted";
+    return status === "completed" || status === "failed" || status === "cancelled" || status === "closed" || status === "deleted" || status === "setup_required";
   }
 
   function refreshTerminalStateFromRecord(state) {
@@ -1005,7 +1005,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       toolWarning: "Une tentative d'outil a \u00e9chou\u00e9 pendant le traitement.",
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour de l'agent local.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue parce que le process local de l'agent n'est plus disponible. Vous pouvez relancer une demande dans cette conversation.",
-      startFailed: "Je n'ai pas pu d\u00e9marrer l'agent local."
+      startFailed: "Je n'ai pas pu d\u00e9marrer l'agent local.",
+      setupRequired: "L'agent local n'est pas encore pr\u00eat.",
+      setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
+      setupReady: "L'agent local est pr\u00eat."
     },
     en: {
       starting: "I am preparing the local agent.",
@@ -1030,7 +1033,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       toolWarning: "A tool attempt failed during processing.",
       bridgeReadError: "I cannot read the local agent response.",
       bridgeProcessLost: "The task was interrupted because the local agent process is no longer available. You can send a new request in this conversation.",
-      startFailed: "I could not start the local agent."
+      startFailed: "I could not start the local agent.",
+      setupRequired: "The local agent is not ready yet.",
+      setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
+      setupReady: "The local agent is ready."
     }
   };
 
@@ -1504,6 +1510,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progress: state.progressLog || "",
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
+      setupRequired: state.setupRequired === true,
+      setup: state.setupReport || null,
       createdAt: state.createdAt,
       updatedAt: state.updatedAt
     };
@@ -1546,6 +1554,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         threadid: state.threadid,
         explanation: state.answer || state.error || "",
         progress: state.progressLog || "",
+        setupRequired: state.setupRequired === true,
+        setup: state.setupReport || null,
         warnings: state.warnings || [],
         messages: responseMessages(state)
       },
@@ -1560,6 +1570,168 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       selected.MISTRAL_API_KEY = env.MISTRAL_API_KEY;
     }
     return selected;
+  }
+
+  function agentSetupPayload(state, options, installOverride) {
+    options = options || {};
+    var provider = normalizeProvider(state.provider);
+    var install = typeof installOverride === "undefined" ? boolValue(options.install || options.installCodex || options.installVibe, false) : installOverride === true;
+    if (provider === "codex") {
+      return {
+        codexHome: trim(options.codexHome || options.agentHome),
+        codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+        codexPath: trim(options.codexPath || options.commandPath),
+        install: install ? "true" : "false",
+        nodeVersion: trim(options.nodeVersion),
+        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
+        npmPath: trim(options.npmPath),
+        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
+        codexPackage: trim(options.codexPackage || options.packageName),
+        codexVersion: trim(options.codexVersion || options.packageVersion),
+        codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
+        codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
+        forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
+        mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
+        skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
+        mcpEndpoint: state.mcpEndpoint,
+        model: state.model || ""
+      };
+    }
+    return {
+      install: install ? "true" : "false",
+      configure: "true",
+      vibeHome: state.vibeHome,
+      mcpEndpoint: state.mcpEndpoint,
+      model: state.model || "",
+      mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
+      skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
+      forceVibeInstall: typeof options.forceVibeInstall === "undefined" ? "" : options.forceVibeInstall,
+      forcePythonInstall: typeof options.forcePythonInstall === "undefined" ? "" : options.forcePythonInstall,
+      allowPythonDownload: typeof options.allowPythonDownload === "undefined" ? "" : options.allowPythonDownload,
+      pythonPath: trim(options.pythonPath),
+      pythonInstallDir: trim(options.pythonInstallDir),
+      pythonArchiveUrl: trim(options.pythonArchiveUrl),
+      pythonArchiveSha256: trim(options.pythonArchiveSha256),
+      pythonAssetUrlPrefix: trim(options.pythonAssetUrlPrefix || options.pythonMirrorBaseUrl),
+      pythonVersion: trim(options.pythonVersion),
+      pythonBuildTag: trim(options.pythonBuildTag),
+      pythonPlatform: trim(options.pythonPlatform),
+      pythonArchiveFlavor: trim(options.pythonArchiveFlavor)
+    };
+  }
+
+  function callAgentSetup(state, options, installOverride) {
+    var provider = normalizeProvider(state.provider);
+    var setupSequence = provider === "codex" ? "agent_codex_setup" : "agent_vibe_setup";
+    var setup = bridgeCall(state, setupSequence, agentSetupPayload(state, options, installOverride), 70000);
+    return {
+      provider: provider,
+      sequence: setupSequence,
+      result: setup
+    };
+  }
+
+  function setupRequiredAnswer(state, setup) {
+    var t = lang(state);
+    var provider = providerLabel(state.provider);
+    var lines = [];
+    lines.push(t.setupRequired);
+    if (setup && setup.messages && setup.messages.length) {
+      lines.push("");
+      lines.push(state.language === "fr" ? "Diagnostic :" : "Diagnostic:");
+      for (var i = 0; i < setup.messages.length && i < 4; i++) {
+        lines.push("- " + String(setup.messages[i]));
+      }
+    }
+    lines.push("");
+    lines.push((state.language === "fr" ? "Agent : " : "Agent: ") + provider);
+    lines.push(t.setupCanInstall);
+    return lines.join("\n");
+  }
+
+  function setupReadyAnswer(state, setup) {
+    var t = lang(state);
+    var provider = providerLabel(state.provider);
+    var lines = [(state.language === "fr" ? "Agent : " : "Agent: ") + provider, t.setupReady];
+    if (setup && setup.skills && setup.skills.message) {
+      lines.push(setup.skills.message);
+    }
+    return lines.join("\n");
+  }
+
+  function publicCommandDiagnostic(command) {
+    if (!command) {
+      return null;
+    }
+    return {
+      found: command.found === true,
+      path: String(command.path || ""),
+      version: String(command.version || ""),
+      error: String(command.error || "")
+    };
+  }
+
+  function publicInstallationDiagnostic(installation) {
+    if (!installation) {
+      return null;
+    }
+    return {
+      attempted: installation.attempted === true,
+      installed: installation.installed === true || installation.installedNode === true,
+      reused: installation.reused === true,
+      method: String(installation.method || ""),
+      package: String(installation.package || ""),
+      stepsCount: installation.steps && installation.steps.length ? installation.steps.length : 0,
+      python: installation.python ? {
+        attempted: installation.python.attempted === true,
+        installed: installation.python.installed === true,
+        reused: installation.python.reused === true,
+        python: publicCommandDiagnostic(installation.python.python)
+      } : null,
+      codex: publicCommandDiagnostic(installation.codex)
+    };
+  }
+
+  function publicSetupReport(report) {
+    if (!report) {
+      return null;
+    }
+    var setup = report.setup || {};
+    var out = {
+      ok: report.ok === true,
+      status: String(report.status || ""),
+      phase: String(report.phase || ""),
+      error: String(report.error || ""),
+      messages: report.messages || [],
+      installation: publicInstallationDiagnostic(report.installation),
+      skills: report.skills || null,
+      setup: {
+        workspaceRoot: String(setup.workspaceRoot || ""),
+        installDir: String(setup.installDir || ""),
+        venvDir: String(setup.venvDir || ""),
+        vibeHome: String(setup.vibeHome || ""),
+        codexHome: String(setup.codexHome || ""),
+        mcpEndpoint: String(setup.mcpEndpoint || ""),
+        model: String(setup.model || ""),
+        home: setup.home || null,
+        config: setup.config ? {
+          selected: setup.config.selected || null
+        } : null,
+        mcp: setup.mcp ? {
+          checked: setup.mcp.checked === true,
+          ok: setup.mcp.ok === true,
+          hasConvertigo: setup.mcp.hasConvertigo === true,
+          error: String(setup.mcp.error || "")
+        } : null,
+        python: publicCommandDiagnostic(setup.python),
+        uv: publicCommandDiagnostic(setup.uv),
+        vibe: publicCommandDiagnostic(setup.vibe),
+        vibeAcp: publicCommandDiagnostic(setup.vibeAcp),
+        codex: publicCommandDiagnostic(setup.codex)
+      },
+      timestamp: report.timestamp || now()
+    };
+    return out;
   }
 
   C8O.assistantAgentBridge.createConversation = function (options) {
@@ -1613,6 +1785,46 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   };
 
+  C8O.assistantAgentBridge.setupAgent = function (options) {
+    options = options || {};
+    var threadid = normalizeThreadId(options.threadid);
+    var state = threadid.length ? readState(threadid) : null;
+    if (state === null) {
+      state = createState(options);
+    }
+    state = ensureState(state);
+    if (trim(options.model || options.agentModel).length) {
+      state.model = normalizeModel(state.provider, options.model || options.agentModel);
+    } else if (!trim(state.model).length) {
+      state.model = normalizeModel(state.provider, "");
+    }
+    state.language = detectLanguage(options.userQuestion || options.Question || "");
+    var install = boolValue(options.install || options.installCodex || options.installVibe, false);
+    var setupInfo = callAgentSetup(state, options, install);
+    var setup = setupInfo.result || {};
+    var publicSetup = publicSetupReport(setup);
+    state.setupReport = publicSetup;
+    state.setupRequired = setup.ok !== true;
+    state.lastStatusText = setup.ok === true ? lang(state).setupReady : lang(state).setupRequired;
+    state.updatedAt = now();
+    saveState(state);
+    setStateBuffer(state);
+    return {
+      ok: setup.ok === true,
+      id: state.threadid,
+      object: "agent.setup",
+      status: setup.status || (setup.ok === true ? "ready" : "missing"),
+      provider: state.provider,
+      model: state.model || "",
+      installRequested: install,
+      setupRequired: setup.ok !== true,
+      canInstall: true,
+      setup: publicSetup,
+      state: publicState(state),
+      message: setup.ok === true ? setupReadyAnswer(state, setup) : setupRequiredAnswer(state, setup)
+    };
+  };
+
   C8O.assistantAgentBridge.sendMessage = function (options) {
     options = options || {};
     var question = String(options.Question || options.question || "");
@@ -1645,6 +1857,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.readErrors = 0;
     state.progressLog = "";
     state.lastProgressLine = "";
+    state.setupRequired = false;
+    state.setupReport = null;
     state.userQuestion = trim(options.userQuestion || extractUserMessage(question));
     state.language = detectLanguage(state.userQuestion || question);
     var currentProject = trim(options.targetProject || options.projectName || options.projectId);
@@ -1660,36 +1874,42 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     try {
       var provider = normalizeProvider(state.provider);
-      var setupSequence = provider === "codex" ? "agent_codex_setup" : "agent_vibe_setup";
       var startSequence = provider === "codex" ? "agent_codex_start" : "agent_vibe_start";
       var promptSequence = provider === "codex" ? "agent_codex_prompt" : "agent_vibe_prompt";
-      var setupPayload = provider === "codex" ? {
-        codexHome: trim(options.codexHome || options.agentHome),
-        codexHomeScope: trim(options.codexHomeScope || options.homeScope),
-        codexPath: trim(options.codexPath || options.commandPath),
-        install: boolValue(options.install || options.installCodex, false) ? "true" : "false",
-        nodeVersion: trim(options.nodeVersion),
-        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
-        npmPath: trim(options.npmPath),
-        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
-        codexPackage: trim(options.codexPackage || options.packageName),
-        codexVersion: trim(options.codexVersion || options.packageVersion),
-        codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
-        codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
-        forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
-        mcpEndpoint: state.mcpEndpoint,
-        model: state.model || ""
-      } : {
-        install: boolValue(options.install || options.installVibe, false) ? "true" : "false",
-        configure: "true",
-        vibeHome: state.vibeHome,
-        mcpEndpoint: state.mcpEndpoint,
-        model: state.model || ""
-      };
-      var setup = bridgeCall(state, setupSequence, setupPayload, 70000);
+      var installRequested = boolValue(options.install || options.installCodex || options.installVibe, false);
+      var setupInfo = callAgentSetup(state, options, installRequested);
+      var setup = setupInfo.result || {};
       if (setup.ok === false) {
-        throw new Error(setup.error || setupSequence + " failed");
+        if (!installRequested && trim(setup.status).toLowerCase() === "missing") {
+          state.status = "setup_required";
+          state.setupRequired = true;
+          state.setupReport = publicSetupReport(setup);
+          state.answer = setupRequiredAnswer(state, setup);
+          state.answerIsFinal = true;
+          state.runid = makeRunId("setup");
+          appendTranscript(state, "user", state.userQuestion || question);
+          appendTranscript(state, "assistant", state.answer);
+          appendProgress(state, lang(state).setupRequired);
+          state.updatedAt = now();
+          saveState(state);
+          setStateBuffer(state);
+          return {
+            ok: false,
+            id: state.runid,
+            object: "agent.run",
+            status: "setup_required",
+            threadid: state.threadid,
+            setupRequired: true,
+            canInstall: true,
+            setup: state.setupReport,
+            AIData: responseForState(state).AIData,
+            state: publicState(state)
+          };
+        }
+        throw new Error(setup.error || setupInfo.sequence + " failed");
       }
+      state.setupRequired = false;
+      state.setupReport = publicSetupReport(setup);
 
       var env = credentialsEnv();
       var startPayload = provider === "codex" ? {
