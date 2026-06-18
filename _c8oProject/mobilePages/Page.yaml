@@ -1,4 +1,4 @@
-comment: AI Component Assistant Page
+comment: AI Agent Assistant Page
 preloadPriority: high
 scriptContent: 
   - xmlizable: 
@@ -60,16 +60,16 @@ scriptContent:
         	}
         	getDefaultFooterSuggestions() {
         		return [
-        			{ label: this.t("Component_Suggestion_1_Label", "Login form"), question: this.t("Component_Suggestion_1_Question", "Create a login form component with email/password validation, error messages, and submit loading state."), icon: "log-in-outline" },
-        			{ label: this.t("Component_Suggestion_2_Label", "Data table"), question: this.t("Component_Suggestion_2_Question", "Create a reusable data table component with sorting, pagination, search, and row actions."), icon: "grid-outline" },
-        			{ label: this.t("Component_Suggestion_3_Label", "Dashboard cards"), question: this.t("Component_Suggestion_3_Question", "Create KPI dashboard card components with icon, trend indicator, and responsive layout."), icon: "stats-chart-outline" },
-        			{ label: this.t("Component_Suggestion_4_Label", "File uploader"), question: this.t("Component_Suggestion_4_Question", "Create a drag-and-drop file uploader component with progress, type validation, and preview list."), icon: "cloud-upload-outline" },
-        			{ label: this.t("Component_Suggestion_5_Label", "Modal dialog"), question: this.t("Component_Suggestion_5_Question", "Create a reusable modal dialog component with title, content slot, and confirm/cancel actions."), icon: "browsers-outline" },
-        			{ label: this.t("Component_Suggestion_6_Label", "Step wizard"), question: this.t("Component_Suggestion_6_Question", "Create a multi-step wizard component with stepper navigation, validation per step, and final summary."), icon: "list-outline" }
+                    { label: this.t("Agent_Suggestion_1_Label", "Corriger l''écran"), question: this.t("Agent_Suggestion_1_Question", "Repère le problème visible et corrige le projet."), icon: "bug-outline" },
+                    { label: this.t("Agent_Suggestion_2_Label", "Créer une page"), question: this.t("Agent_Suggestion_2_Question", "Ajoute une page NGX complète dans le projet sélectionné."), icon: "document-text-outline" },
+                    { label: this.t("Agent_Suggestion_3_Label", "Brancher des données"), question: this.t("Agent_Suggestion_3_Question", "Branche cette page sur une séquence Convertigo et affiche ses données."), icon: "git-network-outline" },
+                    { label: this.t("Agent_Suggestion_4_Label", "Améliorer l''UI"), question: this.t("Agent_Suggestion_4_Question", "Rends cette vue plus claire et plus ergonomique."), icon: "color-wand-outline" },
+                    { label: this.t("Agent_Suggestion_5_Label", "Expliquer le projet"), question: this.t("Agent_Suggestion_5_Question", "Analyse le projet et résume son fonctionnement."), icon: "search-outline" },
+                    { label: this.t("Agent_Suggestion_6_Label", "Tester le flux"), question: this.t("Agent_Suggestion_6_Question", "Vérifie le flux principal et corrige les erreurs trouvées."), icon: "checkmark-circle-outline" }
         		];
         	}
         	getNoProjectSelectedMessage() {
-        		return this.t("Project_Select_Required", "Project: Please select an NGX project !");
+                return this.t("Agent_Project_Select_Required", "Sélectionnez un projet NGX.");
         	}
         	private cleanProjectName(value) {
         		return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
@@ -184,7 +184,7 @@ scriptContent:
         }
         public getNewConversationLabel() {
             var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "le projet sélectionné";
-            return "Démarrer avec " + this.getAgentProviderLabel() + " · " + this.getAgentModelLabel() + " pour " + project;
+            return "Nouvelle conversation · " + this.getAgentProviderLabel() + " · " + this.getAgentModelLabel() + " · " + project;
         }
         public getConversationAgentLabel(conversation) {
             var provider = conversation && conversation.provider ? this.cleanProjectName(conversation.provider).toLowerCase() : this.getAgentProvider();
@@ -339,7 +339,7 @@ scriptContent:
         		}
         		var placeholder = "" + (this.local.QuestionPlaceholder == null ? "" : this.local.QuestionPlaceholder);
         		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage()) {
-        			this.local.QuestionPlaceholder = this.t("Question_Placeholder", "Ask how to build something...");
+                    this.local.QuestionPlaceholder = this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
         		}
         	}
         	refreshFooterLocale() {
@@ -347,7 +347,7 @@ scriptContent:
         			this.local = {};
         		}
         		this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
-        		this.local.QuestionPlaceholder = this.t("Question_Placeholder", "Ask how to build something...");
+                this.local.QuestionPlaceholder = this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
         		this.syncFooterPlaceholder();
         		this.tick();
         	}
@@ -549,18 +549,21 @@ scriptContent:
         			if (this.isEditionMode()) {
         				let compname = this.global.threadQname;
         				try { compname = compname.substring(compname.lastIndexOf(".")+1); } catch (e) {}
-        				return ": edition of " + compname;
+                        return "édition de " + compname;
         			}
         			var project = this.getEffectiveProjectName();
         			if (!project.length) {
-        				return ": Please select an NGX project !";
+                        return this.getNoProjectSelectedMessage();
         			}
-        			return ": creation for " + project;
+                    return project;
         		}
-        		return ": " + (this.local ? this.local.Conversation : "");
+                return this.local ? this.local.Conversation : "";
         	}
         	public getProjectSubtitle() {
         		let heading = "" + this.getProjectHeading();
+                if (heading === this.getNoProjectSelectedMessage()) {
+                    return heading;
+                }
         		while (heading.length > 0) {
         			let c = heading.charAt(0);
         			if (c === ":" || c === " ") {
@@ -569,7 +572,7 @@ scriptContent:
         			}
         			break;
         		}
-        		return "Project: " + heading;
+                return heading.length ? "Projet : " + heading : "";
         	}
         	public GetProjectSubtitle() {
         		return this.getProjectSubtitle();
@@ -591,9 +594,15 @@ scriptContent:
         	/*End_c8o_PageFunction*/
         '
 segment: path-to-xfirst/:threadid
-title: Component assistant
+title: Agent assistant
 ↓Header [ngx.components.UIDynamicElement-1491634212350]: 
-  beanData: '{"ionBean":"Header"}'
+  beanData: |
+    '{
+     "ionBean": "Header",
+     "IonMode": "plain",
+     "Collapse": "plain",
+     "Translucent": "plain:false"
+    }'
   comment: Page header
   tagName: ion-header
   ↓Class [ngx.components.UIAttribute-1774701000008]: 
@@ -603,13 +612,34 @@ title: Component assistant
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
         - MobileSmartSourceType: plain:modern-header
   ↓ToolBar [ngx.components.UIDynamicElement-1491634231108]: 
-    beanData: '{"ionBean":"ToolBar"}'
+    beanData: |
+      '{
+       "ionBean": "ToolBar",
+       "IonColor": "plain",
+       "BarMode": "plain",
+       "BarSlot": "plain"
+      }'
     tagName: ion-toolbar
     ↓ButtonSet1 [ngx.components.UIDynamicElement-1588171103814]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:start"}'
+      beanData: |
+        '{
+         "ionBean": "ButtonSet",
+         "SetPosition": "plain:start",
+         "Collapse": "plain:false"
+        }'
       tagName: ion-buttons
       ↓BackButton [ngx.components.UIDynamicElement-1643993281257]: 
-        beanData: '{"ionBean":"BackButton"}'
+        beanData: |
+          '{
+           "ionBean": "BackButton",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonIcon": "plain",
+           "IonMode": "plain",
+           "ButtonText": "plain",
+           "DefaultHref": "plain"
+          }'
         tagName: ion-back-button
         ↓Class [ngx.components.UIAttribute-1774701000002]: 
           attrName: class
@@ -618,7 +648,15 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
       ↓MenuButton [ngx.components.UIDynamicElement-1588172846908]: 
-        beanData: '{"ionBean":"MenuButton"}'
+        beanData: |
+          '{
+           "ionBean": "MenuButton",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "AutoHide": "plain:true",
+           "MenuId": "plain"
+          }'
         tagName: ion-menu-button
         ↓Class [ngx.components.UIAttribute-1774701000003]: 
           attrName: class
@@ -627,7 +665,14 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
       ↓Image [ngx.components.UIDynamicElement-1774701000011]: 
-        beanData: '{"ionBean":"Image","url":"source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+        beanData: |
+          '{
+           "ionBean": "Image",
+           "url": "source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+           "width": "plain:",
+           "height": "plain:",
+           "alt": "plain"
+          }'
         selfClose: true
         tagName: img
         ↓Class [ngx.components.UIAttribute-1774701000012]: 
@@ -637,7 +682,12 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-logo-btn
     ↓BarTitle [ngx.components.UIDynamicElement-1491634265317]: 
-      beanData: '{"ionBean":"BarTitle"}'
+      beanData: |
+        '{
+         "ionBean": "BarTitle",
+         "IonColor": "plain",
+         "IonSize": "plain"
+        }'
       tagName: ion-title
       ↓TitleWrap [ngx.components.UIDynamicElement-1774701000013]: 
         beanData: '{"ionBean":"DivTag"}'
@@ -658,11 +708,10 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-title-main
           ↓Text [ngx.components.UIText-1774701000017]: 
-            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:AI Component Assistant
+                - MobileSmartSourceType: plain:Agent IA
         ↓SubtitleText [ngx.components.UIDynamicElement-1774701000018]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -679,10 +728,35 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:this.getProjectSubtitle()
     ↓ButtonSet2 [ngx.components.UIDynamicElement-1588170811054]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
+      beanData: |
+        '{
+         "ionBean": "ButtonSet",
+         "SetPosition": "plain:end",
+         "Collapse": "plain:false"
+        }'
       tagName: ion-buttons
       ↓Button [ngx.components.UIDynamicElement-1588170817806]: 
-        beanData: '{"ionBean":"Button"}'
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonExpand": "plain",
+           "IonShape": "plain",
+           "IonFill": "plain",
+           "IonSize": "plain",
+           "IconSlot": "plain",
+           "IonMode": "plain",
+           "IonStrong": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1774701000004]: 
           attrName: class
@@ -691,7 +765,17 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IonColor": "plain",
+             "IconName": "source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "IconMdName": "source",
+             "IconIosName": "source",
+             "IonSize": "plain",
+             "IconSlot": "plain",
+             "IconSource": "plain"
+            }'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
           ↓OpenConversationPanel [ngx.components.UICustomAction-1781700500001]: 
@@ -700,13 +784,13 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    '        if (!page.local) {
+                            if (!page.local) {
                                 page.local = {};
                             }
                             page.local.ShowConversationPanel = true;
                             page.tick();
                             resolve();
-                    '
+                    
         ↓AriaNewConversation [ngx.components.UIAttribute-1781604857325]: 
           attrName: aria-label
           attrValue: 
@@ -714,7 +798,27 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:New conversation
       ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774703000001]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonExpand": "plain",
+           "IonShape": "plain",
+           "IonFill": "plain:clear",
+           "IonSize": "plain",
+           "IconSlot": "plain",
+           "IonMode": "plain",
+           "IonStrong": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1774703000002]: 
           attrName: class
@@ -729,10 +833,43 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? this.translate.instant(''Theme_Switch_To_Light'') : this.translate.instant(''Theme_Switch_To_Dark'')'
         ↓Event [ngx.components.UIControlEvent-1774703000004]: 
-          ↓SetTheme [ngx.components.UIDynamicAction-1774703000005]: 
-            beanData: '{"ionBean":"SetThemeAction","dark":"script:!(this.global && this.global.themeDark)"}'
+          ↓SetTheme [ngx.components.UICustomAction-1781783717976]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    '		var isDark = !(page.global && page.global.themeDark);
+                    		if (!page.global) { page.global = {}; }
+                    		page.global.themeDark = isDark;
+                    		try {
+                    			var root = document.documentElement;
+                    			var body = document.body;
+                    			if (root && root.classList) {
+                    				root.classList.remove("force-dark", "force-light");
+                    				root.classList.add(isDark ? "force-dark" : "force-light");
+                    			}
+                    			if (body && body.classList) {
+                    				body.classList.remove("force-dark", "force-light");
+                    				body.classList.add(isDark ? "force-dark" : "force-light");
+                    			}
+                    		} catch (e1) {}
+                    		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-theme-dark", isDark ? "true" : "false"); } } catch (e2) {}
+                    		try { page.tick(); } catch (e3) {}
+                    		resolve();
+                    '
         ↓ThemeIcon [ngx.components.UIDynamicElement-1774703000006]: 
-          beanData: '{"ionBean":"Icon","IconName":"script:this?.global?.themeDark ? ''sunny-outline'' : ''moon-outline''"}'
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IonColor": "plain",
+             "IconName": "script:this?.global?.themeDark ? ''sunny-outline'' : ''moon-outline''",
+             "IconMdName": "source",
+             "IconIosName": "source",
+             "IonSize": "plain",
+             "IconSlot": "plain",
+             "IconSource": "plain"
+            }'
           tagName: ion-icon
           ↓IconName [ngx.components.UIAttribute-1774703000007]: 
             attrName: '[name]'
@@ -752,7 +889,26 @@ title: Component assistant
           '{
            "ionBean": "Select",
            "ControlName": "plain:name1774703000010",
-           "Justify": "plain:start"
+           "IonMode": "plain",
+           "Disabled": "plain:false",
+           "DoubleBinding": "plain",
+           "CancelText": "plain:Cancel",
+           "OkText": "plain:Ok",
+           "CompareWith": "plain",
+           "ExpandedIcon": "plain",
+           "Fill": "plain",
+           "Interface": "plain",
+           "InterfaceOptions": "plain",
+           "Justify": "plain:start",
+           "Label": "plain",
+           "LabelPlacement": "plain:start",
+           "Legacy": "plain:false",
+           "Placeholder": "plain",
+           "Multiple": "plain:false",
+           "SelectedText": "plain",
+           "Shape": "plain",
+           "ToggleIcon": "plain",
+           "Value": "plain"
           }'
         tagName: ion-select
         ↓Class [ngx.components.UIAttribute-1774703000011]: 
@@ -788,24 +944,31 @@ title: Component assistant
         ↓ChangeEvent [ngx.components.UIControlEvent-1774703000016]: 
           attrName: (ionChange)
           eventName: ionChange
-          ↓SetLanguage [ngx.components.UIDynamicAction-1774703000017]: 
-            beanData: |
-              '{
-               "ionBean": "SetLanguageAction",
-               "language": "script:event.detail.value",
-               "storageKey": "plain:c8o-lang",
-               "globalProperty": "plain:currentLanguage"
-              }'
-            ↓RefreshFooterLocale [ngx.components.UICustomAction-1782803000101]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: |
-                      		page.refreshFooterLocale();
-                      		resolve();
+          ↓SetLanguage [ngx.components.UICustomAction-1781783719462]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    '		var selected = event && event.detail ? event.detail.value : null;
+                    		selected = "" + (selected || "en");
+                    		selected = selected.trim().toLowerCase();
+                    		if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
+                    		page.global.currentLanguage = function() { return selected; };
+                    		page.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
+                    		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e1) {}
+                    		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-lang", selected); } } catch (e2) {}
+                    		if (page.refreshFooterLocale) { page.refreshFooterLocale(); }
+                    		try { page.tick(); } catch (e3) {}
+                    		resolve();
+                    '
         ↓LangEN [ngx.components.UIDynamicElement-1774703000018]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:en"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000019]: 
             i18n: true
@@ -814,7 +977,12 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_English
         ↓LangFR [ngx.components.UIDynamicElement-1774703000020]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:fr"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:fr"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000021]: 
             i18n: true
@@ -823,7 +991,12 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_French
         ↓LangIT [ngx.components.UIDynamicElement-1774703000022]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:it"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:it"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000023]: 
             i18n: true
@@ -832,7 +1005,12 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Italian
         ↓LangES [ngx.components.UIDynamicElement-1774703000024]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:es"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:es"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000025]: 
             i18n: true
@@ -841,7 +1019,18 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Spanish
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
-  beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
+  beanData: |
+    '{
+     "ionBean": "Content",
+     "IonColor": "plain",
+     "IonSlot": "plain",
+     "Padding": "plain:ion-no-padding",
+     "Fullscreen": "plain:false",
+     "ForceOverScroll": "plain:false",
+     "ScrollEvents": "plain:false",
+     "ScrollX": "plain:false",
+     "ScrollY": "plain:true"
+    }'
   identifier: content
   tagName: ion-content
   ↓Class [ngx.components.UIAttribute-1772100000031]: 
@@ -898,11 +1087,10 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-intro-title
           ↓Text [ngx.components.UIText-1772100000038]: 
-            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Welcome to Convertigo Component Assistant
+                - MobileSmartSourceType: plain:Agent IA Convertigo
         ↓IntroCopy1 [ngx.components.UIDynamicElement-1772100000039]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -913,11 +1101,10 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-copy
           ↓Text [ngx.components.UIText-1772100000041]: 
-            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Your AI-powered assistant for creating custom React components in your Convertigo project.
+                - MobileSmartSourceType: plain:Demandez à l'agent d'analyser, modifier et tester le projet Convertigo sélectionné.
         ↓IntroCopy2 [ngx.components.UIDynamicElement-1772100000042]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -928,13 +1115,28 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-copy
           ↓Text [ngx.components.UIText-1772100000044]: 
-            i18n: true
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Describe the component you need, and I'll help you design and implement it with best practices.
+                - MobileSmartSourceType: plain:Il utilise vos sessions d'agent local et les outils MCP Convertigo.
       ↓HowCard [ngx.components.UIDynamicElement-1772100000045]: 
-        beanData: '{"ionBean":"Card"}'
+        beanData: |
+          '{
+           "ionBean": "Card",
+           "Button": "plain:false",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterAnimation": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-card
         ↓Class [ngx.components.UIAttribute-1772100000046]: 
           attrName: class
@@ -943,7 +1145,7 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-card
         ↓CardContent [ngx.components.UIDynamicElement-1772100000047]: 
-          beanData: '{"ionBean":"CardContent"}'
+          beanData: '{"ionBean":"CardContent","IonMode":"plain"}'
           tagName: ion-card-content
           ↓Title [ngx.components.UIDynamicElement-1772100000048]: 
             beanData: '{"ionBean":"Paragraph"}'
@@ -955,11 +1157,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-card-title
             ↓Text [ngx.components.UIText-1772100000050]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:How does the Component Assistant work?
+                  - MobileSmartSourceType: plain:Ce que l'agent peut faire
           ↓P1 [ngx.components.UIDynamicElement-1772100000051]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -970,11 +1171,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000053]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:The Component Assistant helps you create production-ready React components for your Convertigo project: 
+                  - MobileSmartSourceType: plain:L'agent travaille directement sur le projet sélectionné :
           ↓Source1 [ngx.components.UIDynamicElement-1772100000201]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -985,11 +1185,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1772100000203]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:• Describe your component needs in natural language
+                  - MobileSmartSourceType: plain:• Analyser le projet et expliquer ce qu'il trouve
           ↓Source2 [ngx.components.UIDynamicElement-1772100000204]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1000,11 +1199,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1772100000206]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:• Get component code with TypeScript, Tailwind CSS, and accessibility
+                  - MobileSmartSourceType: plain:• Modifier des pages, des séquences et la logique applicative
           ↓Source3 [ngx.components.UIDynamicElement-1772100000207]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1015,11 +1213,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-source-item
             ↓Text [ngx.components.UIText-1772100000209]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:• Iterate and refine with conversational feedback
+                  - MobileSmartSourceType: plain:• Tester, sauvegarder et résumer le résultat
           ↓P2 [ngx.components.UIDynamicElement-1772100000210]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1030,11 +1227,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000212]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:The assistant will provide: 
+                  - MobileSmartSourceType: plain:Demandes typiques :
           ↓B1 [ngx.components.UIDynamicElement-1772100000054]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1045,11 +1241,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1772100000056]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:→ Complete component implementation with props and types
+                  - MobileSmartSourceType: plain:→ Corriger un écran ou une séquence cassée
           ↓B2 [ngx.components.UIDynamicElement-1772100000057]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1060,11 +1255,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1772100000059]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:→ Styled with Tailwind CSS following your design system
+                  - MobileSmartSourceType: plain:→ Améliorer l'ergonomie d'une vue
           ↓B3 [ngx.components.UIDynamicElement-1772100000060]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1075,11 +1269,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-bullet
             ↓Text [ngx.components.UIText-1772100000062]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:→ Best practices for React patterns and accessibility
+                  - MobileSmartSourceType: plain:→ Brancher une page sur des données backend
           ↓P3 [ngx.components.UIDynamicElement-1772100000213]: 
             beanData: '{"ionBean":"Paragraph"}'
             isEnabled: false
@@ -1095,9 +1288,25 @@ title: Component assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain: 
+                  - MobileSmartSourceType: 'plain: '
       ↓StartCard [ngx.components.UIDynamicElement-1772100000093]: 
-        beanData: '{"ionBean":"Card"}'
+        beanData: |
+          '{
+           "ionBean": "Card",
+           "Button": "plain:false",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterAnimation": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-card
         ↓Class [ngx.components.UIAttribute-1772100000094]: 
           attrName: class
@@ -1106,7 +1315,7 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-card modern-cta-card
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
-          beanData: '{"ionBean":"CardContent"}'
+          beanData: '{"ionBean":"CardContent","IonMode":"plain"}'
           tagName: ion-card-content
           ↓Title [ngx.components.UIDynamicElement-1772100000096]: 
             beanData: '{"ionBean":"Paragraph"}'
@@ -1118,11 +1327,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-card-title
             ↓Text [ngx.components.UIText-1772100000098]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Get started
+                  - MobileSmartSourceType: plain:Commencer
           ↓Copy [ngx.components.UIDynamicElement-1772100000099]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1133,11 +1341,10 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-copy
             ↓Text [ngx.components.UIText-1772100000101]: 
-              i18n: true
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Describe the component you need, and let the Convertigo Component Assistant generate it for you.
+                  - MobileSmartSourceType: plain:Demandez une correction, une amélioration ou une explication sur le projet sélectionné.
           ↓AgentSessionStrip [ngx.components.UIDynamicElement-1781604896725]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: div
@@ -1148,7 +1355,17 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:agent-session-strip
             ↓SessionIcon [ngx.components.UIDynamicElement-1781604896729]: 
-              beanData: '{"ionBean":"Icon","IconName":"script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''"}'
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain",
+                 "IconSource": "plain"
+                }'
               tagName: ion-icon
             ↓SessionCopy [ngx.components.UIDynamicElement-1781604896731]: 
               beanData: '{"ionBean":"DivTag"}'
@@ -1188,7 +1405,17 @@ title: Component assistant
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (((this.local && this.local.Conversation) ? (''Session '' + (((('''' + this.local.Conversation).indexOf(''agent-'') === 0) ? ('''' + this.local.Conversation).substring(6, 14) : ('''' + this.local.Conversation).substring(0, 8)))) : ''Initialisation'') + '' - '' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) + '' conversation'' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) > 1 ? ''s'' : '''')))'
             ↓Chevron [ngx.components.UIDynamicElement-1781676585879]: 
-              beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain",
+                 "IconSource": "plain"
+                }'
               tagName: ion-icon
               ↓Class [ngx.components.UIAttribute-1781676585881]: 
                 attrName: class
@@ -1251,8 +1478,23 @@ title: Component assistant
                 beanData: |
                   '{
                    "ionBean": "Button",
+                   "ButtonFormType": "plain:button",
+                   "Disabled": "plain:false",
+                   "IonColor": "plain",
+                   "IonExpand": "plain",
+                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small"
+                   "IonSize": "plain:small",
+                   "IconSlot": "plain",
+                   "IonMode": "plain",
+                   "IonStrong": "plain",
+                   "LinkUrl": "plain",
+                   "LinkDownload": "plain",
+                   "LinkTarget": "plain",
+                   "LinkRel": "plain",
+                   "LinkRouterPath": "plain",
+                   "LinkRouterData": "plain",
+                   "LinkRouterDirection": "plain"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781676493783]: 
@@ -1280,8 +1522,13 @@ title: Component assistant
                   beanData: |
                     '{
                      "ionBean": "Icon",
+                     "IonColor": "plain",
                      "IconName": "plain:close-outline",
-                     "IconSlot": "plain:icon-only"
+                     "IconMdName": "source",
+                     "IconIosName": "source",
+                     "IonSize": "plain",
+                     "IconSlot": "plain:icon-only",
+                     "IconSource": "plain"
                     }'
                   tagName: ion-icon
               ↓CreateSettings [ngx.components.UIDynamicElement-1781700500010]: 
@@ -1317,7 +1564,27 @@ title: Component assistant
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: plain:agent-choice-row
                   ↓VibeButton [ngx.components.UIDynamicElement-1781700500017]: 
-                    beanData: '{"ionBean":"Button","IonFill":"plain:clear","IonSize":"plain:small"}'
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "ButtonFormType": "plain:button",
+                       "Disabled": "plain:false",
+                       "IonColor": "plain",
+                       "IonExpand": "plain",
+                       "IonShape": "plain",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small",
+                       "IconSlot": "plain",
+                       "IonMode": "plain",
+                       "IonStrong": "plain",
+                       "LinkUrl": "plain",
+                       "LinkDownload": "plain",
+                       "LinkTarget": "plain",
+                       "LinkRel": "plain",
+                       "LinkRouterPath": "plain",
+                       "LinkRouterData": "plain",
+                       "LinkRouterDirection": "plain"
+                      }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1781700500018]: 
                       attrName: class
@@ -1332,16 +1599,36 @@ title: Component assistant
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                '        page.setAgentProvider(''vibe'');
+                                        page.setAgentProvider('vibe');
                                         resolve();
-                                '
+                                
                     ↓Text [ngx.components.UIText-1781700500021]: 
                       textValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: plain:Vibe
                   ↓CodexButton [ngx.components.UIDynamicElement-1781700500022]: 
-                    beanData: '{"ionBean":"Button","IonFill":"plain:clear","IonSize":"plain:small"}'
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "ButtonFormType": "plain:button",
+                       "Disabled": "plain:false",
+                       "IonColor": "plain",
+                       "IonExpand": "plain",
+                       "IonShape": "plain",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small",
+                       "IconSlot": "plain",
+                       "IonMode": "plain",
+                       "IonStrong": "plain",
+                       "LinkUrl": "plain",
+                       "LinkDownload": "plain",
+                       "LinkTarget": "plain",
+                       "LinkRel": "plain",
+                       "LinkRouterPath": "plain",
+                       "LinkRouterData": "plain",
+                       "LinkRouterDirection": "plain"
+                      }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1781700500023]: 
                       attrName: class
@@ -1356,9 +1643,9 @@ title: Component assistant
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                '        page.setAgentProvider(''codex'');
+                                        page.setAgentProvider('codex');
                                         resolve();
-                                '
+                                
                     ↓Text [ngx.components.UIText-1781700500026]: 
                       textValue: 
                         - xmlizable: 
@@ -1383,9 +1670,29 @@ title: Component assistant
                   directiveSource: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.getAgentModelOptions ? this.getAgentModelOptions() : []
+                      - MobileSmartSourceType: 'script:this.getAgentModelOptions ? this.getAgentModelOptions() : []'
                   ↓ModelButton [ngx.components.UIDynamicElement-1781700500031]: 
-                    beanData: '{"ionBean":"Button","IonFill":"plain:clear","IonSize":"plain:small"}'
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "ButtonFormType": "plain:button",
+                       "Disabled": "plain:false",
+                       "IonColor": "plain",
+                       "IonExpand": "plain",
+                       "IonShape": "plain",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small",
+                       "IconSlot": "plain",
+                       "IonMode": "plain",
+                       "IonStrong": "plain",
+                       "LinkUrl": "plain",
+                       "LinkDownload": "plain",
+                       "LinkTarget": "plain",
+                       "LinkRel": "plain",
+                       "LinkRouterPath": "plain",
+                       "LinkRouterData": "plain",
+                       "LinkRouterDirection": "plain"
+                      }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1781700500032]: 
                       attrName: class
@@ -1413,9 +1720,23 @@ title: Component assistant
                 beanData: |
                   '{
                    "ionBean": "Button",
+                   "ButtonFormType": "plain:button",
                    "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
+                   "IonColor": "plain",
+                   "IonExpand": "plain",
+                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small"
+                   "IonSize": "plain:small",
+                   "IconSlot": "plain",
+                   "IonMode": "plain",
+                   "IonStrong": "plain",
+                   "LinkUrl": "plain",
+                   "LinkDownload": "plain",
+                   "LinkTarget": "plain",
+                   "LinkRel": "plain",
+                   "LinkRouterPath": "plain",
+                   "LinkRouterData": "plain",
+                   "LinkRouterDirection": "plain"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781676410895]: 
@@ -1434,8 +1755,13 @@ title: Component assistant
                   beanData: |
                     '{
                      "ionBean": "Icon",
+                     "IonColor": "plain",
                      "IconName": "plain:add-circle-outline",
-                     "IconSlot": "plain:start"
+                     "IconMdName": "source",
+                     "IconIosName": "source",
+                     "IonSize": "plain",
+                     "IconSlot": "plain:start",
+                     "IconSource": "plain"
                     }'
                   tagName: ion-icon
                 ↓Text [ngx.components.UIText-1781676410901]: 
@@ -1564,9 +1890,23 @@ title: Component assistant
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
                          "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781608119129]: 
@@ -1582,7 +1922,17 @@ title: Component assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:Reprendre la conversation
                       ↓Icon [ngx.components.UIDynamicElement-1781608119133]: 
-                        beanData: '{"ionBean":"Icon","IconName":"plain:return-down-back-outline"}'
+                        beanData: |
+                          '{
+                           "ionBean": "Icon",
+                           "IonColor": "plain",
+                           "IconName": "plain:return-down-back-outline",
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain",
+                           "IconSource": "plain"
+                          }'
                         tagName: ion-icon
                       ↓Text [ngx.components.UIText-1781676432698]: 
                         textValue: 
@@ -1616,7 +1966,13 @@ title: Component assistant
                             '{
                              "ionBean": "CallSequenceAction",
                              "requestable": "plain:ConvertigoAssistant.AgentResumeConversation",
-                             "noLoading": "plain:true"
+                             "marker": "plain:",
+                             "cachePolicy": "plain",
+                             "cacheTtl": "plain:3000",
+                             "timeout": "plain",
+                             "threshold": "plain",
+                             "noLoading": "plain:true",
+                             "noAutoLogin": "plain:false"
                             }'
                           ↓threadid [ngx.components.UIControlVariable-1781608122133]: 
                             varValue: 
@@ -1717,7 +2073,7 @@ title: Component assistant
                                     				"i am applying a change in the project.": "J''applique une modification dans le projet.",
                                     				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
                                     				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                                    				"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                                                    "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
                                     				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                                     				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
                                     			};
@@ -1889,13 +2245,24 @@ title: Component assistant
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
                           ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
-                            beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+                            beanData: |
+                              '{
+                               "ionBean": "IfAction",
+                               "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}",
+                               "negate": "plain:false"
+                              }'
                             ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
                               beanData: |
                                 '{
                                  "ionBean": "CallSequenceAction",
                                  "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-                                 "noLoading": "plain:true"
+                                 "marker": "plain:",
+                                 "cachePolicy": "plain",
+                                 "cacheTtl": "plain:3000",
+                                 "timeout": "plain",
+                                 "threshold": "plain",
+                                 "noLoading": "plain:true",
+                                 "noAutoLogin": "plain:false"
                                 }'
                               ↓threadid [ngx.components.UIControlVariable-1781621341118]: 
                                 varValue: 
@@ -1915,9 +2282,10 @@ title: Component assistant
                               ↓PublishEvent [ngx.components.UIDynamicAction-1781621341122]: 
                                 beanData: |
                                   '{
+                                   "async": "plain:false",
                                    "ionBean": "PublishEventAction",
                                    "topic": "plain:AssistantResponse",
-                                   "async": "plain:false"
+                                   "data": "script:{}"
                                   }'
                               ↓targetProject [ngx.components.UIControlVariable-1781689577838]: 
                                 varValue: 
@@ -1944,9 +2312,23 @@ title: Component assistant
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
                          "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781608122145]: 
@@ -1962,7 +2344,17 @@ title: Component assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:Supprimer la conversation
                       ↓Icon [ngx.components.UIDynamicElement-1781608122149]: 
-                        beanData: '{"ionBean":"Icon","IconName":"plain:trash-outline"}'
+                        beanData: |
+                          '{
+                           "ionBean": "Icon",
+                           "IonColor": "plain",
+                           "IconName": "plain:trash-outline",
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain",
+                           "IconSource": "plain"
+                          }'
                         tagName: ion-icon
                       ↓Event [ngx.components.UIControlEvent-1781608122151]: 
                         ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
@@ -1970,7 +2362,13 @@ title: Component assistant
                             '{
                              "ionBean": "CallSequenceAction",
                              "requestable": "plain:ConvertigoAssistant.AgentDeleteConversation",
-                             "noLoading": "plain:true"
+                             "marker": "plain:",
+                             "cachePolicy": "plain",
+                             "cacheTtl": "plain:3000",
+                             "timeout": "plain",
+                             "threshold": "plain",
+                             "noLoading": "plain:true",
+                             "noAutoLogin": "plain:false"
                             }'
                           ↓threadid [ngx.components.UIControlVariable-1781608122155]: 
                             varValue: 
@@ -2111,7 +2509,14 @@ title: Component assistant
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓Spinner [ngx.components.UIDynamicElement-1773100000018]: 
-              beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
+              beanData: |
+                '{
+                 "ionBean": "Spinner",
+                 "IonColor": "plain",
+                 "Duration": "plain",
+                 "Name": "plain:lines",
+                 "Paused": "plain:false"
+                }'
               tagName: ion-spinner
   ↓IfScrollTopButton [ngx.components.UIControlDirective-1781676529458]: 
     directiveName: If
@@ -2123,8 +2528,23 @@ title: Component assistant
       beanData: |
         '{
          "ionBean": "Button",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
          "IonColor": "plain:light",
-         "IonShape": "plain:round"
+         "IonExpand": "plain",
+         "IonShape": "plain:round",
+         "IonFill": "plain",
+         "IonSize": "plain",
+         "IconSlot": "plain",
+         "IonMode": "plain",
+         "IonStrong": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
+         "LinkRouterPath": "plain",
+         "LinkRouterData": "plain",
+         "LinkRouterDirection": "plain"
         }'
       tagName: ion-button
       ↓Slot [ngx.components.UIAttribute-1781676533576]: 
@@ -2160,8 +2580,11 @@ title: Component assistant
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-up-outline",
+           "IconMdName": "source",
+           "IconIosName": "source",
            "IonSize": "plain:large",
-           "IconSlot": "plain:icon-only"
+           "IconSlot": "plain:icon-only",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
   ↓IfScrollBottomButton [ngx.components.UIControlDirective-1773900000010]: 
@@ -2174,8 +2597,23 @@ title: Component assistant
       beanData: |
         '{
          "ionBean": "Button",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
          "IonColor": "plain:light",
-         "IonShape": "plain:round"
+         "IonExpand": "plain",
+         "IonShape": "plain:round",
+         "IonFill": "plain",
+         "IonSize": "plain",
+         "IconSlot": "plain",
+         "IonMode": "plain",
+         "IonStrong": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
+         "LinkRouterPath": "plain",
+         "LinkRouterData": "plain",
+         "LinkRouterDirection": "plain"
         }'
       tagName: ion-button
       ↓Slot [ngx.components.UIAttribute-1774000000002]: 
@@ -2211,8 +2649,11 @@ title: Component assistant
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-down-outline",
+           "IconMdName": "source",
+           "IconIosName": "source",
            "IonSize": "plain:large",
-           "IconSlot": "plain:icon-only"
+           "IconSlot": "plain:icon-only",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
 ↓PageEvent [ngx.components.UIPageEvent-1744269061199]: 
@@ -2307,7 +2748,7 @@ title: Component assistant
         '{
          "ionBean": "SetLocalAction",
          "Property": "plain:QuestionPlaceholder",
-         "Value": "script:''Describe the component you need...''"
+         "Value": "script:''Demandez une action sur le projet...''"
         }'
     ↓SetLocal [ngx.components.UIDynamicAction-1744269068118]: 
       beanData: |
@@ -2321,7 +2762,13 @@ title: Component assistant
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
-           "noLoading": "plain:true"
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:true",
+           "noAutoLogin": "plain:false"
           }'
         ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
           beanData: |
@@ -2354,7 +2801,12 @@ title: Component assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.getConfiguredAgentProvider && this.getConfiguredAgentProvider().length && this.getAgentModel) ? this.getAgentModel() : '''''
         ↓If [ngx.components.UIDynamicAction-1749567852407]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: |
+            '{
+             "ionBean": "IfAction",
+             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "negate": "plain:false"
+            }'
           ↓AddHistoryMessages [ngx.components.UICustomAction-1749567905830]: 
             actionValue: 
               - xmlizable: 
@@ -2417,7 +2869,7 @@ title: Component assistant
                     				"i am applying a change in the project.": "J''applique une modification dans le projet.",
                     				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
                     				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                    				"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                                    "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
                     				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                     				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
                     			};
@@ -2581,13 +3033,24 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓PollActiveRunOnEnter [ngx.components.UIDynamicAction-1781622093065]: 
-              beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.IsProcessing === true && !!this.local.RunID"}'
+              beanData: |
+                '{
+                 "ionBean": "IfAction",
+                 "condition": "script:this.local && this.local.IsProcessing === true && !!this.local.RunID",
+                 "negate": "plain:false"
+                }'
               ↓CallSequence [ngx.components.UIDynamicAction-1781622094571]: 
                 beanData: |
                   '{
                    "ionBean": "CallSequenceAction",
                    "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-                   "noLoading": "plain:true"
+                   "marker": "plain:",
+                   "cachePolicy": "plain",
+                   "cacheTtl": "plain:3000",
+                   "timeout": "plain",
+                   "threshold": "plain",
+                   "noLoading": "plain:true",
+                   "noAutoLogin": "plain:false"
                   }'
                 ↓threadid [ngx.components.UIControlVariable-1781622094573]: 
                   varValue: 
@@ -2607,9 +3070,10 @@ title: Component assistant
                 ↓PublishEvent [ngx.components.UIDynamicAction-1781622094577]: 
                   beanData: |
                     '{
+                     "async": "plain:false",
                      "ionBean": "PublishEventAction",
                      "topic": "plain:AssistantResponse",
-                     "async": "plain:false"
+                     "data": "script:{}"
                     }'
                 ↓targetProject [ngx.components.UIControlVariable-1781689586166]: 
                   varValue: 
@@ -2699,7 +3163,7 @@ title: Component assistant
             				"i am applying a change in the project.": "J''applique une modification dans le projet.",
             				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
             				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-            				"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                            "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
             				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
             				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction.",
             				"i am reading files.": "Je lis les fichiers du projet.",
@@ -2788,7 +3252,7 @@ title: Component assistant
             		var currentSnapshot = appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid);
             		var findTarget = function() {
             			var idx = page.local.StreamingIndex;
-            			if (idx != null && page.local.Messages[idx]) {
+                        if (idx != null && page.local.Messages[idx] && page.local.Messages[idx].writing === true) {
             				return { target: page.local.Messages[idx], index: idx };
             			}
             			for (var j = page.local.Messages.length - 1; j >= 0; j--) {
@@ -2841,6 +3305,87 @@ title: Component assistant
             			resolve();
             			return;
             		}
+                    var freezeProgressTarget = function() {
+                        var key = "" + (runid || page.local.RunID || "pending");
+                        if (page.local.LastProgressSummaryRunId === key) {
+                            page.local.StreamingIndex = null;
+                            return;
+                        }
+                        var lines = [];
+                        if (page.local.AgentProgressHistory && page.local.AgentProgressHistoryRunId === key) {
+                            lines = page.local.AgentProgressHistory.slice(0);
+                        }
+                        if (!lines.length && currentSnapshot && currentSnapshot.hasLines) {
+                            lines = ("" + currentSnapshot.text).split(/\n\s*\n/);
+                        }
+                        var filtered = [];
+                        for (var i = 0; i < lines.length; i++) {
+                            var line = trimText(lines[i]);
+                            if (line.length && filtered.indexOf(line) === -1) {
+                                filtered.push(line);
+                            }
+                        }
+                        lines = filtered;
+                        var looksLikeFinalProgress = function(value) {
+                            var text = trimText(value).replace(/\s+/g, " ");
+                            var lower = text.toLowerCase();
+                            return lower.indexOf("validation") !== -1 ||
+                                lower.indexOf("c''est fait") === 0 ||
+                                lower.indexOf("c’est fait") === 0 ||
+                                lower.indexOf("j''ai ajout") === 0 ||
+                                lower.indexOf("j’ai ajout") === 0 ||
+                                lower.indexOf("j''ai corrig") === 0 ||
+                                lower.indexOf("j’ai corrig") === 0 ||
+                                lower.indexOf("i added ") === 0 ||
+                                lower.indexOf("i fixed ") === 0 ||
+                                lower.indexOf("i updated ") === 0;
+                        };
+                        if (lines.length > 1 && looksLikeFinalProgress(lines[lines.length - 1])) {
+                            lines.pop();
+                        }
+                        if (!lines.length) {
+                            page.local.StreamingIndex = null;
+                            return;
+                        }
+                        while (lines.length > 12) {
+                            lines.shift();
+                        }
+                        var providerLabel = state && state.provider ? (("" + state.provider).charAt(0).toUpperCase() + ("" + state.provider).slice(1)) : "Agent";
+                        var summary = "Étapes du traitement (" + lines.length + ")";
+                        if (lines.length) {
+                            summary += "\n\nDernière étape : " + lines[lines.length - 1];
+                        }
+                        var found = findTarget();
+                        var target = found.target;
+                        if (!target) {
+                            var now = new Date();
+                            var hh = ("0" + now.getHours()).slice(-2);
+                            var mm = ("0" + now.getMinutes()).slice(-2);
+                            target = {
+                                msg: "",
+                                type: "assistant",
+                                author: "Assistant",
+                                time: hh + ":" + mm,
+                                id: key + "-steps"
+                            };
+                            page.local.Messages.push(target);
+                        }
+                        target.msg = summary;
+                        target.progressSummary = summary;
+                        target.progressDetails = lines.join("\n\n");
+                        target.progressCollapsed = true;
+                        target.type = "assistant";
+                        target.author = target.author || "Assistant";
+                        target.id = key + "-steps";
+                        target.tag1 = "Étapes";
+                        target.tag2 = providerLabel;
+                        target.tag3 = "Progression";
+                        target.status = "";
+                        target.writing = false;
+                        page.local.LastProgressSummaryRunId = key;
+                        page.local.StreamingIndex = null;
+                    };
+                    freezeProgressTarget();
             		var finalTarget = ensureTarget(false);
             		var target = finalTarget.target;
             		var responseId = null;
@@ -2904,6 +3449,10 @@ title: Component assistant
             			if (!text.length) {
             				return true;
             			}
+                        var lower = text.toLowerCase();
+                        if ((lower.indexOf("have finished the task") !== -1 || lower.indexOf("terminé le traitement") !== -1) && text.length < 80) {
+                            return true;
+                        }
             			if (text.indexOf("Sending data to the AI assistant") === 0 || text.indexOf("\"JsonResponse\"") !== -1 || text.indexOf("<tool_error>") !== -1) {
             				return true;
             			}
@@ -2975,13 +3524,24 @@ title: Component assistant
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓IfElse [ngx.components.UIDynamicIf-1744357030892]: 
-      beanData: '{"ionBean":"IfElseAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+      beanData: |
+        '{
+         "ionBean": "IfElseAction",
+         "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}",
+         "negate": "plain:false"
+        }'
       ↓CallSequence [ngx.components.UIDynamicAction-1744367857710]: 
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-           "noLoading": "plain:true"
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:true",
+           "noAutoLogin": "plain:false"
           }'
         ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
           varValue: 
@@ -2991,9 +3551,10 @@ title: Component assistant
         ↓PublishEvent [ngx.components.UIDynamicAction-1744367857716]: 
           beanData: |
             '{
+             "async": "plain:false",
              "ionBean": "PublishEventAction",
              "topic": "plain:AssistantResponse",
-             "async": "plain:false"
+             "data": "script:{}"
             }'
         ↓runid [ngx.components.UIControlVariable-1744389800542]: 
           varValue: 
@@ -3044,7 +3605,12 @@ title: Component assistant
              "level": "plain:warn"
             }'
         ↓If1 [ngx.components.UIDynamicAction-1747229858672]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: |
+            '{
+             "ionBean": "IfAction",
+             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponse\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "negate": "plain:false"
+            }'
           ↓AddAssistantMessage [ngx.components.UICustomAction-1747229858675]: 
             actionValue: 
               - xmlizable: 
@@ -3095,7 +3661,13 @@ title: Component assistant
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponse","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
 ↓Footer [ngx.components.UIDynamicElement-1750415662453]: 
-  beanData: '{"ionBean":"Footer"}'
+  beanData: |
+    '{
+     "ionBean": "Footer",
+     "IonMode": "plain",
+     "Collapse": "plain",
+     "Translucent": "plain:false"
+    }'
   tagName: ion-footer
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]: 
     identifier: chatfooter
@@ -3104,7 +3676,18 @@ title: Component assistant
       attrName: (RunQuestion)
       eventName: RunQuestion
       ↓CallSequence [ngx.components.UIDynamicAction-1751354620842]: 
-        beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.UploadFiles"}'
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:ConvertigoAssistant.UploadFiles",
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:false",
+           "noAutoLogin": "plain:false"
+          }'
         ↓files [ngx.components.UIControlVariable-1751354620845]: 
           varValue: 
             - xmlizable: 
@@ -3126,7 +3709,12 @@ title: Component assistant
             beanData: '{"ionBean":"IterateAction","items":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.UploadFiles\",\"marker\":\"\"}],\"path\":\"?.file\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
             ↓Loop_Handler [ngx.components.UIActionLoopEvent-1751354620854]: 
               ↓If [ngx.components.UIDynamicAction-1751354620857]: 
-                beanData: '{"ionBean":"IfAction","condition":"script:item.filename"}'
+                beanData: |
+                  '{
+                   "ionBean": "IfAction",
+                   "condition": "script:item.filename",
+                   "negate": "plain:false"
+                  }'
                 ↓PushAIFile [ngx.components.UICustomAction-1751354620860]: 
                   actionValue: 
                     - xmlizable: 
@@ -3227,7 +3815,12 @@ title: Component assistant
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
               ↓If1 [ngx.components.UIDynamicAction-1751634630354]: 
-                beanData: '{"ionBean":"IfAction","condition":"script:item.error"}'
+                beanData: |
+                  '{
+                   "ionBean": "IfAction",
+                   "condition": "script:item.error",
+                   "negate": "plain:false"
+                  }'
                 ↓AddAssistantMessage [ngx.components.UICustomAction-1751634630369]: 
                   actionValue: 
                     - xmlizable: 
@@ -3248,7 +3841,12 @@ title: Component assistant
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
             ↓If [ngx.components.UIDynamicAction-1751354620878]: 
-              beanData: '{"ionBean":"IfAction","condition":"script:parent.out == ''done''"}'
+              beanData: |
+                '{
+                 "ionBean": "IfAction",
+                 "condition": "script:parent.out == ''done''",
+                 "negate": "plain:false"
+                }'
               ↓ConsoleLog [ngx.components.UICustomAction-1751354620881]: 
                 actionValue: 
                   - xmlizable: 
@@ -3296,7 +3894,7 @@ title: Component assistant
                         					"i am applying a change in the project.": "J''applique une modification dans le projet.",
                         					"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
                         					"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                        					"i am checking available convertigo components.": "Je vérifie les composants Convertigo disponibles.",
+                                            "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
                         					"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                         					"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction.",
                         					"i am reading files.": "Je lis les fichiers du projet.",
@@ -3539,7 +4137,13 @@ title: Component assistant
                     '{
                      "ionBean": "CallSequenceAction",
                      "requestable": "plain:ConvertigoAssistant.AgentSendMessage",
-                     "noLoading": "plain:true"
+                     "marker": "plain:",
+                     "cachePolicy": "plain",
+                     "cacheTtl": "plain:3000",
+                     "timeout": "plain",
+                     "threshold": "plain",
+                     "noLoading": "plain:true",
+                     "noAutoLogin": "plain:false"
                     }'
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
                     varValue: 
@@ -3574,7 +4178,12 @@ title: Component assistant
                             		resolve();
                             '
                   ↓If [ngx.components.UIDynamicAction-1751354620911]: 
-                    beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+                    beanData: |
+                      '{
+                       "ionBean": "IfAction",
+                       "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+                       "negate": "plain:false"
+                      }'
                     ↓AddAssistantMessage [ngx.components.UICustomAction-1751354620914]: 
                       actionValue: 
                         - xmlizable: 
@@ -3622,7 +4231,13 @@ title: Component assistant
                         '{
                          "ionBean": "CallSequenceAction",
                          "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
-                         "noLoading": "plain:true"
+                         "marker": "plain:",
+                         "cachePolicy": "plain",
+                         "cacheTtl": "plain:3000",
+                         "timeout": "plain",
+                         "threshold": "plain",
+                         "noLoading": "plain:true",
+                         "noAutoLogin": "plain:false"
                         }'
                       ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
                         varValue: 
@@ -3637,9 +4252,10 @@ title: Component assistant
                       ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
                         beanData: |
                           '{
+                           "async": "plain:false",
                            "ionBean": "PublishEventAction",
                            "topic": "plain:AssistantResponse",
-                           "async": "plain:false"
+                           "data": "script:{}"
                           }'
                       ↓runid [ngx.components.UIControlVariable-1751354620932]: 
                         varValue: 

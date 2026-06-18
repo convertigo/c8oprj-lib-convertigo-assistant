@@ -163,10 +163,10 @@ componentScriptContent:
         					page.global.projectName = msg.projectName;
         					page.global.threadQname = msg.threadQname;
         					page.tick();
-        					page.getInstance(Events).publish("JavaMessage",{}, false);
+        					page.getInstance(Events).publish("JavaMessage",{});
         				}
         				if (''capture'' == msg.type) {
-        					page.getInstance(Events).publish("JavaCapture", msg, false);
+        					page.getInstance(Events).publish("JavaCapture", msg);
         				}
         			}
         		});
@@ -195,7 +195,6 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
           →: |
             '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
             		
-            
             		if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
             			page.global.studio = true;
             		}
@@ -230,10 +229,10 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             					page.global.projectName = msg.projectName;
             					page.global.threadQname = msg.threadQname;
             					page.tick();
-            					page.getInstance(Events).publish("JavaMessage",{}, false);
+            					page.getInstance(Events).publish("JavaMessage",{});
             				}
             				if (''capture'' == msg.type) {
-            					page.getInstance(Events).publish("JavaCapture", msg, false);
+            					page.getInstance(Events).publish("JavaCapture", msg);
             				}
             			}
             		});
@@ -241,7 +240,18 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             		resolve();
             '
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
-    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.GetVersion"}'
+    beanData: |
+      '{
+       "ionBean": "CallSequenceAction",
+       "requestable": "plain:ConvertigoAssistant.GetVersion",
+       "marker": "plain:",
+       "cachePolicy": "plain",
+       "cacheTtl": "plain:3000",
+       "timeout": "plain",
+       "threshold": "plain",
+       "noLoading": "plain:false",
+       "noAutoLogin": "plain:false"
+      }'
     ↓SetLocal [ngx.components.UIDynamicAction-1750662135534]: 
       beanData: |
         '{
@@ -249,44 +259,81 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
          "Property": "plain:version",
          "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.GetVersion\",\"marker\":\"\"}],\"path\":\"?.version\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
         }'
-  ↓GetTheme [ngx.components.UIDynamicAction-1771929741650]: 
-    beanData: |
-      '{
-       "ionBean": "GetThemeAction",
-       "applyTheme": "plain:true",
-       "emitResizeWhenApply": "plain:true"
-      }'
+  ↓GetTheme [ngx.components.UICustomAction-1781783631043]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		var applyTheme = function(dark, persist, forceClass) {
+            			var isDark = dark === true;
+            			page.global.themeDark = isDark;
+            			try {
+            				var root = document.documentElement;
+            				var body = document.body;
+            				if (root && root.classList) {
+            					root.classList.remove("force-dark", "force-light");
+            					if (forceClass === true) {
+            						root.classList.add(isDark ? "force-dark" : "force-light");
+            					}
+            				}
+            				if (body && body.classList) {
+            					body.classList.remove("force-dark", "force-light");
+            					if (forceClass === true) {
+            						body.classList.add(isDark ? "force-dark" : "force-light");
+            					}
+            				}
+            			} catch (e1) {}
+            			try {
+            				if (persist === true && window && window.localStorage) {
+            					window.localStorage.setItem("c8o-theme-dark", isDark ? "true" : "false");
+            				}
+            			} catch (e2) {}
+            			try { page.tick(); } catch (e3) {}
+            			return isDark;
+            		};
+            		page.global.applyAssistantTheme = applyTheme;
+            		var forced = page.getUrlDarkThemeOverride ? page.getUrlDarkThemeOverride() : null;
+            		page.global.themeLockedFromUrl = forced !== null;
+            		if (forced !== null) {
+            			applyTheme(forced, false, true);
+            		} else {
+            			var stored = null;
+            			try { stored = window && window.localStorage ? window.localStorage.getItem("c8o-theme-dark") : null; } catch (e4) {}
+            			if (stored === "true" || stored === "dark") {
+            				applyTheme(true, false, true);
+            			} else if (stored === "false" || stored === "light") {
+            				applyTheme(false, false, true);
+            			} else {
+            				var prefersDark = false;
+            				try { prefersDark = !!(window && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); } catch (e5) {}
+            				applyTheme(prefersDark, false, false);
+            			}
+            		}
+            		resolve();
+            '
     comment: Restores and applies the persisted theme preference
-    ↓ApplyUrlThemeOverride [ngx.components.UIDynamicAction-1772191600101]: 
-      beanData: '{"ionBean":"IfAction","condition":"script:this.getUrlDarkThemeOverride() !== null"}'
-      comment: Applies explicit dark-theme query parameter when present
-      ↓SetThemeFromUrl [ngx.components.UIDynamicAction-1772191600102]: 
-        beanData: |
-          '{
-           "ionBean": "SetThemeAction",
-           "dark": "script:this.getUrlDarkThemeOverride()",
-           "persist": "plain:false"
-          }'
-    ↓SetThemeLockGlobal [ngx.components.UICustomAction-1772192100101]: 
-      actionValue: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-          - com.twinsoft.convertigo.beans.common.FormatedContent: 
-            →: |
-              		page.global.themeLockedFromUrl = page.getUrlDarkThemeOverride() !== null;
-              		resolve();
-              
-      comment: Stores whether the URL explicitly forces the theme
-    ↓PublishEvent [ngx.components.UIDynamicAction-1772036299092]: 
-      beanData: '{"ionBean":"PublishEventAction","topic":"plain:ThemeSet"}'
-  ↓SetLanguage [ngx.components.UIDynamicAction-1771929741651]: 
-    beanData: |
-      '{
-       "ionBean": "SetLanguageAction",
-       "language": "script:null",
-       "storageKey": "plain:c8o-lang",
-       "globalProperty": "plain:currentLanguage"
-      }'
+  ↓SetLanguage [ngx.components.UICustomAction-1781783632529]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		var selected = null;
+            		try { selected = window && window.localStorage ? window.localStorage.getItem("c8o-lang") : null; } catch (e1) {}
+            		selected = "" + (selected || "en");
+            		selected = selected.trim().toLowerCase();
+            		if (["en", "fr", "it", "es"].indexOf(selected) < 0) {
+            			selected = "en";
+            		}
+            		page.global.currentLanguage = function() { return selected; };
+            		page.global.getLanguageLabelKey = function() {
+            			return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English"));
+            		};
+            		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e2) {}
+            		try { page.tick(); } catch (e3) {}
+            		resolve();
+            '
     comment: Restores and applies the persisted language preference
 ↓Style [ngx.components.UIStyle-1771929741648]: 
   comment: You can add some global application styles here

@@ -906,8 +906,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (/[\u00e0\u00e2\u00e4\u00e7\u00e9\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00f6\u00f9\u00fb\u00fc\u00ff\u0153]/.test(sample)) {
       return "fr";
     }
+    sample = sample.replace(/[’']/g, " ");
     var frenchHits = 0;
-    var words = [" je ", " tu ", " il ", " elle ", " nous ", " vous ", " les ", " des ", " une ", " pour ", " avec ", " dans ", " faut ", " projet ", " application ", " corrige ", " corriger ", " fonctionne "];
+    var words = [" je ", " tu ", " il ", " elle ", " nous ", " vous ", " les ", " des ", " une ", " pour ", " avec ", " dans ", " sur ", " le ", " la ", " de ", " du ", " au ", " aux ", " mes ", " ton ", " ta ", " tes ", " peux ", " peut ", " faut ", " projet ", " application ", " corrige ", " corriger ", " fonctionne ", " ajoute ", " ajouter ", " rajoute ", " rajouter ", " permet ", " ville ", " villes ", " colonne ", " colonnes ", " tri ", " fuseau "];
     for (var i = 0; i < words.length; i++) {
       if (sample.indexOf(words[i]) !== -1) {
         frenchHits++;
@@ -928,16 +929,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       execute: "Je teste une s\u00e9quence ou une transaction.",
       logs: "Je consulte les logs pour comprendre le r\u00e9sultat.",
       builder: "Je relance l'application pour v\u00e9rifier l'\u00e9cran.",
-      palette: "Je v\u00e9rifie les composants Convertigo disponibles.",
+      palette: "Je v\u00e9rifie les objets Convertigo disponibles.",
       tool: "J'utilise un outil Convertigo.",
       toolRetry: "Une tentative d'outil a \u00e9chou\u00e9, je cherche une autre piste.",
       closedAfterAnswer: "L'agent a termin\u00e9 sa r\u00e9ponse.",
       closedEarly: "L'agent s'est arr\u00eat\u00e9 avant d'avoir termin\u00e9.",
-      completedNoAnswer: "J'ai termin\u00e9 le traitement.",
+      completedNoAnswer: "J'ai termin\u00e9 le traitement, mais l'agent n'a pas transmis de r\u00e9sum\u00e9 final d\u00e9taill\u00e9.",
       completedIncomplete: "L'agent a termin\u00e9, mais sa r\u00e9ponse finale est incompl\u00e8te.",
       lastObservedAction: "Derni\u00e8re action observ\u00e9e : ",
+      observedSteps: "\u00c9tapes observ\u00e9es :",
       toolWarning: "Une tentative d'outil a \u00e9chou\u00e9 pendant le traitement.",
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour de l'agent local.",
+      bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue parce que le process local de l'agent n'est plus disponible. Vous pouvez relancer une demande dans cette conversation.",
       startFailed: "Je n'ai pas pu d\u00e9marrer l'agent local."
     },
     en: {
@@ -951,16 +954,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       execute: "I am testing a sequence or transaction.",
       logs: "I am checking the logs to understand the result.",
       builder: "I am restarting the application to verify the screen.",
-      palette: "I am checking the available Convertigo components.",
+      palette: "I am checking the available Convertigo objects.",
       tool: "I am using a Convertigo tool.",
       toolRetry: "A tool attempt failed, I am trying another path.",
       closedAfterAnswer: "The agent finished its response.",
       closedEarly: "The agent stopped before completion.",
-      completedNoAnswer: "I have finished the task.",
+      completedNoAnswer: "I finished the task, but the agent did not send a detailed final summary.",
       completedIncomplete: "The agent finished, but its final answer is incomplete.",
       lastObservedAction: "Last observed action: ",
+      observedSteps: "Observed steps:",
       toolWarning: "A tool attempt failed during processing.",
       bridgeReadError: "I cannot read the local agent response.",
+      bridgeProcessLost: "The task was interrupted because the local agent process is no longer available. You can send a new request in this conversation.",
       startFailed: "I could not start the local agent."
     }
   };
@@ -1051,6 +1056,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!text.length) {
       return true;
     }
+    if (genericCompletedFallback(text)) {
+      return true;
+    }
     if (text.indexOf("<tool_error>") !== -1 || text.indexOf("\"JsonResponse\"") !== -1) {
       return true;
     }
@@ -1068,6 +1076,83 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (phase.length) {
       text += "\n\n" + t.lastObservedAction + phase;
     }
+    if (state && state.warnings && state.warnings.length) {
+      text += "\n\n" + t.toolWarning;
+    }
+    return text;
+  }
+
+  function progressLines(state) {
+    var raw = String(state && state.progressLog || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    var lines = [];
+    for (var i = 0; i < raw.length; i++) {
+      var line = compactLine(raw[i]);
+      if (line.length && lines.indexOf(line) === -1) {
+        lines.push(line);
+      }
+    }
+    return lines;
+  }
+
+  function genericCompletedFallback(value) {
+    var text = trim(String(value || "").toLowerCase().replace(/\s+/g, " "));
+    return text === "i have finished the task." ||
+      text === "i have finished the task" ||
+      text === "j'ai termin\u00e9 le traitement." ||
+      text === "j'ai termin\u00e9 le traitement" ||
+      text === "j\u2019ai termin\u00e9 le traitement." ||
+      text === "j\u2019ai termin\u00e9 le traitement";
+  }
+
+  function progressLineLooksLikeFinalAnswer(value) {
+    var text = trim(String(value || "").replace(/\s+/g, " "));
+    if (!text.length || genericCompletedFallback(text)) {
+      return false;
+    }
+    var lower = text.toLowerCase();
+    if (lower.indexOf("je vais ") === 0 || lower.indexOf("i will ") === 0 || lower.indexOf("i am ") === 0 || lower.indexOf("j'analyse ") === 0 || lower.indexOf("j'utilise ") === 0) {
+      return false;
+    }
+    if (lower.indexOf("validation") !== -1 || lower.indexOf("c'est fait") === 0 || lower.indexOf("c\u2019est fait") === 0) {
+      return true;
+    }
+    if (lower.indexOf("j'ai ajout") === 0 || lower.indexOf("j\u2019ai ajout") === 0 || lower.indexOf("j'ai corrig") === 0 || lower.indexOf("j\u2019ai corrig") === 0 || lower.indexOf("i added ") === 0 || lower.indexOf("i fixed ") === 0 || lower.indexOf("i updated ") === 0) {
+      return true;
+    }
+    return text.length >= 140 && (text.indexOf("- ") !== -1 || text.indexOf(";") !== -1 || text.indexOf(". ") !== -1);
+  }
+
+  function finalAnswerFromProgress(state) {
+    var lines = progressLines(state);
+    for (var i = lines.length - 1; i >= 0; i--) {
+      if (progressLineLooksLikeFinalAnswer(lines[i])) {
+        return lines[i];
+      }
+    }
+    return "";
+  }
+
+  function appendObservedSteps(state, text) {
+    var lines = progressLines(state);
+    if (!lines.length) {
+      return text;
+    }
+    if (lines.length > 6) {
+      lines = lines.slice(lines.length - 6);
+    }
+    var t = lang(state);
+    return text + "\n\n" + t.observedSteps + "\n" + lines.map(function (line) {
+      return "- " + line;
+    }).join("\n");
+  }
+
+  function completedFallbackAnswer(state) {
+    var finalFromProgress = finalAnswerFromProgress(state);
+    if (finalFromProgress.length) {
+      return finalFromProgress;
+    }
+    var t = lang(state);
+    var text = appendObservedSteps(state, t.completedNoAnswer);
     if (state && state.warnings && state.warnings.length) {
       text += "\n\n" + t.toolWarning;
     }
@@ -1435,7 +1520,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state = ensureState(state);
     state.updatedAt = now();
     saveState(state);
-    setBuffer("", "");
+    if (!isTerminalStatus(state.status) && trim(state.runid).length && C8O.assistantAgentBridge.readResponse) {
+      try {
+        C8O.assistantAgentBridge.readResponse({
+          threadid: state.threadid,
+          runid: state.runid,
+          limit: 100,
+          waitMs: 0
+        });
+        state = readState(state.threadid) || state;
+        state = ensureState(state);
+      } catch (_ignoreCreateConversationRead) {}
+    } else {
+      setBuffer("", "");
+    }
     return {
       ok: true,
       id: state.threadid,
@@ -1634,11 +1732,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (state.status === "completed" || state.status === "failed" || state.status === "cancelled" || state.status === "closed" || state.status === "deleted") {
       if (state.status === "completed") {
         if (!trim(state.answer).length) {
-          state.answer = trim(state.progressLog).length ? incompleteFinalAnswer(state) : lang(state).completedNoAnswer;
+          state.answer = completedFallbackAnswer(state);
           state.answerIsFinal = true;
           saveState(state);
         } else if (answerLooksIncomplete(state, state.answer)) {
-          state.answer = incompleteFinalAnswer(state);
+          state.answer = finalAnswerFromProgress(state) || incompleteFinalAnswer(state);
           state.answerIsFinal = true;
           saveState(state);
         }
@@ -1654,6 +1752,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         limit: String(intValue(options.limit, 100, 1, 500)),
         waitMs: String(intValue(options.waitMs, 1000, 0, 30000))
       }, 45000);
+      if (events && events.ok === false) {
+        var bridgeStatus = trim(events.status).toLowerCase();
+        if (bridgeStatus === "not_found") {
+          if (trim(state.answer).length) {
+            state.status = "completed";
+            state.answerIsFinal = true;
+          } else {
+            state.status = "failed";
+            state.error = lang(state).bridgeProcessLost;
+            state.answer = state.error;
+            state.answerIsFinal = true;
+            appendProgress(state, state.error);
+          }
+          state.updatedAt = now();
+          saveState(state);
+          setStateBuffer(state);
+          return responseForState(state);
+        }
+        throw new Error(events.error || ("agent_events " + (bridgeStatus || "failed")));
+      }
       state.readErrors = 0;
       var list = events.events || [];
       for (var i = 0; i < list.length; i++) {
@@ -1693,10 +1811,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           state.status = "completed";
           state.error = "";
           if (!trim(state.answer).length) {
-            state.answer = lang(state).completedNoAnswer;
+            state.answer = completedFallbackAnswer(state);
             state.answerIsFinal = true;
           } else if (answerLooksIncomplete(state, state.answer)) {
-            state.answer = incompleteFinalAnswer(state);
+            state.answer = finalAnswerFromProgress(state) || incompleteFinalAnswer(state);
             state.answerIsFinal = true;
           }
           if (state.answerTranscriptRunid !== state.runid) {

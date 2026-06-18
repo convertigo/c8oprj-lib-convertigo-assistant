@@ -1,14 +1,39 @@
-beanData: '{"ionBean":"Menu"}'
+beanData: |
+  '{
+   "ionBean": "Menu",
+   "Disabled": "plain:true",
+   "MenuType": "plain",
+   "MenuSide": "plain:start",
+   "MenuSwipeEnabled": "plain:true",
+   "MenuMaxEdgeStart": "plain"
+  }'
 comment: A menu with all pages added automatically
 tagName: ion-menu
 ↓Header [ngx.components.UIDynamicElement-1500890727582]: 
-  beanData: '{"ionBean":"Header"}'
+  beanData: |
+    '{
+     "ionBean": "Header",
+     "IonMode": "plain",
+     "Collapse": "plain",
+     "Translucent": "plain:false"
+    }'
   tagName: ion-header
   ↓ToolBar [ngx.components.UIDynamicElement-1500890731485]: 
-    beanData: '{"ionBean":"ToolBar"}'
+    beanData: |
+      '{
+       "ionBean": "ToolBar",
+       "IonColor": "plain",
+       "BarMode": "plain",
+       "BarSlot": "plain"
+      }'
     tagName: ion-toolbar
     ↓BarTitle [ngx.components.UIDynamicElement-1500890752959]: 
-      beanData: '{"ionBean":"BarTitle"}'
+      beanData: |
+        '{
+         "ionBean": "BarTitle",
+         "IonColor": "plain",
+         "IonSize": "plain"
+        }'
       tagName: ion-title
       ↓Text [ngx.components.UIText-1500890755422]: 
         i18n: true
@@ -17,10 +42,28 @@ tagName: ion-menu
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:Convertigo AI Assistants
 ↓Content [ngx.components.UIDynamicElement-1500890742326]: 
-  beanData: '{"ionBean":"Content"}'
+  beanData: |
+    '{
+     "ionBean": "Content",
+     "IonColor": "plain",
+     "IonSlot": "plain",
+     "Padding": "plain:ion-padding",
+     "Fullscreen": "plain:false",
+     "ForceOverScroll": "plain:false",
+     "ScrollEvents": "plain:false",
+     "ScrollX": "plain:false",
+     "ScrollY": "plain:true"
+    }'
   tagName: ion-content
   ↓List [ngx.components.UIDynamicElement-1501343197007]: 
-    beanData: '{"ionBean":"List","Inset":"plain:inset"}'
+    beanData: |
+      '{
+       "ionBean": "List",
+       "IonMode": "plain",
+       "IonSlot": "plain",
+       "Inset": "plain:inset",
+       "Lines": "plain"
+      }'
     tagName: ion-list
     ↓LightRagItem [ngx.components.UIDynamicElement-1767172421203]: 
       beanData: |
@@ -28,9 +71,21 @@ tagName: ion-menu
          "ionBean": "ListItem",
          "Button": "plain:true",
          "Lines": "plain:inset",
+         "Detail": "plain:false",
          "DetailIconName": "plain",
+         "Shape": "plain",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
+         "IonColor": "plain",
          "IonSlot": "plain:start",
+         "IonMode": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
          "LinkRouterPath": "script:''path-to-lightrag''",
+         "LinkRouterData": "plain",
+         "LinkRouterAnimation": "plain",
          "LinkRouterDirection": "plain:root"
         }'
       tagName: ion-item
@@ -40,11 +95,22 @@ tagName: ion-menu
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:help-circle-outline",
-           "IconSlot": "plain:start"
+           "IconMdName": "source",
+           "IconIosName": "source",
+           "IonSize": "plain",
+           "IconSlot": "plain:start",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
       ↓Label [ngx.components.UIDynamicElement-1767172421209]: 
-        beanData: '{"ionBean":"Label"}'
+        beanData: |
+          '{
+           "ionBean": "Label",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "Position": "plain",
+           "IconSlot": "plain"
+          }'
         tagName: ion-label
         ↓Text [ngx.components.UIText-1767172421212]: 
           i18n: true
@@ -57,16 +123,28 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:(selectedPath$ | async)?.startsWith('/path-to-lightrag')
+            - MobileSmartSourceType: script:selectedPath && selectedPath.startsWith('/path-to-lightrag')
     ↓ComponentItem [ngx.components.UIDynamicElement-1753179834069]: 
       beanData: |
         '{
          "ionBean": "ListItem",
          "Button": "plain:true",
          "Lines": "plain:inset",
+         "Detail": "plain:false",
          "DetailIconName": "plain",
+         "Shape": "plain",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
+         "IonColor": "plain",
          "IonSlot": "plain:start",
+         "IonMode": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
          "LinkRouterPath": "script:''path-to-xfirst\/:threadid''",
+         "LinkRouterData": "plain",
+         "LinkRouterAnimation": "plain",
          "LinkRouterDirection": "plain:root"
         }'
       tagName: ion-item
@@ -76,33 +154,55 @@ tagName: ion-menu
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:sparkles-outline",
-           "IconSlot": "plain:start"
+           "IconMdName": "source",
+           "IconIosName": "source",
+           "IonSize": "plain",
+           "IconSlot": "plain:start",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
       ↓Label [ngx.components.UIDynamicElement-1753179834066]: 
-        beanData: '{"ionBean":"Label"}'
+        beanData: |
+          '{
+           "ionBean": "Label",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "Position": "plain",
+           "IconSlot": "plain"
+          }'
         tagName: ion-label
         ↓Text [ngx.components.UIText-1753179834068]: 
-          i18n: true
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:AI Component assistant
+              - MobileSmartSourceType: plain:Agent IA
       ↓Attr [ngx.components.UIAttribute-1753180304616]: 
         attrName: '[class.selected]'
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:(selectedPath$ | async)?.startsWith('/path-to-xfirst/:threadid')
+            - MobileSmartSourceType: script:selectedPath && selectedPath.startsWith('/path-to-xfirst')
     ↓FigmaItem [ngx.components.UIDynamicElement-1753180404710]: 
       beanData: |
         '{
          "ionBean": "ListItem",
          "Button": "plain:true",
          "Lines": "plain:inset",
+         "Detail": "plain:false",
          "DetailIconName": "plain",
+         "Shape": "plain",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
+         "IonColor": "plain",
          "IonSlot": "plain:start",
+         "IonMode": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
          "LinkRouterPath": "script:''path-to-figma''",
+         "LinkRouterData": "plain",
+         "LinkRouterAnimation": "plain",
          "LinkRouterDirection": "plain:root"
         }'
       tagName: ion-item
@@ -112,11 +212,22 @@ tagName: ion-menu
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:logo-figma",
-           "IconSlot": "plain:start"
+           "IconMdName": "source",
+           "IconIosName": "source",
+           "IonSize": "plain",
+           "IconSlot": "plain:start",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
       ↓Label [ngx.components.UIDynamicElement-1753180404716]: 
-        beanData: '{"ionBean":"Label"}'
+        beanData: |
+          '{
+           "ionBean": "Label",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "Position": "plain",
+           "IconSlot": "plain"
+          }'
         tagName: ion-label
         ↓Text [ngx.components.UIText-1753180404719]: 
           i18n: true
@@ -129,15 +240,49 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:(selectedPath$ | async)?.startsWith('/path-to-figma')
+            - MobileSmartSourceType: script:selectedPath && selectedPath.startsWith('/path-to-figma')
 ↓Footer [ngx.components.UIDynamicElement-1750663875479]: 
-  beanData: '{"ionBean":"Footer"}'
+  beanData: |
+    '{
+     "ionBean": "Footer",
+     "IonMode": "plain",
+     "Collapse": "plain",
+     "Translucent": "plain:false"
+    }'
   tagName: ion-footer
   ↓Version [ngx.components.UIDynamicElement-1750662255080]: 
-    beanData: '{"ionBean":"GenericItem","Lines":"plain:none"}'
+    beanData: |
+      '{
+       "ionBean": "GenericItem",
+       "Button": "plain:false",
+       "Lines": "plain:none",
+       "Detail": "plain:false",
+       "DetailIconName": "source:{\"filter\":\"Icon\",\"project\":\"\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''chevron-forward''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+       "Shape": "plain",
+       "ButtonFormType": "plain:button",
+       "Disabled": "plain:false",
+       "IonColor": "plain",
+       "IonSlot": "plain",
+       "IonMode": "plain",
+       "LinkUrl": "plain",
+       "LinkDownload": "plain",
+       "LinkTarget": "plain",
+       "LinkRel": "plain",
+       "LinkRouterPath": "plain",
+       "LinkRouterData": "plain",
+       "LinkRouterAnimation": "plain",
+       "LinkRouterDirection": "plain"
+      }'
     tagName: ion-item
     ↓Label [ngx.components.UIDynamicElement-1750662255082]: 
-      beanData: '{"ionBean":"Label"}'
+      beanData: |
+        '{
+         "ionBean": "Label",
+         "IonColor": "plain",
+         "IonMode": "plain",
+         "Position": "plain",
+         "IconSlot": "plain"
+        }'
       tagName: ion-label
       ↓Text1 [ngx.components.UIText-1750662796759]: 
         i18n: true

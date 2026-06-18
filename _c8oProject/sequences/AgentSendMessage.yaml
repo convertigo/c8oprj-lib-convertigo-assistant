@@ -88,6 +88,8 @@ responseTimeout: 120
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
     promptParts.push("- If the user asks for advice only, answer without modifying the project.");
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
+    promptParts.push("- Always finish with a concise but useful final summary in the user''s language. Never answer only that the task is done.");
+    promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
     promptParts.push("- Do not expose secrets, credentials, API keys, or private environment values.");
     promptParts.push("- If installation, credentials, network access, or permissions block the work, explain the blocker and the next action clearly.");
     if (uploadedFiles.length) {
@@ -166,8 +168,8 @@ responseTimeout: 120
   comment: Optional explicit CODEX_HOME.
   description: Optional explicit CODEX_HOME.
 ↓codexHomeScope [variables.RequestableVariable-1781700300215]: 
-  comment: Optional Codex home scope: default, shared, user, conversation, or explicit.
-  description: Optional Codex home scope: default, shared, user, conversation, or explicit.
+  comment: 'Optional Codex home scope: default, shared, user, conversation, or explicit.'
+  description: 'Optional Codex home scope: default, shared, user, conversation, or explicit.'
 ↓homeScope [variables.RequestableVariable-1781700300216]: 
   comment: Optional generic provider home scope.
   description: Optional generic provider home scope.
