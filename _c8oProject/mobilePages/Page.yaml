@@ -584,6 +584,122 @@ scriptContent:
         		this.local.ShowConversationPanel = !this.local.ShowConversationPanel;
         		this.tick();
         	}
+            public startAgentSetupMessage(providerLabel, installing = false) {
+                if (!this.local) {
+                    this.local = {};
+                }
+                if (!this.local.Messages) {
+                    this.local.Messages = [];
+                }
+                var label = "" + (providerLabel || "agent");
+                var messageId = "__agent_setup__";
+                var target = null;
+                for (var i = this.local.Messages.length - 1; i >= 0; i--) {
+                    if (this.local.Messages[i] && this.local.Messages[i].id === messageId) {
+                        target = this.local.Messages[i];
+                        break;
+                    }
+                }
+                if (target === null) {
+                    target = {
+                        id: messageId,
+                        type: "assistant",
+                        author: "Assistant",
+                        tag1: "Diagnostic",
+                        tag2: label,
+                        tag3: "Agent"
+                    };
+                    this.local.Messages.push(target);
+                }
+                target.msg = installing ? ("Installation de " + label + " dans le workspace Convertigo.\n\nCette operation peut prendre plusieurs minutes.") : ("Verification de " + label + " et de sa configuration locale.");
+                target.status = installing ? "Installation en cours" : "Diagnostic en cours";
+                target.writing = true;
+                this.local.AgentSetupMessageId = messageId;
+                this.local.IsProcessing = true;
+                this.tick();
+                this.scrollChatBottom(20, true);
+            }
+            public finishAgentSetupMessage(result, error = "") {
+                if (!this.local) {
+                    this.local = {};
+                }
+                if (!this.local.Messages) {
+                    this.local.Messages = [];
+                }
+                var messageId = this.local.AgentSetupMessageId || "__agent_setup__";
+                var target = null;
+                for (var i = this.local.Messages.length - 1; i >= 0; i--) {
+                    if (this.local.Messages[i] && this.local.Messages[i].id === messageId) {
+                        target = this.local.Messages[i];
+                        break;
+                    }
+                }
+                if (target === null) {
+                    target = { id: messageId, type: "assistant", author: "Assistant", tag1: "Diagnostic", tag2: "Agent", tag3: "Local" };
+                    this.local.Messages.push(target);
+                }
+                var setup = result && result.setup ? result.setup : {};
+                var detail = setup && setup.setup ? setup.setup : {};
+                var installation = setup && setup.installation ? setup.installation : {};
+                var provider = "" + ((result && result.provider) || (detail && detail.codex ? "codex" : "") || (this.getAgentProvider ? this.getAgentProvider() : "agent"));
+                var label = this.getAgentProviderLabel ? this.getAgentProviderLabel(provider) : provider;
+                var lines = [];
+                if (error) {
+                    lines.push("Diagnostic impossible.");
+                    lines.push("" + error);
+                } else if (result && result.ok === true) {
+                    lines.push("Agent " + label + " pret.");
+                } else {
+                    lines.push("Agent " + label + " non pret.");
+                }
+                if (result && result.status) {
+                    lines.push("Statut : " + result.status);
+                }
+                if (installation && installation.attempted === true) {
+                    if (installation.installed === true) {
+                        lines.push("Installation locale terminee.");
+                    } else if (installation.reused === true) {
+                        lines.push("Runtime local existant reutilise.");
+                    } else {
+                        lines.push("Installation executee.");
+                    }
+                }
+                if (detail && detail.codex && detail.codex.path) {
+                    lines.push("Codex : " + detail.codex.path);
+                }
+                if (detail && detail.vibe && detail.vibe.path) {
+                    lines.push("Vibe : " + detail.vibe.path);
+                }
+                if (detail && detail.codexHome) {
+                    lines.push("CODEX_HOME : " + detail.codexHome);
+                }
+                if (detail && detail.vibeHome) {
+                    lines.push("VIBE_HOME : " + detail.vibeHome);
+                }
+                if (detail && detail.installDir) {
+                    lines.push("Repertoire agent : " + detail.installDir);
+                }
+                if (setup && setup.skills && setup.skills.message) {
+                    lines.push(setup.skills.message);
+                }
+                if (setup && setup.error) {
+                    lines.push("Erreur : " + setup.error);
+                }
+                if (setup && setup.messages && setup.messages.length) {
+                    for (var j = 0; j < setup.messages.length && j < 4; j++) {
+                        var m = "" + setup.messages[j];
+                        if (m.length && lines.indexOf(m) === -1) {
+                            lines.push(m);
+                        }
+                    }
+                }
+                target.msg = lines.join("\n\n");
+                target.status = result && result.ok === true ? "Agent pret" : "Action requise";
+                target.writing = false;
+                this.local.IsProcessing = false;
+                this.tick();
+                this.scrollChatBottom(20, true);
+            }
         	public closeConversationsPanel() {
         		if (!this.local) {
         			this.local = {};
@@ -1819,7 +1935,7 @@ title: Agent assistant
                                             page.enableAutoScroll();
                                             resolve();
                                         };
-                                        var setupPayload = {
+                                        var setupPayload: any = {
                                             ''threadid'': page.local.Conversation || '''',
                                             ''targetProject'': project,
                                             ''provider'': page.getAgentProvider ? page.getAgentProvider() : ''vibe'',
@@ -1827,34 +1943,18 @@ title: Agent assistant
                                             ''install'': false,
                                             ''__context'': ''byside''
                                         };
+                                        var setupProviderLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(setupPayload.provider) : setupPayload.provider;
+                                        page.startAgentSetupMessage(setupProviderLabel, false);
                                         page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', setupPayload).async().then(function(setupResponse) {
                                             var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
                                             page.local.AgentSetup = setupResult;
-                                            if (setupResult && setupResult.setupRequired === true) {
-                                                var providerLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel() : (setupResult.provider || ''agent'');
-                                                var ok = true;
-                                                try {
-                                                    ok = window.confirm(''L’agent '' + providerLabel + '' n’est pas prêt. Voulez-vous installer les composants locaux nécessaires dans le workspace Convertigo ?'');
-                                                } catch (e) {}
-                                                if (ok) {
-                                                    setupPayload.install = true;
-                                                    page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', setupPayload).async().then(function(installResponse) {
-                                                        page.local.AgentSetup = installResponse && installResponse.result ? installResponse.result : page.local.AgentSetup;
-                                                        finish();
-                                                    }).catch(function(error) {
-                                                        try {
-                                                            page.c8o.log.warn(''[Assistant] Unable to install agent runtime: '' + error);
-                                                        } catch (e) {}
-                                                        finish();
-                                                    });
-                                                    return;
-                                                }
-                                            }
+                                            page.finishAgentSetupMessage(setupResult, '''');
                                             finish();
                                         }).catch(function(error) {
                                             try {
                                                 page.c8o.log.warn(''[Assistant] Unable to diagnose agent runtime: '' + error);
                                             } catch (e) {}
+                                            page.finishAgentSetupMessage(null, ''Diagnostic impossible : '' + error);
                                             finish();
                                         });
                             		}).catch(function(error) {
@@ -1941,67 +2041,34 @@ title: Agent assistant
                                         ''targetProject'': project,
                                         ''provider'': provider,
                                         ''model'': page.getAgentModel ? page.getAgentModel() : '''',
-                                        ''install'': false,
+                                        ''install'': true,
                                         ''__context'': ''byside''
                                     };
-                                    var finish = function(message) {
-                                        if (message) {
-                                            try {
-                                                window.alert(message);
-                                            } catch (e) {}
-                                        }
+                                    if (provider === ''codex'') {
+                                        payload.forceCodexInstall = true;
+                                    } else {
+                                        payload.forceVibeInstall = true;
+                                    }
+                                    page.startAgentSetupMessage(providerLabel, true);
+                                    var finish = function() {
                                         page.tick();
                                         resolve();
-                                    };
-                                    var installNow = function(force) {
-                                        payload.install = true;
-                                        if (force === true) {
-                                            if (provider === ''codex'') {
-                                                payload.forceCodexInstall = true;
-                                            } else {
-                                                payload.forceVibeInstall = true;
-                                            }
-                                        }
-                                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(installResponse) {
-                                            var installResult = installResponse && installResponse.result ? installResponse.result : {};
-                                            page.local.AgentSetup = installResult;
-                                            finish(installResult.message || ''Diagnostic terminé.'');
-                                        }).catch(function(error) {
-                                            try {
-                                                page.c8o.log.warn(''[Assistant] Unable to install agent runtime: '' + error);
-                                            } catch (e) {}
-                                            finish(''Installation impossible : '' + error);
-                                        });
                                     };
                                     page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(setupResponse) {
                                         var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
                                         page.local.AgentSetup = setupResult;
-                                        if (setupResult.setupRequired === true) {
-                                            var ok = true;
-                                            try {
-                                                ok = window.confirm(''L’agent '' + providerLabel + '' n’est pas prêt. Voulez-vous installer les composants locaux nécessaires dans le workspace Convertigo ?'');
-                                            } catch (e) {}
-                                            if (ok) {
-                                                installNow(false);
-                                            } else {
-                                                finish(setupResult.message || ''Installation annulée.'');
-                                            }
-                                            return;
+                                        page.local.Conversation = setupResult.id || page.local.Conversation;
+                                        if (setupResult.conversations) {
+                                            page.local.AgentConversations = setupResult.conversations;
                                         }
-                                        var force = false;
-                                        try {
-                                            force = window.confirm(''L’agent '' + providerLabel + '' est prêt. Voulez-vous forcer une installation ou mise à jour locale ?'');
-                                        } catch (e2) {}
-                                        if (force) {
-                                            installNow(true);
-                                        } else {
-                                            finish(setupResult.message || ''Agent prêt.'');
-                                        }
+                                        page.finishAgentSetupMessage(setupResult, '''');
+                                        finish();
                                     }).catch(function(error) {
                                         try {
                                             page.c8o.log.warn(''[Assistant] Unable to diagnose agent runtime: '' + error);
                                         } catch (e) {}
-                                        finish(''Diagnostic impossible : '' + error);
+                                        page.finishAgentSetupMessage(null, ''Installation impossible : '' + error);
+                                        finish();
                                     });
                             '
               ↓Conversations [ngx.components.UIControlDirective-1781608119101]: 

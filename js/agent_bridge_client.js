@@ -1623,7 +1623,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function callAgentSetup(state, options, installOverride) {
     var provider = normalizeProvider(state.provider);
     var setupSequence = provider === "codex" ? "agent_codex_setup" : "agent_vibe_setup";
-    var setup = bridgeCall(state, setupSequence, agentSetupPayload(state, options, installOverride), 70000);
+    var setup = bridgeCall(state, setupSequence, agentSetupPayload(state, options, installOverride), 900000);
     return {
       provider: provider,
       sequence: setupSequence,
@@ -1653,8 +1653,40 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var t = lang(state);
     var provider = providerLabel(state.provider);
     var lines = [(state.language === "fr" ? "Agent : " : "Agent: ") + provider, t.setupReady];
+    var detail = setup && setup.setup ? setup.setup : {};
+    var installation = setup && setup.installation ? setup.installation : {};
+    if (installation && installation.attempted === true) {
+      if (installation.installed === true) {
+        lines.push(state.language === "fr" ? "Installation locale terminee." : "Local installation completed.");
+      } else if (installation.reused === true) {
+        lines.push(state.language === "fr" ? "Runtime local existant reutilise." : "Existing local runtime reused.");
+      }
+    }
+    if (detail.codex && detail.codex.path) {
+      lines.push("Codex: " + detail.codex.path);
+    }
+    if (detail.vibe && detail.vibe.path) {
+      lines.push("Vibe: " + detail.vibe.path);
+    }
+    if (detail.codexHome) {
+      lines.push("CODEX_HOME: " + detail.codexHome);
+    }
+    if (detail.vibeHome) {
+      lines.push("VIBE_HOME: " + detail.vibeHome);
+    }
+    if (detail.installDir) {
+      lines.push((state.language === "fr" ? "Repertoire agent: " : "Agent directory: ") + detail.installDir);
+    }
     if (setup && setup.skills && setup.skills.message) {
       lines.push(setup.skills.message);
+    }
+    if (setup && setup.messages && setup.messages.length) {
+      for (var i = 0; i < setup.messages.length && i < 4; i++) {
+        var message = String(setup.messages[i] || "");
+        if (message.length && lines.indexOf(message) === -1) {
+          lines.push(message);
+        }
+      }
     }
     return lines.join("\n");
   }
