@@ -1936,7 +1936,7 @@ title: Agent assistant
                                     }
                                     var provider = page.getAgentProvider ? page.getAgentProvider() : ''vibe'';
                                     var providerLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(provider) : provider;
-                                    var payload = {
+                                    var payload: any = {
                                         ''threadid'': page.local.Conversation || '''',
                                         ''targetProject'': project,
                                         ''provider'': provider,
