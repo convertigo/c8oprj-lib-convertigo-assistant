@@ -1778,6 +1778,58 @@ scriptContent:
                "IconSlot": "plain:icon-only"
               }'
             tagName: ion-icon
+        ↓Stop [ngx.components.UIDynamicElement-1781872816757]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonColor": "plain:danger",
+             "IonFill": "plain:clear"
+            }'
+          tagName: ion-button
+          ↓Hidden [ngx.components.UIAttribute-1781872816759]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.IsProcessing !== true
+          ↓Disabled [ngx.components.UIAttribute-1781872816761]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.EnableChat === false
+          ↓Class [ngx.components.UIAttribute-1781872816763]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-attach-btn modern-stop-btn
+          ↓Event [ngx.components.UIControlEvent-1781872816765]: 
+            attrName: click
+            eventName: click
+            ↓EmitStopRequest [ngx.components.UICustomAction-1781872818283]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		try {
+                      			if (event && event.preventDefault) {
+                      				event.preventDefault();
+                      			}
+                      			this.StopRequest.emit({});
+                      		} catch (e) {}
+                      		resolve();
+                      
+          ↓Icon [ngx.components.UIDynamicElement-1781872818285]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IonColor": "plain:danger",
+               "IconName": "plain:stop-circle-outline",
+               "IconSlot": "plain:icon-only"
+              }'
+            tagName: ion-icon
     ↓Event [ngx.components.UIControlEvent-1775200000210]: 
       attrName: (ngSubmit)
       eventName: onSubmit
@@ -2478,3 +2530,5 @@ scriptContent:
                 - ↑value: '{ IonToolbar, IonButton, IonButtons, IonIcon, IonItem, IonTextarea}'
               - java.lang.String: 
                 - ↑value: '@ionic/angular/standalone'
+↓StopRequest [ngx.components.UICompEvent-1781872796496]: 
+  attrName: StopRequest

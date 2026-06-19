@@ -1458,7 +1458,7 @@ title: Agent assistant
                       attrValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:this.getAgentProvider && this.getAgentProvider() === ''vibe'' ? ''agent-choice-button active'' : ''agent-choice-button'''
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider === ''vibe'') ? ''agent-choice-button active'' : ''agent-choice-button'''
                     ↓Event [ngx.components.UIControlEvent-1781700500019]: 
                       ↓SetProvider [ngx.components.UICustomAction-1781700500020]: 
                         actionValue: 
@@ -1487,7 +1487,7 @@ title: Agent assistant
                       attrValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:this.getAgentProvider && this.getAgentProvider() === ''codex'' ? ''agent-choice-button active'' : ''agent-choice-button'''
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider === ''codex'') ? ''agent-choice-button active'' : ''agent-choice-button'''
                     ↓Event [ngx.components.UIControlEvent-1781700500024]: 
                       ↓SetProvider [ngx.components.UICustomAction-1781700500025]: 
                         actionValue: 
@@ -1603,6 +1603,34 @@ title: Agent assistant
                             		if (!page.local) {
                             			page.local = {};
                             		}
+                            		var normalizeProvider = function(value) {
+                            			var provider = ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''').toLowerCase();
+                            			if (provider === ''codex-cli'' || provider === ''openai-codex'') {
+                            				return ''codex'';
+                            			}
+                            			if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') {
+                            				return ''vibe'';
+                            			}
+                            			return provider;
+                            		};
+                            		var provider = normalizeProvider(page.local.AgentProvider);
+                            		try {
+                            			if (!provider.length && page.getConfiguredAgentProvider) {
+                            				provider = normalizeProvider(page.getConfiguredAgentProvider());
+                            			}
+                            		} catch (e0) {}
+                            		if (!provider.length) {
+                            			page.local.ShowConversationPanel = true;
+                            			page.local.AgentProvider = '''';
+                            			page.local.AgentModel = '''';
+                            			page.local.AgentConversationResumed = false;
+                            			page.setConversationProject(project);
+                            			page.setEnableChat();
+                            			page.tick();
+                            			resolve();
+                            			return;
+                            		}
+                            		var model = page.getAgentModel ? page.getAgentModel() : '''';
                             		page.local.Question = '''';
                             		page.local.Messages = [];
                             		page.local.RunID = '''';
@@ -1616,15 +1644,26 @@ title: Agent assistant
                                     }
                                     page.c8o.callJsonObject(''ConvertigoAssistant.AgentCreateConversation'', {
                                         ''targetProject'': project,
-                                        ''provider'': page.getAgentProvider ? page.getAgentProvider() : ''vibe'',
-                                        ''model'': page.getAgentModel ? page.getAgentModel() : '''',
+                                        ''provider'': provider,
+                                        ''model'': model,
                                         ''forceNew'': true,
                                         ''__context'': ''byside''
                                     }).async().then(function(response) {
                                         var result = response && response.result ? response.result : {};
+                                        if (result.requiresAgentSelection === true || !result.id) {
+                                            page.local.ShowConversationPanel = true;
+                                            page.local.AgentProvider = '''';
+                                            page.local.AgentModel = '''';
+                                            page.local.AgentConversationResumed = false;
+                                            page.setConversationProject(project);
+                                            page.setEnableChat();
+                                            page.tick();
+                                            resolve();
+                                            return;
+                                        }
                                         page.local.Conversation = result.id || page.local.Conversation;
-                                        page.local.AgentProvider = result.provider || (result.state && result.state.provider) || page.local.AgentProvider;
-                                        page.local.AgentModel = result.model || (result.state && result.state.model) || page.local.AgentModel || '''';
+                                        page.local.AgentProvider = result.provider || (result.state && result.state.provider) || provider;
+                                        page.local.AgentModel = result.model || (result.state && result.state.model) || model || '''';
                                         if (result.conversations) {
                                             page.local.AgentConversations = result.conversations;
                                         }
@@ -1640,13 +1679,13 @@ title: Agent assistant
                                         var setupPayload: any = {
                                             ''threadid'': page.local.Conversation || '''',
                                             ''targetProject'': project,
-                                            ''provider'': page.getAgentProvider ? page.getAgentProvider() : ''vibe'',
-                                            ''model'': page.getAgentModel ? page.getAgentModel() : '''',
-                                            ''install'': false,
+                                            ''provider'': page.local.AgentProvider || provider,
+                                            ''model'': page.local.AgentModel || model || '''',
+                                            ''install'': true,
                                             ''__context'': ''byside''
                                         };
                                         var setupProviderLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(setupPayload.provider) : setupPayload.provider;
-                                        page.startAgentSetupMessage(setupProviderLabel, false);
+                                        page.startAgentSetupMessage(setupProviderLabel, true);
                                         page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', setupPayload).async().then(function(setupResponse) {
                                             var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
                                             page.local.AgentSetup = setupResult;
@@ -1654,9 +1693,9 @@ title: Agent assistant
                                             finish();
                                         }).catch(function(error) {
                                             try {
-                                                page.c8o.log.warn(''[Assistant] Unable to diagnose agent runtime: '' + error);
+                                                page.c8o.log.warn(''[Assistant] Unable to setup agent runtime: '' + error);
                                             } catch (e) {}
-                                            page.finishAgentSetupMessage(null, ''Diagnostic impossible : '' + error);
+                                            page.finishAgentSetupMessage(null, ''Installation impossible : '' + error);
                                             finish();
                                         });
                             		}).catch(function(error) {
@@ -1717,19 +1756,45 @@ title: Agent assistant
                                     if (!page.local) {
                                         page.local = {};
                                     }
-                                    var provider = page.getAgentProvider ? page.getAgentProvider() : ''vibe'';
+                                    var normalizeProvider = function(value) {
+                                        var provider = ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''').toLowerCase();
+                                        if (provider === ''codex-cli'' || provider === ''openai-codex'') {
+                                            return ''codex'';
+                                        }
+                                        if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') {
+                                            return ''vibe'';
+                                        }
+                                        return provider;
+                                    };
+                                    var provider = normalizeProvider(page.local.AgentProvider);
+                                    try {
+                                        if (!provider.length && page.getConfiguredAgentProvider) {
+                                            provider = normalizeProvider(page.getConfiguredAgentProvider());
+                                        }
+                                    } catch (e0) {}
+                                    if (!provider.length) {
+                                        page.local.ShowConversationPanel = true;
+                                        page.local.AgentProvider = '''';
+                                        page.local.AgentModel = '''';
+                                        page.setConversationProject(project);
+                                        page.setEnableChat();
+                                        page.tick();
+                                        resolve();
+                                        return;
+                                    }
+                                    var model = page.getAgentModel ? page.getAgentModel() : '''';
                                     var providerLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(provider) : provider;
                                     var payload: any = {
                                         ''threadid'': page.local.Conversation || '''',
                                         ''targetProject'': project,
                                         ''provider'': provider,
-                                        ''model'': page.getAgentModel ? page.getAgentModel() : '''',
+                                        ''model'': model,
                                         ''install'': true,
                                         ''__context'': ''byside''
                                     };
                                     if (provider === ''codex'') {
                                         payload.forceCodexInstall = true;
-                                    } else {
+                                    } else if (provider === ''vibe'') {
                                         payload.forceVibeInstall = true;
                                     }
                                     page.startAgentSetupMessage(providerLabel, true);
@@ -1741,6 +1806,8 @@ title: Agent assistant
                                         var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
                                         page.local.AgentSetup = setupResult;
                                         page.local.Conversation = setupResult.id || page.local.Conversation;
+                                        page.local.AgentProvider = setupResult.provider || provider;
+                                        page.local.AgentModel = setupResult.model || model || '''';
                                         if (setupResult.conversations) {
                                             page.local.AgentConversations = setupResult.conversations;
                                         }
@@ -1748,7 +1815,7 @@ title: Agent assistant
                                         finish();
                                     }).catch(function(error) {
                                         try {
-                                            page.c8o.log.warn(''[Assistant] Unable to diagnose agent runtime: '' + error);
+                                            page.c8o.log.warn(''[Assistant] Unable to setup agent runtime: '' + error);
                                         } catch (e) {}
                                         page.finishAgentSetupMessage(null, ''Installation impossible : '' + error);
                                         finish();
@@ -1923,43 +1990,21 @@ title: Agent assistant
                                     '		var data = vars.data || {};
                                     		var state = vars.state || {};
                                     		var history = data.messages || [];
-                                            if (!page.local) {
-                                                page.local = {};
-                                            }
-                                            var trimValue = function(value) {
-                                                return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
-                                            };
-                                            var resumedProvider = trimValue(state.provider || data.provider);
-                                            if (resumedProvider.length) {
-                                                page.local.AgentProvider = resumedProvider.toLowerCase();
-                                            }
-                                            if (state.model != null || data.model != null) {
-                                                page.local.AgentModel = trimValue(state.model != null ? state.model : data.model);
-                                            }
-                                            if (page.local.Buffer && page.local.Buffer.intId) {
-                                                window.clearInterval(page.local.Buffer.intId);
-                                            }
-                                    		page.local.Messages = [];
-                                    		if (history && history.length != null) {
-                                    			for (var i = 0; i < history.length; i++) {
-                                    				var msg = history[i];
-                                    				if (!msg || !msg.msg) {
-                                    					continue;
-                                    				}
-                                    				page.local.Messages.push({
-                                    					type: msg.type || ''assistant'',
-                                    					msg: msg.msg,
-                                    					author: msg.author || (msg.type === ''user'' ? ''You'' : ''Assistant''),
-                                    					time: msg.time || '''',
-                                    					id: msg.id || -1,
-                                    					tag1: msg.tag1 || (msg.type === ''assistant'' ? ''History'' : ''''),
-                                    					tag2: msg.tag2 || (msg.type === ''assistant'' ? ''Vibe'' : ''''),
-                                    					tag3: msg.tag3 || (msg.type === ''assistant'' ? ''Resume'' : ''''),
-                                    					writing: false,
-                                    					status: ''''
-                                    				});
-                                    			}
+                                    		if (!page.local) {
+                                    			page.local = {};
                                     		}
+                                    		var trimValue = function(value) {
+                                    			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                                    		};
+                                    		var clearLegacyPollers = function() {
+                                    			if (page.local.Buffer && page.local.Buffer.intId) {
+                                    				window.clearInterval(page.local.Buffer.intId);
+                                    			}
+                                    			if (page.local.AgentBufferPollId) {
+                                    				window.clearInterval(page.local.AgentBufferPollId);
+                                    			}
+                                    			page.local.AgentBufferPollId = null;
+                                    		};
                                     		var clean = function(value) {
                                     			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
                                     		};
@@ -1972,7 +2017,7 @@ title: Agent assistant
                                     				"i am applying a change in the project.": "J''applique une modification dans le projet.",
                                     				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
                                     				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                                                    "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
+                                    				"i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
                                     				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                                     				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
                                     			};
@@ -1982,152 +2027,88 @@ title: Agent assistant
                                     			var text = clean(value).toLowerCase();
                                     			return !text.length || text === ''writing'' || text === ''agent is working'' || text === ''agent is working...'' || text === ''assistant is writing'' || text === ''assistant is writing...'' || text === ''traitement en cours'' || text === ''traitement en cours...'';
                                     		};
-                                    		var isLowSignal = function(value) {
-                                    			var text = clean(value).toLowerCase();
-                                    			return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
-                                    		};
-                                    		var linesFrom = function(progress, phase) {
+                                    		var progressLines = function(progress, phase) {
                                     			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
                                     			var lines = [];
-                                    			for (var i = 0; i < raw.length; i++) {
-                                    				var line = localize(raw[i]);
-                                    				if (isGeneric(line) || line.indexOf(''Sending data to the AI assistant'') === 0) {
-                                    					continue;
-                                    				}
-                                    				if (lines.length && lines[lines.length - 1] === line) {
-                                    					continue;
-                                    				}
-                                    				if (lines.indexOf(line) === -1) {
+                                    			var add = function(value) {
+                                    				var line = localize(value);
+                                    				if (!isGeneric(line) && line.indexOf(''Sending data to the AI assistant'') !== 0 && lines.indexOf(line) === -1) {
                                     					lines.push(line);
                                     				}
+                                    			};
+                                    			for (var i = 0; i < raw.length; i++) {
+                                    				add(raw[i]);
                                     			}
-                                    			var p = localize(phase);
-                                    			if (!isGeneric(p) && lines.indexOf(p) === -1) {
-                                    				lines.push(p);
-                                    			}
-                                    			if (lines.length > 1) {
-                                    				var filtered = [];
-                                    				for (var j = 0; j < lines.length; j++) {
-                                    					if (!isLowSignal(lines[j])) {
-                                    						filtered.push(lines[j]);
-                                    					}
-                                    				}
-                                    				if (filtered.length) {
-                                    					lines = filtered;
-                                    				}
+                                    			add(phase);
+                                    			while (lines.length > 12) {
+                                    				lines.shift();
                                     			}
                                     			return lines;
                                     		};
-                                    		var snapshotFrom = function(progress, phase) {
-                                    			var lines = linesFrom(progress, phase);
-                                    			if (lines.length > 12) {
-                                    				lines = lines.slice(lines.length - 12);
-                                    			}
-                                    			return { text: lines.join(''\n\n''), status: lines.length ? lines[lines.length - 1] : '''', lines: lines, hasLines: lines.length > 0 };
-                                    		};
-                                    		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
-                                    		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
-                                    		var append = function(snapshot) {
-                                    			var key = runid || page.local.RunID || ''pending'';
-                                    			if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
-                                    				page.local.AgentProgressHistory = [];
-                                    				page.local.AgentProgressHistoryRunId = key;
-                                    			}
-                                    			var history = page.local.AgentProgressHistory;
-                                    			var lines = snapshot && snapshot.lines ? snapshot.lines : [];
-                                    			for (var i = 0; i < lines.length; i++) {
-                                    				var line = localize(lines[i]);
-                                    				if (!isGeneric(line) && history.indexOf(line) === -1) {
-                                    					history.push(line);
+                                    		var resumedProvider = trimValue(state.provider || data.provider);
+                                    		if (resumedProvider.length) {
+                                    			page.local.AgentProvider = resumedProvider.toLowerCase();
+                                    		}
+                                    		if (state.model != null || data.model != null) {
+                                    			page.local.AgentModel = trimValue(state.model != null ? state.model : data.model);
+                                    		}
+                                    		clearLegacyPollers();
+                                    		page.local.Messages = [];
+                                    		if (history && history.length != null) {
+                                    			for (var i = 0; i < history.length; i++) {
+                                    				var msg = history[i];
+                                    				if (!msg || !msg.msg) {
+                                    					continue;
                                     				}
+                                    				var type = msg.type || ''assistant'';
+                                    				page.local.Messages.push({
+                                    					type: type,
+                                    					msg: msg.msg || '''',
+                                    					author: msg.author || (type === ''user'' ? ''You'' : ''Assistant''),
+                                    					time: msg.time || '''',
+                                    					id: msg.id || -1,
+                                    					tag1: msg.tag1 || (type === ''assistant'' ? ''History'' : ''''),
+                                    					tag2: msg.tag2 || (type === ''assistant'' ? ''Agent'' : ''''),
+                                    					tag3: msg.tag3 || (type === ''assistant'' ? ''Resume'' : ''''),
+                                    					writing: false,
+                                    					status: msg.status || '''',
+                                    					progressSummary: msg.progressSummary || '''',
+                                    					progressDetails: msg.progressDetails || ''''
+                                    				});
                                     			}
-                                    			while (history.length > 12) {
-                                    				history.shift();
-                                    			}
-                                    			return { text: history.join(''\n\n''), status: history.length ? history[history.length - 1] : '''', hasLines: history.length > 0 };
-                                    		};
-                                    		var render = function(buffer) {
-                                    			var idx = page.local.StreamingIndex;
-                                    			if (idx == null || !page.local.Messages || !page.local.Messages[idx]) {
-                                    				return;
-                                    			}
-                                    			var current = page.local.Messages[idx];
-                                    			var progress = buffer && buffer.progress != null ? buffer.progress : (buffer && buffer.content != null ? buffer.content : (buffer && buffer.text != null ? buffer.text : ''''));
-                                    			var snap = append(snapshotFrom(progress, buffer ? buffer.phase : ''''));
-                                    			if (!snap.hasLines) {
-                                    				if (clean(current.msg).length || clean(current.status).length) {
-                                    					return;
-                                    				}
-                                    				snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
-                                    			}
-                                    			page.local.Messages[idx].msg = snap.text;
-                                    			page.local.Messages[idx].status = snap.status;
-                                    			page.local.Messages[idx].writing = true;
-                                    		};
+                                    		}
                                     		page.local.StreamingIndex = null;
                                     		page.local.IsProcessing = false;
                                     		page.local.Buffer = {};
+                                    		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
+                                    		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
                                     		var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
                                     		if (active) {
                                     			page.local.RunID = runid;
                                     			page.local.IsProcessing = true;
                                     			var progress = state.progress != null ? state.progress : (data.progress != null ? data.progress : '''');
                                     			var phase = state.phase != null ? state.phase : (data.phase != null ? data.phase : '''');
-                                    			var snap = append(snapshotFrom(progress, phase));
-                                    			if (!snap.hasLines) {
-                                    				snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
+                                    			var lines = progressLines(progress, phase);
+                                    			if (!lines.length) {
+                                    				lines = ["J''analyse la demande."];
                                     			}
                                     			var nowDate = new Date();
                                     			var hh = (''0'' + nowDate.getHours()).slice(-2);
                                     			var mm = (''0'' + nowDate.getMinutes()).slice(-2);
                                     			page.local.Messages.push({
-                                    				msg: snap.text,
+                                    				msg: lines.join(''\n\n''),
                                     				type: ''assistant'',
                                     				author: ''Assistant'',
                                     				time: hh + '':'' + mm,
                                     				id: -1,
-                                    				tag1: ''How-To'',
-                                    				tag2: ''Convertigo'',
-                                    				tag3: ''Guide'',
-                                    				status: snap.status,
+                                    				tag1: ''Etapes'',
+                                    				tag2: page.local.AgentProvider || ''Agent'',
+                                    				tag3: ''Progression'',
+                                    				status: lines[lines.length - 1],
                                     				writing: true
                                     			});
                                     			page.local.StreamingIndex = page.local.Messages.length - 1;
-                                    			page.local.Buffer = { progress: progress, phase: phase || snap.status };
-                                    			render(page.local.Buffer);
-                                    			var intervalId = null;
-                                    			var pull = function() {
-                                    				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', { ''__context'': ''byside'' }).async().then(function(r) {
-                                    					var raw = r ? r.C8OAiAssistantBuffer : null;
-                                    					if (raw == null) {
-                                    						return;
-                                    					}
-                                    					var buffer = null;
-                                    					if (typeof raw === ''string'') {
-                                    						if (!raw.length) {
-                                    							return;
-                                    						}
-                                    						try {
-                                    							buffer = JSON.parse(raw);
-                                    						} catch (e1) {
-                                    							return;
-                                    						}
-                                    					} else if (typeof raw === ''object'') {
-                                    						buffer = raw;
-                                    					}
-                                    					if (!buffer) {
-                                    						return;
-                                    					}
-                                    					page.local.Buffer = buffer;
-                                    					page.local.Buffer.intId = intervalId;
-                                    					render(buffer);
-                                    					page.tick();
-                                    					page.scrollChatBottom(0);
-                                    				}).catch(function() {});
-                                    			};
-                                    			pull();
-                                    			intervalId = window.setInterval(pull, 600);
-                                    			page.local.Buffer.intId = intervalId;
+                                    			page.local.Buffer = { progress: progress, phase: phase || lines[lines.length - 1] };
                                     		}
                                     		page.tick();
                                     		page.scrollChatBottom(0);
@@ -2299,7 +2280,7 @@ title: Agent assistant
                 varValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:item.msg
+                    - MobileSmartSourceType: 'script:(item.progressDetails ? (''<details style=white-space:pre-wrap><summary style=white-space:normal>'' + (('''' + (item.progressSummary || item.msg || ''Étapes du traitement'')).split(''\n'')[0]) + ''</summary>\n\n'' + ('''' + item.progressDetails) + ''\n\n</details>'') : item.msg)'
               ↓file [ngx.components.UIUseVariable-1777601000001]: 
                 varValue: 
                   - xmlizable: 
@@ -2622,44 +2603,36 @@ title: Agent assistant
                     				actionResponse = props.stack[''1744302843894''].out;
                     			}
                     		} catch (e0) {}
-                    		var actionResult = actionResponse && actionResponse.result ? actionResponse.result : {};
-                    		var data = actionResult.AIData || vars.data || {};
-                    		if (data != null) {
-                    			page.c8o.log.debug("AIData:\n" + JSON.stringify(data));
-                    			if (data.messages) {
-                    				data.messages.forEach((msg) => {
-                    					page.c8o.log.debug("Msg:\n" + JSON.stringify(msg));
-                                        page.local.Messages.push(msg);
-                                    });
-                                }
-                            }
-                            var state = actionResult.state || data.state || vars.state || {};
-                            var trimValue = function(value) {
-                                return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
-                            };
-                            var resumedProvider = trimValue(state.provider || actionResult.provider || data.provider);
-                            if (resumedProvider.length) {
-                                page.local.AgentProvider = resumedProvider.toLowerCase();
-                            }
-                            if (state.model != null || actionResult.model != null || data.model != null) {
-                                page.local.AgentModel = trimValue(state.model != null ? state.model : (actionResult.model != null ? actionResult.model : data.model));
-                            }
-                            var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
-                            var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
-                            var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
-                    		if (!active) {
-                    			resolve();
-                    			return;
-                    		}
                     		if (!page.local) {
                     			page.local = {};
                     		}
                     		if (!page.local.Messages) {
                     			page.local.Messages = [];
                     		}
-                    		if (page.local.Buffer && page.local.Buffer.intId) {
-                    			window.clearInterval(page.local.Buffer.intId);
+                    		var actionResult = actionResponse && actionResponse.result ? actionResponse.result : {};
+                    		var data = actionResult.AIData || vars.data || {};
+                    		if (data != null) {
+                    			page.c8o.log.debug("AIData:\n" + JSON.stringify(data));
+                    			if (data.messages) {
+                    				data.messages.forEach(function(msg) {
+                    					page.c8o.log.debug("Msg:\n" + JSON.stringify(msg));
+                    					page.local.Messages.push(msg);
+                    				});
+                    			}
                     		}
+                    		var state = actionResult.state || data.state || vars.state || {};
+                    		var trimValue = function(value) {
+                    			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                    		};
+                    		var clearLegacyPollers = function() {
+                    			if (page.local.Buffer && page.local.Buffer.intId) {
+                    				window.clearInterval(page.local.Buffer.intId);
+                    			}
+                    			if (page.local.AgentBufferPollId) {
+                    				window.clearInterval(page.local.AgentBufferPollId);
+                    			}
+                    			page.local.AgentBufferPollId = null;
+                    		};
                     		var clean = function(value) {
                     			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
                     		};
@@ -2672,7 +2645,7 @@ title: Agent assistant
                     				"i am applying a change in the project.": "J''applique une modification dans le projet.",
                     				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
                     				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                                    "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
+                    				"i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
                     				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                     				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
                     			};
@@ -2682,145 +2655,66 @@ title: Agent assistant
                     			var text = clean(value).toLowerCase();
                     			return !text.length || text === ''writing'' || text === ''agent is working'' || text === ''agent is working...'' || text === ''assistant is writing'' || text === ''assistant is writing...'' || text === ''traitement en cours'' || text === ''traitement en cours...'';
                     		};
-                    		var isLowSignal = function(value) {
-                    			var text = clean(value).toLowerCase();
-                    			return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
-                    		};
-                    		var linesFrom = function(progress, phase) {
+                    		var progressLines = function(progress, phase) {
                     			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
                     			var lines = [];
-                    			for (var i = 0; i < raw.length; i++) {
-                    				var line = localize(raw[i]);
-                    				if (isGeneric(line) || line.indexOf(''Sending data to the AI assistant'') === 0) {
-                    					continue;
-                    				}
-                    				if (lines.length && lines[lines.length - 1] === line) {
-                    					continue;
-                    				}
-                    				if (lines.indexOf(line) === -1) {
+                    			var add = function(value) {
+                    				var line = localize(value);
+                    				if (!isGeneric(line) && line.indexOf(''Sending data to the AI assistant'') !== 0 && lines.indexOf(line) === -1) {
                     					lines.push(line);
                     				}
+                    			};
+                    			for (var i = 0; i < raw.length; i++) {
+                    				add(raw[i]);
                     			}
-                    			var p = localize(phase);
-                    			if (!isGeneric(p) && lines.indexOf(p) === -1) {
-                    				lines.push(p);
-                    			}
-                    			if (lines.length > 1) {
-                    				var filtered = [];
-                    				for (var j = 0; j < lines.length; j++) {
-                    					if (!isLowSignal(lines[j])) {
-                    						filtered.push(lines[j]);
-                    					}
-                    				}
-                    				if (filtered.length) {
-                    					lines = filtered;
-                    				}
+                    			add(phase);
+                    			while (lines.length > 12) {
+                    				lines.shift();
                     			}
                     			return lines;
                     		};
-                    		var snapshotFrom = function(progress, phase) {
-                    			var lines = linesFrom(progress, phase);
-                    			if (lines.length > 12) {
-                    				lines = lines.slice(lines.length - 12);
-                    			}
-                    			return { text: lines.join(''\n\n''), status: lines.length ? lines[lines.length - 1] : '''', lines: lines, hasLines: lines.length > 0 };
-                    		};
-                    		var append = function(snapshot) {
-                    			var key = runid || page.local.RunID || ''pending'';
-                    			if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
-                    				page.local.AgentProgressHistory = [];
-                    				page.local.AgentProgressHistoryRunId = key;
-                    			}
-                    			var history = page.local.AgentProgressHistory;
-                    			var lines = snapshot && snapshot.lines ? snapshot.lines : [];
-                    			for (var i = 0; i < lines.length; i++) {
-                    				var line = localize(lines[i]);
-                    				if (!isGeneric(line) && history.indexOf(line) === -1) {
-                    					history.push(line);
-                    				}
-                    			}
-                    			while (history.length > 12) {
-                    				history.shift();
-                    			}
-                    			return { text: history.join(''\n\n''), status: history.length ? history[history.length - 1] : '''', hasLines: history.length > 0 };
-                    		};
-                    		var render = function(buffer) {
-                    			var idx = page.local.StreamingIndex;
-                    			if (idx == null || !page.local.Messages || !page.local.Messages[idx]) {
-                    				return;
-                    			}
-                    			var current = page.local.Messages[idx];
-                    			var progress = buffer && buffer.progress != null ? buffer.progress : (buffer && buffer.content != null ? buffer.content : (buffer && buffer.text != null ? buffer.text : ''''));
-                    			var snap = append(snapshotFrom(progress, buffer ? buffer.phase : ''''));
-                    			if (!snap.hasLines) {
-                    				if (clean(current.msg).length || clean(current.status).length) {
-                    					return;
-                    				}
-                    				snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
-                    			}
-                    			page.local.Messages[idx].msg = snap.text;
-                    			page.local.Messages[idx].status = snap.status;
-                    			page.local.Messages[idx].writing = true;
-                    		};
+                    		var resumedProvider = trimValue(state.provider || actionResult.provider || data.provider);
+                    		if (resumedProvider.length) {
+                    			page.local.AgentProvider = resumedProvider.toLowerCase();
+                    		}
+                    		if (state.model != null || actionResult.model != null || data.model != null) {
+                    			page.local.AgentModel = trimValue(state.model != null ? state.model : (actionResult.model != null ? actionResult.model : data.model));
+                    		}
+                    		clearLegacyPollers();
+                    		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
+                    		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
+                    		var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
+                    		if (!active) {
+                    			page.local.IsProcessing = false;
+                    			page.tick();
+                    			resolve();
+                    			return;
+                    		}
                     		page.local.RunID = runid;
                     		page.local.IsProcessing = true;
                     		var progress = state.progress != null ? state.progress : (data.progress != null ? data.progress : '''');
                     		var phase = state.phase != null ? state.phase : (data.phase != null ? data.phase : '''');
-                    		var snap = append(snapshotFrom(progress, phase));
-                    		if (!snap.hasLines) {
-                    			snap = { text: ''Traitement en cours.'', status: ''Traitement en cours.'', hasLines: true };
+                    		var lines = progressLines(progress, phase);
+                    		if (!lines.length) {
+                    			lines = ["J''analyse la demande."];
                     		}
                     		var nowDate = new Date();
                     		var hh = (''0'' + nowDate.getHours()).slice(-2);
                     		var mm = (''0'' + nowDate.getMinutes()).slice(-2);
                     		page.local.Messages.push({
-                    			msg: snap.text,
+                    			msg: lines.join(''\n\n''),
                     			type: ''assistant'',
                     			author: ''Assistant'',
                     			time: hh + '':'' + mm,
                     			id: -1,
-                    			tag1: ''How-To'',
-                    			tag2: ''Convertigo'',
-                    			tag3: ''Guide'',
-                    			status: snap.status,
+                    			tag1: ''Etapes'',
+                    			tag2: page.local.AgentProvider || ''Agent'',
+                    			tag3: ''Progression'',
+                    			status: lines[lines.length - 1],
                     			writing: true
                     		});
                     		page.local.StreamingIndex = page.local.Messages.length - 1;
-                    		page.local.Buffer = { progress: progress, phase: phase || snap.status };
-                    		render(page.local.Buffer);
-                    		var intervalId = null;
-                    		var pull = function() {
-                    			page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', { ''__context'': ''byside'' }).async().then(function(r) {
-                    				var raw = r ? r.C8OAiAssistantBuffer : null;
-                    				if (raw == null) {
-                    					return;
-                    				}
-                    				var buffer = null;
-                    				if (typeof raw === ''string'') {
-                    					if (!raw.length) {
-                    						return;
-                    					}
-                    					try {
-                    						buffer = JSON.parse(raw);
-                    					} catch (e1) {
-                    						return;
-                    					}
-                    				} else if (typeof raw === ''object'') {
-                    					buffer = raw;
-                    				}
-                    				if (!buffer) {
-                    					return;
-                    				}
-                    				page.local.Buffer = buffer;
-                    				page.local.Buffer.intId = intervalId;
-                    				render(buffer);
-                    				page.tick();
-                    				page.scrollChatBottom(0);
-                    			}).catch(function() {});
-                    		};
-                    		pull();
-                    		intervalId = window.setInterval(pull, 600);
-                    		page.local.Buffer.intId = intervalId;
+                    		page.local.Buffer = { progress: progress, phase: phase || lines[lines.length - 1] };
                     		page.tick();
                     		page.scrollChatBottom(0);
                     		resolve();
@@ -3365,13 +3259,20 @@ title: Agent assistant
               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                 →: |
                   '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+                  		if (!page.local) {
+                  			page.local = {};
+                  		}
                   		if (page.local.Buffer && page.local.Buffer.intId) {
                   			window.clearInterval(page.local.Buffer.intId);
+                  		}
+                  		if (page.local.AgentBufferPollId) {
+                  			window.clearInterval(page.local.AgentBufferPollId);
                   		}
                   		if (!page.local.Buffer) {
                   			page.local.Buffer = {};
                   		}
                   		page.local.Buffer.intId = null;
+                  		page.local.AgentBufferPollId = null;
                   		page.local.IsProcessing = false;
                   		page.tick();
                   		resolve();
@@ -3617,176 +3518,19 @@ title: Agent assistant
                         			if (!page.local) {
                         				page.local = {};
                         			}
+                        			if (page.local.Buffer && page.local.Buffer.intId) {
+                        				window.clearInterval(page.local.Buffer.intId);
+                        			}
+                        			if (page.local.AgentBufferPollId) {
+                        				window.clearInterval(page.local.AgentBufferPollId);
+                        			}
                         			if (!page.local.Buffer) {
                         				page.local.Buffer = {};
                         			}
-                        			if (page.local.Buffer.intId) {
-                        				window.clearInterval(page.local.Buffer.intId);
-                        			}
-                        			var trimText = function(value) {
-                        				return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
-                        			};
-                        			var localizeProgress = function(value) {
-                        				var line = trimText(value);
-                        				var key = line.toLowerCase();
-                        				var map = {
-                        					"i am preparing the local agent.": "Je prépare l''agent local.",
-                        					"i am analyzing the request.": "J''analyse la demande.",
-                        					"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
-                        					"i am applying a change in the project.": "J''applique une modification dans le projet.",
-                        					"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
-                        					"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                                            "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
-                        					"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
-                        					"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction.",
-                        					"i am reading files.": "Je lis les fichiers du projet.",
-                        					"i am searching code.": "Je recherche dans le code.",
-                        					"i am writing.": "J''écris la réponse."
-                        				};
-                        				return map[key] || line;
-                        			};
-                        			var isGenericProgress = function(value) {
-                        				var text = trimText(value).toLowerCase();
-                        				return !text.length || text === "writing" || text === "agent is working" || text === "agent is working..." || text === "assistant is writing" || text === "assistant is writing..." || text === "traitement en cours" || text === "traitement en cours...";
-                        			};
-                        			var isLowSignalProgress = function(value) {
-                        				var text = trimText(value).toLowerCase();
-                        				return text === "je prepare l''agent local." || text === "je prépare l''agent local." || text === "i am preparing the local agent.";
-                        			};
-                        			var normalizeProgressLines = function(progress, phase) {
-                        				var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-                        				var lines = [];
-                        				for (var i = 0; i < raw.length; i++) {
-                        					var line = localizeProgress(raw[i]);
-                        					if (isGenericProgress(line) || line.indexOf("Sending data to the AI assistant") === 0) {
-                        						continue;
-                        					}
-                        					if (lines.length && lines[lines.length - 1] === line) {
-                        						continue;
-                        					}
-                        					if (lines.indexOf(line) === -1) {
-                        						lines.push(line);
-                        					}
-                        				}
-                        				var p = localizeProgress(phase);
-                        				if (!isGenericProgress(p) && lines.indexOf(p) === -1) {
-                        					lines.push(p);
-                        				}
-                        				if (lines.length > 1) {
-                        					var filtered = [];
-                        					for (var j = 0; j < lines.length; j++) {
-                        						if (!isLowSignalProgress(lines[j])) {
-                        							filtered.push(lines[j]);
-                        						}
-                        					}
-                        					if (filtered.length) {
-                        						lines = filtered;
-                        					}
-                        				}
-                        				return lines;
-                        			};
-                        			var progressSnapshot = function(progress, phase) {
-                        				var lines = normalizeProgressLines(progress, phase);
-                        				if (lines.length > 12) {
-                        					lines = lines.slice(lines.length - 12);
-                        				}
-                        				return {
-                        					text: lines.join("\n\n"),
-                        					status: lines.length ? lines[lines.length - 1] : "",
-                        					lines: lines,
-                        					hasLines: lines.length > 0
-                        				};
-                        			};
-                        			var appendProgressSnapshot = function(snapshot, runKey) {
-                        				var key = "" + (runKey || page.local.RunID || "pending");
-                        				if (!page.local.AgentProgressHistory || page.local.AgentProgressHistoryRunId !== key) {
-                        					page.local.AgentProgressHistory = [];
-                        					page.local.AgentProgressHistoryRunId = key;
-                        				}
-                        				var history = page.local.AgentProgressHistory;
-                        				var lines = snapshot && snapshot.lines ? snapshot.lines : [];
-                        				for (var i = 0; i < lines.length; i++) {
-                        					var line = localizeProgress(lines[i]);
-                        					if (!isGenericProgress(line) && history.indexOf(line) === -1) {
-                        						history.push(line);
-                        					}
-                        				}
-                        				while (history.length > 12) {
-                        					history.shift();
-                        				}
-                        				return {
-                        					text: history.join("\n\n"),
-                        					status: history.length ? history[history.length - 1] : "",
-                        					hasLines: history.length > 0
-                        				};
-                        			};
-                        			var renderProgress = function(buffer) {
-                        				var idx = page.local.StreamingIndex;
-                        				if (idx == null || !page.local.Messages || !page.local.Messages[idx]) {
-                        					return;
-                        				}
-                        				var current = page.local.Messages[idx];
-                        				var phase = buffer && buffer.phase != null ? trimText(buffer.phase) : "";
-                        				var progress = "";
-                        				if (buffer && buffer.progress != null) {
-                        					progress = "" + buffer.progress;
-                        				} else if (buffer && buffer.content != null) {
-                        					progress = "" + buffer.content;
-                        				} else if (buffer && buffer.text != null) {
-                        					progress = "" + buffer.text;
-                        				}
-                        				var snapshot = appendProgressSnapshot(progressSnapshot(progress, phase), buffer && buffer.runid);
-                        				if (!snapshot.hasLines) {
-                        					if (trimText(current.msg).length || trimText(current.status).length) {
-                        						return;
-                        					}
-                        					snapshot = { text: "Traitement en cours.", status: "Traitement en cours.", hasLines: true };
-                        				}
-                        				current.msg = snapshot.text;
-                        				current.status = snapshot.status;
-                        				current.writing = true;
-                        			};
-                        			var intervalId = null;
-                        			var pullBuffer = function() {
-                        				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
-                        					"__context": "byside"
-                        				}).async().then(function(r) {
-                        					var rawBuffer = r ? r.C8OAiAssistantBuffer : null;
-                        					if (rawBuffer == null) {
-                        						return;
-                        					}
-                        					var buffer = null;
-                        					if (typeof rawBuffer === "string") {
-                        						if (!rawBuffer.length) {
-                        							return;
-                        						}
-                        						try {
-                        							buffer = JSON.parse(rawBuffer);
-                        						} catch (e1) {
-                        							return;
-                        						}
-                        					} else if (typeof rawBuffer === "object") {
-                        						buffer = rawBuffer;
-                        					}
-                        					try {
-                        						if (!buffer) {
-                        							return;
-                        						}
-                        						page.local.Buffer = buffer;
-                        						page.local.Buffer.intId = intervalId;
-                        						renderProgress(buffer);
-                        						page.tick();
-                        						page.scrollChatBottom(0);
-                        					} catch (e) {}
-                        				}).catch(function() {});
-                        			};
-                        			pullBuffer();
-                        			intervalId = window.setInterval(pullBuffer, 600);
-                        			page.local.Buffer.intId = intervalId;
+                        			page.local.Buffer.intId = null;
+                        			page.local.AgentBufferPollId = null;
                         		} catch (e) {
-                        			page.c8o.log.warn("[MB] ERROR : " + e.message);
-                        		} finally {
-                        			return;
+                        			page.c8o.log.warn(''[MB] ERROR : '' + e.message);
                         		}
                         '
               ↓AddUserMessage [ngx.components.UICustomAction-1751354620890]: 
@@ -3900,7 +3644,7 @@ title: Agent assistant
                     varValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
+                        - MobileSmartSourceType: script:(function(page) { var provider = ''; try { provider = '' + ((page.local && page.local.AgentProvider) || ''); } catch (e) {} provider = provider.replace(/^\s+|\s+$/g, '').toLowerCase(); if (provider === 'codex-cli' || provider === 'openai-codex') { return 'codex'; } if (provider === 'mistral-vibe' || provider === 'vibe-acp') { return 'vibe'; } if (!provider.length && page.getConfiguredAgentProvider) { try { provider = '' + page.getConfiguredAgentProvider(); } catch (e2) {} } return provider.replace(/^\s+|\s+$/g, '').toLowerCase(); })(this)
                   ↓ChatReset [ngx.components.UICustomAction-1751354620908]: 
                     actionValue: 
                       - xmlizable: 
@@ -4042,6 +3786,45 @@ title: Agent assistant
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:true
+    ↓StopRequest [ngx.components.UIControlEvent-1781872836648]: 
+      attrName: (StopRequest)
+      eventName: StopRequest
+      ↓CloseConversation [ngx.components.UIDynamicAction-1781872838134]: 
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:ConvertigoAssistant.AgentCloseConversation",
+           "noLoading": "plain:true"
+          }'
+        ↓threadid [ngx.components.UIControlVariable-1781872839640]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}
+      ↓StopUiState [ngx.components.UICustomAction-1781872839642]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		try {
+                			if (page.local && page.local.Buffer && page.local.Buffer.intId) {
+                				window.clearInterval(page.local.Buffer.intId);
+                			}
+                			if (!page.local) {
+                				page.local = {};
+                			}
+                			page.local.IsProcessing = false;
+                			page.local.spinner = false;
+                			page.local.StreamingIndex = null;
+                			page.local.Buffer = {};
+                			if (page.chatfooter && page.chatfooter.setEnable) {
+                				page.chatfooter.setEnable(true);
+                			}
+                			page.tick();
+                		} catch (e) {}
+                		resolve();
+                
 ↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1750758766481]: 
   topic: JavaMessage
   ↓enableChat [ngx.components.UICustomAction-1750759185953]: 

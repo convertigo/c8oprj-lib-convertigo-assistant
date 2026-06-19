@@ -882,9 +882,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       raw = context.httpSession.getAttribute(stateKey(threadid));
       if (raw !== null && typeof raw !== "undefined") {
         if (typeof raw === "string") {
-          return JSON.parse(String(raw));
+          return sanitizeProgressLog(JSON.parse(String(raw)));
         }
-        return JSON.parse(String(raw));
+        return sanitizeProgressLog(JSON.parse(String(raw)));
       }
     } catch (_ignoreReadState) {}
     try {
@@ -892,7 +892,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (storage !== null && storage.get) {
         raw = storage.get(stateKey(threadid));
         if (raw !== null && typeof raw !== "undefined" && trim(raw).length) {
-          return JSON.parse(String(raw));
+          return sanitizeProgressLog(JSON.parse(String(raw)));
         }
       }
     } catch (_ignoreReadServerState) {}
@@ -972,7 +972,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     sample = sample.replace(/[’']/g, " ");
     var frenchHits = 0;
-    var words = [" je ", " tu ", " il ", " elle ", " nous ", " vous ", " les ", " des ", " une ", " pour ", " avec ", " dans ", " sur ", " le ", " la ", " de ", " du ", " au ", " aux ", " mes ", " ton ", " ta ", " tes ", " peux ", " peut ", " faut ", " projet ", " application ", " corrige ", " corriger ", " fonctionne ", " ajoute ", " ajouter ", " rajoute ", " rajouter ", " permet ", " ville ", " villes ", " colonne ", " colonnes ", " tri ", " fuseau "];
+    var words = [" je ", " tu ", " il ", " elle ", " nous ", " vous ", " les ", " des ", " une ", " pour ", " avec ", " dans ", " sur ", " le ", " la ", " de ", " du ", " au ", " aux ", " mes ", " ton ", " ta ", " tes ", " peux ", " peut ", " faut ", " projet ", " projets ", " liste ", " lister ", " affiche ", " afficher ", " montre ", " montrer ", " application ", " corrige ", " corriger ", " fonctionne ", " ajoute ", " ajouter ", " rajoute ", " rajouter ", " permet ", " ville ", " villes ", " colonne ", " colonnes ", " tri ", " fuseau "];
     for (var i = 0; i < words.length; i++) {
       if (sample.indexOf(words[i]) !== -1) {
         frenchHits++;
@@ -1090,7 +1090,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function appendProgress(state, text) {
-    text = compactLine(text);
+    var rawText = String(text || "");
+    if (progressLineLooksLikeFinalAnswer(rawText)) {
+      appendAnswerChunk(state, trim(rawText));
+      state.answerIsFinal = true;
+      return;
+    }
+    text = compactLine(rawText);
     if (!text.length) {
       return;
     }
@@ -1107,6 +1113,41 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.progressLog += (state.progressLog.length ? "\n" : "") + text;
     state.lastProgressLine = text;
     state.lastStatusText = text;
+  }
+
+  function comparableAnswerText(value) {
+    return trim(String(value || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\s+/g, " ")
+      .replace(/\s*-\s*/g, " - "));
+  }
+
+  function appendAnswerChunk(state, text) {
+    text = String(text || "");
+    if (!trim(text).length) {
+      return;
+    }
+    var current = String(state.answer || "");
+    if (!trim(current).length) {
+      state.answer = text;
+      return;
+    }
+    var currentComparable = comparableAnswerText(current);
+    var nextComparable = comparableAnswerText(text);
+    if (nextComparable === currentComparable) {
+      if (text.length > current.length) {
+        state.answer = text;
+      }
+      return;
+    }
+    if (nextComparable.indexOf(currentComparable) !== -1) {
+      state.answer = text;
+      return;
+    }
+    if (currentComparable.indexOf(nextComparable) !== -1) {
+      return;
+    }
+    state.answer += text;
   }
 
   function displayContent(state) {
@@ -1189,7 +1230,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (lower.indexOf("j'ai ajout") === 0 || lower.indexOf("j\u2019ai ajout") === 0 || lower.indexOf("j'ai corrig") === 0 || lower.indexOf("j\u2019ai corrig") === 0 || lower.indexOf("i added ") === 0 || lower.indexOf("i fixed ") === 0 || lower.indexOf("i updated ") === 0) {
       return true;
     }
-    return text.length >= 140 && (text.indexOf("- ") !== -1 || text.indexOf(";") !== -1 || text.indexOf(". ") !== -1);
+    if (lower.indexOf("projets ouverts") === 0 || lower.indexOf("open projects") === 0 || lower.indexOf("aucune modification effectu") !== -1 || lower.indexOf("no change") !== -1) {
+      return true;
+    }
+    var bulletCount = (String(value || "").match(/\n\s*[-*]\s+/g) || []).length;
+    if (bulletCount >= 2 && text.length >= 80) {
+      return true;
+    }
+    return text.length >= 180 && (text.indexOf("- ") !== -1 || text.indexOf(";") !== -1);
   }
 
   function finalAnswerFromProgress(state) {
@@ -1200,6 +1248,40 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     return "";
+  }
+
+  function sanitizeProgressLog(state) {
+    if (!state) {
+      return state;
+    }
+    var rawLines = String(state.progressLog || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    var lines = [];
+    var finalCandidate = "";
+    for (var i = 0; i < rawLines.length; i++) {
+      var line = compactLine(rawLines[i]);
+      if (!line.length) {
+        continue;
+      }
+      if (progressLineLooksLikeFinalAnswer(line)) {
+        if (!finalCandidate.length) {
+          finalCandidate = trim(rawLines[i]) || line;
+        }
+        continue;
+      }
+      if (lines.indexOf(line) === -1) {
+        lines.push(line);
+      }
+    }
+    if (finalCandidate.length && !trim(state.answer).length) {
+      state.answer = finalCandidate;
+      state.answerIsFinal = true;
+    }
+    state.progressLog = lines.join("\n");
+    if (state.lastStatusText && progressLineLooksLikeFinalAnswer(state.lastStatusText)) {
+      state.lastStatusText = lines.length ? lines[lines.length - 1] : "";
+    }
+    state.lastProgressLine = lines.length ? lines[lines.length - 1] : "";
+    return state;
   }
 
   function appendObservedSteps(state, text) {
@@ -1231,6 +1313,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function setStateBuffer(state) {
     setBuffer(displayContent(state), state.status, {
+      runid: state.runid || "",
+      threadid: state.threadid || "",
       phase: state.lastStatusText || "",
       progress: state.progressLog || "",
       warnings: state.warnings || []
@@ -1286,11 +1370,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (normalizeProvider(state && state.provider) !== "codex" || !data) {
       return false;
     }
-    if (String(data.phase || "") === "commentary") {
+    var text = eventText(data);
+    var phase = String(data.phase || "").toLowerCase();
+    if (phase === "final_answer") {
+      return false;
+    }
+    if (progressLineLooksLikeFinalAnswer(text)) {
+      return false;
+    }
+    if (phase === "commentary") {
       return true;
     }
     if (data.item && String(data.item.type || "").toLowerCase() === "agent_message") {
-      return true;
+      var itemPhase = String(data.item.phase || (data.item.metadata && data.item.metadata.phase) || "").toLowerCase();
+      return itemPhase !== "final_answer";
     }
     return false;
   }
@@ -1405,7 +1498,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.model === "undefined" || state.model === null) {
       state.model = normalizeModel(state.provider, "");
     }
-    return refreshTerminalStateFromRecord(state);
+    return sanitizeProgressLog(refreshTerminalStateFromRecord(state));
   }
 
   function recoverState(options, threadid) {
@@ -1418,7 +1511,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state.updatedAt = now();
     saveState(state);
-    return state;
+    return sanitizeProgressLog(state);
   }
 
   function createState(options) {
@@ -1563,6 +1656,28 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
+  function bridgeProcessLostMessage(state, bridgeState) {
+    var message = lang(state).bridgeProcessLost;
+    var detail = trim(bridgeState && bridgeState.lastError);
+    if (detail.length) {
+      message += "\n\nDiagnostic: " + detail;
+    }
+    return message;
+  }
+
+  function shouldInstallForRun(options, provider) {
+    if (typeof options.install !== "undefined") {
+      return boolValue(options.install, true);
+    }
+    if (normalizeProvider(provider) === "codex" && typeof options.installCodex !== "undefined") {
+      return boolValue(options.installCodex, true);
+    }
+    if (normalizeProvider(provider) === "vibe" && typeof options.installVibe !== "undefined") {
+      return boolValue(options.installVibe, true);
+    }
+    return true;
+  }
+
   function credentialsEnv() {
     var env = readEnvFile(new File(new File(String(System.getProperty("user.home")), ".vibe"), ".env"));
     var selected = {};
@@ -1579,7 +1694,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (provider === "codex") {
       var codexScope = trim(options.codexHomeScope || options.homeScope);
       if (!codexScope.length) {
-        codexScope = "shared";
+        codexScope = "default";
       }
       return {
         codexHome: trim(options.codexHome),
@@ -1677,6 +1792,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (detail.codexHome) {
       lines.push("CODEX_HOME: " + detail.codexHome);
+    } else if (setup && setup.skills && setup.skills.resolvedCodexHome) {
+      lines.push("CODEX_HOME: " + setup.skills.resolvedCodexHome);
     }
     if (detail.vibeHome) {
       lines.push("VIBE_HOME: " + detail.vibeHome);
@@ -1778,15 +1895,43 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
+    var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var requestedThreadId = normalizeThreadId(options.threadid);
     var resumedLatest = false;
     if (!requestedThreadId.length && !boolValue(options.forceNew, false)) {
-      var latest = latestConversationRecord(workspaceRoot, userKey, trim(options.targetProject || options.projectName || options.projectId), provider);
+      var latest = latestConversationRecord(workspaceRoot, userKey, projectFilter, provider);
       if (latest !== null) {
         requestedThreadId = normalizeConversationId(latest.conversationId || latest.threadid);
         options.threadid = requestedThreadId;
         resumedLatest = requestedThreadId.length > 0;
       }
+    }
+    if (!requestedThreadId.length && provider === "all") {
+      setBuffer("", "");
+      return {
+        ok: true,
+        id: "",
+        object: "agent.conversation",
+        provider: "",
+        model: "",
+        status: "agent_selection_required",
+        setupRequired: false,
+        requiresAgentSelection: true,
+        resumed: false,
+        state: null,
+        conversation: null,
+        conversations: publicConversations(workspaceRoot, userKey, projectFilter, false, "all"),
+        AIData: {
+          type: "agent",
+          threadid: "",
+          explanation: "",
+          progress: "",
+          setupRequired: false,
+          setup: null,
+          warnings: [],
+          messages: []
+        }
+      };
     }
     var state = readState(requestedThreadId);
     if (state === null) {
@@ -1828,6 +1973,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options = options || {};
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
+    if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
+      return {
+        ok: true,
+        id: "",
+        object: "agent.setup",
+        status: "agent_selection_required",
+        provider: "",
+        model: "",
+        installRequested: false,
+        setupRequired: false,
+        requiresAgentSelection: true,
+        canInstall: false,
+        setup: null,
+        state: null,
+        message: ""
+      };
+    }
     if (state === null) {
       state = createState(options);
     }
@@ -1838,7 +2000,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.model = normalizeModel(state.provider, "");
     }
     state.language = detectLanguage(options.userQuestion || options.Question || "");
-    var install = boolValue(options.install || options.installCodex || options.installVibe, false);
+    var install = boolValue(options.diagnosticOnly, false) ? false : true;
     var setupInfo = callAgentSetup(state, options, install);
     var setup = setupInfo.result || {};
     var publicSetup = publicSetupReport(setup);
@@ -1879,6 +2041,29 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
+    if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
+      return {
+        ok: true,
+        id: "",
+        object: "agent.run",
+        status: "agent_selection_required",
+        threadid: "",
+        setupRequired: false,
+        requiresAgentSelection: true,
+        canInstall: false,
+        AIData: {
+          type: "agent",
+          threadid: "",
+          explanation: "",
+          progress: "",
+          setupRequired: false,
+          setup: null,
+          warnings: [],
+          messages: []
+        },
+        state: null
+      };
+    }
     if (state === null) {
       state = createState(options);
     }
@@ -1915,7 +2100,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var provider = normalizeProvider(state.provider);
       var startSequence = provider === "codex" ? "agent_codex_start" : "agent_vibe_start";
       var promptSequence = provider === "codex" ? "agent_codex_prompt" : "agent_vibe_prompt";
-      var installRequested = boolValue(options.install || options.installCodex || options.installVibe, false);
+      var installRequested = shouldInstallForRun(options, provider);
       var setupInfo = callAgentSetup(state, options, installRequested);
       var setup = setupInfo.result || {};
       if (setup.ok === false) {
@@ -1950,10 +2135,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.setupRequired = false;
       state.setupReport = publicSetupReport(setup);
 
-      var env = credentialsEnv();
+      var env = provider === "vibe" ? credentialsEnv() : {};
       var codexScope = trim(options.codexHomeScope || options.homeScope);
       if (!codexScope.length) {
-        codexScope = "shared";
+        codexScope = "default";
       }
       var startPayload = provider === "codex" ? {
         handle: state.handle,
@@ -1964,7 +2149,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         projectId: state.primaryProject || state.projectId || "",
         userId: state.userId || state.userKey || "",
         codexPath: trim(options.codexPath || options.commandPath),
-        install: boolValue(options.install || options.installCodex, false) ? "true" : "false",
+        install: installRequested ? "true" : "false",
         nodeVersion: trim(options.nodeVersion),
         nodeDir: trim(options.nodeDir || options.nodeInstallDir),
         npmPath: trim(options.npmPath),
@@ -1984,6 +2169,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         handle: state.handle,
         cwd: state.cwd,
         vibeHome: state.vibeHome,
+        install: installRequested ? "true" : "false",
         mcpEndpoint: state.mcpEndpoint,
         model: state.model || "",
         env: JSON.stringify(env),
@@ -2104,7 +2290,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         handle: state.handle,
         cursor: String(state.cursor || 0),
         limit: String(intValue(options.limit, 100, 1, 500)),
-        waitMs: String(intValue(options.waitMs, 1000, 0, 30000))
+        waitMs: String(intValue(options.waitMs, 250, 0, 30000))
       }, 45000);
       if (events && events.ok === false) {
         var bridgeStatus = trim(events.status).toLowerCase();
@@ -2114,7 +2300,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             state.answerIsFinal = true;
           } else {
             state.status = "failed";
-            state.error = lang(state).bridgeProcessLost;
+            state.error = bridgeProcessLostMessage(state, events && events.state);
             state.answer = state.error;
             state.answerIsFinal = true;
             appendProgress(state, state.error);
@@ -2142,7 +2328,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (codexAnswerChunkIsProgress(state, data)) {
             appendProgress(state, eventText(data));
           } else {
-            state.answer += eventText(data);
+            appendAnswerChunk(state, eventText(data));
             state.answerIsFinal = true;
           }
         } else if (type === "reasoning/chunk") {
@@ -2192,6 +2378,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Number(events.nextCursor) : state.cursor;
+      var bridgeState = events.state || {};
+      var bridgeStatus = trim(bridgeState.status).toLowerCase();
+      if (state.status !== "completed" && state.status !== "failed" && !list.length && bridgeState.alive !== true && (bridgeStatus === "exited" || bridgeStatus === "closed" || bridgeStatus === "error")) {
+        if (trim(state.answer).length) {
+          state.status = "completed";
+          state.answerIsFinal = true;
+        } else {
+          state.status = "failed";
+          state.error = bridgeProcessLostMessage(state, bridgeState);
+          state.answer = state.error;
+          state.answerIsFinal = true;
+          appendProgress(state, state.error);
+          appendTranscript(state, "assistant", state.answer);
+          state.answerTranscriptRunid = state.runid;
+        }
+      }
       if (state.status !== "completed" && state.status !== "failed") {
         state.status = "in_progress";
       }

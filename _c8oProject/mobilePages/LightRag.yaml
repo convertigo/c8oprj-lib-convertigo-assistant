@@ -1571,84 +1571,23 @@ title: Title for LightRag
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
                     '		try {
-                    			page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                    			
+                    			page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+                    			if (!page.local) {
+                    				page.local = {};
+                    			}
+                    			if (page.local.Buffer && page.local.Buffer.intId) {
+                    				window.clearInterval(page.local.Buffer.intId);
+                    			}
+                    			if (page.local.AgentBufferPollId) {
+                    				window.clearInterval(page.local.AgentBufferPollId);
+                    			}
                     			if (!page.local.Buffer) {
                     				page.local.Buffer = {};
                     			}
-                    			
-                    			if (page.local.Buffer.intId) {
-                    				window.clearInterval(page.local.Buffer.intId);
-                    			}
-                    			
-                    			var intervalId = null;
-                    			
-                    			var pullBuffer = function() {
-                    				page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {
-                    					"__context": "byside"
-                    				}).async().then(function(r) {
-                    					var text = '''' + (r && r.C8OAiAssistantBuffer ? r.C8OAiAssistantBuffer : '''');
-                    					if (!text.length) {
-                    						return;
-                    					}
-                    					try {
-                    						var buffer = JSON.parse(text);
-                    						if (!buffer) {
-                    							return;
-                    						}
-                    						page.local.Buffer = buffer;
-                    						page.local.Buffer.intId = intervalId;
-                    						
-                    						var idx = page.local.StreamingIndex;
-                    						if (idx != null && page.local.Messages && page.local.Messages[idx]) {
-                    							var current = page.local.Messages[idx];
-                    							var content = '''';
-                    							if (buffer.content != null) {
-                    								content = '''' + buffer.content;
-                    							} else if (buffer.text != null) {
-                    								content = '''' + buffer.text;
-                    							}
-                    							var currentText = '''' + (current.msg || '''');
-                    							if (!page.local.Buffer) {
-                    								page.local.Buffer = {};
-                    							}
-                    							var previousRaw = '''' + (page.local.Buffer.lastRaw || '''');
-                    							var part = content;
-                    							if (previousRaw.length && content.indexOf(previousRaw) === 0) {
-                    								part = content.substring(previousRaw.length);
-                    							} else if (content === previousRaw) {
-                    								part = '''';
-                    							}
-                    							if (part.length) {
-                    								var partText = '''' + part;
-                    								if (/\.\.\.\s*$/.test(partText)) {
-                    									current.status = partText.trim();
-                    								} else {
-                    									current.msg = currentText + partText;
-                    									current.status = ''writing'';
-                    								}
-                    							} else if (/\.\.\.\s*$/.test(content)) {
-                    								current.status = ('''' + content).trim();
-                    							}
-                    							page.local.Buffer.lastRaw = content;
-                    							if (!current.status || !current.status.length) {
-                    								current.status = ''writing'';
-                    							}
-                    							current.writing = true;
-                    							page.tick();
-                    							page.scrollChatBottom(0);
-                    						}
-                    					} catch (e) {}
-                    				}).catch(function() {});
-                    			};
-                    			
-                    			pullBuffer();
-                    			intervalId = window.setInterval(pullBuffer, 600);
-                    			page.local.Buffer.intId = intervalId;
+                    			page.local.Buffer.intId = null;
+                    			page.local.AgentBufferPollId = null;
                     		} catch (e) {
-                    			page.c8o.log.warn(''[MB] ERROR : ''+ e.message);
-                    		} finally {
-                    			return;
+                    			page.c8o.log.warn(''[MB] ERROR : '' + e.message);
                     		}
                     '
           ↓CallSequence [ngx.components.UIDynamicAction-1773100000105]: 
