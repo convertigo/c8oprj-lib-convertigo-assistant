@@ -1695,7 +1695,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (provider === "codex") {
       var codexScope = trim(options.codexHomeScope || options.homeScope);
       if (!codexScope.length) {
-        codexScope = "default";
+        codexScope = "user";
       }
       return {
         codexHome: trim(options.codexHome),
@@ -2139,7 +2139,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var env = provider === "vibe" ? credentialsEnv() : {};
       var codexScope = trim(options.codexHomeScope || options.homeScope);
       if (!codexScope.length) {
-        codexScope = "default";
+        codexScope = "user";
       }
       var startPayload = provider === "codex" ? {
         handle: state.handle,
