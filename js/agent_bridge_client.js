@@ -9,6 +9,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var FALLBACK_MCP_PATH = "/api/mcp";
   var STATE_PREFIX = "ConvertigoAssistant.agentConversation.";
   var BUFFER_KEY = "C8OAiAssistantBuffer";
+  var DEFAULT_EVENT_WAIT_MS = 10000;
 
   var File = Packages.java.io.File;
   var BufferedReader = Packages.java.io.BufferedReader;
@@ -2290,7 +2291,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         handle: state.handle,
         cursor: String(state.cursor || 0),
         limit: String(intValue(options.limit, 100, 1, 500)),
-        waitMs: String(intValue(options.waitMs, 250, 0, 30000))
+        waitMs: String(intValue(options.waitMs, DEFAULT_EVENT_WAIT_MS, 0, 30000))
       }, 45000);
       if (events && events.ok === false) {
         var bridgeStatus = trim(events.status).toLowerCase();
