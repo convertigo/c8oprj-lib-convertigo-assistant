@@ -1021,11 +1021,10 @@ scriptContent:
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:modern-suggestions-label
       ↓Text [ngx.components.UIText-1772100000110]: 
-        i18n: true
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: 'plain:Quick suggestions: '
+            - MobileSmartSourceType: plain:Suggestions rapides :
     ↓Row [ngx.components.UIDynamicElement-1772100000111]: 
       beanData: '{"ionBean":"DivTag"}'
       tagName: div
@@ -1544,6 +1543,247 @@ scriptContent:
               ↓Icon [ngx.components.UIDynamicElement-1776301000109]: 
                 beanData: '{"ionBean":"Icon","IconName":"plain:close-outline"}'
                 tagName: ion-icon
+    ↓AddMenu [ngx.components.UIDynamicElement-1782131782571]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1782131786779]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:codex-add-panel
+      ↓Hidden [ngx.components.UIAttribute-1782131786781]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this['showAddMenu'] !== true
+      ↓Title [ngx.components.UIDynamicElement-1782131786783]: 
+        beanData: '{"ionBean":"Paragraph"}'
+        tagName: p
+        ↓Class [ngx.components.UIAttribute-1782131786785]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:codex-add-title
+        ↓Text [ngx.components.UIText-1782131786787]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:'Agent_Add_Title' | translate
+      ↓FilesOption [ngx.components.UIDynamicElement-1782131786789]: 
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "IonFill": "plain:clear",
+           "IonSize": "plain:small"
+          }'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1782131786791]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:codex-add-option
+        ↓Hidden [ngx.components.UIAttribute-1782131786793]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.isAttachmentInputEnabled()
+        ↓Aria [ngx.components.UIAttribute-1782131786795]: 
+          attrName: aria-label
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Ajouter des fichiers ou images
+        ↓Event [ngx.components.UIControlEvent-1782131786797]: 
+          attrName: click
+          eventName: click
+          ↓OpenFiles [ngx.components.UICustomAction-1782131788315]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		try {
+                    			if (event && event.preventDefault) {
+                    				event.preventDefault();
+                    			}
+                    			page['showAddMenu'] = false;
+                    			page.openAttachPicker(event);
+                    			page.tick();
+                    		} catch (e) {}
+                    		resolve();
+                    
+        ↓Icon [ngx.components.UIDynamicElement-1782131788317]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:attach-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+        ↓Copy [ngx.components.UIDynamicElement-1782131788319]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: div
+          ↓Class [ngx.components.UIAttribute-1782131788321]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-add-option-copy
+          ↓Label [ngx.components.UIDynamicElement-1782131788323]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1782131788325]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:codex-add-option-label
+            ↓Text [ngx.components.UIText-1782131788327]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'Agent_Add_Files_Images' | translate
+          ↓Hint [ngx.components.UIDynamicElement-1782131788329]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1782131788331]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:codex-add-option-hint
+            ↓Text [ngx.components.UIText-1782131788333]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'Agent_Add_Files_Images_Hint' | translate
+        ↓ClickBinding [ngx.components.UIAttribute-1782132321856]: 
+          attrName: (click)
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:$event.preventDefault(); this['showAddMenu'] = false; this.openAttachPicker($event); this.tick()
+      ↓ImagesOption [ngx.components.UIDynamicElement-1782131788335]: 
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "IonFill": "plain:clear",
+           "IonSize": "plain:small"
+          }'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1782131788337]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:codex-add-option
+        ↓Hidden [ngx.components.UIAttribute-1782131788339]: 
+          attrName: '[hidden]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.isAssetInputEnabled()
+        ↓Aria [ngx.components.UIAttribute-1782131788341]: 
+          attrName: aria-label
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Ajouter une image
+        ↓Event [ngx.components.UIControlEvent-1782131788343]: 
+          attrName: click
+          eventName: click
+          ↓OpenImages [ngx.components.UICustomAction-1782131788345]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		try {
+                    			if (event && event.preventDefault) {
+                    				event.preventDefault();
+                    			}
+                    			page['showAddMenu'] = false;
+                    			page.openImagePicker(event);
+                    			page.tick();
+                    		} catch (e) {}
+                    		resolve();
+                    
+        ↓Icon [ngx.components.UIDynamicElement-1782131788347]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:image-outline",
+             "IconSlot": "plain:start"
+            }'
+          tagName: ion-icon
+        ↓Copy [ngx.components.UIDynamicElement-1782131788349]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: div
+          ↓Class [ngx.components.UIAttribute-1782131788351]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-add-option-copy
+          ↓Label [ngx.components.UIDynamicElement-1782131788353]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1782131788355]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:codex-add-option-label
+            ↓Text [ngx.components.UIText-1782131788357]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'Agent_Add_Image' | translate
+          ↓Hint [ngx.components.UIDynamicElement-1782131788359]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1782131788361]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:codex-add-option-hint
+            ↓Text [ngx.components.UIText-1782131788363]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'Agent_Add_Image_Hint' | translate
+        ↓ClickBinding [ngx.components.UIAttribute-1782132326064]: 
+          attrName: (click)
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:$event.preventDefault(); this['showAddMenu'] = false; this.openImagePicker($event); this.tick()
+      ↓DropPasteNote [ngx.components.UIDynamicElement-1782131788365]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1782131788367]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:codex-add-note
+        ↓Icon [ngx.components.UIDynamicElement-1782131788369]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:albums-outline"}'
+          tagName: ion-icon
+        ↓Text [ngx.components.UIDynamicElement-1782131788371]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Value [ngx.components.UIText-1782131788373]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:'Agent_Add_DropPaste_Note' | translate
     ↓InputItem [ngx.components.UIDynamicElement-1772100000125]: 
       beanData: '{"ionBean":"FormItem"}'
       tagName: ion-item
@@ -1635,7 +1875,7 @@ scriptContent:
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.isAssetInputEnabled()
+              - MobileSmartSourceType: script:false
           ↓ImageAttach [ngx.components.UIDynamicElement-1776201000002]: 
             beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
             tagName: ion-button
@@ -1696,7 +1936,7 @@ scriptContent:
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:modern-attach-btn
             ↓Icon [ngx.components.UIDynamicElement-1776201000015]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:attach-outline"}'
+              beanData: '{"ionBean":"Icon","IconName":"plain:add-outline"}'
               tagName: ion-icon
         ↓Voice [ngx.components.UIDynamicElement-1772100000131]: 
           beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
@@ -1778,6 +2018,12 @@ scriptContent:
                "IconSlot": "plain:icon-only"
               }'
             tagName: ion-icon
+          ↓HiddenWhenProcessing [ngx.components.UIAttribute-1782124908752]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.IsProcessing === true
         ↓Stop [ngx.components.UIDynamicElement-1781872816757]: 
           beanData: |
             '{
@@ -1830,6 +2076,426 @@ scriptContent:
                "IconSlot": "plain:icon-only"
               }'
             tagName: ion-icon
+    ↓PromptControls [ngx.components.UIDynamicElement-1782124818644]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1782125435444]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-prompt-controls
+      ↓ControlsLeft [ngx.components.UIDynamicElement-1782125435766]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1782125435768]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-prompt-controls-left
+        ↓AddAsset [ngx.components.UIDynamicElement-1782125435770]: 
+          beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1782125435772]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-prompt-icon-btn codex-prompt-plus
+          ↓Aria [ngx.components.UIAttribute-1782125435774]: 
+            attrName: aria-label
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Ajouter un fichier
+          ↓Disabled [ngx.components.UIAttribute-1782125435776]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.EnableChat === false || this.IsProcessing === true
+          ↓Event [ngx.components.UIControlEvent-1782125435778]: 
+            attrName: click
+            eventName: click
+            ↓OpenAssetPicker [ngx.components.UICustomAction-1782125437296]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		try {
+                      			if (event && event.preventDefault) {
+                      				event.preventDefault();
+                      			}
+                      			if (page.EnableChat === false || page.IsProcessing === true) {
+                      				resolve();
+                      				return;
+                      			}
+                      			page['showAddMenu'] = page['showAddMenu'] !== true;
+                      			page.tick();
+                      		} catch (e) {}
+                      		resolve();
+                      
+          ↓Icon [ngx.components.UIDynamicElement-1782125437298]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IconName": "plain:add-outline",
+               "IconSlot": "plain:icon-only"
+              }'
+            tagName: ion-icon
+          ↓ClickBinding [ngx.components.UIAttribute-1782132317648]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:$event.preventDefault(); this['showAddMenu'] = this['showAddMenu'] !== true; this.tick()
+        ↓AccessMode [ngx.components.UIDynamicElement-1782125437300]: 
+          beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+          isEnabled: false
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1782125437302]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-access-chip
+          ↓Aria [ngx.components.UIAttribute-1782125437304]: 
+            attrName: aria-label
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Accès complet
+          ↓Shield [ngx.components.UIDynamicElement-1782125437306]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IconName": "plain:shield-checkmark-outline",
+               "IconSlot": "plain:start"
+              }'
+            tagName: ion-icon
+          ↓Text [ngx.components.UIText-1782125437308]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Accès complet
+          ↓Chevron [ngx.components.UIDynamicElement-1782125437310]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IconName": "plain:chevron-down-outline",
+               "IconSlot": "plain:end"
+              }'
+            tagName: ion-icon
+      ↓ControlsRight [ngx.components.UIDynamicElement-1782125437312]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1782125437314]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-prompt-controls-right
+        ↓ModelSelect [ngx.components.UIDynamicElement-1782125437316]: 
+          beanData: |
+            '{
+             "ionBean": "Select",
+             "ControlName": "plain:agentModel",
+             "Interface": "plain:popover",
+             "Justify": "plain:start"
+            }'
+          tagName: ion-select
+          ↓Class [ngx.components.UIAttribute-1782125437318]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-prompt-select agent-prompt-model-select
+          ↓Hidden [ngx.components.UIAttribute-1782125437320]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:!(this.AgentModels && this.AgentModels.length > 0)
+          ↓Aria [ngx.components.UIAttribute-1782125437322]: 
+            attrName: aria-label
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:Modèle
+          ↓Interface [ngx.components.UIAttribute-1782125437324]: 
+            attrName: '[interface]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:'popover'
+          ↓Value [ngx.components.UIAttribute-1782125437326]: 
+            attrName: '[value]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.AgentModel || ''
+          ↓SelectedText [ngx.components.UIAttribute-1782125437328]: 
+            attrName: '[selectedText]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.AgentModelLabel || this.AgentModel || 'Modèle'
+          ↓ChangeEvent [ngx.components.UIControlEvent-1782125437330]: 
+            attrName: (ionChange)
+            eventName: ionChange
+            ↓EmitModelChange [ngx.components.UICustomAction-1782125437332]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      '		var selected = event && event.detail ? event.detail.value : event;
+                      		try {
+                      			this.ModelChange.emit(selected);
+                      		} catch (e) {}
+                      		resolve();
+                      '
+          ↓ModelOptions [ngx.components.UIControlDirective-1782125437334]: 
+            directiveItemName: agentModel
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.AgentModels || []
+            ↓ModelOption [ngx.components.UIDynamicElement-1782125441542]: 
+              beanData: '{"ionBean":"SelectOption","Value":"script:agentModel && agentModel.id"}'
+              tagName: ion-select-option
+              ↓Text [ngx.components.UIText-1782125441544]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:agentModel ? (agentModel.label || agentModel.id || '''') : '''''
+        ↓ReasoningIf [ngx.components.UIControlDirective-1782125441546]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.AgentReasoningLevels && this.AgentReasoningLevels.length > 0
+          ↓ReasoningSelect [ngx.components.UIDynamicElement-1782125441548]: 
+            beanData: |
+              '{
+               "ionBean": "Select",
+               "ControlName": "plain:agentReasoning",
+               "Interface": "plain:popover",
+               "Justify": "plain:start"
+              }'
+            tagName: ion-select
+            ↓Class [ngx.components.UIAttribute-1782125441550]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-prompt-select agent-prompt-reasoning-select
+            ↓Aria [ngx.components.UIAttribute-1782125441552]: 
+              attrName: aria-label
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:Raisonnement
+            ↓Interface [ngx.components.UIAttribute-1782125441554]: 
+              attrName: '[interface]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'popover'
+            ↓Value [ngx.components.UIAttribute-1782125441556]: 
+              attrName: '[value]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.AgentReasoningEffort || ''
+            ↓SelectedText [ngx.components.UIAttribute-1782125441558]: 
+              attrName: '[selectedText]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.AgentReasoningLabel || this.AgentReasoningEffort || 'Raisonnement'
+            ↓ChangeEvent [ngx.components.UIControlEvent-1782125441560]: 
+              attrName: (ionChange)
+              eventName: ionChange
+              ↓EmitReasoningChange [ngx.components.UICustomAction-1782125441562]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        '		var selected = event && event.detail ? event.detail.value : event;
+                        		try {
+                        			this.ReasoningChange.emit(selected);
+                        		} catch (e) {}
+                        		resolve();
+                        '
+            ↓ReasoningOptions [ngx.components.UIControlDirective-1782125441564]: 
+              directiveItemName: reasoningLevel
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.AgentReasoningLevels || []
+              ↓ReasoningOption [ngx.components.UIDynamicElement-1782125441566]: 
+                beanData: '{"ionBean":"SelectOption","Value":"script:reasoningLevel && reasoningLevel.id"}'
+                tagName: ion-select-option
+                ↓Text [ngx.components.UIText-1782125441568]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.label ? reasoningLevel.label : (reasoningLevel && reasoningLevel.id ? reasoningLevel.id : '''')'
+        ↓Voice [ngx.components.UIDynamicElement-1782125441570]: 
+          beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1782125441572]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-prompt-icon-btn codex-prompt-mic
+          ↓Hidden [ngx.components.UIAttribute-1782125441574]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.SpeechRecognitionAvailable !== true
+          ↓Disabled [ngx.components.UIAttribute-1782125441576]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.EnableChat === false || this.IsProcessing === true
+          ↓Event [ngx.components.UIControlEvent-1782125441578]: 
+            attrName: click
+            eventName: click
+            ↓StartSpeechRecognition [ngx.components.UICustomAction-1782125441580]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.requestVoice(event);
+                      		resolve();
+                      
+          ↓Icon [ngx.components.UIDynamicElement-1782125441582]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IconName": "plain:mic-outline",
+               "IconSlot": "plain:icon-only"
+              }'
+            tagName: ion-icon
+          ↓ClickBinding [ngx.components.UIAttribute-1782132330272]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:this.requestVoice($event)
+        ↓Submit [ngx.components.UIDynamicElement-1782125441584]: 
+          beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1782125441586]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-prompt-send-btn
+          ↓Hidden [ngx.components.UIAttribute-1782125441588]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.IsProcessing === true
+          ↓Disabled [ngx.components.UIAttribute-1782125441590]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:(formAssistant && formAssistant.invalid) || this.EnableChat === false
+          ↓Event [ngx.components.UIControlEvent-1782125441592]: 
+            attrName: click
+            eventName: click
+            ↓SubmitQuestion [ngx.components.UICustomAction-1782125441594]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.submitQuestionFromUI(event);
+                      		resolve();
+                      
+          ↓Icon [ngx.components.UIDynamicElement-1782125441596]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IconName": "plain:arrow-up-outline",
+               "IconSlot": "plain:icon-only"
+              }'
+            tagName: ion-icon
+          ↓ClickBinding [ngx.components.UIAttribute-1782132334480]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:this.submitQuestionFromUI($event)
+        ↓Stop [ngx.components.UIDynamicElement-1782125441598]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonColor": "plain:danger",
+             "IonFill": "plain:clear"
+            }'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1782125441600]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:codex-prompt-send-btn codex-prompt-stop-btn
+          ↓Hidden [ngx.components.UIAttribute-1782125441602]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.IsProcessing !== true
+          ↓Disabled [ngx.components.UIAttribute-1782125441604]: 
+            attrName: '[disabled]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.EnableChat === false
+          ↓Event [ngx.components.UIControlEvent-1782125441606]: 
+            attrName: click
+            eventName: click
+            ↓EmitStopRequest [ngx.components.UICustomAction-1782125441608]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		try {
+                      			if (event && event.preventDefault) {
+                      				event.preventDefault();
+                      			}
+                      			this.StopRequest.emit({});
+                      		} catch (e) {}
+                      		resolve();
+                      
+          ↓Icon [ngx.components.UIDynamicElement-1782125441610]: 
+            beanData: |
+              '{
+               "ionBean": "Icon",
+               "IconName": "plain:stop-circle-outline",
+               "IconSlot": "plain:icon-only"
+              }'
+            tagName: ion-icon
+          ↓ClickBinding [ngx.components.UIAttribute-1782132338688]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:this.StopRequest.emit({})
     ↓Event [ngx.components.UIControlEvent-1775200000210]: 
       attrName: (ngSubmit)
       eventName: onSubmit
@@ -2532,3 +3198,374 @@ scriptContent:
                 - ↑value: '@ionic/angular/standalone'
 ↓StopRequest [ngx.components.UICompEvent-1781872796496]: 
   attrName: StopRequest
+↓AgentCodexDesktopFooterStyle [ngx.components.UIStyle-1782123558684]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host-context(ion-footer.agent-footer-codex) {
+            display: flex;
+            flex-direction: column;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-toolbar {
+            order: 1;
+            border-top: 1px solid var(--modern-border);
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-toolbar {
+            order: 2;
+            --min-height: 36px;
+            border-top: 0;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-form {
+            padding: 8px 18px 4px;
+            gap: 8px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item,
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item::part(native) {
+            min-height: 50px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item::part(native) {
+            border-radius: 14px;
+            padding: 1px 12px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field {
+            font-size: 15px;
+            line-height: 19px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap {
+            gap: 6px;
+            padding: 5px 18px 8px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-label,
+          :host-context(ion-footer.agent-footer-codex) .modern-meta-row {
+            display: none !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestion-btn {
+            height: 28px;
+            min-height: 28px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestion-btn::part(native) {
+            border-radius: 9px;
+            padding: 0 10px;
+          }
+          @media (max-width: 640px) {
+            :host-context(ion-footer.agent-footer-codex) .modern-input-form {
+              padding: 8px 10px 4px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap {
+              padding: 4px 10px 7px;
+            }
+          }'
+↓AgentCodexPromptRefineStyle [ngx.components.UIStyle-1782124950344]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host-context(ion-footer.agent-footer-codex) .modern-input-form {
+            margin: 10px 18px 6px;
+            padding: 14px 16px 12px;
+            gap: 10px;
+            border: 1px solid color-mix(in srgb, var(--modern-border) 55%, transparent);
+            border-radius: 22px;
+            background: color-mix(in srgb, var(--modern-surface) 78%, var(--ion-text-color) 8%);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item {
+            --min-height: 42px;
+            min-height: 42px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item::part(native) {
+            min-height: 42px;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item ion-buttons[slot="end"] {
+            display: none !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field {
+            font-size: 16px;
+            line-height: 22px;
+            max-height: 148px;
+            color: var(--ion-text-color);
+            --placeholder-color: color-mix(in srgb, var(--ion-text-color) 48%, transparent);
+            --placeholder-opacity: 1;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-height: 34px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-left,
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right {
+            justify-content: flex-end;
+            margin-left: auto;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-icon-btn,
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            min-height: 34px;
+            margin: 0;
+            color: color-mix(in srgb, var(--ion-text-color) 64%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-icon-btn::part(native),
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn::part(native),
+          :host-context(ion-footer.agent-footer-codex) .codex-access-chip::part(native) {
+            padding: 0;
+            min-height: 34px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-plus {
+            color: color-mix(in srgb, var(--ion-text-color) 62%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-access-chip {
+            height: 34px;
+            min-height: 34px;
+            margin: 0;
+            color: var(--ion-color-warning, #ff8a3d);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-access-chip ion-icon {
+            font-size: 17px;
+            margin: 0 4px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-select {
+            min-height: 30px;
+            max-width: 170px;
+            --padding-start: 5px;
+            --padding-end: 4px;
+            --placeholder-color: color-mix(in srgb, var(--ion-text-color) 58%, transparent);
+            color: color-mix(in srgb, var(--ion-text-color) 72%, transparent);
+            font-size: 13px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-model-select {
+            max-width: 92px;
+            color: var(--ion-text-color);
+            font-weight: 600;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-reasoning-select {
+            max-width: 136px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn {
+            border-radius: 50%;
+            background: color-mix(in srgb, var(--ion-text-color) 72%, transparent);
+            color: var(--modern-surface);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn::part(native) {
+            border-radius: 50%;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-stop-btn {
+            background: color-mix(in srgb, var(--ion-color-danger) 24%, transparent);
+            color: var(--ion-color-danger);
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-toolbar {
+            order: 2;
+            --min-height: 34px;
+            border-top: 0;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap {
+            padding: 4px 18px 8px;
+            gap: 6px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-label,
+          :host-context(ion-footer.agent-footer-codex) .modern-meta-row {
+            display: none !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestion-btn {
+            height: 28px;
+            min-height: 28px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestion-btn::part(native) {
+            border-radius: 9px;
+            padding: 0 10px;
+          }
+          @media (max-width: 640px) {
+            :host-context(ion-footer.agent-footer-codex) .modern-input-form {
+              margin: 8px 10px 5px;
+              padding: 12px 12px 10px;
+              border-radius: 20px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls {
+              gap: 6px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-left,
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right {
+              gap: 5px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .codex-access-chip {
+              max-width: 132px;
+              overflow: hidden;
+            }
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-model-select {
+              max-width: 70px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-reasoning-select {
+              max-width: 112px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap {
+              padding: 4px 10px 7px;
+            }
+          }'
+↓AgentModel [ngx.components.UICompVariable-1782124529780]: 
+  value: null
+↓AgentModels [ngx.components.UICompVariable-1782124534048]: 
+  value: null
+↓AgentReasoningEffort [ngx.components.UICompVariable-1782124538316]: 
+  value: null
+↓AgentReasoningLevels [ngx.components.UICompVariable-1782124542584]: 
+  value: null
+↓AgentModelLabel [ngx.components.UICompVariable-1782124546852]: 
+  value: null
+↓AgentReasoningLabel [ngx.components.UICompVariable-1782124551120]: 
+  value: null
+↓ModelChange [ngx.components.UICompEvent-1782124555388]: 
+  attrName: ModelChange
+↓ReasoningChange [ngx.components.UICompEvent-1782124559656]: 
+  attrName: ReasoningChange
+↓AgentAddMenuStyle [ngx.components.UIStyle-1782131827646]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host-context(ion-footer.agent-footer-codex) .modern-input-form {
+            --codex-prompt-bg: color-mix(in srgb, var(--modern-surface) 78%, var(--ion-text-color) 8%);
+            background: var(--codex-prompt-bg);
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item,
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field {
+            background: transparent;
+            --background: transparent;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field::part(native) {
+            background: transparent;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            border: 1px solid color-mix(in srgb, var(--modern-border) 70%, transparent);
+            border-radius: 18px;
+            background: var(--codex-prompt-bg);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ion-text-color) 4%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-title {
+            margin: 0 2px 4px;
+            color: color-mix(in srgb, var(--ion-text-color) 66%, transparent);
+            font-size: 13px;
+            line-height: 18px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option {
+            width: 100%;
+            min-height: 44px;
+            margin: 0;
+            color: var(--ion-text-color);
+            text-align: left;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option::part(native) {
+            justify-content: flex-start;
+            gap: 10px;
+            min-height: 44px;
+            padding: 7px 10px;
+            border-radius: 12px;
+            background: color-mix(in srgb, var(--ion-text-color) 6%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option:hover::part(native) {
+            background: color-mix(in srgb, var(--ion-text-color) 11%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option ion-icon {
+            flex: 0 0 auto;
+            font-size: 19px;
+            color: color-mix(in srgb, var(--ion-text-color) 72%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option-copy {
+            display: flex;
+            min-width: 0;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option-label,
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option-hint,
+          :host-context(ion-footer.agent-footer-codex) .codex-add-note p {
+            margin: 0;
+            letter-spacing: 0;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option-label {
+            font-size: 14px;
+            line-height: 18px;
+            font-weight: 600;
+            color: var(--ion-text-color);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-option-hint {
+            font-size: 12px;
+            line-height: 16px;
+            color: color-mix(in srgb, var(--ion-text-color) 58%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 3px 2px 0;
+            padding: 7px 8px 0;
+            border-top: 1px solid color-mix(in srgb, var(--modern-border) 72%, transparent);
+            color: color-mix(in srgb, var(--ion-text-color) 58%, transparent);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-note ion-icon {
+            flex: 0 0 auto;
+            margin-top: 1px;
+            font-size: 15px;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-add-note p {
+            font-size: 12px;
+            line-height: 16px;
+          }
+          @media (max-width: 640px) {
+            :host-context(ion-footer.agent-footer-codex) .codex-add-panel {
+              padding: 9px;
+              border-radius: 16px;
+            }
+            :host-context(ion-footer.agent-footer-codex) .codex-add-option::part(native) {
+              padding: 7px 9px;
+            }
+          }'
+↓AgentPromptNoShadowStyle [ngx.components.UIStyle-1782140093787]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host-context(ion-footer.agent-footer-codex) .modern-input-form {
+            box-shadow: none;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item,
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item::part(native),
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field,
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field::part(native) {
+            box-shadow: none;
+            outline: none;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field:focus,
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field:focus-within,
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field::part(native):focus {
+            box-shadow: none;
+            outline: none;
+          }'

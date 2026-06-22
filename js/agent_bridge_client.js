@@ -10,6 +10,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var STATE_PREFIX = "ConvertigoAssistant.agentConversation.";
   var BUFFER_KEY = "C8OAiAssistantBuffer";
   var DEFAULT_EVENT_WAIT_MS = 10000;
+  var MAX_TRANSIENT_READ_ERRORS = 6;
 
   var File = Packages.java.io.File;
   var BufferedReader = Packages.java.io.BufferedReader;
@@ -524,6 +525,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return model;
   }
 
+  function normalizeReasoningEffort(value) {
+    var effort = trim(value).toLowerCase();
+    if (!effort.length || effort === "default" || effort === "auto") {
+      return "";
+    }
+    if (effort === "very-high" || effort === "very_high" || effort === "extra-high" || effort === "extra_high") {
+      return "xhigh";
+    }
+    return effort;
+  }
+
   function agentsRoot(workspaceRoot, provider) {
     return new File(workspaceRoot, "agents/" + normalizeProvider(provider));
   }
@@ -606,6 +618,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progress: String(record.progress || ""),
       phase: String(record.phase || ""),
       model: String(record.model || ""),
+      reasoningEffort: String(record.reasoningEffort || ""),
+      serviceTier: String(record.serviceTier || ""),
       warnings: record.warnings || [],
       vibeHome: String(record.vibeHome || ""),
       agentHome: String(record.agentHome || record.vibeHome || ""),
@@ -696,6 +710,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return records.length ? records[0] : null;
   }
 
+  function latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, provider) {
+    var records = conversationRecords(workspaceRoot, userKey, projectFilter, false, provider);
+    for (var i = 0; i < records.length; i++) {
+      var status = trim(records[i] && records[i].status).toLowerCase();
+      if (status === "starting" || status === "queued" || status === "running" || status === "in_progress") {
+        return records[i];
+      }
+    }
+    return null;
+  }
+
   function writeConversationRecord(state) {
     if (!state || !state.conversationFile) {
       return;
@@ -710,6 +735,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       handle: state.handle || state.threadid,
       status: state.status || "created",
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
+      serviceTier: state.serviceTier || "",
       primaryProject: state.primaryProject || state.projectId || "",
       projectNames: state.projectNames || [],
       workspaceRoot: state.workspaceRoot || "",
@@ -794,6 +821,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (recordIsNewer) {
       state.status = String(record.status || state.status || "");
       state.model = String(record.model || state.model || "");
+      state.reasoningEffort = String(record.reasoningEffort || state.reasoningEffort || "");
+      state.serviceTier = String(record.serviceTier || state.serviceTier || "");
       state.cursor = Number(record.lastCursor || state.cursor || 0);
       state.runid = String(record.lastRunId || state.runid || "");
       state.externalSessionId = String(record.externalSessionId || state.externalSessionId || "");
@@ -875,6 +904,86 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function stateKey(threadid) {
     return STATE_PREFIX + threadid;
+  }
+
+  function cancelKey(threadid) {
+    return stateKey(threadid) + ":cancel";
+  }
+
+  function markCancellationRequested(threadid) {
+    var id = normalizeThreadId(threadid);
+    if (!id.length) {
+      return;
+    }
+    var value = String(now());
+    try {
+      context.httpSession.setAttribute(cancelKey(id), value);
+    } catch (_ignoreSessionCancel) {}
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.set) {
+        storage.set(cancelKey(id), value);
+      }
+    } catch (_ignoreServerCancel) {}
+  }
+
+  function clearCancellationRequested(threadid) {
+    var id = normalizeThreadId(threadid);
+    if (!id.length) {
+      return;
+    }
+    try {
+      context.httpSession.removeAttribute(cancelKey(id));
+    } catch (_ignoreSessionCancelClear) {}
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.remove) {
+        storage.remove(cancelKey(id));
+      } else if (storage !== null && storage.set) {
+        storage.set(cancelKey(id), "");
+      }
+    } catch (_ignoreServerCancelClear) {}
+  }
+
+  function cancellationRequested(threadid) {
+    var id = normalizeThreadId(threadid);
+    if (!id.length) {
+      return false;
+    }
+    try {
+      var raw = context.httpSession.getAttribute(cancelKey(id));
+      if (raw !== null && typeof raw !== "undefined" && trim(raw).length) {
+        return true;
+      }
+    } catch (_ignoreReadSessionCancel) {}
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.get) {
+        var value = storage.get(cancelKey(id));
+        return value !== null && typeof value !== "undefined" && trim(value).length > 0;
+      }
+    } catch (_ignoreReadServerCancel) {}
+    return false;
+  }
+
+  function cancelledRunResponse(state) {
+    state.status = "cancelled";
+    state.error = "";
+    state.answer = lang(state).closedEarly;
+    state.answerIsFinal = true;
+    appendProgress(state, lang(state).closedEarly);
+    state.updatedAt = now();
+    saveState(state);
+    setStateBuffer(state);
+    return {
+      ok: false,
+      id: state.runid || makeRunId("cancelled"),
+      object: "agent.run",
+      status: "cancelled",
+      threadid: state.threadid,
+      state: publicState(state),
+      AIData: responseForState(state).AIData
+    };
   }
 
   function readState(threadid) {
@@ -986,16 +1095,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     fr: {
       starting: "Je pr\u00e9pare l'agent local.",
       thinking: "J'analyse la demande.",
-      projectList: "Je v\u00e9rifie les projets disponibles.",
-      inspect: "J'inspecte la structure Convertigo du projet.",
-      apply: "J'applique une modification dans le projet.",
-      rename: "Je renomme un objet Convertigo.",
-      save: "Je sauvegarde le projet.",
-      execute: "Je teste une s\u00e9quence ou une transaction.",
-      logs: "Je consulte les logs pour comprendre le r\u00e9sultat.",
-      builder: "Je relance l'application pour v\u00e9rifier l'\u00e9cran.",
-      palette: "Je v\u00e9rifie les objets Convertigo disponibles.",
-      tool: "J'utilise un outil Convertigo.",
+      projectList: "J'utilise le MCP Convertigo pour lister les projets.",
+      inspect: "J'utilise le MCP Convertigo pour inspecter le projet.",
+      apply: "J'utilise le MCP Convertigo pour appliquer une modification.",
+      rename: "J'utilise le MCP Convertigo pour renommer un objet.",
+      save: "J'utilise le MCP Convertigo pour sauvegarder le projet.",
+      execute: "J'utilise le MCP Convertigo pour tester une séquence ou une transaction.",
+      logs: "J'utilise le MCP Convertigo pour consulter les logs.",
+      builder: "J'utilise le MCP Convertigo pour vérifier l'application.",
+      palette: "J'utilise le MCP Convertigo pour lire la palette.",
+      tool: "J'utilise le MCP Convertigo.",
+      mcpResult: "Résultat MCP : ",
       toolRetry: "Une tentative d'outil a \u00e9chou\u00e9, je cherche une autre piste.",
       closedAfterAnswer: "L'agent a termin\u00e9 sa r\u00e9ponse.",
       closedEarly: "L'agent s'est arr\u00eat\u00e9 avant d'avoir termin\u00e9.",
@@ -1005,6 +1115,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       observedSteps: "\u00c9tapes observ\u00e9es :",
       toolWarning: "Une tentative d'outil a \u00e9chou\u00e9 pendant le traitement.",
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour de l'agent local.",
+      bridgeStateRecover: "Je v\u00e9rifie que l'agent local est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue parce que le process local de l'agent n'est plus disponible. Vous pouvez relancer une demande dans cette conversation.",
       startFailed: "Je n'ai pas pu d\u00e9marrer l'agent local.",
       setupRequired: "L'agent local n'est pas encore pr\u00eat.",
@@ -1014,16 +1125,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     en: {
       starting: "I am preparing the local agent.",
       thinking: "I am analyzing the request.",
-      projectList: "I am checking the available projects.",
-      inspect: "I am inspecting the Convertigo project structure.",
-      apply: "I am applying a change in the project.",
-      rename: "I am renaming a Convertigo object.",
-      save: "I am saving the project.",
-      execute: "I am testing a sequence or transaction.",
-      logs: "I am checking the logs to understand the result.",
-      builder: "I am restarting the application to verify the screen.",
-      palette: "I am checking the available Convertigo objects.",
-      tool: "I am using a Convertigo tool.",
+      projectList: "I am using the Convertigo MCP to list projects.",
+      inspect: "I am using the Convertigo MCP to inspect the project.",
+      apply: "I am using the Convertigo MCP to apply a change.",
+      rename: "I am using the Convertigo MCP to rename an object.",
+      save: "I am using the Convertigo MCP to save the project.",
+      execute: "I am using the Convertigo MCP to test a sequence or transaction.",
+      logs: "I am using the Convertigo MCP to read logs.",
+      builder: "I am using the Convertigo MCP to verify the app.",
+      palette: "I am using the Convertigo MCP to read the palette.",
+      tool: "I am using the Convertigo MCP.",
+      mcpResult: "MCP result: ",
       toolRetry: "A tool attempt failed, I am trying another path.",
       closedAfterAnswer: "The agent finished its response.",
       closedEarly: "The agent stopped before completion.",
@@ -1033,6 +1145,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       observedSteps: "Observed steps:",
       toolWarning: "A tool attempt failed during processing.",
       bridgeReadError: "I cannot read the local agent response.",
+      bridgeStateRecover: "I am checking that the local agent is still running.",
       bridgeProcessLost: "The task was interrupted because the local agent process is no longer available. You can send a new request in this conversation.",
       startFailed: "I could not start the local agent.",
       setupRequired: "The local agent is not ready yet.",
@@ -1351,6 +1464,48 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  function eventToolResultPreview(data) {
+    if (!data) {
+      return "";
+    }
+    var candidates = [
+      data.preview,
+      data.summary,
+      data.text,
+      data.output,
+      data.result && data.result.preview,
+      data.result && data.result.summary,
+      data.result && data.result.text,
+      data.result && data.result.output,
+      data.result
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      var value = candidates[i];
+      if (value == null) {
+        continue;
+      }
+      var text = "";
+      if (typeof value === "string") {
+        text = value;
+      } else {
+        try {
+          text = JSON.stringify(value);
+        } catch (_ignoreStringify) {
+          text = String(value);
+        }
+      }
+      text = trim(text.replace(/\s+/g, " "));
+      if (!text.length || text === "{}" || text === "[]") {
+        continue;
+      }
+      if (text.length > 260) {
+        text = text.substring(0, 257) + "...";
+      }
+      return text;
+    }
+    return "";
+  }
+
   function eventText(data) {
     if (!data) {
       return "";
@@ -1499,6 +1654,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.model === "undefined" || state.model === null) {
       state.model = normalizeModel(state.provider, "");
     }
+    if (typeof state.reasoningEffort === "undefined" || state.reasoningEffort === null) {
+      state.reasoningEffort = "";
+    }
+    if (typeof state.serviceTier === "undefined" || state.serviceTier === null) {
+      state.serviceTier = "";
+    }
     return sanitizeProgressLog(refreshTerminalStateFromRecord(state));
   }
 
@@ -1542,12 +1703,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       vibeHome = record && trim(record.agentHome || record.vibeHome).length ? trim(record.agentHome || record.vibeHome) : childPath(conversationDir, homeLeafForProvider(provider));
     }
     var model = normalizeModel(provider, options.model || options.agentModel || (record && record.model));
+    var reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort || (record && record.reasoningEffort));
+    var serviceTier = trim(options.serviceTier || options.speedTier || (record && record.serviceTier));
     return {
       conversationId: threadid,
       threadid: threadid,
       handle: record && trim(record.handle).length ? trim(record.handle) : threadid,
       provider: provider,
       model: model,
+      reasoningEffort: reasoningEffort,
+      serviceTier: serviceTier,
       bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || defaultBridgeUrl(),
       mcpEndpoint: trim(options.mcpEndpoint) || (record && trim(record.mcpEndpoint)) || defaultMcpEndpoint(),
       workspaceRoot: workspaceRoot,
@@ -1588,6 +1753,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       handle: state.handle,
       provider: state.provider,
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
+      serviceTier: state.serviceTier || "",
       status: state.status,
       runid: state.runid,
       cursor: state.cursor,
@@ -1642,6 +1809,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       status: state.status,
       provider: state.provider,
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
+      serviceTier: state.serviceTier || "",
       threadid: state.threadid,
       AIData: {
         type: "agent",
@@ -1664,6 +1833,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       message += "\n\nDiagnostic: " + detail;
     }
     return message;
+  }
+
+  function recoverableBridgeError(error) {
+    var message = String(error || "").toLowerCase();
+    return message.indexOf("timed out") !== -1 ||
+      message.indexOf("timeout") !== -1 ||
+      message.indexOf("read timed") !== -1 ||
+      message.indexOf("connect timed") !== -1 ||
+      message.indexOf("sockettimeoutexception") !== -1;
+  }
+
+  function keepRunAliveAfterBridgeReadFailure(state, progressText) {
+    state.readErrors = Number(state.readErrors || 0) + 1;
+    appendProgress(state, progressText || lang(state).bridgeStateRecover);
+    if (state.readErrors <= MAX_TRANSIENT_READ_ERRORS && !trim(state.answer).length) {
+      state.status = "in_progress";
+      state.error = "";
+      return true;
+    }
+    return false;
   }
 
   function shouldInstallForRun(options, provider) {
@@ -1717,7 +1906,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
         skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
         mcpEndpoint: state.mcpEndpoint,
-        model: state.model || ""
+        model: state.model || "",
+        reasoningEffort: state.reasoningEffort || "",
+        serviceTier: state.serviceTier || ""
       };
     }
     return {
@@ -1752,6 +1943,44 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       sequence: setupSequence,
       result: setup
     };
+  }
+
+  function agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) {
+    options = options || {};
+    var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
+    var providerFilter = providerSelector === "all" ? "" : providerSelector;
+    var payload = {
+      provider: providerFilter,
+      workspaceRoot: workspaceRoot || resolveWorkspaceRoot(options),
+      projectId: projectFilter || trim(options.targetProject || options.projectName || options.projectId),
+      userId: trim(options.userId) || userKey || "studio",
+      conversationId: normalizeConversationId(options.threadid || options.conversationId),
+      mcpEndpoint: trim(options.mcpEndpoint) || defaultMcpEndpoint(),
+      codexHome: trim(options.codexHome),
+      codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+      codexPath: trim(options.codexPath || options.commandPath),
+      vibeHome: trim(options.vibeHome || options.agentHome),
+      vibeHomeScope: trim(options.vibeHomeScope || options.homeScope),
+      settingsTimeoutMs: trim(options.settingsTimeoutMs)
+    };
+    try {
+      var settings = bridgeCall(options, "agent_settings", payload, 120000);
+      settings.ok = settings.ok !== false;
+      return settings;
+    } catch (e) {
+      return {
+        ok: false,
+        status: "error",
+        error: String(e),
+        defaults: {
+          provider: "",
+          model: "",
+          reasoning: ""
+        },
+        providers: [],
+        timestamp: now()
+      };
+    }
   }
 
   function setupRequiredAnswer(state, setup) {
@@ -1897,6 +2126,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
+    var includeSettings = boolValue(options.includeSettings, true);
     var requestedThreadId = normalizeThreadId(options.threadid);
     var resumedLatest = false;
     if (!requestedThreadId.length && !boolValue(options.forceNew, false)) {
@@ -1909,6 +2139,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
+      var emptySettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
       return {
         ok: true,
         id: "",
@@ -1922,6 +2153,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state: null,
         conversation: null,
         conversations: publicConversations(workspaceRoot, userKey, projectFilter, false, "all"),
+        settings: emptySettings,
         AIData: {
           type: "agent",
           threadid: "",
@@ -1966,7 +2198,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
       conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all"),
+      settings: includeSettings ? agentSettingsForOptions(options, state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, state.provider) : null,
       AIData: conversationAIData(state, options.historyLimit)
+    };
+  };
+
+  C8O.assistantAgentBridge.settings = function (options) {
+    options = options || {};
+    var workspaceRoot = resolveWorkspaceRoot(options);
+    var userKey = normalizeUserKey(options.userId);
+    var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
+    var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
+    var settings = agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+    return {
+      ok: settings.ok !== false,
+      status: settings.status || (settings.ok === false ? "error" : "ready"),
+      provider: provider,
+      userKey: userKey,
+      workspaceRoot: workspaceRoot,
+      settings: settings,
+      defaults: settings.defaults || {
+        provider: "",
+        model: "",
+        reasoning: ""
+      },
+      providers: settings.providers || [],
+      conversations: publicConversations(workspaceRoot, userKey, projectFilter, false, "all"),
+      timestamp: now()
     };
   };
 
@@ -1995,10 +2253,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    clearCancellationRequested(state.threadid);
     if (trim(options.model || options.agentModel).length) {
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
     } else if (!trim(state.model).length) {
       state.model = normalizeModel(state.provider, "");
+    }
+    if (trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort).length) {
+      state.reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
+    }
+    if (trim(options.serviceTier || options.speedTier).length) {
+      state.serviceTier = trim(options.serviceTier || options.speedTier);
     }
     state.language = detectLanguage(options.userQuestion || options.Question || "");
     var install = boolValue(options.diagnosticOnly, false) ? false : true;
@@ -2018,6 +2283,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       status: setup.status || (setup.ok === true ? "ready" : "missing"),
       provider: state.provider,
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
+      serviceTier: state.serviceTier || "",
       installRequested: install,
       setupRequired: setup.ok !== true,
       canInstall: true,
@@ -2073,6 +2340,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
     } else if (!trim(state.model).length) {
       state.model = normalizeModel(state.provider, "");
+    }
+    if (trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort).length) {
+      state.reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
+    }
+    if (trim(options.serviceTier || options.speedTier).length) {
+      state.serviceTier = trim(options.serviceTier || options.speedTier);
     }
     state.status = "starting";
     state.answer = "";
@@ -2135,6 +2408,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       state.setupRequired = false;
       state.setupReport = publicSetupReport(setup);
+      if (cancellationRequested(state.threadid)) {
+        return cancelledRunResponse(state);
+      }
 
       var env = provider === "vibe" ? credentialsEnv() : {};
       var codexScope = trim(options.codexHomeScope || options.homeScope);
@@ -2165,7 +2441,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         mcpEndpoint: state.mcpEndpoint,
         env: JSON.stringify(env),
         codexThreadId: state.externalSessionId || "",
-        model: state.model || ""
+        model: state.model || "",
+        reasoningEffort: state.reasoningEffort || "",
+        serviceTier: state.serviceTier || ""
       } : {
         handle: state.handle,
         cwd: state.cwd,
@@ -2193,12 +2471,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state.agentHome = String(start.home.path);
         state.vibeHome = state.agentHome;
       }
+      if (cancellationRequested(state.threadid)) {
+        try {
+          bridgeCall(state, provider === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+            handle: state.handle
+          }, 15000);
+        } catch (_ignoreCloseAfterStartCancel) {}
+        return cancelledRunResponse(state);
+      }
 
       var promptPayload = provider === "codex" ? {
         handle: state.handle,
         prompt: question,
         codexThreadId: state.externalSessionId || "",
         model: state.model || "",
+        reasoningEffort: state.reasoningEffort || "",
+        serviceTier: state.serviceTier || "",
         bypassApprovalsAndSandbox: typeof options.bypassApprovalsAndSandbox === "undefined" ? "true" : options.bypassApprovalsAndSandbox,
         sandbox: trim(options.sandbox)
       } : {
@@ -2210,6 +2498,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
       if (prompt.ok === false) {
         throw new Error(prompt.error || promptSequence + " failed");
+      }
+      if (cancellationRequested(state.threadid)) {
+        try {
+          bridgeCall(state, provider === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+            handle: state.handle
+          }, 15000);
+        } catch (_ignoreCloseAfterPromptCancel) {}
+        return cancelledRunResponse(state);
       }
 
       state.status = "in_progress";
@@ -2230,6 +2526,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state: publicState(state)
       };
     } catch (e) {
+      if (cancellationRequested(state.threadid)) {
+        return cancelledRunResponse(state);
+      }
+      if (recoverableBridgeError(e)) {
+        state.status = "in_progress";
+        state.runid = state.runid || makeRunId("pending");
+        state.cursor = Number(state.cursor || 0);
+        appendTranscript(state, "user", state.userQuestion || question);
+        appendProgress(state, lang(state).bridgeStateRecover);
+        state.updatedAt = now();
+        saveState(state);
+        setStateBuffer(state);
+        return {
+          ok: true,
+          id: state.runid,
+          object: "agent.run",
+          status: "queued",
+          threadid: state.threadid,
+          state: publicState(state)
+        };
+      }
       state.status = "failed";
       state.error = String(e);
       appendProgress(state, lang(state).startFailed);
@@ -2299,6 +2616,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (trim(state.answer).length) {
             state.status = "completed";
             state.answerIsFinal = true;
+          } else if (keepRunAliveAfterBridgeReadFailure(state, lang(state).bridgeStateRecover)) {
+            state.updatedAt = now();
+            saveState(state);
+            setStateBuffer(state);
+            return responseForState(state);
           } else {
             state.status = "failed";
             state.error = bridgeProcessLostMessage(state, events && events.state);
@@ -2347,6 +2669,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             });
           } else if (type === "tool/start") {
             appendProgress(state, progressTextForTool(state, eventToolTitle(event, data)));
+          } else if (toolStatus === "completed" || toolStatus === "complete" || toolStatus === "success" || toolStatus === "succeeded") {
+            var preview = eventToolResultPreview(data);
+            if (preview.length) {
+              appendProgress(state, lang(state).mcpResult + preview);
+            }
           }
         } else if (type === "turn/end") {
           state.status = "completed";
@@ -2385,6 +2712,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (trim(state.answer).length) {
           state.status = "completed";
           state.answerIsFinal = true;
+        } else if (keepRunAliveAfterBridgeReadFailure(state, lang(state).bridgeStateRecover)) {
+          state.status = "in_progress";
         } else {
           state.status = "failed";
           state.error = bridgeProcessLostMessage(state, bridgeState);
@@ -2404,9 +2733,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return responseForState(state);
     } catch (e) {
       state.error = String(e);
-      state.readErrors = Number(state.readErrors || 0) + 1;
-      appendProgress(state, lang(state).bridgeReadError);
-      if (state.readErrors <= 3 && !trim(state.answer).length) {
+      if (keepRunAliveAfterBridgeReadFailure(state, lang(state).bridgeReadError)) {
         state.status = "in_progress";
       } else if (trim(state.answer).length) {
         state.status = "completed";
@@ -2478,6 +2805,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       object: "agent.conversation",
       provider: state.provider,
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
+      serviceTier: state.serviceTier || "",
       status: state.status,
       threadid: state.threadid,
       state: publicState(state),
@@ -2504,6 +2833,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    markCancellationRequested(threadid);
     var bridge = {};
     try {
       bridge = bridgeCall(state, normalizeProvider(state.provider) === "codex" ? "agent_codex_close" : "agent_vibe_close", {
@@ -2538,6 +2868,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   C8O.assistantAgentBridge.closeConversation = function (options) {
     options = options || {};
     var threadid = normalizeThreadId(options.threadid);
+    if (!threadid.length) {
+      var workspaceRoot = resolveWorkspaceRoot(options);
+      var userKey = normalizeUserKey(options.userId);
+      var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
+      var providerFilter = trim(options.provider || options.agentProvider);
+      var latest = latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, providerFilter);
+      if (latest) {
+        threadid = normalizeConversationId(latest.conversationId || latest.threadid);
+        options.threadid = threadid;
+        if (!trim(options.provider || options.agentProvider).length && latest.provider) {
+          options.provider = latest.provider;
+        }
+      }
+    }
     var state = threadid.length ? readState(threadid) : null;
     if (state === null) {
       if (threadid.length) {
@@ -2551,6 +2895,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             threadid: threadid
           };
         }
+        options.threadid = threadid;
+        if (!trim(options.provider || options.agentProvider).length && record.provider) {
+          options.provider = record.provider;
+        }
         state = createState(options);
       } else {
         return {
@@ -2561,6 +2909,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     state = ensureState(state);
+    markCancellationRequested(threadid);
     var bridge = {};
     try {
       bridge = bridgeCall(state, normalizeProvider(state.provider) === "codex" ? "agent_codex_close" : "agent_vibe_close", {
@@ -2572,7 +2921,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         error: String(e)
       };
     }
-    state.status = "closed";
+    state.status = "cancelled";
     state.updatedAt = now();
     saveState(state);
     removeState(threadid);

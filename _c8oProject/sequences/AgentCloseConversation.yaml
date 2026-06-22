@@ -3,7 +3,13 @@ comment: Close a local agent conversation and its backing process.
   expression: |
     'include("js/agent_bridge_client.js");
     result = C8O.assistantAgentBridge.closeConversation({
-      threadid: typeof threadid === "undefined" ? "" : threadid
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      provider: typeof provider === "undefined" ? "" : provider,
+      targetProject: typeof targetProject === "undefined" ? "" : targetProject,
+      projectName: typeof projectName === "undefined" ? "" : projectName,
+      userId: typeof userId === "undefined" ? "" : userId,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      bridgeBaseUrl: typeof bridgeBaseUrl === "undefined" ? "" : bridgeBaseUrl
     });'
 ↓result [steps.JsonToXmlStep-1781650000402]: 
   jsonObject: 
@@ -21,3 +27,21 @@ comment: Close a local agent conversation and its backing process.
 ↓threadid [variables.RequestableVariable-1781650000403]: 
   comment: Agent conversation id returned by AgentCreateConversation.
   description: Agent conversation id returned by AgentCreateConversation.
+↓provider [variables.RequestableVariable-1782147691392]: 
+  comment: Optional agent provider used to locate the active conversation when threadid is not yet known.
+  description: Optional agent provider used to locate the active conversation when threadid is not yet known.
+↓targetProject [variables.RequestableVariable-1782147691423]: 
+  comment: Optional selected Convertigo project used to locate the active conversation when threadid is not yet known.
+  description: Optional selected Convertigo project used to locate the active conversation when threadid is not yet known.
+↓projectName [variables.RequestableVariable-1782147691442]: 
+  comment: Optional selected Convertigo project fallback.
+  description: Optional selected Convertigo project fallback.
+↓userId [variables.RequestableVariable-1782147691463]: 
+  comment: Optional user id for scoped agent conversations.
+  description: Optional user id for scoped agent conversations.
+↓workspaceRoot [variables.RequestableVariable-1782147691485]: 
+  comment: Optional Convertigo workspace root.
+  description: Optional Convertigo workspace root.
+↓bridgeBaseUrl [variables.RequestableVariable-1782147691505]: 
+  comment: Optional ConvertigoAgentBridge endpoint.
+  description: Optional ConvertigoAgentBridge endpoint.

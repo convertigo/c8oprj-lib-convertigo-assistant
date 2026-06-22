@@ -20,6 +20,8 @@ comment: Resume a durable local agent conversation from its conversation id.
       codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
       homeScope: typeof homeScope === "undefined" ? "" : homeScope,
       model: typeof model === "undefined" ? "" : model,
+      reasoningEffort: typeof reasoningEffort === "undefined" ? "" : reasoningEffort,
+      serviceTier: typeof serviceTier === "undefined" ? "" : serviceTier,
       targetProject: _targetProject,
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId
@@ -85,3 +87,9 @@ comment: Resume a durable local agent conversation from its conversation id.
 ↓targetProject [variables.RequestableVariable-1781602660076]: 
   comment: Optional target Convertigo project name. Preferred over projectName.
   description: Optional target Convertigo project name. Preferred over projectName.
+↓reasoningEffort [variables.RequestableVariable-1782119962225]: 
+  comment: Optional reasoning effort selected for this conversation.
+  description: Optional reasoning effort selected for this conversation.
+↓serviceTier [variables.RequestableVariable-1782119962237]: 
+  comment: Optional service tier selected for this conversation.
+  description: Optional service tier selected for this conversation.

@@ -1,0 +1,88 @@
+comment: Return available local agent providers, models and reasoning settings for the assistant UI.
+responseTimeout: 120
+↓Run [steps.SimpleStep-1782119857983]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    var _targetProject = typeof targetProject === "undefined" ? "" : targetProject;
+    if (!_targetProject && typeof projectName !== "undefined") {
+      _targetProject = projectName;
+    }
+    result = C8O.assistantAgentBridge.settings({
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      provider: typeof provider === "undefined" ? "" : provider,
+      bridgeBaseUrl: typeof bridgeBaseUrl === "undefined" ? "" : bridgeBaseUrl,
+      mcpEndpoint: typeof mcpEndpoint === "undefined" ? "" : mcpEndpoint,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      targetProject: _targetProject,
+      projectName: typeof projectName === "undefined" ? "" : projectName,
+      userId: typeof userId === "undefined" ? "" : userId,
+      codexHome: typeof codexHome === "undefined" ? "" : codexHome,
+      codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
+      homeScope: typeof homeScope === "undefined" ? "" : homeScope,
+      codexPath: typeof codexPath === "undefined" ? "" : codexPath,
+      vibeHome: typeof vibeHome === "undefined" ? "" : vibeHome,
+      vibeHomeScope: typeof vibeHomeScope === "undefined" ? "" : vibeHomeScope,
+      agentHome: typeof agentHome === "undefined" ? "" : agentHome,
+      settingsTimeoutMs: typeof settingsTimeoutMs === "undefined" ? "" : settingsTimeoutMs
+    });'
+↓result [steps.JsonToXmlStep-1782119857985]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓threadid [variables.RequestableVariable-1782119888663]: 
+  comment: Optional current assistant conversation id.
+  description: Optional current assistant conversation id.
+↓provider [variables.RequestableVariable-1782119888689]: 
+  comment: 'Optional provider filter: codex, vibe, or all.'
+  description: 'Optional provider filter: codex, vibe, or all.'
+↓bridgeBaseUrl [variables.RequestableVariable-1782119888707]: 
+  comment: Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+  description: Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+↓mcpEndpoint [variables.RequestableVariable-1782119888726]: 
+  comment: Optional Convertigo MCP endpoint. Defaults to the current Convertigo endpoint plus /api/mcp.
+  description: Optional Convertigo MCP endpoint. Defaults to the current Convertigo endpoint plus /api/mcp.
+↓workspaceRoot [variables.RequestableVariable-1782119888765]: 
+  comment: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+  description: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+↓targetProject [variables.RequestableVariable-1782119888799]: 
+  comment: Optional target Convertigo project name. Preferred over projectName.
+  description: Optional target Convertigo project name. Preferred over projectName.
+↓projectName [variables.RequestableVariable-1782119888815]: 
+  comment: Optional target Convertigo project name.
+  description: Optional target Convertigo project name.
+↓userId [variables.RequestableVariable-1782119888831]: 
+  comment: Optional user id used for scoped homes.
+  description: Optional user id used for scoped homes.
+↓codexHome [variables.RequestableVariable-1782119888848]: 
+  comment: Optional explicit CODEX_HOME.
+  description: Optional explicit CODEX_HOME.
+↓codexHomeScope [variables.RequestableVariable-1782119888865]: 
+  comment: 'Optional Codex home scope: default, shared, user, conversation, or explicit.'
+  description: 'Optional Codex home scope: default, shared, user, conversation, or explicit.'
+↓homeScope [variables.RequestableVariable-1782119888881]: 
+  comment: Optional generic provider home scope.
+  description: Optional generic provider home scope.
+↓codexPath [variables.RequestableVariable-1782119888897]: 
+  comment: Optional Codex CLI executable path.
+  description: Optional Codex CLI executable path.
+↓vibeHome [variables.RequestableVariable-1782119888916]: 
+  comment: Optional explicit VIBE_HOME.
+  description: Optional explicit VIBE_HOME.
+↓vibeHomeScope [variables.RequestableVariable-1782119888933]: 
+  comment: 'Optional Vibe home scope: shared, user, or conversation.'
+  description: 'Optional Vibe home scope: shared, user, or conversation.'
+↓agentHome [variables.RequestableVariable-1782119888951]: 
+  comment: Optional explicit provider home directory.
+  description: Optional explicit provider home directory.
+↓settingsTimeoutMs [variables.RequestableVariable-1782119888966]: 
+  comment: Timeout in milliseconds for CLI settings discovery.
+  description: Timeout in milliseconds for CLI settings discovery.

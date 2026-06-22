@@ -26,6 +26,22 @@ rediscovering the same context.
 - User-facing prompts should instruct the LLM in English, but the agent must
   answer the user in the user's language.
 
+## Current 1.2.0 Roadmap
+
+- Rework the agent page toward the Codex Desktop interaction model while keeping
+  it usable in a narrow Studio/C8Oforms drawer.
+- Keep conversation management in a compact top cartouche or popover, not in a
+  permanent left sidebar. Show provider, model, state, and creation time.
+- New conversations must ask for agent provider, model, and reasoning level.
+  The Convertigo Generalist skill remains forced and invisible to the user.
+- Models and reasoning choices must come from the bridge/CLI capability contract,
+  not from UI-only hardcoded lists.
+- Keep start templates only on the new conversation screen.
+- Preserve accumulated progress steps after completion and collapse them by
+  default, similar to Codex Desktop.
+- Build the style with light/dark theme variables now, then align it with
+  C8Oforms in a second pass.
+
 ## Bridge Contract
 
 - Main client file: `js/agent_bridge_client.js`.
@@ -70,4 +86,3 @@ rediscovering the same context.
 - Before a demo, verify a fresh Codex conversation can list Convertigo projects
   through the Convertigo Generalist skill and MCP, without using a local
   hardcoded fast path.
-

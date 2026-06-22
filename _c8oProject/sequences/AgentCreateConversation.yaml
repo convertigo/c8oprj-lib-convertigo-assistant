@@ -19,6 +19,9 @@ comment: Create or reuse a local agent conversation through ConvertigoAgentBridg
       codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
       homeScope: typeof homeScope === "undefined" ? "" : homeScope,
       model: typeof model === "undefined" ? "" : model,
+      reasoningEffort: typeof reasoningEffort === "undefined" ? "" : reasoningEffort,
+      serviceTier: typeof serviceTier === "undefined" ? "" : serviceTier,
+      includeSettings: typeof includeSettings === "undefined" ? "" : includeSettings,
       targetProject: _targetProject,
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId,
@@ -85,4 +88,14 @@ comment: Create or reuse a local agent conversation through ConvertigoAgentBridg
 ↓forceNew [variables.RequestableVariable-1781603724188]: 
   comment: When true, always starts a new conversation instead of resuming the latest one.
   description: When true, always starts a new conversation instead of resuming the latest one.
+  schemaType: xsd:boolean
+↓reasoningEffort [variables.RequestableVariable-1782119962086]: 
+  comment: Optional reasoning effort selected for this conversation.
+  description: Optional reasoning effort selected for this conversation.
+↓serviceTier [variables.RequestableVariable-1782119962105]: 
+  comment: Optional service tier selected for this conversation.
+  description: Optional service tier selected for this conversation.
+↓includeSettings [variables.RequestableVariable-1782119962122]: 
+  comment: When true, include provider/model settings in the response.
+  description: When true, include provider/model settings in the response.
   schemaType: xsd:boolean

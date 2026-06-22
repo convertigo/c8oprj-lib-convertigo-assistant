@@ -818,13 +818,32 @@ title: Agent assistant
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                            if (!page.local) {
+                    '        if (!page.local) {
                                 page.local = {};
                             }
-                            page.local.ShowConversationPanel = true;
+                            var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
+                            if (project && page.setConversationProject) {
+                                page.setConversationProject(project);
+                            }
+                            page.local.NewConversationMode = true;
+                            page.local.ShowConversationPanel = false;
+                            page.local.Conversation = '''';
+                            page.local.AgentConversationResumed = false;
+                            page.local.Messages = [];
+                            page.local.RunID = '''';
+                            page.local.Buffer = {};
+                            page.local.StreamingIndex = null;
+                            page.local.IsProcessing = false;
+                            page.local.AgentProgressHistory = [];
+                            page.local.AgentProgressHistoryRunId = '''';
+                            page.local.Question = '''';
+                            if (page.chatfooter && page.chatfooter.setQuestionText) {
+                                page.chatfooter.setQuestionText('''', false);
+                            }
+                            page.setEnableChat();
                             page.tick();
-                            resolve();
-                    
+                            page.focusQuestionInput(20);
+                            resolve();'
         ↓AriaNewConversation [ngx.components.UIAttribute-1781604857325]: 
           attrName: aria-label
           attrValue: 
@@ -1027,7 +1046,7 @@ title: Agent assistant
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:modern-center
+            - MobileSmartSourceType: plain:modern-center agent-desktop-center
       ↓Div [ngx.components.UIDynamicElement-1772014207161]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
@@ -1044,7 +1063,7 @@ title: Agent assistant
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Agent IA Convertigo
+                - MobileSmartSourceType: 'script:(this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? (''Que devrions-nous construire pour le projet '' + this.getEffectiveProjectName() + '' ?'') : ''Que devrions-nous construire ?'''
         ↓IntroCopy1 [ngx.components.UIDynamicElement-1772100000039]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -1053,12 +1072,12 @@ title: Agent assistant
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-copy
+                - MobileSmartSourceType: plain:modern-copy agent-hidden
           ↓Text [ngx.components.UIText-1772100000041]: 
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Demandez à l'agent d'analyser, modifier et tester le projet Convertigo sélectionné.
+                - MobileSmartSourceType: plain:Décrivez le changement attendu, ajoutez des fichiers si besoin, puis laissez l'agent intervenir.
         ↓IntroCopy2 [ngx.components.UIDynamicElement-1772100000042]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -1067,12 +1086,18 @@ title: Agent assistant
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-copy
+                - MobileSmartSourceType: plain:modern-copy agent-hidden
           ↓Text [ngx.components.UIText-1772100000044]: 
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Il utilise vos sessions d'agent local et les outils MCP Convertigo.
+                - MobileSmartSourceType: plain:Choisissez l'agent, le modèle et le niveau de raisonnement au démarrage.
+        ↓Class [ngx.components.UIAttribute-1782121734063]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-desktop-hero
       ↓HowCard [ngx.components.UIDynamicElement-1772100000045]: 
         beanData: '{"ionBean":"Card"}'
         tagName: ion-card
@@ -1081,7 +1106,7 @@ title: Agent assistant
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-card
+              - MobileSmartSourceType: plain:modern-card agent-desktop-how-card
         ↓CardContent [ngx.components.UIDynamicElement-1772100000047]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -1235,7 +1260,7 @@ title: Agent assistant
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-card modern-cta-card
+              - MobileSmartSourceType: plain:modern-card modern-cta-card agent-start-card
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -1252,7 +1277,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Commencer
+                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''Conversations précédentes'' : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Conversation en cours'' : ''Nouvelle conversation'')'
           ↓Copy [ngx.components.UIDynamicElement-1772100000099]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1266,7 +1291,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Demandez une correction, une amélioration ou une explication sur le projet sélectionné.
+                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''Reprenez ou supprimez une conversation existante.'' : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Continuez cette conversation ou ouvrez la liste pour en choisir une autre.'' : (''Choisissez l’agent. Le premier message démarre la conversation pour le projet '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''sélectionné'') + ''.''))'
           ↓AgentSessionStrip [ngx.components.UIDynamicElement-1781604896725]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: div
@@ -1275,7 +1300,7 @@ title: Agent assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:agent-session-strip
+                  - MobileSmartSourceType: 'script:(this.local && this.local.Conversation && this.local.NewConversationMode !== true && this.local.ShowConversationPanel !== true) ? ''agent-session-strip'' : ''agent-session-strip agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1781604896729]: 
               beanData: '{"ionBean":"Icon","IconName":"script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''"}'
               tagName: ion-icon
@@ -1301,7 +1326,7 @@ title: Agent assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.AgentConversationResumed) ? ''Conversation reprise'' : ''Nouvelle conversation active'''
+                      - MobileSmartSourceType: 'script:(this.local && this.local.Conversation) ? ''Conversation en cours'' : ''Nouvelle conversation'''
               ↓Meta [ngx.components.UIDynamicElement-1781604896741]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -1315,7 +1340,7 @@ title: Agent assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (((this.local && this.local.Conversation) ? (''Session '' + (((('''' + this.local.Conversation).indexOf(''agent-'') === 0) ? ('''' + this.local.Conversation).substring(6, 14) : ('''' + this.local.Conversation).substring(0, 8)))) : ''Initialisation'') + '' - '' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) + '' conversation'' + (((this.local && this.local.AgentConversations && this.local.AgentConversations.length) ? this.local.AgentConversations.length : 0) > 1 ? ''s'' : '''')))'
+                      - MobileSmartSourceType: 'script:(this.local && this.local.Conversation) ? (this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (''Session '' + ('''' + this.local.Conversation).substring(0, 8))) : (''Choisissez un agent pour le projet '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''sélectionné''))'
             ↓Chevron [ngx.components.UIDynamicElement-1781676585879]: 
               beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
               tagName: ion-icon
@@ -1344,14 +1369,19 @@ title: Agent assistant
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        		page.toggleConversationsPanel();
+                        		if (!page.local) {
+                        			page.local = {};
+                        		}
+                        		page.local.NewConversationMode = false;
+                        		page.local.ShowConversationPanel = true;
+                        		page.tick();
                         		resolve();
           ↓AgentConversationsPanelIf [ngx.components.UIControlDirective-1781608114975]: 
             directiveName: If
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.local && this.local.ShowConversationPanel === true
+                - MobileSmartSourceType: script:this.local && (this.local.ShowConversationPanel === true || this.local.NewConversationMode === true || !this.local.Conversation)
             ↓Panel [ngx.components.UIDynamicElement-1781608119091]: 
               beanData: '{"ionBean":"DivTag"}'
               tagName: div
@@ -1369,13 +1399,12 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-conversations-title
+                      - MobileSmartSourceType: 'script:(this.local && ((this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true && this.local.AgentConversations && this.local.AgentConversations.length > 0) || this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-conversations-title'' : ''agent-conversations-title agent-hidden'''
                 ↓Text [ngx.components.UIText-1781608119099]: 
-                  i18n: true
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Conversations
+                      - MobileSmartSourceType: 'script:(this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''Nouvelle conversation'' : ''Conversations précédentes'''
               ↓CloseButton [ngx.components.UIDynamicElement-1781676493781]: 
                 beanData: |
                   '{
@@ -1389,7 +1418,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-conversations-close
+                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.Conversation && this.local.NewConversationMode !== true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'''
                 ↓Aria [ngx.components.UIAttribute-1781676493785]: 
                   attrName: aria-label
                   attrValue: 
@@ -1421,7 +1450,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-create-settings
+                      - MobileSmartSourceType: 'script:(this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-create-settings'' : ''agent-create-settings agent-hidden'''
                 ↓AgentLabel [ngx.components.UIDynamicElement-1781700500012]: 
                   beanData: '{"ionBean":"Paragraph"}'
                   tagName: p
@@ -1466,9 +1495,58 @@ title: Agent assistant
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                        page.setAgentProvider('vibe');
+                                '        var provider = ''vibe'';
+                                        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var settings = page.local.AgentSettings || {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selectedProvider = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                                                selectedProvider = providers[i];
+                                                break;
+                                            }
+                                        }
+                                        page.local.AgentProvider = provider;
+                                        var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
+                                        page.local.AgentModels = models;
+                                        page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                                        var model = clean(selectedProvider && selectedProvider.defaultModel);
+                                        if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
+                                            model = clean(settings.defaults.model);
+                                        }
+                                        var selectedModel = null;
+                                        for (var j = 0; j < models.length; j++) {
+                                            if (clean(models[j] && models[j].id) === model) {
+                                                selectedModel = models[j];
+                                                break;
+                                            }
+                                        }
+                                        if (selectedModel === null && models.length) {
+                                            selectedModel = models[0];
+                                            model = clean(selectedModel && selectedModel.id);
+                                        }
+                                        page.local.AgentModel = model;
+                                        page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                                        var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
+                                        if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
+                                            reasoning = clean(settings.defaults.reasoning);
+                                        }
+                                        if (page.local.AgentProviderSupportsReasoning !== true) {
+                                            reasoning = '''';
+                                        }
+                                        page.local.AgentReasoningEffort = reasoning;
+                                        var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
+                                        page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
+                                        try {
+                                            if (typeof window !== ''undefined'' && window.localStorage) {
+                                                window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
+                                            }
+                                        } catch (e) {}
+                                        page.tick();
                                         resolve();
-                                
+                                '
                     ↓Text [ngx.components.UIText-1781700500021]: 
                       textValue: 
                         - xmlizable: 
@@ -1495,9 +1573,58 @@ title: Agent assistant
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                        page.setAgentProvider('codex');
+                                '        var provider = ''codex'';
+                                        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var settings = page.local.AgentSettings || {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selectedProvider = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                                                selectedProvider = providers[i];
+                                                break;
+                                            }
+                                        }
+                                        page.local.AgentProvider = provider;
+                                        var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
+                                        page.local.AgentModels = models;
+                                        page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                                        var model = clean(selectedProvider && selectedProvider.defaultModel);
+                                        if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
+                                            model = clean(settings.defaults.model);
+                                        }
+                                        var selectedModel = null;
+                                        for (var j = 0; j < models.length; j++) {
+                                            if (clean(models[j] && models[j].id) === model) {
+                                                selectedModel = models[j];
+                                                break;
+                                            }
+                                        }
+                                        if (selectedModel === null && models.length) {
+                                            selectedModel = models[0];
+                                            model = clean(selectedModel && selectedModel.id);
+                                        }
+                                        page.local.AgentModel = model;
+                                        page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                                        var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
+                                        if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
+                                            reasoning = clean(settings.defaults.reasoning);
+                                        }
+                                        if (page.local.AgentProviderSupportsReasoning !== true) {
+                                            reasoning = '''';
+                                        }
+                                        page.local.AgentReasoningEffort = reasoning;
+                                        var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
+                                        page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
+                                        try {
+                                            if (typeof window !== ''undefined'' && window.localStorage) {
+                                                window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
+                                            }
+                                        } catch (e) {}
+                                        page.tick();
                                         resolve();
-                                
+                                '
                     ↓Text [ngx.components.UIText-1781700500026]: 
                       textValue: 
                         - xmlizable: 
@@ -1505,6 +1632,7 @@ title: Agent assistant
                           - MobileSmartSourceType: plain:Codex
                 ↓ModelLabel [ngx.components.UIDynamicElement-1781700500027]: 
                   beanData: '{"ionBean":"Paragraph"}'
+                  isEnabled: false
                   tagName: p
                   ↓Class [ngx.components.UIAttribute-1781700500028]: 
                     attrName: class
@@ -1522,7 +1650,8 @@ title: Agent assistant
                   directiveSource: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:this.getAgentModelOptions ? this.getAgentModelOptions() : []'
+                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  isEnabled: false
                   ↓ModelButton [ngx.components.UIDynamicElement-1781700500031]: 
                     beanData: |
                       '{
@@ -1545,7 +1674,39 @@ title: Agent assistant
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
                                 '        var agentModel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.agentModel : null;
-                                        page.setAgentModel(agentModel ? agentModel.id : '''');
+                                        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var modelId = clean(agentModel && agentModel.id);
+                                        page.local.AgentModel = modelId;
+                                        var provider = clean(page.local.AgentProvider).toLowerCase();
+                                        var settings = page.local.AgentSettings || {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selectedProvider = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                                                selectedProvider = providers[i];
+                                                break;
+                                            }
+                                        }
+                                        page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                                        page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && agentModel && agentModel.reasoningLevels ? agentModel.reasoningLevels : [];
+                                        var reasoning = clean(agentModel && agentModel.defaultReasoning);
+                                        if (page.local.AgentProviderSupportsReasoning !== true) {
+                                            reasoning = '''';
+                                        }
+                                        page.local.AgentReasoningEffort = reasoning;
+                                        var tiers = agentModel && agentModel.serviceTiers ? agentModel.serviceTiers : [];
+                                        var currentTier = clean(page.local.AgentServiceTier);
+                                        var tierOk = !currentTier.length;
+                                        for (var j = 0; j < tiers.length; j++) {
+                                            if (clean(tiers[j] && tiers[j].id) === currentTier) {
+                                                tierOk = true;
+                                                break;
+                                            }
+                                        }
+                                        page.local.AgentServiceTier = tierOk ? currentTier : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''');
+                                        page.tick();
                                         resolve();
                                 '
                     ↓Text [ngx.components.UIText-1781700500035]: 
@@ -1553,11 +1714,79 @@ title: Agent assistant
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: 'script:agentModel ? agentModel.label : '''''
+                ↓ReasoningIf [ngx.components.UIControlDirective-1782120764871]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
+                  isEnabled: false
+                  ↓ReasoningSettings [ngx.components.UIDynamicElement-1782120769047]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1782120769049]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-create-settings-block
+                    ↓ReasoningLabel [ngx.components.UIDynamicElement-1782120769051]: 
+                      beanData: '{"ionBean":"Paragraph"}'
+                      tagName: p
+                      ↓Class [ngx.components.UIAttribute-1782120769053]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-create-label
+                      ↓Text [ngx.components.UIText-1782120769055]: 
+                        i18n: true
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:Raisonnement
+                    ↓ReasoningChoices [ngx.components.UIControlDirective-1782120769057]: 
+                      directiveItemName: reasoningLevel
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                      ↓ReasoningButton [ngx.components.UIDynamicElement-1782120769059]: 
+                        beanData: |
+                          '{
+                           "ionBean": "Button",
+                           "IonFill": "plain:clear",
+                           "IonSize": "plain:small"
+                          }'
+                        tagName: ion-button
+                        ↓Class [ngx.components.UIAttribute-1782120769061]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.id === (this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : '''') ? ''agent-choice-button active'' : ''agent-choice-button'''
+                        ↓Event [ngx.components.UIControlEvent-1782120769063]: 
+                          ↓SetReasoning [ngx.components.UICustomAction-1782120770549]: 
+                            actionValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                  →: |
+                                    '        var reasoningLevel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.reasoningLevel : null;
+                                            if (!page.local) { page.local = {}; }
+                                            page.local.AgentReasoningEffort = reasoningLevel && reasoningLevel.id != null ? ('''' + reasoningLevel.id).replace(/^\s+|\s+$/g, '''') : '''';
+                                            page.tick();
+                                            resolve();
+                                    '
+                        ↓Text [ngx.components.UIText-1782120770551]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
               ↓NewConversationButton [ngx.components.UIDynamicElement-1781676410893]: 
                 beanData: |
                   '{
                    "ionBean": "Button",
-                   "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
                    "IonFill": "plain:clear",
                    "IonSize": "plain:small"
                   }'
@@ -1567,7 +1796,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-new-conversation-button
+                      - MobileSmartSourceType: 'script:(this.local && ((this.local.AgentConversations && this.local.AgentConversations.length > 0) || (this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true))) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
                 ↓Aria [ngx.components.UIAttribute-1781676410897]: 
                   attrName: aria-label
                   attrValue: 
@@ -1578,7 +1807,7 @@ title: Agent assistant
                   beanData: |
                     '{
                      "ionBean": "Icon",
-                     "IconName": "plain:add-circle-outline",
+                     "IconName": "script:(this.local && this.local.NewConversationMode === true) ? ''list-outline'' : ''add-circle-outline''",
                      "IconSlot": "plain:start"
                     }'
                   tagName: ion-icon
@@ -1586,7 +1815,7 @@ title: Agent assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:this.getNewConversationLabel ? this.getNewConversationLabel() : (''Démarrer une nouvelle conversation pour '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''le projet sélectionné''))'
+                      - MobileSmartSourceType: 'script:(this.local && this.local.NewConversationMode === true) ? ''Conversations précédentes'' : ''Démarrer une nouvelle conversation'''
                 ↓Event [ngx.components.UIControlEvent-1781676410903]: 
                   ↓CreateConversation [ngx.components.UICustomAction-1781676412389]: 
                     actionValue: 
@@ -1594,44 +1823,24 @@ title: Agent assistant
                         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                         - com.twinsoft.convertigo.beans.common.FormatedContent: 
                           →: |
-                            '		var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
-                            		if (!project.length) {
-                            			page.setEnableChat();
-                            			resolve();
-                            			return;
-                            		}
-                            		if (!page.local) {
+                            '		if (!page.local) {
                             			page.local = {};
                             		}
-                            		var normalizeProvider = function(value) {
-                            			var provider = ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''').toLowerCase();
-                            			if (provider === ''codex-cli'' || provider === ''openai-codex'') {
-                            				return ''codex'';
-                            			}
-                            			if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') {
-                            				return ''vibe'';
-                            			}
-                            			return provider;
-                            		};
-                            		var provider = normalizeProvider(page.local.AgentProvider);
-                            		try {
-                            			if (!provider.length && page.getConfiguredAgentProvider) {
-                            				provider = normalizeProvider(page.getConfiguredAgentProvider());
-                            			}
-                            		} catch (e0) {}
-                            		if (!provider.length) {
+                            		if (page.local.NewConversationMode === true) {
+                            			page.local.NewConversationMode = false;
                             			page.local.ShowConversationPanel = true;
-                            			page.local.AgentProvider = '''';
-                            			page.local.AgentModel = '''';
-                            			page.local.AgentConversationResumed = false;
-                            			page.setConversationProject(project);
-                            			page.setEnableChat();
                             			page.tick();
                             			resolve();
                             			return;
                             		}
-                            		var model = page.getAgentModel ? page.getAgentModel() : '''';
-                            		page.local.Question = '''';
+                            		var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
+                            		if (project && page.setConversationProject) {
+                            			page.setConversationProject(project);
+                            		}
+                            		page.local.NewConversationMode = true;
+                            		page.local.ShowConversationPanel = false;
+                            		page.local.Conversation = '''';
+                            		page.local.AgentConversationResumed = false;
                             		page.local.Messages = [];
                             		page.local.RunID = '''';
                             		page.local.Buffer = {};
@@ -1639,73 +1848,14 @@ title: Agent assistant
                             		page.local.IsProcessing = false;
                             		page.local.AgentProgressHistory = [];
                             		page.local.AgentProgressHistoryRunId = '''';
+                            		page.local.Question = '''';
                             		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                                        page.chatfooter.setQuestionText('''', false);
-                                    }
-                                    page.c8o.callJsonObject(''ConvertigoAssistant.AgentCreateConversation'', {
-                                        ''targetProject'': project,
-                                        ''provider'': provider,
-                                        ''model'': model,
-                                        ''forceNew'': true,
-                                        ''__context'': ''byside''
-                                    }).async().then(function(response) {
-                                        var result = response && response.result ? response.result : {};
-                                        if (result.requiresAgentSelection === true || !result.id) {
-                                            page.local.ShowConversationPanel = true;
-                                            page.local.AgentProvider = '''';
-                                            page.local.AgentModel = '''';
-                                            page.local.AgentConversationResumed = false;
-                                            page.setConversationProject(project);
-                                            page.setEnableChat();
-                                            page.tick();
-                                            resolve();
-                                            return;
-                                        }
-                                        page.local.Conversation = result.id || page.local.Conversation;
-                                        page.local.AgentProvider = result.provider || (result.state && result.state.provider) || provider;
-                                        page.local.AgentModel = result.model || (result.state && result.state.model) || model || '''';
-                                        if (result.conversations) {
-                                            page.local.AgentConversations = result.conversations;
-                                        }
-                            			page.local.AgentConversationResumed = result.resumed === true;
-                            			page.setConversationProject((result.state && result.state.primaryProject) || project);
-                            			page.local.ShowConversationPanel = false;
-                            			page.setEnableChat();
-                                        var finish = function() {
-                                            page.tick();
-                                            page.enableAutoScroll();
-                                            resolve();
-                                        };
-                                        var setupPayload: any = {
-                                            ''threadid'': page.local.Conversation || '''',
-                                            ''targetProject'': project,
-                                            ''provider'': page.local.AgentProvider || provider,
-                                            ''model'': page.local.AgentModel || model || '''',
-                                            ''install'': true,
-                                            ''__context'': ''byside''
-                                        };
-                                        var setupProviderLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(setupPayload.provider) : setupPayload.provider;
-                                        page.startAgentSetupMessage(setupProviderLabel, true);
-                                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', setupPayload).async().then(function(setupResponse) {
-                                            var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
-                                            page.local.AgentSetup = setupResult;
-                                            page.finishAgentSetupMessage(setupResult, '''');
-                                            finish();
-                                        }).catch(function(error) {
-                                            try {
-                                                page.c8o.log.warn(''[Assistant] Unable to setup agent runtime: '' + error);
-                                            } catch (e) {}
-                                            page.finishAgentSetupMessage(null, ''Installation impossible : '' + error);
-                                            finish();
-                                        });
-                            		}).catch(function(error) {
-                            			try {
-                            				page.c8o.log.warn(''[Assistant] Unable to create agent conversation: '' + error);
-                            			} catch (e) {}
-                            			page.tick();
-                            			resolve();
-                            		});
-                            '
+                            			page.chatfooter.setQuestionText('''', false);
+                            		}
+                            		page.setEnableChat();
+                            		page.tick();
+                            		page.focusQuestionInput(20);
+                            		resolve();'
               ↓AgentSetupButton [ngx.components.UIDynamicElement-1781811000100]: 
                 beanData: |
                   '{
@@ -1720,7 +1870,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-new-conversation-button
+                      - MobileSmartSourceType: 'script:(this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
                 ↓Aria [ngx.components.UIAttribute-1781811000102]: 
                   attrName: aria-label
                   attrValue: 
@@ -1739,7 +1889,7 @@ title: Agent assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Diagnostiquer / installer l'agent
+                      - MobileSmartSourceType: plain:Préparer l'agent
                 ↓Event [ngx.components.UIControlEvent-1781811000105]: 
                   ↓SetupAgent [ngx.components.UICustomAction-1781811000106]: 
                     actionValue: 
@@ -1766,6 +1916,7 @@ title: Agent assistant
                                         }
                                         return provider;
                                     };
+                                    var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
                                     var provider = normalizeProvider(page.local.AgentProvider);
                                     try {
                                         if (!provider.length && page.getConfiguredAgentProvider) {
@@ -1776,19 +1927,25 @@ title: Agent assistant
                                         page.local.ShowConversationPanel = true;
                                         page.local.AgentProvider = '''';
                                         page.local.AgentModel = '''';
+                                        page.local.AgentReasoningEffort = '''';
+                                        page.local.AgentServiceTier = '''';
                                         page.setConversationProject(project);
                                         page.setEnableChat();
                                         page.tick();
                                         resolve();
                                         return;
                                     }
-                                    var model = page.getAgentModel ? page.getAgentModel() : '''';
+                                    var model = page.local.AgentModel != null ? clean(page.local.AgentModel) : (page.getAgentModel ? page.getAgentModel() : '''');
+                                    var reasoningEffort = clean(page.local.AgentReasoningEffort);
+                                    var serviceTier = clean(page.local.AgentServiceTier);
                                     var providerLabel = page.getAgentProviderLabel ? page.getAgentProviderLabel(provider) : provider;
                                     var payload: any = {
                                         ''threadid'': page.local.Conversation || '''',
                                         ''targetProject'': project,
                                         ''provider'': provider,
                                         ''model'': model,
+                                        ''reasoningEffort'': reasoningEffort,
+                                        ''serviceTier'': serviceTier,
                                         ''install'': true,
                                         ''__context'': ''byside''
                                     };
@@ -1808,6 +1965,8 @@ title: Agent assistant
                                         page.local.Conversation = setupResult.id || page.local.Conversation;
                                         page.local.AgentProvider = setupResult.provider || provider;
                                         page.local.AgentModel = setupResult.model || model || '''';
+                                        page.local.AgentReasoningEffort = setupResult.reasoningEffort || reasoningEffort || '''';
+                                        page.local.AgentServiceTier = setupResult.serviceTier || serviceTier || '''';
                                         if (setupResult.conversations) {
                                             page.local.AgentConversations = setupResult.conversations;
                                         }
@@ -1835,7 +1994,7 @@ title: Agent assistant
                     attrValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-row active'' : ''agent-conversation-row'''
+                        - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? (conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-row active'' : ''agent-conversation-row'') : ''agent-conversation-row agent-hidden'''
                   ↓Info [ngx.components.UIDynamicElement-1781608119107]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: div
@@ -1858,7 +2017,7 @@ title: Agent assistant
                         textValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''Conversation active'' : ''Conversation disponible'''
+                            - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''Conversation en cours'' : ''Conversation'''
                     ↓Meta [ngx.components.UIDynamicElement-1781608119117]: 
                       beanData: '{"ionBean":"Paragraph"}'
                       tagName: p
@@ -2190,7 +2349,7 @@ title: Agent assistant
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: plain:agent-conversation-action danger
+                            - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-action danger agent-hidden'' : ''agent-conversation-action danger'''
                       ↓Aria [ngx.components.UIAttribute-1781608122147]: 
                         attrName: aria-label
                         attrValue: 
@@ -2198,7 +2357,12 @@ title: Agent assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:Supprimer la conversation
                       ↓Icon [ngx.components.UIDynamicElement-1781608122149]: 
-                        beanData: '{"ionBean":"Icon","IconName":"plain:trash-outline"}'
+                        beanData: |
+                          '{
+                           "ionBean": "Icon",
+                           "IconName": "plain:trash-outline",
+                           "IconSlot": "plain:icon-only"
+                          }'
                         tagName: ion-icon
                       ↓Event [ngx.components.UIControlEvent-1781608122151]: 
                         ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
@@ -2268,19 +2432,173 @@ title: Agent assistant
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:item.time || ''
+          ↓IsWorklog [ngx.components.UIControlDirective-1782137358861]: 
+            directiveName: If
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:item && (item.type == 'worklog' || item.writing === true || !!item.progressDetails)
+            ↓Worklog [ngx.components.UIDynamicElement-1782137358863]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: details
+              ↓Class [ngx.components.UIAttribute-1782137363039]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-worklog
+              ↓Header [ngx.components.UIDynamicElement-1782137363041]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: summary
+                ↓Class [ngx.components.UIAttribute-1782137363043]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-worklog-header
+                ↓Title [ngx.components.UIDynamicElement-1782137363045]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1782137363047]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-worklog-title
+                  ↓Text [ngx.components.UIText-1782137363049]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:item && item.progressTitle ? item.progressTitle : (item && item.writing === true ? ''Traitement en cours'' : ''A travaillé'')'
+              ↓Narrative [ngx.components.UIDynamicElement-1782143276091]: 
+                beanData: '{"ionBean":"DivTag"}'
+                isEnabled: false
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1782143276093]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-worklog-narrative
+                ↓MdReader [ngx.components.UIUseShared-1782143276095]: 
+                  sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                  ↓data [ngx.components.UIUseVariable-1782143280331]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:item ? (item.progressNarrative || item.msg || '''') : '''''
+              ↓Details [ngx.components.UIDynamicElement-1782137363057]: 
+                beanData: '{"ionBean":"DivTag"}'
+                isEnabled: false
+                tagName: details
+                ↓Class [ngx.components.UIAttribute-1782137363059]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-worklog-details
+                ↓Open [ngx.components.UIAttribute-1782137363061]: 
+                  attrName: '[open]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item && item.writing !== true && item.progressCollapsed !== true
+                ↓Summary [ngx.components.UIDynamicElement-1782137363063]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: summary
+                  ↓Class [ngx.components.UIAttribute-1782137363065]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-worklog-summary
+                  ↓Text [ngx.components.UIText-1782137363067]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:item && item.progressSummary ? ('''' + item.progressSummary).split(''\n'')[0] : ''Étapes et appels MCP'''
+                ↓Body [ngx.components.UIDynamicElement-1782137363069]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1782137363071]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-worklog-body
+                  ↓MdReader [ngx.components.UIUseShared-1782137363073]: 
+                    sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                    ↓data [ngx.components.UIUseVariable-1782137367309]: 
+                      varValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:item ? (item.progressDetails || item.msg || item.status || '''') : '''''
+              ↓Pulse [ngx.components.UIDynamicElement-1782137363051]: 
+                beanData: '{"ionBean":"Paragraph"}'
+                isEnabled: false
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1782137363053]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-worklog-pulse
+                ↓Text [ngx.components.UIText-1782137363055]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:item && item.writing === true ? ((item.status && ('''' + item.status).length < 90) ? item.status : ''En réflexion'') : '''''
+              ↓Open [ngx.components.UIAttribute-1782146112299]: 
+                attrName: '[open]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:item && item.writing === true
+              ↓Flow [ngx.components.UIDynamicElement-1782146116475]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1782146116477]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-worklog-flow
+                ↓Steps [ngx.components.UIControlDirective-1782146116479]: 
+                  directiveIndexName: stepIndex
+                  directiveItemName: step
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:item && item.progressItems ? item.progressItems : []'
+                  ↓Step [ngx.components.UIDynamicElement-1782146120655]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1782146120657]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:''agent-worklog-step agent-worklog-step-'' + ((step && step.type) ? step.type : ''narrative'') + ((step && step.current) ? '' is-current'' : '''')'
+                    ↓StepMd [ngx.components.UIUseShared-1782146120659]: 
+                      sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                      ↓data [ngx.components.UIUseVariable-1782146124895]: 
+                        varValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:step && step.text ? step.text : '''''
           ↓IsAssistant [ngx.components.UIControlDirective-1773100000007]: 
             directiveName: If
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:item.type == 'assistant' || item.type == 'image'
+                - MobileSmartSourceType: script:item && ((item.type == 'assistant' || item.type == 'image') && item.writing !== true && !item.progressDetails)
             ↓AssistantMessage [ngx.components.UIUseShared-1773100000008]: 
               sharedcomponent: ConvertigoAssistant.Application.NgxApp.AssistantMessageComponent
               ↓message [ngx.components.UIUseVariable-1773100000009]: 
                 varValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:(item.progressDetails ? (''<details style=white-space:pre-wrap><summary style=white-space:normal>'' + (('''' + (item.progressSummary || item.msg || ''Étapes du traitement'')).split(''\n'')[0]) + ''</summary>\n\n'' + ('''' + item.progressDetails) + ''\n\n</details>'') : item.msg)'
+                    - MobileSmartSourceType: 'script:item ? item.msg : '''''
               ↓file [ngx.components.UIUseVariable-1777601000001]: 
                 varValue: 
                   - xmlizable: 
@@ -2349,6 +2667,12 @@ title: Agent assistant
             ↓Spinner [ngx.components.UIDynamicElement-1773100000018]: 
               beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
               tagName: ion-spinner
+          ↓Hidden [ngx.components.UIAttribute-1782124487981]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:!(this.local && this.local.spinner === true && this.local.IsProcessing !== true)
   ↓IfScrollTopButton [ngx.components.UIControlDirective-1781676529458]: 
     directiveName: If
     directiveSource: 
@@ -2396,7 +2720,7 @@ title: Agent assistant
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-up-outline",
-           "IonSize": "plain:large",
+           "IonSize": "plain:small",
            "IconSlot": "plain:icon-only"
           }'
         tagName: ion-icon
@@ -2447,7 +2771,7 @@ title: Agent assistant
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-down-outline",
-           "IonSize": "plain:large",
+           "IonSize": "plain:small",
            "IconSlot": "plain:icon-only"
           }'
         tagName: ion-icon
@@ -2799,6 +3123,93 @@ title: Agent assistant
                   →: |
                     		page.setEnableChat();
                     		resolve();
+        ↓SetAgentSettings [ngx.components.UIDynamicAction-1782120489669]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:AgentSettings",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.settings\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
+        ↓PrepareAgentSettingsLocal [ngx.components.UICustomAction-1782121043245]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  '        var actionResponse = null;
+                          try {
+                              if (props && props.stack && props.stack[''1744302843894'']) {
+                                  actionResponse = props.stack[''1744302843894''].out;
+                              }
+                          } catch (e0) {}
+                          var result = actionResponse && actionResponse.result ? actionResponse.result : {};
+                          if (!page.local) { page.local = {}; }
+                          if (result.settings) {
+                              page.local.AgentSettings = result.settings;
+                          }
+                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                          var state = result.state || {};
+                          var provider = clean(page.local.AgentProvider || state.provider || result.provider).toLowerCase();
+                          var model = clean(page.local.AgentModel || state.model || result.model);
+                          var settings = page.local.AgentSettings || {};
+                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                          var providers = settings.providers || [];
+                          var selectedProvider = null;
+                          for (var i = 0; i < providers.length; i++) {
+                              if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                                  selectedProvider = providers[i];
+                                  break;
+                              }
+                          }
+                          if (!provider.length || selectedProvider === null) {
+                              page.local.AgentModels = [];
+                              page.local.AgentProviderSupportsReasoning = false;
+                              page.local.AgentReasoningLevels = [];
+                              resolve();
+                              return;
+                          }
+                          var models = selectedProvider.models || [];
+                          page.local.AgentProvider = provider;
+                          page.local.AgentModels = models;
+                          page.local.AgentProviderSupportsReasoning = selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                          if (!model.length) {
+                              model = clean(selectedProvider.defaultModel || (settings.defaults && settings.defaults.provider === provider ? settings.defaults.model : ''''));
+                          }
+                          var selectedModel = null;
+                          for (var j = 0; j < models.length; j++) {
+                              if (clean(models[j] && models[j].id) === model) {
+                                  selectedModel = models[j];
+                                  break;
+                              }
+                          }
+                          if (selectedModel === null && models.length) {
+                              selectedModel = models[0];
+                              model = clean(selectedModel && selectedModel.id);
+                          }
+                          page.local.AgentModel = model;
+                          page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                          var reasoning = clean(page.local.AgentReasoningEffort || state.reasoningEffort || result.reasoningEffort);
+                          if (!reasoning.length && page.local.AgentProviderSupportsReasoning === true) {
+                              reasoning = clean(selectedModel && selectedModel.defaultReasoning);
+                          }
+                          page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : '''';
+                          page.local.AgentServiceTier = clean(page.local.AgentServiceTier || state.serviceTier || result.serviceTier);
+                          resolve();
+                  '
+        ↓SetAgentReasoningEffort [ngx.components.UIDynamicAction-1782120503630]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:AgentReasoningEffort",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.reasoningEffort\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
+        ↓SetAgentServiceTier [ngx.components.UIDynamicAction-1782120505136]: 
+          beanData: |
+            '{
+             "ionBean": "SetLocalAction",
+             "Property": "plain:AgentServiceTier",
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.serviceTier\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+            }'
   ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
     actionValue: 
       - xmlizable: 
@@ -2838,6 +3249,15 @@ title: Agent assistant
             		var trimText = function(value) {
             			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
             		};
+            		var formatDuration = function(ms) {
+            			var seconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+            			if (seconds < 60) {
+            				return seconds + " s";
+            			}
+            			var minutes = Math.floor(seconds / 60);
+            			var rest = seconds % 60;
+            			return minutes + " min" + (rest ? " " + rest + " s" : "");
+            		};
             		var localizeProgress = function(value) {
             			var line = trimText(value);
             			var key = line.toLowerCase();
@@ -2846,7 +3266,7 @@ title: Agent assistant
             				"i am analyzing the request.": "J''analyse la demande.",
             				"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
             				"i am applying a change in the project.": "J''applique une modification dans le projet.",
-            				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
+            				"i am using a convertigo tool.": "J''utilise le MCP Convertigo.",
             				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
                             "i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
             				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
@@ -2932,16 +3352,114 @@ title: Agent assistant
             				hasLines: history.length > 0
             			};
             		};
+            		var isProgressActivity = function(value) {
+            			var text = trimText(value);
+            			var lower = text.toLowerCase();
+            			return !text.length ||
+            				lower === "réflexion en cours" ||
+            				lower === "réflexion en cours." ||
+            				lower.indexOf("j''analyse") === 0 ||
+            				lower.indexOf("j’utilise") === 0 ||
+            				lower.indexOf("j''utilise") === 0 ||
+            				lower.indexOf("j’appelle") === 0 ||
+            				lower.indexOf("j''appelle") === 0 ||
+            				lower.indexOf("j’exécute") === 0 ||
+            				lower.indexOf("j''exécute") === 0 ||
+            				lower.indexOf("je lis ") === 0 ||
+            				lower.indexOf("je recherche") === 0 ||
+            				lower.indexOf("loaded ") === 0 ||
+            				lower.indexOf("read ") === 0 ||
+            				lower.indexOf("searched ") === 0 ||
+            				lower.indexOf("a utilisé") === 0 ||
+            				lower.indexOf("a lu ") === 0 ||
+            				lower.indexOf("a exécuté") === 0;
+            		};
+            		var progressView = function(lines) {
+            			var details = [];
+            			var narrative = [];
+            			var items = [];
+            			var statusLine = "";
+            			for (var i = 0; i < lines.length; i++) {
+            				var line = trimText(lines[i]);
+            				if (!line.length || details.indexOf(line) !== -1) {
+            					continue;
+            				}
+            				details.push(line);
+            				var activity = isProgressActivity(line);
+            				items.push({ text: line, type: activity ? "activity" : "narrative", current: false });
+            				if (activity) {
+            					statusLine = line;
+            				} else {
+            					narrative.push(line);
+            					statusLine = "En réflexion";
+            				}
+            			}
+            			return {
+            				narrativeText: narrative.join("\n\n"),
+            				detailsText: details.join("\n\n"),
+            				items: items,
+            				status: statusLine || "En réflexion",
+            				count: details.length,
+            				hasLines: details.length > 0,
+            				summary: "Étapes et appels MCP (" + details.length + ")"
+            			};
+            		};
+            		var progressItemsForWriting = function(view) {
+            			var source = view && view.items ? view.items : [];
+            			var items = [];
+            			for (var i = 0; i < source.length; i++) {
+            				items.push({ text: source[i].text, type: source[i].type || "narrative", current: false });
+            			}
+            			var status = trimText(view && view.status ? view.status : "En réflexion");
+            			if (!status.length) {
+            				status = "En réflexion";
+            			}
+            			if (items.length) {
+            				var last = items[items.length - 1];
+            				if (last.type === "activity" && trimText(last.text) === status) {
+            					last.current = true;
+            					return items;
+            				}
+            			}
+            			items.push({ text: status, type: "activity", current: true });
+            			return items;
+            		};
+            		var applyProgressView = function(snapshot) {
+            			var lines = snapshot && snapshot.text ? ("" + snapshot.text).split(/\n\s*\n/) : [];
+            			var view = progressView(lines);
+            			snapshot.text = view.detailsText;
+            			snapshot.narrativeText = "";
+            			snapshot.detailsText = view.detailsText;
+            			snapshot.items = view.items;
+            			snapshot.status = view.status;
+            			snapshot.count = view.count;
+            			snapshot.summary = view.summary;
+            			snapshot.hasLines = view.hasLines;
+            			return snapshot;
+            		};
             		var currentProgress = state.progress != null ? state.progress : (aiData.progress != null ? aiData.progress : (page.local.Buffer && page.local.Buffer.progress != null ? page.local.Buffer.progress : ""));
             		var currentPhase = state.phase != null ? state.phase : (aiData.phase != null ? aiData.phase : (page.local.Buffer && page.local.Buffer.phase != null ? page.local.Buffer.phase : ""));
-            		var currentSnapshot = appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid);
+            		var progressRunKey = "" + (runid || page.local.RunID || "pending");
+            		var progressNow = (new Date()).getTime();
+            		if (!page.local.AgentProgressStartedAt || !page.local.AgentProgressStartedAtRunId || (page.local.AgentProgressStartedAtRunId !== progressRunKey && page.local.AgentProgressStartedAtRunId !== "pending")) {
+            			page.local.AgentProgressStartedAt = progressNow;
+            		}
+            		page.local.AgentProgressStartedAtRunId = progressRunKey;
+            		var progressElapsedLabel = function(done) {
+            			var end = done && page.local.AgentProgressFinishedAt ? Number(page.local.AgentProgressFinishedAt) : (new Date()).getTime();
+            			return formatDuration(end - Number(page.local.AgentProgressStartedAt || end));
+            		};
+            		var progressTitle = function(done) {
+            			return done ? ("A travaillé pendant " + progressElapsedLabel(true)) : ("Traitement en cours depuis " + progressElapsedLabel(false));
+            		};
+            		var currentSnapshot = applyProgressView(appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid));
             		var findTarget = function() {
             			var idx = page.local.StreamingIndex;
                         if (idx != null && page.local.Messages[idx] && page.local.Messages[idx].writing === true) {
             				return { target: page.local.Messages[idx], index: idx };
             			}
             			for (var j = page.local.Messages.length - 1; j >= 0; j--) {
-            				if (page.local.Messages[j] && page.local.Messages[j].type === "assistant" && page.local.Messages[j].writing === true) {
+            				if (page.local.Messages[j] && (page.local.Messages[j].type === "worklog" || page.local.Messages[j].type === "assistant") && page.local.Messages[j].writing === true) {
             					return { target: page.local.Messages[j], index: j };
             				}
             			}
@@ -2956,8 +3474,8 @@ title: Agent assistant
             			var hh = ("0" + now.getHours()).slice(-2);
             			var mm = ("0" + now.getMinutes()).slice(-2);
             			var target = {
-            				msg: writing && currentSnapshot.hasLines ? currentSnapshot.text : "",
-            				type: "assistant",
+            				msg: "",
+            				type: writing ? "worklog" : "assistant",
             				author: "Assistant",
             				time: hh + ":" + mm,
             				id: -1,
@@ -2965,6 +3483,12 @@ title: Agent assistant
             				tag2: "Convertigo",
             				tag3: "Guide",
             				status: writing && currentSnapshot.hasLines ? currentSnapshot.status : "",
+            				progressNarrative: "",
+            				progressDetails: "",
+            				progressSummary: "",
+            				progressItems: writing && currentSnapshot.hasLines ? progressItemsForWriting(currentSnapshot) : [],
+            				progressStartedAt: writing ? page.local.AgentProgressStartedAt : null,
+            				progressTitle: writing ? progressTitle(false) : "",
             				writing: writing === true
             			};
             			page.local.Messages.push(target);
@@ -2973,14 +3497,25 @@ title: Agent assistant
             		if (!isCompleted && !isFailed) {
             			var active = ensureTarget(true);
             			if (currentSnapshot.hasLines) {
-            				active.target.msg = currentSnapshot.text;
-            				active.target.status = currentSnapshot.status;
+            				active.target.msg = "";
+            				active.target.progressNarrative = "";
+            				active.target.progressDetails = "";
+            				active.target.progressSummary = "";
+            				active.target.progressItems = progressItemsForWriting(currentSnapshot);
+            				active.target.status = currentSnapshot.status || "En réflexion";
             			} else if (!trimText(active.target.msg).length && !trimText(active.target.status).length) {
-            				active.target.msg = "Traitement en cours.";
-            				active.target.status = "Traitement en cours.";
+            				active.target.msg = "";
+            				active.target.progressNarrative = "";
+            				active.target.progressDetails = "";
+            				active.target.progressSummary = "";
+            				active.target.progressItems = [{ text: "En réflexion", type: "activity", current: true }];
+            				active.target.status = "En réflexion";
             			}
             			active.target.writing = true;
-            			active.target.type = "assistant";
+            			active.target.type = "worklog";
+            			active.target.progressStartedAt = page.local.AgentProgressStartedAt;
+            			active.target.progressTitle = progressTitle(false);
+            			active.target.progressCollapsed = true;
             			active.target.id = runid != null ? runid : active.target.id;
             			page.local.StreamingIndex = active.index;
             			page.local.IsProcessing = true;
@@ -3036,10 +3571,10 @@ title: Agent assistant
                             lines.shift();
                         }
                         var providerLabel = state && state.provider ? (("" + state.provider).charAt(0).toUpperCase() + ("" + state.provider).slice(1)) : "Agent";
-                        var summary = "Étapes du traitement (" + lines.length + ")";
-                        if (lines.length) {
-                            summary += "\n\nDernière étape : " + lines[lines.length - 1];
-                        }
+                        var view = progressView(lines);
+                        page.local.AgentProgressFinishedAt = (new Date()).getTime();
+                        var title = progressTitle(true);
+                        var summary = view.summary || ("Étapes et appels MCP (" + lines.length + ")");
                         var found = findTarget();
                         var target = found.target;
                         if (!target) {
@@ -3048,18 +3583,23 @@ title: Agent assistant
                             var mm = ("0" + now.getMinutes()).slice(-2);
                             target = {
                                 msg: "",
-                                type: "assistant",
+                                type: "worklog",
                                 author: "Assistant",
                                 time: hh + ":" + mm,
                                 id: key + "-steps"
                             };
                             page.local.Messages.push(target);
                         }
-                        target.msg = summary;
-                        target.progressSummary = summary;
-                        target.progressDetails = lines.join("\n\n");
+                        target.msg = "";
+                        target.progressNarrative = "";
+                        target.progressSummary = "";
+                        target.progressDetails = "";
+                        target.progressItems = view.items || [];
                         target.progressCollapsed = true;
-                        target.type = "assistant";
+                        target.progressStartedAt = page.local.AgentProgressStartedAt;
+                        target.progressEndedAt = page.local.AgentProgressFinishedAt;
+                        target.progressTitle = title + " en " + view.count + " étape" + (view.count > 1 ? "s" : "");
+                        target.type = "worklog";
                         target.author = target.author || "Assistant";
                         target.id = key + "-steps";
                         target.tag1 = "Étapes";
@@ -3189,6 +3729,9 @@ title: Agent assistant
             		page.local.IsProcessing = false;
             		page.local.AgentProgressHistory = [];
             		page.local.AgentProgressHistoryRunId = "";
+            		page.local.AgentProgressStartedAt = null;
+            		page.local.AgentProgressStartedAtRunId = "";
+            		page.local.AgentProgressFinishedAt = null;
             		page.tick();
             		page.scrollChatBottom(0);
             		resolve();
@@ -3694,6 +4237,27 @@ title: Agent assistant
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentSendMessage","marker":""}],"path":"?.result.error","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  ↓SetConversation [ngx.components.UIDynamicAction-1782134929106]: 
+                    beanData: |
+                      '{
+                       "ionBean": "SetLocalAction",
+                       "Property": "plain:Conversation",
+                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessage\",\"marker\":\"\"}],\"path\":\"?.result.threadid\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                      }'
+                  ↓SetNewConversationMode [ngx.components.UIDynamicAction-1782134957158]: 
+                    beanData: |
+                      '{
+                       "ionBean": "SetLocalAction",
+                       "Property": "plain:NewConversationMode",
+                       "Value": "script:false"
+                      }'
+                  ↓SetShowConversationPanel [ngx.components.UIDynamicAction-1782134967975]: 
+                    beanData: |
+                      '{
+                       "ionBean": "SetLocalAction",
+                       "Property": "plain:ShowConversationPanel",
+                       "Value": "script:false"
+                      }'
                   ↓SetLocal [ngx.components.UIDynamicAction-1751354620920]: 
                     beanData: |
                       '{
@@ -3717,7 +4281,7 @@ title: Agent assistant
                         varValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
+                            - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''')'
                       ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
                         beanData: |
                           '{
@@ -3740,6 +4304,21 @@ title: Agent assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+                  ↓model [ngx.components.UIControlVariable-1782120729730]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.local && this.local.AgentModel != null ? this.local.AgentModel : '''''
+                  ↓reasoningEffort [ngx.components.UIControlVariable-1782120731236]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.local && this.local.AgentReasoningEffort != null ? this.local.AgentReasoningEffort : '''''
+                  ↓serviceTier [ngx.components.UIControlVariable-1782120732742]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.local && this.local.AgentServiceTier != null ? this.local.AgentServiceTier : '''''
         ↓attachments [ngx.components.UIControlVariable-1751373371973]: 
           varValue: 
             - xmlizable: 
@@ -3755,7 +4334,7 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.EnableChat","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: script:local && local.EnableChat !== false && (local.Conversation || ((local.NewConversationMode === true || (!local.Conversation && local.ShowConversationPanel !== true)) && local.AgentProvider && local.AgentModel && local.AgentModels && local.AgentModels.length > 0))
     ↓IsProcessing [ngx.components.UIUseVariable-1775200000004]: 
       varValue: 
         - xmlizable: 
@@ -3770,7 +4349,7 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: script:local.QuickSuggestions
+          - MobileSmartSourceType: 'script:(local && (!local.Messages || local.Messages.length === 0) && !local.IsProcessing && (local.NewConversationMode === true || local.ShowConversationPanel !== true)) ? local.QuickSuggestions : []'
     ↓Placeholder [ngx.components.UIUseVariable-1775800000116]: 
       varValue: 
         - xmlizable: 
@@ -3801,6 +4380,26 @@ title: Agent assistant
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}
+        ↓provider [ngx.components.UIControlVariable-1782147693044]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.local && this.local.AgentProvider ? this.local.AgentProvider : '''''
+        ↓targetProject [ngx.components.UIControlVariable-1782147694550]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+        ↓projectName [ngx.components.UIControlVariable-1782147696056]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+        ↓userId [ngx.components.UIControlVariable-1782147697562]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:'studio'
       ↓StopUiState [ngx.components.UICustomAction-1781872839642]: 
         actionValue: 
           - xmlizable: 
@@ -3825,6 +4424,102 @@ title: Agent assistant
                 		} catch (e) {}
                 		resolve();
                 
+    ↓AgentModel [ngx.components.UIUseVariable-1782124563892]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:local && local.AgentModel ? local.AgentModel : '''''
+    ↓AgentModels [ngx.components.UIUseVariable-1782124568128]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:local && local.AgentModels ? local.AgentModels : []'
+    ↓AgentReasoningEffort [ngx.components.UIUseVariable-1782124572364]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:local && local.AgentReasoningEffort ? local.AgentReasoningEffort : '''''
+    ↓AgentReasoningLevels [ngx.components.UIUseVariable-1782124576600]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:local && local.AgentReasoningLevels ? local.AgentReasoningLevels : []'
+    ↓AgentModelLabel [ngx.components.UIUseVariable-1782124580836]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:local && local.AgentModel ? local.AgentModel : ''Modèle'''
+    ↓AgentReasoningLabel [ngx.components.UIUseVariable-1782124585072]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:local && local.AgentReasoningEffort ? local.AgentReasoningEffort : ''Raisonnement'''
+    ↓ModelChange [ngx.components.UIControlEvent-1782124897336]: 
+      attrName: (ModelChange)
+      eventName: ModelChange
+      ↓SetFooterModel [ngx.components.UICustomAction-1782124898822]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                '		var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                		var selected = event && event.model != null ? event.model : (event && event.detail && event.detail.value != null ? event.detail.value : event);
+                		var modelId = clean(selected);
+                		if (!page.local) { page.local = {}; }
+                		page.local.AgentModel = modelId;
+                		var provider = clean(page.local.AgentProvider).toLowerCase();
+                		var settings = page.local.AgentSettings || {};
+                		if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                		var providers = settings.providers || [];
+                		var selectedProvider = null;
+                		for (var i = 0; i < providers.length; i++) {
+                			if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                				selectedProvider = providers[i];
+                				break;
+                			}
+                		}
+                		var models = page.local.AgentModels || (selectedProvider && selectedProvider.models ? selectedProvider.models : []);
+                		var selectedModel = null;
+                		for (var j = 0; j < models.length; j++) {
+                			if (clean(models[j] && models[j].id) === modelId) {
+                				selectedModel = models[j];
+                				break;
+                			}
+                		}
+                		page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                		page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                		var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
+                		if (page.local.AgentProviderSupportsReasoning !== true) {
+                			reasoning = '''';
+                		}
+                		page.local.AgentReasoningEffort = reasoning;
+                		var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
+                		page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
+                		page.tick();
+                		resolve();
+                '
+    ↓ReasoningChange [ngx.components.UIControlEvent-1782124903058]: 
+      attrName: (ReasoningChange)
+      eventName: ReasoningChange
+      ↓SetFooterReasoning [ngx.components.UICustomAction-1782124904544]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                '		var selected = event && event.reasoning != null ? event.reasoning : (event && event.detail && event.detail.value != null ? event.detail.value : event);
+                		if (!page.local) { page.local = {}; }
+                		page.local.AgentReasoningEffort = ('''' + (selected == null ? '''' : selected)).replace(/^\s+|\s+$/g, '''');
+                		page.tick();
+                		resolve();
+                '
+  ↓Class [ngx.components.UIAttribute-1782123550292]: 
+    attrName: class
+    attrValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: 'script:(this.local && this.local.EnableChat !== false && (this.local.Conversation || ((this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true)) && this.local.AgentProvider && this.local.AgentModel && this.local.AgentModels && this.local.AgentModels.length > 0))) ? ''modern-footer agent-footer-codex'' : ''modern-footer agent-footer-codex agent-footer-hidden'''
 ↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1750758766481]: 
   topic: JavaMessage
   ↓enableChat [ngx.components.UICustomAction-1750759185953]: 
@@ -3833,8 +4528,219 @@ title: Agent assistant
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
+            '        if (!page.local) {
+                        page.local = {};
+                    }
+                    var clean = function(value) {
+                        return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                    };
+                    var selected = clean(page.global && page.global.projectName);
+                    var previous = clean(page.local.CurrentStudioProject || page.local.ConversationProject);
+                    page.local.ProjectSelectionChanged = false;
                     page.setEnableChat();
-                    resolve();
+                    if (!selected.length) {
+                        page.local.CurrentStudioProject = "";
+                        page.local.ConversationProject = "";
+                        page.local.Conversation = "";
+                        page.local.RunID = "";
+                        page.local.Messages = [];
+                        page.local.AgentConversations = [];
+                        page.local.AgentConversationResumed = false;
+                        page.local.ProjectSelectionChanged = false;
+                        page.tick();
+                        resolve();
+                        return;
+                    }
+                    if (selected !== previous) {
+                        page.local.CurrentStudioProject = selected;
+                        page.local.ConversationProject = selected;
+                        page.local.Conversation = "";
+                        page.local.RunID = "";
+                        page.local.Messages = [];
+                        page.local.Buffer = {};
+                        page.local.StreamingIndex = null;
+                        page.local.IsProcessing = false;
+                        page.local.AgentProgressHistory = [];
+                        page.local.AgentProgressHistoryRunId = "";
+                        page.local.AgentConversationResumed = false;
+                        page.local.ShowConversationPanel = false;
+                        page.local.NewConversationMode = false;
+                        page.local.AgentProvider = page.getConfiguredAgentProvider ? page.getConfiguredAgentProvider() : "";
+                        page.local.AgentModel = "";
+                        page.local.ProjectSelectionChanged = true;
+                    }
+                    page.tick();
+                    resolve();'
+    ↓SwitchProjectIf [ngx.components.UIDynamicAction-1782139100462]: 
+      beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.ProjectSelectionChanged === true && this.local.EnableChat !== false"}'
+      ↓ReloadProjectConversation [ngx.components.UIDynamicAction-1782139101968]: 
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
+           "noLoading": "plain:true"
+          }'
+        ↓threadid [ngx.components.UIControlVariable-1782139101970]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:null
+        ↓provider [ngx.components.UIControlVariable-1782139101972]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''''
+        ↓model [ngx.components.UIControlVariable-1782139101974]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(this.getConfiguredAgentProvider && this.getConfiguredAgentProvider().length && this.getAgentModel) ? this.getAgentModel() : '''''
+        ↓targetProject [ngx.components.UIControlVariable-1782139101976]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+        ↓forceNew [ngx.components.UIControlVariable-1782139101978]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:false
+        ↓reasoningEffort [ngx.components.UIControlVariable-1782139101980]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : '''''
+        ↓serviceTier [ngx.components.UIControlVariable-1782139101982]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.local && this.local.AgentServiceTier ? this.local.AgentServiceTier : '''''
+        ↓ApplyProjectConversation [ngx.components.UICustomAction-1782139485537]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  '        var out = null;
+                          try {
+                              out = props && props.stack && props.stack[''1782139101968''] ? props.stack[''1782139101968''].out : null;
+                          } catch (e0) {}
+                          if (!page.local) { page.local = {}; }
+                          var clean = function(value) { return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, ""); };
+                          var result = out && out.result ? out.result : {};
+                          var data = result.AIData || {};
+                          var state = result.state || data.state || {};
+                          if (page.local.Buffer && page.local.Buffer.intId) { window.clearInterval(page.local.Buffer.intId); }
+                          if (page.local.AgentBufferPollId) { window.clearInterval(page.local.AgentBufferPollId); }
+                          page.local.AgentBufferPollId = null;
+                          page.local.ProjectSelectionChanged = false;
+                          page.local.ProjectConversationNeedsPolling = false;
+                          page.local.Messages = [];
+                          if (data.messages && data.messages.length != null) {
+                              for (var i = 0; i < data.messages.length; i++) { page.local.Messages.push(data.messages[i]); }
+                          }
+                          page.local.Conversation = clean(result.id || data.id);
+                          page.local.AgentConversations = result.conversations || data.conversations || [];
+                          page.local.AgentConversationResumed = result.resumed === true;
+                          if (result.settings) { page.local.AgentSettings = result.settings; }
+                          var selectedProject = clean(page.global && page.global.projectName);
+                          var project = "";
+                          try { project = page.setConversationProjectFromData ? page.setConversationProjectFromData(result, state) : ""; } catch (e1) {}
+                          if (!project.length && selectedProject.length && page.setConversationProject) { project = page.setConversationProject(selectedProject); }
+                          page.local.CurrentStudioProject = project.length ? project : selectedProject;
+                          var provider = clean(state.provider || result.provider || data.provider).toLowerCase();
+                          page.local.AgentProvider = provider.length ? provider : (page.getConfiguredAgentProvider ? page.getConfiguredAgentProvider() : "");
+                          var model = clean(state.model != null ? state.model : (result.model != null ? result.model : data.model));
+                          page.local.AgentModel = model;
+                          var settings = page.local.AgentSettings || {};
+                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                          var providers = settings.providers || [];
+                          var selectedProvider = null;
+                          for (var p = 0; p < providers.length; p++) {
+                              if (clean(providers[p] && providers[p].id).toLowerCase() === page.local.AgentProvider) { selectedProvider = providers[p]; break; }
+                          }
+                          page.local.AgentModels = selectedProvider ? (selectedProvider.models || []) : [];
+                          page.local.AgentProviderSupportsReasoning = !!(selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true);
+                          page.local.AgentReasoningLevels = [];
+                          var selectedModel = null;
+                          if (selectedProvider) {
+                              if (!page.local.AgentModel.length) { page.local.AgentModel = clean(selectedProvider.defaultModel || (settings.defaults && settings.defaults.provider === page.local.AgentProvider ? settings.defaults.model : "")); }
+                              for (var m = 0; m < page.local.AgentModels.length; m++) {
+                                  if (clean(page.local.AgentModels[m] && page.local.AgentModels[m].id) === page.local.AgentModel) { selectedModel = page.local.AgentModels[m]; break; }
+                              }
+                              if (!selectedModel && page.local.AgentModels.length) { selectedModel = page.local.AgentModels[0]; page.local.AgentModel = clean(selectedModel && selectedModel.id); }
+                              page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                          }
+                          var reasoning = clean(state.reasoningEffort || result.reasoningEffort || data.reasoningEffort || page.local.AgentReasoningEffort);
+                          if (!reasoning.length && page.local.AgentProviderSupportsReasoning === true) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
+                          page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : "";
+                          page.local.AgentServiceTier = clean(state.serviceTier || result.serviceTier || data.serviceTier || page.local.AgentServiceTier);
+                          var status = clean(state.status == null ? data.status : state.status).toLowerCase();
+                          var runid = clean(state.runid == null ? data.runid : state.runid);
+                          var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0 && page.local.Conversation.length > 0;
+                          page.local.RunID = active ? runid : "";
+                          page.local.IsProcessing = active;
+                          page.local.StreamingIndex = null;
+                          page.local.Buffer = {};
+                          if (active) {
+                              page.local.ProjectConversationNeedsPolling = true;
+                              var progress = clean(state.progress != null ? state.progress : data.progress);
+                              var phase = clean(state.phase != null ? state.phase : data.phase);
+                              var hasWriting = false;
+                              for (var w = page.local.Messages.length - 1; w >= 0; w--) {
+                                  if (page.local.Messages[w] && page.local.Messages[w].writing === true) { hasWriting = true; page.local.StreamingIndex = w; break; }
+                              }
+                              if (!hasWriting) {
+                                  var now = new Date();
+                                  page.local.AgentProgressStartedAt = now.getTime();
+                                  page.local.AgentProgressStartedAtRunId = runid;
+                                  page.local.AgentProgressHistory = [];
+                                  page.local.AgentProgressHistoryRunId = runid;
+                                  page.local.Messages.push({ msg: progress || phase || "Réflexion en cours.", type: "worklog", author: "Assistant", time: ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2), id: runid, tag1: "Étapes", tag2: page.local.AgentProvider || "Agent", tag3: "Progression", status: phase || progress || "Réflexion en cours", progressTitle: "Traitement en cours depuis 0s", writing: true });
+                                  page.local.StreamingIndex = page.local.Messages.length - 1;
+                              }
+                          }
+                          if (page.setEnableChat) { page.setEnableChat(); }
+                          if (page.syncFooterPlaceholder) { page.syncFooterPlaceholder(); }
+                          page.tick();
+                          if (page.local.Messages.length && page.scrollChatBottom) { page.scrollChatBottom(0); }
+                          resolve();'
+          ↓PollActiveRunOnSwitch [ngx.components.UIDynamicAction-1782139533591]: 
+            beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.ProjectConversationNeedsPolling === true && this.local.IsProcessing === true && !!this.local.RunID && !!this.local.Conversation"}'
+            ↓ReadActiveRun [ngx.components.UIDynamicAction-1782139535097]: 
+              beanData: |
+                '{
+                 "ionBean": "CallSequenceAction",
+                 "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
+                 "noLoading": "plain:true"
+                }'
+              ↓threadid [ngx.components.UIControlVariable-1782139535099]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:this.local && this.local.Conversation ? this.local.Conversation : '''''
+              ↓runid [ngx.components.UIControlVariable-1782139535101]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:this.local && this.local.RunID ? this.local.RunID : '''''
+              ↓provider [ngx.components.UIControlVariable-1782139535103]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
+              ↓targetProject [ngx.components.UIControlVariable-1782139535105]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+              ↓PublishEvent [ngx.components.UIDynamicAction-1782139535107]: 
+                beanData: |
+                  '{
+                   "ionBean": "PublishEventAction",
+                   "topic": "plain:AssistantResponse",
+                   "async": "plain:false"
+                  }'
 ↓Subscribe_Handler2 [ngx.components.UIEventSubscriber-1751537016993]: 
   topic: JavaCapture
   ↓CustomAction [ngx.components.UICustomAction-1751537016996]: 
@@ -4147,5 +5053,481 @@ title: Agent assistant
               --padding-end: 7px;
               --padding-start: 7px;
             }
+          }
+          '
+↓AgentDesktopUxStyle [ngx.components.UIStyle-1782121738187]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.agent-desktop-center {
+            max-width: min(100%, 720px);
+            padding: 24px 20px 18px;
+          }
+          .agent-desktop-hero {
+            margin: 10px 0 18px;
+            padding: 0 6px;
+          }
+          .agent-desktop-hero .modern-intro-title {
+            color: var(--modern-text, #f1f5f9);
+            font-size: 25px;
+            font-weight: 650;
+            line-height: 32px;
+            margin: 0 0 10px;
+            letter-spacing: 0;
+          }
+          .agent-desktop-hero .modern-copy {
+            color: var(--modern-muted, #94a3b8);
+            font-size: 14px;
+            line-height: 22px;
+            margin: 0 0 5px;
+          }
+          .agent-desktop-how-card {
+            display: none !important;
+          }
+          .agent-start-card {
+            border-radius: 10px;
+            margin-top: 0;
+          }
+          .agent-start-card ion-card-content {
+            padding: 18px 20px 20px;
+          }
+          .agent-start-card .modern-card-title {
+            font-size: 15px;
+            line-height: 21px;
+            margin: 0 0 7px;
+          }
+          .agent-start-card .modern-copy {
+            font-size: 13px;
+            line-height: 20px;
+            margin: 0 0 12px;
+          }
+          .agent-conversations-panel {
+            max-height: min(54vh, 420px);
+            padding: 10px;
+          }
+          .agent-create-settings {
+            gap: 7px;
+            padding: 10px;
+          }
+          .agent-choice-button {
+            min-height: 30px;
+          }
+          .modern-chat-spinner {
+            align-items: center;
+            display: flex;
+            justify-content: center;
+            min-height: 30px;
+            padding: 0 0 8px;
+          }
+          .modern-chat-spinner ion-spinner {
+            display: none !important;
+          }
+          .modern-chat-spinner::before {
+            content: ''En réflexion'';
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 80%, transparent 20%);
+            font-size: 13px;
+            line-height: 18px;
+            animation: agent-thinking-pulse 1.45s ease-in-out infinite;
+          }
+          @keyframes agent-thinking-pulse {
+            0%, 100% { opacity: 0.42; }
+            50% { opacity: 0.92; }
+          }
+          .chat-assistant-bubble details {
+            border-top: 1px solid rgba(148, 163, 184, 0.16);
+            margin-top: 10px;
+            padding-top: 8px;
+          }
+          .chat-assistant-bubble details summary {
+            color: var(--modern-muted, #94a3b8);
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 20px;
+          }
+          .modern-scroll-top-btn,
+          .modern-scroll-bottom-btn {
+            --padding-start: 0 !important;
+            --padding-end: 0 !important;
+            bottom: 98px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            opacity: 0.58;
+            position: absolute !important;
+            right: 8px !important;
+            width: 30px !important;
+            z-index: 32;
+          }
+          .modern-scroll-top-btn {
+            bottom: 134px !important;
+          }
+          .modern-scroll-top-btn::part(native),
+          .modern-scroll-bottom-btn::part(native) {
+            border-radius: 8px;
+            padding: 5px;
+          }
+          .modern-scroll-top-btn ion-icon,
+          .modern-scroll-bottom-btn ion-icon {
+            font-size: 16px !important;
+          }
+          .modern-scroll-top-btn:hover,
+          .modern-scroll-bottom-btn:hover,
+          .modern-scroll-top-btn:focus,
+          .modern-scroll-bottom-btn:focus {
+            opacity: 0.9;
+          }
+          @media (max-width: 640px) {
+            .agent-desktop-center {
+              padding: 18px 12px 14px;
+            }
+            .agent-desktop-hero .modern-intro-title {
+              font-size: 21px;
+              line-height: 28px;
+            }
+            .agent-start-card ion-card-content {
+              padding: 15px 14px 16px;
+            }
+          }'
+↓AgentCodexDesktopRefineStyle [ngx.components.UIStyle-1782123554416]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.agent-hidden {
+            display: none !important;
+          }
+          .agent-header-new-hidden {
+            display: none !important;
+          }
+          ion-header.modern-header ion-toolbar {
+            --min-height: 50px;
+          }
+          ion-header.modern-header .modern-menu-btn,
+          ion-header.modern-header .modern-header-btn,
+          ion-header.modern-header .modern-theme-btn {
+            width: 30px;
+            height: 30px;
+            min-height: 30px;
+          }
+          ion-header.modern-header .modern-header-main {
+            gap: 10px;
+          }
+          ion-header.modern-header .modern-logo-btn {
+            width: 44px;
+            height: 34px;
+            min-height: 34px;
+          }
+          ion-header.modern-header .modern-logo {
+            max-height: 29px;
+          }
+          ion-header.modern-header .modern-header-title {
+            font-size: 18px;
+            line-height: 22px;
+          }
+          ion-header.modern-header .modern-header-subtitle {
+            font-size: 11px;
+            line-height: 15px;
+          }
+          .agent-desktop-center {
+            padding-top: 18px;
+          }
+          .agent-desktop-hero {
+            margin: 4px 0 18px;
+            padding: 0 2px;
+          }
+          .agent-desktop-hero .modern-intro-title {
+            font-size: 23px;
+            line-height: 29px;
+            margin-bottom: 0;
+          }
+          .agent-start-card {
+            margin-top: 0;
+            border-radius: 10px;
+          }
+          .agent-start-card ion-card-content {
+            padding: 16px;
+          }
+          .agent-start-card .modern-card-title {
+            font-size: 14px;
+            line-height: 19px;
+            margin-bottom: 6px;
+          }
+          .agent-start-card .modern-copy {
+            margin-bottom: 12px;
+          }
+          .agent-conversations-panel {
+            border-radius: 10px;
+            max-height: none;
+            padding: 0;
+            border: 0;
+            background: transparent;
+          }
+          .agent-conversations-title {
+            margin: 10px 0 8px;
+          }
+          .agent-create-settings {
+            border-radius: 10px;
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 12px;
+          }
+          .agent-create-label {
+            margin: 0 0 4px;
+          }
+          .agent-choice-row,
+          .agent-create-settings-block {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          .agent-create-settings-block {
+            flex-direction: column;
+          }
+          .agent-choice-button {
+            height: 30px;
+            min-height: 30px;
+            margin: 0;
+          }
+          .agent-choice-button::part(native) {
+            border-radius: 8px;
+            padding: 0 11px;
+          }
+          .agent-new-conversation-button {
+            height: 36px;
+            min-height: 36px;
+            margin-top: 10px;
+          }
+          .agent-new-conversation-button::part(native) {
+            border-radius: 9px;
+          }
+          .agent-footer-hidden {
+            display: none !important;
+          }
+          @media (max-width: 640px) {
+            .agent-desktop-center {
+              padding: 14px 10px 12px;
+            }
+            .agent-desktop-hero .modern-intro-title {
+              font-size: 20px;
+              line-height: 26px;
+            }
+            .agent-start-card ion-card-content {
+              padding: 14px;
+            }
+          }'
+↓AgentWorklogStyle [ngx.components.UIStyle-1782137371433]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.agent-worklog {
+            color: var(--modern-text, #f1f5f9);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 10px 0 18px 28px;
+            max-width: min(100%, 760px);
+            padding: 0 8px 0 18px;
+            position: relative;
+          }
+          .agent-worklog::before {
+            background: color-mix(in srgb, var(--modern-muted, #94a3b8) 22%, transparent 78%);
+            bottom: 2px;
+            content: '''';
+            left: 0;
+            position: absolute;
+            top: 3px;
+            width: 1px;
+          }
+          .agent-worklog-header {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+          }
+          .agent-worklog-title {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 88%, var(--modern-text, #f1f5f9) 12%);
+            font-size: 15px;
+            line-height: 22px;
+            margin: 0;
+          }
+          .agent-worklog-pulse {
+            color: color-mix(in srgb, var(--modern-text, #f1f5f9) 92%, var(--modern-muted, #94a3b8) 8%);
+            font-size: 15px;
+            line-height: 23px;
+            margin: 0;
+            animation: agent-worklog-pulse 1.45s ease-in-out infinite;
+          }
+          .agent-worklog-details {
+            border-top: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 20%, transparent 80%);
+            padding-top: 7px;
+          }
+          .agent-worklog-summary {
+            align-items: center;
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, transparent 18%);
+            cursor: pointer;
+            display: inline-flex;
+            font-size: 13px;
+            gap: 7px;
+            line-height: 19px;
+            list-style: none;
+          }
+          .agent-worklog-summary::-webkit-details-marker {
+            display: none;
+          }
+          .agent-worklog-summary::before {
+            content: ''›'';
+            display: inline-block;
+            font-size: 16px;
+            line-height: 1;
+            transition: transform 160ms ease;
+          }
+          .agent-worklog-details[open] .agent-worklog-summary::before {
+            transform: rotate(90deg);
+          }
+          .agent-worklog-body {
+            margin-top: 9px;
+            padding-left: 14px;
+          }
+          :host ::ng-deep .agent-worklog markdown p,
+          :host ::ng-deep .agent-worklog markdown li {
+            color: color-mix(in srgb, var(--modern-text, #f1f5f9) 88%, var(--modern-muted, #94a3b8) 12%);
+            font-size: 14px;
+            line-height: 22px;
+            margin-bottom: 9px;
+          }
+          :host ::ng-deep .agent-worklog markdown strong {
+            color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 42%, var(--modern-text, #f1f5f9) 58%);
+            font-weight: 600;
+          }
+          :host ::ng-deep .agent-worklog .agent-progress-pulse {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 74%, transparent 26%);
+            display: inline-flex;
+            font-size: 13px;
+            line-height: 20px;
+            margin: 0 0 8px;
+            animation: agent-worklog-pulse 1.45s ease-in-out infinite;
+          }
+          @keyframes agent-worklog-pulse {
+            0%, 100% { opacity: 0.38; }
+            50% { opacity: 0.92; }
+          }
+          @media (max-width: 640px) {
+            .agent-worklog {
+              margin-left: 18px;
+              padding-left: 14px;
+            }
+          }
+          '
+↓AgentWorklogCodexFlowStyle [ngx.components.UIStyle-1782143573624]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.agent-worklog {
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            color: var(--modern-text, #f1f5f9);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 18px 0 22px 28px;
+            max-width: min(100%, 760px);
+            padding: 0 8px 0 18px;
+            position: relative;
+          }
+          .agent-worklog::before {
+            background: color-mix(in srgb, var(--modern-muted, #94a3b8) 22%, transparent 78%);
+            bottom: 2px;
+            content: '''';
+            left: 0;
+            position: absolute;
+            top: 3px;
+            width: 1px;
+          }
+          .agent-worklog-header {
+            align-items: center;
+            cursor: pointer;
+            display: inline-flex;
+            gap: 8px;
+            list-style: none;
+            margin: 0;
+          }
+          .agent-worklog-header::-webkit-details-marker {
+            display: none;
+          }
+          .agent-worklog-header::before {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, transparent 18%);
+            content: ''›'';
+            display: inline-flex;
+            font-size: 16px;
+            line-height: 1;
+            transform: translateY(-1px);
+            transition: transform 160ms ease;
+          }
+          .agent-worklog[open] > .agent-worklog-header::before {
+            transform: rotate(90deg) translateX(1px);
+          }
+          .agent-worklog-title {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 88%, var(--modern-text, #f1f5f9) 12%);
+            font-size: 15px;
+            line-height: 22px;
+            margin: 0;
+          }
+          .agent-worklog-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 2px;
+          }
+          .agent-worklog-step {
+            margin: 0;
+          }
+          :host ::ng-deep .agent-worklog-step markdown p,
+          :host ::ng-deep .agent-worklog-step markdown li {
+            margin: 0;
+          }
+          :host ::ng-deep .agent-worklog-step-narrative markdown p,
+          :host ::ng-deep .agent-worklog-step-narrative markdown li {
+            color: color-mix(in srgb, var(--modern-text, #f1f5f9) 94%, var(--modern-muted, #94a3b8) 6%);
+            font-size: 15px;
+            line-height: 24px;
+          }
+          :host ::ng-deep .agent-worklog-step-activity markdown p,
+          :host ::ng-deep .agent-worklog-step-activity markdown li {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 78%, transparent 22%);
+            font-size: 13px;
+            line-height: 21px;
+          }
+          .agent-worklog-step.is-current {
+            animation: agent-worklog-pulse 1.45s ease-in-out infinite;
+          }
+          :host ::ng-deep .agent-worklog-step.is-current markdown p,
+          :host ::ng-deep .agent-worklog-step.is-current markdown li {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, var(--modern-text, #f1f5f9) 18%);
+          }
+          :host ::ng-deep .agent-worklog markdown strong {
+            color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 42%, var(--modern-text, #f1f5f9) 58%);
+            font-weight: 600;
+          }
+          @keyframes agent-worklog-pulse {
+            0%, 100% { opacity: 0.38; }
+            50% { opacity: 0.92; }
+          }
+          @media (max-width: 640px) {
+            .agent-worklog {
+              margin-left: 18px;
+              padding-left: 14px;
+            }
+          }
+          .agent-worklog-narrative,
+          .agent-worklog-details,
+          .agent-worklog-pulse {
+            display: none !important;
           }
           '

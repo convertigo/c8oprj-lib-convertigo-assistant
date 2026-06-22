@@ -193,7 +193,7 @@ scriptContent:
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: plain:chat-assistant-message
+        - MobileSmartSourceType: 'script:''chat-assistant-message'' + ((this.writing === true || this.tag3 === ''Progression'') ? '' chat-assistant-worklog'' : '''')'
   ↓Avatar [ngx.components.UIDynamicElement-1771949858743]: 
     beanData: '{"ionBean":"DivTag"}'
     tagName: div
@@ -268,7 +268,7 @@ scriptContent:
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:chat-assistant-bubble
+            - MobileSmartSourceType: 'script:''chat-assistant-bubble'' + ((this.writing === true || this.tag3 === ''Progression'') ? '' chat-assistant-worklog-bubble'' : '''')'
       ↓CardContent [ngx.components.UIDynamicElement-1771949858791]: 
         beanData: '{"ionBean":"CardContent"}'
         tagName: ion-card-content
@@ -379,7 +379,7 @@ scriptContent:
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.writing
+              - MobileSmartSourceType: script:false
           ↓Tags [ngx.components.UIDynamicElement-1771949858815]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: div
@@ -600,18 +600,88 @@ scriptContent:
             }
           }
           .chat-assistant-tags {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 8px;
-            padding-top: 9px;
-            border-top: 1px solid rgba(30, 41, 59, 0.4);
+            display: none !important;
           }
           .chat-assistant-tag {
             margin: 0;
             color: var(--modern-muted, #94a3b8);
             font-size: 12px;
             line-height: 16px;
+          }
+          .chat-assistant-worklog {
+            gap: 8px;
+            opacity: 0.98;
+          }
+          .chat-assistant-worklog .chat-assistant-avatar {
+            opacity: 0.62;
+            transform: scale(0.78);
+          }
+          .chat-assistant-worklog .chat-message-meta {
+            display: none;
+          }
+          .chat-assistant-worklog-bubble {
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+          }
+          .chat-assistant-worklog-bubble ion-card-content {
+            padding: 4px 0 8px;
+          }
+          .chat-assistant-worklog-bubble markdown,
+          .chat-assistant-worklog-bubble markdown p,
+          .chat-assistant-worklog-bubble markdown li {
+            color: color-mix(in srgb, var(--modern-text, #f1f5f9) 88%, var(--modern-muted, #94a3b8) 12%);
+            font-size: 14px;
+            line-height: 22px;
+          }
+          .chat-assistant-worklog-bubble details.agent-progress-details {
+            border-top: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 22%, transparent 78%);
+            margin: 0;
+            padding: 0;
+          }
+          .chat-assistant-worklog-bubble details.agent-progress-details summary {
+            align-items: center;
+            cursor: pointer;
+            display: inline-flex;
+            gap: 8px;
+            list-style: none;
+            padding: 7px 0 8px;
+          }
+          .chat-assistant-worklog-bubble details.agent-progress-details summary::-webkit-details-marker {
+            display: none;
+          }
+          .chat-assistant-worklog-bubble details.agent-progress-details summary::before {
+            content: ''›'';
+            color: var(--modern-muted, #94a3b8);
+            font-size: 17px;
+            line-height: 1;
+            transition: transform 160ms ease;
+          }
+          .chat-assistant-worklog-bubble details.agent-progress-details[open] summary::before {
+            transform: rotate(90deg);
+          }
+          .agent-work-title {
+            color: var(--modern-muted, #94a3b8);
+            font-size: 15px;
+            line-height: 22px;
+          }
+          .agent-work-count {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 72%, transparent 28%);
+            font-size: 12px;
+            line-height: 18px;
+          }
+          .agent-progress-pulse {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 70%, transparent 30%);
+            display: inline-flex;
+            font-size: 13px;
+            line-height: 20px;
+            margin: 2px 0 6px;
+            animation: agent-progress-pulse 1.45s ease-in-out infinite;
+          }
+          @keyframes agent-progress-pulse {
+            0%, 100% { opacity: 0.34; }
+            50% { opacity: 0.86; }
           }
           @media (max-width: 768px) {
             .chat-assistant-message {
