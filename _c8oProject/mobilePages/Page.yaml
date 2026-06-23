@@ -28,6 +28,7 @@ scriptContent:
         		this.ensureFooterInputs();
         		/*End_c8o_PageInitialization*/
         /*Begin_c8o_PageAfterViewInit*/
+        		this.refreshScrollButtons(350);
         		/*End_c8o_PageAfterViewInit*/
         /*Begin_c8o_PageFinalization*/
         		/*End_c8o_PageFinalization*/
@@ -75,7 +76,7 @@ scriptContent:
         		return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
         	}
         private normalizeAgentProviderValue(provider) {
-            provider = provider.toLowerCase();
+            provider = this.cleanProjectName(provider).toLowerCase();
             if (provider === "codex-cli" || provider === "openai-codex") {
                 return "codex";
             }
@@ -83,6 +84,42 @@ scriptContent:
                 return "vibe";
             }
             return provider.length ? provider : "";
+        }
+        private getAgentSettingsRoot() {
+            var settings: any = {};
+            try {
+                settings = this.local && this.local.AgentSettings ? this.local.AgentSettings : {};
+            } catch (e) {}
+            try {
+                if (settings && settings.settings && settings.settings.providers && !settings.providers) {
+                    settings = settings.settings;
+                }
+            } catch (e2) {}
+            return settings || {};
+        }
+        private isAgentProviderReady(providerInfo) {
+            try {
+                if (!providerInfo) {
+                    return false;
+                }
+                return providerInfo.ready === true || providerInfo.status === "ready";
+            } catch (e) {}
+            return false;
+        }
+        private getAgentProviderDescriptor(provider = null) {
+            var requested = this.normalizeAgentProviderValue(provider == null ? "" : provider);
+            var settings: any = this.getAgentSettingsRoot();
+            var providers = [];
+            try {
+                providers = settings.providers || [];
+            } catch (e) {}
+            for (var i = 0; i < providers.length; i++) {
+                var id = this.normalizeAgentProviderValue(providers[i] && providers[i].id);
+                if (requested.length && id === requested) {
+                    return providers[i];
+                }
+            }
+            return null;
         }
         public getConfiguredAgentProvider() {
             var provider = "";
@@ -119,20 +156,103 @@ scriptContent:
             } catch (e4) {}
             return this.normalizeAgentProviderValue(provider);
         }
+        public getDefaultAgentProvider() {
+            var settings: any = this.getAgentSettingsRoot();
+            var providers = [];
+            try {
+                providers = settings.providers || [];
+            } catch (e) {}
+            var stored = "";
+            try {
+                if (typeof window !== "undefined" && window.localStorage) {
+                    stored = this.normalizeAgentProviderValue(window.localStorage.getItem("ConvertigoAssistant.AgentProvider"));
+                }
+            } catch (e0) {}
+            for (var i = 0; stored.length && i < providers.length; i++) {
+                var storedId = this.normalizeAgentProviderValue(providers[i] && providers[i].id);
+                if (storedId === stored && this.isAgentProviderReady(providers[i])) {
+                    return stored;
+                }
+            }
+            var preferred = "";
+            try {
+                preferred = this.normalizeAgentProviderValue(settings.defaults && settings.defaults.provider);
+            } catch (e1) {}
+            for (var j = 0; preferred.length && j < providers.length; j++) {
+                var preferredId = this.normalizeAgentProviderValue(providers[j] && providers[j].id);
+                if (preferredId === preferred && this.isAgentProviderReady(providers[j])) {
+                    return preferred;
+                }
+            }
+            for (var k = 0; k < providers.length; k++) {
+                var id = this.normalizeAgentProviderValue(providers[k] && providers[k].id);
+                if (id.length && this.isAgentProviderReady(providers[k])) {
+                    return id;
+                }
+            }
+            if (preferred.length) {
+                return preferred;
+            }
+            if (stored.length) {
+                return stored;
+            }
+            return providers.length ? this.normalizeAgentProviderValue(providers[0] && providers[0].id) : "";
+        }
         public getAgentProvider() {
             var provider = this.getExplicitAgentProvider();
-            return provider.length ? provider : "vibe";
+            return provider.length ? provider : this.getDefaultAgentProvider();
         }
         public getAgentProviderLabel(provider = null) {
             var p = this.cleanProjectName(provider == null ? this.getAgentProvider() : provider).toLowerCase();
-            return p === "codex" ? "Codex" : "Vibe";
+            if (p === "codex") {
+                return "Codex";
+            }
+            if (p === "vibe") {
+                return "Vibe";
+            }
+            return "Agent";
         }
-        public getDefaultAgentModel(provider = null) {
-            var p = this.cleanProjectName(provider || this.getAgentProvider()).toLowerCase();
-            return p === "codex" ? "" : "vibe-thinking";
+        public hasReadyAgentProvider(provider = null) {
+            var p = this.normalizeAgentProviderValue(provider == null ? this.getAgentProvider() : provider);
+            var settings: any = this.getAgentSettingsRoot();
+            var providers = [];
+            try {
+                providers = settings.providers || [];
+            } catch (e) {}
+            if (!providers.length) {
+                return p.length > 0;
+            }
+            for (var i = 0; i < providers.length; i++) {
+                var id = this.normalizeAgentProviderValue(providers[i] && providers[i].id);
+                if (id === p) {
+                    return this.isAgentProviderReady(providers[i]);
+                }
+            }
+            return false;
+        }
+        public shouldShowAgentSettingsPanel() {
+            if (!this.local) {
+                return false;
+            }
+            if (this.local.ShowAgentConfigPanel === true) {
+                return true;
+            }
+            if (!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)) {
+                return false;
+            }
+            return !this.hasReadyAgentProvider(this.getAgentProvider());
         }
         public getAgentModelOptions(provider = null) {
-            var p = this.cleanProjectName(provider || this.getAgentProvider()).toLowerCase();
+            var p = this.normalizeAgentProviderValue(provider || this.getAgentProvider());
+            var descriptor = this.getAgentProviderDescriptor(p);
+            var models = descriptor && descriptor.models ? descriptor.models : [];
+            if (models.length) {
+                var mapped = [];
+                for (var i = 0; i < models.length; i++) {
+                    mapped.push({ id: this.cleanProjectName(models[i] && models[i].id), label: this.cleanProjectName((models[i] && (models[i].label || models[i].name || models[i].id)) || "") });
+                }
+                return mapped;
+            }
             if (p === "codex") {
                 return [
                     { id: "", label: "Codex default" },
@@ -145,6 +265,27 @@ scriptContent:
                 { id: "mistral-medium-3.5", label: "Mistral medium" },
                 { id: "devstral-small-latest", label: "Devstral" }
             ];
+        }
+        public getDefaultAgentModel(provider = null) {
+            var p = this.normalizeAgentProviderValue(provider || this.getAgentProvider());
+            var settings: any = this.getAgentSettingsRoot();
+            var descriptor = this.getAgentProviderDescriptor(p);
+            var model = "";
+            try {
+                model = this.cleanProjectName(descriptor && descriptor.defaultModel);
+            } catch (e) {}
+            try {
+                if (!model.length && settings.defaults && this.normalizeAgentProviderValue(settings.defaults.provider) === p) {
+                    model = this.cleanProjectName(settings.defaults.model);
+                }
+            } catch (e2) {}
+            var options = this.getAgentModelOptions(p);
+            for (var i = 0; model.length && i < options.length; i++) {
+                if (options[i].id === model) {
+                    return model;
+                }
+            }
+            return options.length ? options[0].id : (p === "codex" ? "" : "vibe-thinking");
         }
         public getAgentModel() {
             var model = "";
@@ -168,7 +309,7 @@ scriptContent:
                 }
             } catch (e3) {}
             if (model.toLowerCase() === "default" || model.toLowerCase() === "auto") {
-                return this.getAgentProvider() === "codex" ? "" : this.getDefaultAgentModel();
+                return this.getDefaultAgentModel();
             }
             return model.length ? model : this.getDefaultAgentModel();
         }
@@ -181,6 +322,42 @@ scriptContent:
                 }
             }
             return value.length ? value : "Codex default";
+        }
+        public hasConversationContent() {
+            if (!this.local) {
+                return false;
+            }
+            var messages = this.local.Messages || [];
+            for (var i = 0; i < messages.length; i++) {
+                var msg = messages[i] || {};
+                if (msg.id === "__agent_setup__") {
+                    continue;
+                }
+                if (msg.type === "user" || msg.type === "assistant" || msg.type === "worklog") {
+                    if (("" + (msg.msg == null ? "" : msg.msg)).replace(/^\s+|\s+$/g, "").length || msg.writing === true) {
+                        return true;
+                    }
+                }
+            }
+            if (this.local.AgentConversationResumed === true || this.local.ConversationStarted === true) {
+                return true;
+            }
+            return this.cleanProjectName(this.local.Conversation).length > 0;
+        }
+        public shouldShowInitialSuggestions() {
+            if (!this.local || this.local.IsProcessing === true) {
+                return false;
+            }
+            if (this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) {
+                return false;
+            }
+            if (this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) {
+                return false;
+            }
+            if (this.hasConversationContent && this.hasConversationContent()) {
+                return false;
+            }
+            return this.hasReadyAgentProvider ? this.hasReadyAgentProvider(this.getAgentProvider()) : true;
         }
         public getNewConversationLabel() {
             var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "le projet sélectionné";
@@ -245,8 +422,9 @@ scriptContent:
             if (!this.local) {
                 this.local = {};
             }
-            this.local.AgentProvider = this.cleanProjectName(provider).toLowerCase() || "vibe";
+            this.local.AgentProvider = this.normalizeAgentProviderValue(provider) || this.getDefaultAgentProvider();
             this.local.AgentModel = this.getDefaultAgentModel(this.local.AgentProvider);
+            this.local.ShowAgentConfigPanel = true;
             try {
                 if (typeof window !== "undefined" && window.localStorage) {
                     window.localStorage.setItem("ConvertigoAssistant.AgentProvider", this.local.AgentProvider);
@@ -362,10 +540,16 @@ scriptContent:
                     this.local.ShowConversationPanel = false;
                 }
                 if (this.local.AgentProvider == null) {
-                    this.local.AgentProvider = this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : "";
+                    this.local.AgentProvider = this.getAgentProvider ? this.getAgentProvider() : "";
                 }
-                if (this.local.AgentModel == null) {
+                if (this.local.AgentModel == null || !this.local.AgentModel.length) {
                     this.local.AgentModel = this.getAgentModel();
+                }
+                if (this.local.ConversationStarted == null) {
+                    this.local.ConversationStarted = false;
+                }
+                if (this.local.ShowAgentConfigPanel == null) {
+                    this.local.ShowAgentConfigPanel = false;
                 }
                 this.syncFooterPlaceholder();
                 this.local.EnableVisionForPage = false;
@@ -379,6 +563,9 @@ scriptContent:
         					self.local = {};
         				}
                         if (self.local && self.local.AutoScrollEnabled === false) {
+        					if (self.refreshScrollButtons) {
+        						self.refreshScrollButtons(20);
+        					}
         					return;
         				}
         				if (force) {
@@ -386,6 +573,9 @@ scriptContent:
         				}
         				if (self.content && self.content.scrollToBottom) {
         					self.content.scrollToBottom(220);
+        				}
+        				if (self.refreshScrollButtons) {
+        					self.refreshScrollButtons(260);
         				}
         			} catch (e) {}
         		}, wait);
@@ -405,6 +595,81 @@ scriptContent:
         				if (self.content && self.content.scrollToTop) {
         					self.content.scrollToTop(220);
         				}
+        				if (self.refreshScrollButtons) {
+        					self.refreshScrollButtons(260);
+        				}
+        			} catch (e) {}
+        		}, wait);
+        	}
+        	applyScrollButtonState(scrollTop, scrollHeight, contentHeight) {
+        		try {
+        			if (!this.local) {
+        				this.local = {};
+        			}
+        			scrollTop = Number(scrollTop || 0);
+        			scrollHeight = Number(scrollHeight || 0);
+        			contentHeight = Number(contentHeight || 0);
+        			if (isNaN(scrollTop)) {
+        				scrollTop = 0;
+        			}
+        			if (isNaN(scrollHeight)) {
+        				scrollHeight = 0;
+        			}
+        			if (isNaN(contentHeight)) {
+        				contentHeight = 0;
+        			}
+        			var distanceToBottom = scrollHeight > 0 && contentHeight > 0 ? scrollHeight - (scrollTop + contentHeight) : -1;
+        			var hasScrollableHistory = this.hasConversationContent ? this.hasConversationContent() : !!(this.local.Messages && this.local.Messages.length);
+        			var canScroll = scrollHeight > contentHeight + 4;
+        			var showTop = hasScrollableHistory && canScroll && scrollTop > 120;
+        			var showBottom = hasScrollableHistory && canScroll && distanceToBottom > 56;
+        			var changed = false;
+        			if (this.local.ShowScrollTopButton !== showTop) {
+        				this.local.ShowScrollTopButton = showTop;
+        				changed = true;
+        			}
+        			if (this.local.ShowScrollBottomButton !== showBottom) {
+        				this.local.ShowScrollBottomButton = showBottom;
+        				changed = true;
+        			}
+        			return changed;
+        		} catch (e) {}
+        		return false;
+        	}
+        	refreshScrollButtons(delay = 0) {
+        		var wait = delay == null ? 0 : delay;
+        		var self = this;
+        		setTimeout(function() {
+        			try {
+        				if (!self.local) {
+        					self.local = {};
+        				}
+        				var content = self.content;
+        				if (!content) {
+        					return;
+        				}
+        				var updateFromElement = function(el) {
+        					try {
+        						if (!el) {
+        							return;
+        						}
+        						var changed = self.applyScrollButtonState(el.scrollTop, el.scrollHeight, el.clientHeight || el.offsetHeight);
+        						self.local.LastScrollTop = Number(el.scrollTop || 0);
+        						if (changed && self.tick) {
+        							self.tick();
+        						}
+        					} catch (e) {}
+        				};
+        				if (content.getScrollElement) {
+        					var result = content.getScrollElement();
+        					if (result && result.then) {
+        						result.then(updateFromElement).catch(function() {});
+        					} else {
+        						updateFromElement(result);
+        					}
+        				} else {
+        					updateFromElement(content);
+        				}
         			} catch (e) {}
         		}, wait);
         	}
@@ -417,59 +682,47 @@ scriptContent:
         			var scrollTop = Number(detail.scrollTop || 0);
         			var previousTop = Number(this.local.LastScrollTop);
         			var lockUntil = Number(this.local.AutoScrollLockUntil || 0);
-        			var maxTop = Number(this.local.AutoScrollMaxTop);
         			var scrollHeight = Number(detail.scrollHeight || 0);
         			var contentHeight = Number(detail.contentHeight || detail.clientHeight || 0);
-        			var distanceToBottom = -1;
-        			var showTop = scrollTop > 160;
-        			if (this.local.ShowScrollTopButton !== showTop) {
-        				this.local.ShowScrollTopButton = showTop;
-        				this.tick();
-        			}
         			if (isNaN(previousTop)) {
         				previousTop = scrollTop;
         			}
         			if (isNaN(lockUntil)) {
         				lockUntil = 0;
         			}
-        			if (isNaN(maxTop)) {
-        				maxTop = scrollTop;
-        			}
-        			if (scrollHeight > 0 && contentHeight > 0) {
+        			var hasMetrics = scrollHeight > 0 && contentHeight > 0;
+        			var distanceToBottom = -1;
+        			if (hasMetrics) {
         				distanceToBottom = scrollHeight - (scrollTop + contentHeight);
+        			} else if (this.refreshScrollButtons) {
+        				this.refreshScrollButtons(0);
         			}
-        			this.local.LastScrollTop = scrollTop;
-        			if (scrollTop > maxTop) {
-        				this.local.AutoScrollMaxTop = scrollTop;
-        				maxTop = scrollTop;
+        			var hasScrollableHistory = this.hasConversationContent ? this.hasConversationContent() : !!(this.local.Messages && this.local.Messages.length);
+        			var showTop = hasScrollableHistory && scrollTop > 120;
+        			var changed = false;
+        			if (this.local.ShowScrollTopButton !== showTop) {
+        				this.local.ShowScrollTopButton = showTop;
+        				changed = true;
+        			}
+        			if (hasMetrics) {
+        				var showBottom = hasScrollableHistory && distanceToBottom > 56;
+        				if (this.local.ShowScrollBottomButton !== showBottom) {
+        					this.local.ShowScrollBottomButton = showBottom;
+        					changed = true;
+        				}
         			}
         			var isGoingUp = scrollTop < (previousTop - 1);
-        			var isGoingDown = scrollTop > (previousTop + 1);
-        			if (this.local.AutoScrollEnabled !== false && isGoingUp) {
+        			if (this.local.AutoScrollEnabled !== false && isGoingUp && Date.now() >= lockUntil) {
         				this.local.AutoScrollEnabled = false;
-        				this.local.AutoScrollLockUntil = Date.now() + 250;
-        				this.tick();
-        				return;
+        				changed = true;
         			}
-        			if (Date.now() < lockUntil) {
-        				return;
+        			if (distanceToBottom >= 0 && distanceToBottom <= 24 && this.local.AutoScrollEnabled === false) {
+        				this.local.AutoScrollEnabled = true;
+        				this.local.AutoScrollLockUntil = Date.now() + 300;
+        				changed = true;
         			}
-        			if (this.local.AutoScrollEnabled === false) {
-        				var nearBottom = false;
-        				if (distanceToBottom >= 0) {
-        					nearBottom = distanceToBottom <= 24;
-        				} else {
-        					nearBottom = scrollTop >= (maxTop - 24);
-        				}
-        				if (nearBottom && (isGoingDown || scrollTop >= (maxTop - 2))) {
-        					this.local.AutoScrollEnabled = true;
-        					this.local.AutoScrollLockUntil = Date.now() + 300;
-        					this.tick();
-        				}
-        				return;
-        			}
-        			if ((previousTop - scrollTop) > 10 && this.local.AutoScrollEnabled !== false) {
-        				this.local.AutoScrollEnabled = false;
+        			this.local.LastScrollTop = scrollTop;
+        			if (changed) {
         				this.tick();
         			}
         		} catch (e) {}
@@ -479,6 +732,7 @@ scriptContent:
         			this.local = {};
         		}
         		this.local.AutoScrollEnabled = true;
+        		this.local.ShowScrollBottomButton = false;
         		this.local.AutoScrollLockUntil = Date.now() + 1400;
         		this.tick();
         		this.scrollChatBottom(0, true);
@@ -827,6 +1081,8 @@ title: Agent assistant
                             }
                             page.local.NewConversationMode = true;
                             page.local.ShowConversationPanel = false;
+                            page.local.ShowAgentConfigPanel = false;
+                            page.local.ConversationStarted = false;
                             page.local.Conversation = '''';
                             page.local.AgentConversationResumed = false;
                             page.local.Messages = [];
@@ -1291,7 +1547,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''Reprenez ou supprimez une conversation existante.'' : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Continuez cette conversation ou ouvrez la liste pour en choisir une autre.'' : (''Choisissez l’agent. Le premier message démarre la conversation pour le projet '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''sélectionné'') + ''.''))'
+                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''Reprenez ou supprimez une conversation existante.'' : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Continuez cette conversation ou ouvrez la liste pour en choisir une autre.'' : ((this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''Choisissez et préparez l’agent local à utiliser dans ce workspace.'' : (''Envoyez un premier message pour démarrer une nouvelle conversation sur le projet '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''sélectionné'') + ''.'')))'
           ↓AgentSessionStrip [ngx.components.UIDynamicElement-1781604896725]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: div
@@ -1381,7 +1637,7 @@ title: Agent assistant
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.local && (this.local.ShowConversationPanel === true || this.local.NewConversationMode === true || !this.local.Conversation)
+                - MobileSmartSourceType: script:this.local && (this.local.ShowConversationPanel === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0 && this.local.NewConversationMode === true) || (this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()))
             ↓Panel [ngx.components.UIDynamicElement-1781608119091]: 
               beanData: '{"ionBean":"DivTag"}'
               tagName: div
@@ -1450,7 +1706,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-create-settings'' : ''agent-create-settings agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''agent-create-settings'' : ''agent-create-settings agent-hidden'''
                 ↓AgentLabel [ngx.components.UIDynamicElement-1781700500012]: 
                   beanData: '{"ionBean":"Paragraph"}'
                   tagName: p
@@ -1796,7 +2052,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && ((this.local.AgentConversations && this.local.AgentConversations.length > 0) || (this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true))) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.local && ((this.local.AgentConversations && this.local.AgentConversations.length > 0 && this.local.NewConversationMode === true) || (this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true))) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
                 ↓Aria [ngx.components.UIAttribute-1781676410897]: 
                   attrName: aria-label
                   attrValue: 
@@ -1839,6 +2095,8 @@ title: Agent assistant
                             		}
                             		page.local.NewConversationMode = true;
                             		page.local.ShowConversationPanel = false;
+                                    page.local.ShowAgentConfigPanel = false;
+                                    page.local.ConversationStarted = false;
                             		page.local.Conversation = '''';
                             		page.local.AgentConversationResumed = false;
                             		page.local.Messages = [];
@@ -1870,7 +2128,7 @@ title: Agent assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
                 ↓Aria [ngx.components.UIAttribute-1781811000102]: 
                   attrName: aria-label
                   attrValue: 
@@ -1889,7 +2147,7 @@ title: Agent assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Préparer l'agent
+                      - MobileSmartSourceType: 'script:(this.hasReadyAgentProvider && this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : '''')) ? ''Mettre à jour l’agent'' : ''Installer / préparer l’agent'''
                 ↓Event [ngx.components.UIControlEvent-1781811000105]: 
                   ↓SetupAgent [ngx.components.UICustomAction-1781811000106]: 
                     actionValue: 
@@ -1919,12 +2177,13 @@ title: Agent assistant
                                     var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
                                     var provider = normalizeProvider(page.local.AgentProvider);
                                     try {
-                                        if (!provider.length && page.getConfiguredAgentProvider) {
-                                            provider = normalizeProvider(page.getConfiguredAgentProvider());
+                                        if (!provider.length && page.getAgentProvider) {
+                                            provider = normalizeProvider(page.getAgentProvider());
                                         }
                                     } catch (e0) {}
                                     if (!provider.length) {
-                                        page.local.ShowConversationPanel = true;
+                                        page.local.ShowConversationPanel = false;
+                                        page.local.ShowAgentConfigPanel = true;
                                         page.local.AgentProvider = '''';
                                         page.local.AgentModel = '''';
                                         page.local.AgentReasoningEffort = '''';
@@ -1967,6 +2226,9 @@ title: Agent assistant
                                         page.local.AgentModel = setupResult.model || model || '''';
                                         page.local.AgentReasoningEffort = setupResult.reasoningEffort || reasoningEffort || '''';
                                         page.local.AgentServiceTier = setupResult.serviceTier || serviceTier || '''';
+                                        page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : false;
+                                        page.local.NewConversationMode = true;
+                                        page.local.ShowConversationPanel = false;
                                         if (setupResult.conversations) {
                                             page.local.AgentConversations = setupResult.conversations;
                                         }
@@ -2152,6 +2414,10 @@ title: Agent assistant
                                     		if (!page.local) {
                                     			page.local = {};
                                     		}
+                                    		page.local.NewConversationMode = false;
+                                    		page.local.AgentConversationResumed = true;
+                                    		page.local.ConversationStarted = true;
+                                    		page.local.ShowAgentConfigPanel = false;
                                     		var trimValue = function(value) {
                                     			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
                                     		};
@@ -2271,6 +2537,10 @@ title: Agent assistant
                                     		}
                                     		page.tick();
                                     		page.scrollChatBottom(0);
+                                    		if (page.refreshScrollButtons) {
+                                    			page.refreshScrollButtons(120);
+                                    			page.refreshScrollButtons(500);
+                                    		}
                                     		resolve();
                                     '
                             ↓data [ngx.components.UIControlVariable-1781612472549]: 
@@ -2360,7 +2630,8 @@ title: Agent assistant
                         beanData: |
                           '{
                            "ionBean": "Icon",
-                           "IconName": "plain:trash-outline",
+                           "IonColor": "plain:danger",
+                           "IconName": "plain:close-outline",
                            "IconSlot": "plain:icon-only"
                           }'
                         tagName: ion-icon
@@ -2729,7 +3000,7 @@ title: Agent assistant
     directiveSource: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:this.local && this.local.AutoScrollEnabled === false
+        - MobileSmartSourceType: script:this.local && this.local.ShowScrollBottomButton === true
     ↓ScrollBottomButton [ngx.components.UIDynamicElement-1773900000011]: 
       beanData: |
         '{
@@ -3011,6 +3282,10 @@ title: Agent assistant
                     		if (!active) {
                     			page.local.IsProcessing = false;
                     			page.tick();
+                    			if (page.refreshScrollButtons) {
+                    				page.refreshScrollButtons(120);
+                    				page.refreshScrollButtons(500);
+                    			}
                     			resolve();
                     			return;
                     		}
@@ -3041,6 +3316,10 @@ title: Agent assistant
                     		page.local.Buffer = { progress: progress, phase: phase || lines[lines.length - 1] };
                     		page.tick();
                     		page.scrollChatBottom(0);
+                    		if (page.refreshScrollButtons) {
+                    			page.refreshScrollButtons(120);
+                    			page.refreshScrollButtons(500);
+                    		}
                     		resolve();
                     '
             ↓data [ngx.components.UIControlVariable-1749567905833]: 
@@ -3147,24 +3426,34 @@ title: Agent assistant
                           if (result.settings) {
                               page.local.AgentSettings = result.settings;
                           }
-                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^s+|s+$/g, ''''); };
+                          var normalize = function(value) {
+                              var provider = clean(value).toLowerCase();
+                              if (provider === ''codex-cli'' || provider === ''openai-codex'') { return ''codex''; }
+                              if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') { return ''vibe''; }
+                              return provider;
+                          };
                           var state = result.state || {};
-                          var provider = clean(page.local.AgentProvider || state.provider || result.provider).toLowerCase();
-                          var model = clean(page.local.AgentModel || state.model || result.model);
                           var settings = page.local.AgentSettings || {};
                           if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
                           var providers = settings.providers || [];
+                          var provider = normalize(page.local.AgentProvider || state.provider || result.provider);
+                          if (!provider.length && page.getAgentProvider) { provider = normalize(page.getAgentProvider()); }
+                          if (!provider.length && settings.defaults) { provider = normalize(settings.defaults.provider); }
+                          if (!provider.length && providers.length) { provider = normalize(providers[0] && providers[0].id); }
                           var selectedProvider = null;
                           for (var i = 0; i < providers.length; i++) {
-                              if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                              if (normalize(providers[i] && providers[i].id) === provider) {
                                   selectedProvider = providers[i];
                                   break;
                               }
                           }
                           if (!provider.length || selectedProvider === null) {
+                              page.local.AgentProvider = provider;
                               page.local.AgentModels = [];
                               page.local.AgentProviderSupportsReasoning = false;
                               page.local.AgentReasoningLevels = [];
+                              page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : true;
                               resolve();
                               return;
                           }
@@ -3172,8 +3461,9 @@ title: Agent assistant
                           page.local.AgentProvider = provider;
                           page.local.AgentModels = models;
                           page.local.AgentProviderSupportsReasoning = selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                          var model = clean(page.local.AgentModel || state.model || result.model);
                           if (!model.length) {
-                              model = clean(selectedProvider.defaultModel || (settings.defaults && settings.defaults.provider === provider ? settings.defaults.model : ''''));
+                              model = clean(selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''));
                           }
                           var selectedModel = null;
                           for (var j = 0; j < models.length; j++) {
@@ -3194,8 +3484,8 @@ title: Agent assistant
                           }
                           page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : '''';
                           page.local.AgentServiceTier = clean(page.local.AgentServiceTier || state.serviceTier || result.serviceTier);
-                          resolve();
-                  '
+                          page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : false;
+                          resolve();'
         ↓SetAgentReasoningEffort [ngx.components.UIDynamicAction-1782120503630]: 
           beanData: |
             '{
@@ -4117,6 +4407,8 @@ title: Agent assistant
                         		this.local.AutoScrollEnabled = true;
                         		this.local.AutoScrollLockUntil = Date.now() + 1400;
                         		this.local.IsProcessing = true;
+                                this.local.ConversationStarted = true;
+                                this.local.ShowAgentConfigPanel = false;
                         		var now = new Date();
                         		var hh = ("0" + now.getHours()).slice(-2);
                         		var mm = ("0" + now.getMinutes()).slice(-2);
@@ -4334,7 +4626,7 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: script:local && local.EnableChat !== false && (local.Conversation || ((local.NewConversationMode === true || (!local.Conversation && local.ShowConversationPanel !== true)) && local.AgentProvider && local.AgentModel && local.AgentModels && local.AgentModels.length > 0))
+          - MobileSmartSourceType: 'script:local && local.EnableChat !== false && (!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (local.AgentProvider || '''')))'
     ↓IsProcessing [ngx.components.UIUseVariable-1775200000004]: 
       varValue: 
         - xmlizable: 
@@ -4349,7 +4641,7 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(local && (!local.Messages || local.Messages.length === 0) && !local.IsProcessing && (local.NewConversationMode === true || local.ShowConversationPanel !== true)) ? local.QuickSuggestions : []'
+          - MobileSmartSourceType: 'script:(this.shouldShowInitialSuggestions && this.shouldShowInitialSuggestions()) ? local.QuickSuggestions : []'
     ↓Placeholder [ngx.components.UIUseVariable-1775800000116]: 
       varValue: 
         - xmlizable: 
@@ -4467,6 +4759,15 @@ title: Agent assistant
                 		var selected = event && event.model != null ? event.model : (event && event.detail && event.detail.value != null ? event.detail.value : event);
                 		var modelId = clean(selected);
                 		if (!page.local) { page.local = {}; }
+                		if (modelId === "__configure_agent__") {
+                			page.local.ShowAgentConfigPanel = true;
+                			page.local.NewConversationMode = true;
+                			page.local.ShowConversationPanel = false;
+                			page.tick();
+                			if (page.scrollChatTop) { page.scrollChatTop(0, true); }
+                			resolve();
+                			return;
+                		}
                 		page.local.AgentModel = modelId;
                 		var provider = clean(page.local.AgentProvider).toLowerCase();
                 		var settings = page.local.AgentSettings || {};
@@ -4519,7 +4820,7 @@ title: Agent assistant
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: 'script:(this.local && this.local.EnableChat !== false && (this.local.Conversation || ((this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true)) && this.local.AgentProvider && this.local.AgentModel && this.local.AgentModels && this.local.AgentModels.length > 0))) ? ''modern-footer agent-footer-codex'' : ''modern-footer agent-footer-codex agent-footer-hidden'''
+        - MobileSmartSourceType: 'script:(this.local && this.local.EnableChat !== false && (!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (this.local.AgentProvider || '''')))) ? ''modern-footer agent-footer-codex'' : ''modern-footer agent-footer-codex agent-footer-hidden'''
 ↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1750758766481]: 
   topic: JavaMessage
   ↓enableChat [ngx.components.UICustomAction-1750759185953]: 
@@ -4546,6 +4847,8 @@ title: Agent assistant
                         page.local.Messages = [];
                         page.local.AgentConversations = [];
                         page.local.AgentConversationResumed = false;
+                        page.local.ShowScrollTopButton = false;
+                        page.local.ShowScrollBottomButton = false;
                         page.local.ProjectSelectionChanged = false;
                         page.tick();
                         resolve();
@@ -4564,9 +4867,13 @@ title: Agent assistant
                         page.local.AgentProgressHistoryRunId = "";
                         page.local.AgentConversationResumed = false;
                         page.local.ShowConversationPanel = false;
-                        page.local.NewConversationMode = false;
-                        page.local.AgentProvider = page.getConfiguredAgentProvider ? page.getConfiguredAgentProvider() : "";
-                        page.local.AgentModel = "";
+                        page.local.NewConversationMode = true;
+                        page.local.ShowAgentConfigPanel = false;
+                        page.local.ConversationStarted = false;
+                        page.local.ShowScrollTopButton = false;
+                        page.local.ShowScrollBottomButton = false;
+                        page.local.AgentProvider = page.getAgentProvider ? page.getAgentProvider() : "";
+                        page.local.AgentModel = page.getAgentModel ? page.getAgentModel() : "";
                         page.local.ProjectSelectionChanged = true;
                     }
                     page.tick();
@@ -4589,12 +4896,12 @@ title: Agent assistant
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''''
+              - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ""'
         ↓model [ngx.components.UIControlVariable-1782139101974]: 
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(this.getConfiguredAgentProvider && this.getConfiguredAgentProvider().length && this.getAgentModel) ? this.getAgentModel() : '''''
+              - MobileSmartSourceType: 'script:this.getAgentModel ? this.getAgentModel() : ""'
         ↓targetProject [ngx.components.UIControlVariable-1782139101976]: 
           varValue: 
             - xmlizable: 
@@ -4700,6 +5007,7 @@ title: Agent assistant
                                   page.local.StreamingIndex = page.local.Messages.length - 1;
                               }
                           }
+                          page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : false;
                           if (page.setEnableChat) { page.setEnableChat(); }
                           if (page.syncFooterPlaceholder) { page.syncFooterPlaceholder(); }
                           page.tick();
@@ -4992,8 +5300,14 @@ title: Agent assistant
             --color: #fda4af;
             width: 32px;
           }
+          .agent-conversations-close ion-icon,
           .agent-conversation-action.danger ion-icon {
+            display: inline-block;
+            flex: 0 0 16px;
+            height: 16px;
             margin-right: 0;
+            min-width: 16px;
+            width: 16px;
           }
           .agent-conversation-action[disabled] {
             opacity: 0.55;
@@ -5150,17 +5464,17 @@ title: Agent assistant
           .modern-scroll-bottom-btn {
             --padding-start: 0 !important;
             --padding-end: 0 !important;
-            bottom: 98px !important;
+            bottom: 14px !important;
             height: 30px !important;
             min-height: 30px !important;
             opacity: 0.58;
             position: absolute !important;
-            right: 8px !important;
+            right: 10px !important;
             width: 30px !important;
             z-index: 32;
           }
           .modern-scroll-top-btn {
-            bottom: 134px !important;
+            bottom: 50px !important;
           }
           .modern-scroll-top-btn::part(native),
           .modern-scroll-bottom-btn::part(native) {

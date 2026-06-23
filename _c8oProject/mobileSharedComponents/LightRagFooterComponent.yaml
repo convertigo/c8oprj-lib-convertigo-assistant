@@ -148,6 +148,17 @@ scriptContent:
         		return '''' + (fallback == null ? key : fallback);
         	}
         	
+        	getActiveAgentLabel() {
+        		var model = ('''' + (this.AgentModelLabel || this.AgentModel || '''')).toLowerCase();
+        		if (model.indexOf(''gpt'') !== -1 || model.indexOf(''codex'') !== -1) {
+        			return ''Codex'';
+        		}
+        		if (model.indexOf(''vibe'') !== -1 || model.indexOf(''mistral'') !== -1 || model.indexOf(''devstral'') !== -1) {
+        			return ''Vibe'';
+        		}
+        		return ''Agent'';
+        	}
+        
         	getDefaultSuggestions() {
         		return [
         			{ label: this.t(''HowTo_Suggestion_1_Label'', ''REST/SOAP web service''), question: this.t(''HowTo_Suggestion_1_Question'', ''How do I consume a REST or SOAP web service?''), icon: ''code-slash-outline'' },
@@ -207,13 +218,13 @@ scriptContent:
         						list.push(item);
         					}
         				}
+        				return list;
         			}
-        		} catch (e) {}
-        		
-        		if (!list.length) {
-        			for (var j = 0; j < defaults.length; j++) {
-        				list.push(this.normalizeSuggestionItem(defaults[j], defaults[j]));
-        			}
+        		} catch (e) {
+        			return [];
+        		}
+        		for (var j = 0; j < defaults.length; j++) {
+        			list.push(this.normalizeSuggestionItem(defaults[j], defaults[j]));
         		}
         		return list;
         	}
@@ -2153,7 +2164,6 @@ scriptContent:
                 - MobileSmartSourceType: plain:$event.preventDefault(); this['showAddMenu'] = this['showAddMenu'] !== true; this.tick()
         ↓AccessMode [ngx.components.UIDynamicElement-1782125437300]: 
           beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
-          isEnabled: false
           tagName: ion-button
           ↓Class [ngx.components.UIAttribute-1782125437302]: 
             attrName: class
@@ -2166,7 +2176,7 @@ scriptContent:
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Accès complet
+                - MobileSmartSourceType: plain:Configurer l'agent actif
           ↓Shield [ngx.components.UIDynamicElement-1782125437306]: 
             beanData: |
               '{
@@ -2179,7 +2189,7 @@ scriptContent:
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Accès complet
+                - MobileSmartSourceType: script:this.getActiveAgentLabel()
           ↓Chevron [ngx.components.UIDynamicElement-1782125437310]: 
             beanData: |
               '{
@@ -2188,6 +2198,12 @@ scriptContent:
                "IconSlot": "plain:end"
               }'
             tagName: ion-icon
+          ↓ConfigureAgentClick [ngx.components.UIAttribute-1782207425483]: 
+            attrName: (click)
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:$event.preventDefault(); this.ModelChange.emit('__configure_agent__')
       ↓ControlsRight [ngx.components.UIDynamicElement-1782125437312]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
