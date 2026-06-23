@@ -616,6 +616,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lastRunId: String(record.lastRunId || ""),
       lastAnswerPreview: String(record.lastAnswerPreview || ""),
       progress: String(record.progress || ""),
+      progressEvents: record.progressEvents || [],
       phase: String(record.phase || ""),
       model: String(record.model || ""),
       reasoningEffort: String(record.reasoningEffort || ""),
@@ -752,6 +753,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lastRunId: String(state.runid || ""),
       lastAnswerPreview: answer.length > 500 ? answer.substring(0, 500) : answer,
       progress: String(state.progressLog || ""),
+      progressEvents: state.progressEvents || [],
       phase: String(state.lastStatusText || ""),
       warnings: state.warnings || [],
       deleted: false
@@ -827,6 +829,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.runid = String(record.lastRunId || state.runid || "");
       state.externalSessionId = String(record.externalSessionId || state.externalSessionId || "");
       state.progressLog = String(record.progress || "");
+      state.progressEvents = record.progressEvents || [];
       state.lastStatusText = String(record.phase || "");
       state.warnings = record.warnings || [];
       state.updatedAt = recordUpdatedAt;
@@ -1104,6 +1107,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       logs: "J'utilise le MCP Convertigo pour consulter les logs.",
       builder: "J'utilise le MCP Convertigo pour vérifier l'application.",
       palette: "J'utilise le MCP Convertigo pour lire la palette.",
+      shell: "J'exécute une commande locale.",
       tool: "J'utilise le MCP Convertigo.",
       mcpResult: "Résultat MCP : ",
       toolRetry: "Une tentative d'outil a \u00e9chou\u00e9, je cherche une autre piste.",
@@ -1134,6 +1138,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       logs: "I am using the Convertigo MCP to read logs.",
       builder: "I am using the Convertigo MCP to verify the app.",
       palette: "I am using the Convertigo MCP to read the palette.",
+      shell: "I am running a local command.",
       tool: "I am using the Convertigo MCP.",
       mcpResult: "MCP result: ",
       toolRetry: "A tool attempt failed, I am trying another path.",
@@ -1162,6 +1167,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function progressTextForTool(state, title) {
     var text = String(title || "").toLowerCase();
     var t = lang(state);
+    if (text.indexOf("exec_command") !== -1 || text.indexOf("commande shell") !== -1 || text.indexOf("shell command") !== -1 || text.indexOf("lecture de fichier") !== -1 || text.indexOf("read file") !== -1) {
+      return t.shell;
+    }
     if (text.indexOf("project-list") !== -1) {
       return t.projectList;
     }
@@ -1192,6 +1200,246 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return t.tool;
   }
 
+  function looksLikeShellCommand(value) {
+    var text = trim(String(value || ""));
+    if (!text.length) {
+      return false;
+    }
+    if (text.charAt(text.length - 1) === ".") {
+      text = trim(text.substring(0, text.length - 1));
+    }
+    var lower = text.toLowerCase();
+    return lower.indexOf("/bin/") === 0 ||
+      lower.indexOf("zsh -lc ") === 0 ||
+      lower.indexOf("bash -lc ") === 0 ||
+      lower.indexOf("sh -c ") === 0 ||
+      lower.indexOf("commande exécutée") === 0 ||
+      lower.indexOf("command executed") === 0;
+  }
+
+  function shellCommandTitle(state, value) {
+    var text = trim(String(value || "")).toLowerCase();
+    var french = state && state.language === "fr";
+    if (text.indexOf("sed ") !== -1 || text.indexOf("sed -n ") !== -1) {
+      return french ? "Lecture de fichier" : "Read file";
+    }
+    if (text.indexOf("rg ") !== -1 || text.indexOf("grep ") !== -1) {
+      return french ? "Recherche dans les fichiers" : "Search files";
+    }
+    if (text.indexOf("ls ") !== -1 || text.indexOf("find ") !== -1) {
+      return french ? "Liste de fichiers" : "List files";
+    }
+    return french ? "Commande shell" : "Shell command";
+  }
+
+  function cleanEventText(value) {
+    return compactLine(value);
+  }
+
+  function eventKeyForText(kind, text) {
+    return String(kind || "event") + ":" + trim(text).substring(0, 180);
+  }
+
+  function isOpaqueCallId(value) {
+    return /^call_[A-Za-z0-9_-]+$/.test(trim(value));
+  }
+
+  function toolCallId(data) {
+    return trim(data && (data.callId || data.toolCallId || data.tool_call_id || data.id));
+  }
+
+  function toolNameFromData(data) {
+    data = data || {};
+    var invocation = data.invocation || {};
+    var item = data.item || {};
+    var name = trim(data.toolName || data.tool || invocation.tool || invocation.name || item.tool || item.name || data.name);
+    var server = trim(data.server || invocation.server || item.server);
+    if (server.length && name.length && name.indexOf(server + ".") !== 0) {
+      return server + "." + name;
+    }
+    if (name.length) {
+      return name;
+    }
+    return trim(data.title);
+  }
+
+  function normalizedToolTitle(state, data, title) {
+    title = trim(title);
+    var callId = toolCallId(data);
+    if (callId.length && state && state.toolCalls && state.toolCalls[callId] && state.toolCalls[callId].title) {
+      if (!title.length || isOpaqueCallId(title)) {
+        title = state.toolCalls[callId].title;
+      }
+    }
+    var namedTool = toolNameFromData(data);
+    if ((!title.length || isOpaqueCallId(title)) && namedTool.length && !isOpaqueCallId(namedTool)) {
+      title = namedTool;
+    }
+    if (!title.length || isOpaqueCallId(title)) {
+      title = normalizeProvider(state && state.provider) === "codex" ? "Outil Codex" : "Outil";
+    }
+    return title;
+  }
+
+  function rememberToolCall(state, data, title) {
+    var callId = toolCallId(data);
+    if (!state || !callId.length) {
+      return;
+    }
+    if (!state.toolCalls) {
+      state.toolCalls = {};
+    }
+    if (!state.toolCalls[callId]) {
+      state.toolCalls[callId] = {};
+    }
+    if (title && !isOpaqueCallId(title)) {
+      state.toolCalls[callId].title = title;
+    }
+    var toolName = toolNameFromData(data);
+    if (toolName.length && !isOpaqueCallId(toolName)) {
+      state.toolCalls[callId].toolName = toolName;
+    }
+  }
+
+  function pushProgressEvent(state, item) {
+    if (!state) {
+      return null;
+    }
+    if (!state.progressEvents || typeof state.progressEvents.length === "undefined") {
+      state.progressEvents = [];
+    }
+    item = item || {};
+    var text = cleanEventText(item.text || item.title || "");
+    var title = trim(item.title || text);
+    if (!text.length && !title.length) {
+      return null;
+    }
+    var kind = trim(item.type || "narrative") || "narrative";
+    var key = trim(item.key || eventKeyForText(kind, title || text));
+    for (var i = 0; i < state.progressEvents.length; i++) {
+      var existing = state.progressEvents[i];
+      if (existing && existing.key === key) {
+        if (isOpaqueCallId(title) && existing.title && !isOpaqueCallId(existing.title)) {
+          title = existing.title;
+        }
+        existing.text = text || existing.text || "";
+        existing.title = title || existing.title || "";
+        existing.status = trim(item.status || existing.status || "");
+        existing.detail = trim(item.detail || existing.detail || "");
+        existing.toolName = trim(item.toolName || existing.toolName || "");
+        existing.groupKey = trim(item.groupKey || existing.groupKey || "");
+        existing.current = item.current === true;
+        existing.updatedAt = now();
+        if (existing.status === "completed" || existing.status === "failed" || existing.status === "error") {
+          existing.completedAt = existing.completedAt || now();
+          existing.current = false;
+        }
+        return existing;
+      }
+    }
+    state.progressEvents.push({
+      key: key,
+      type: kind,
+      text: text,
+      title: title,
+      status: trim(item.status || ""),
+      detail: trim(item.detail || ""),
+      provider: trim(item.provider || state.provider || ""),
+      callId: trim(item.callId || ""),
+      toolName: trim(item.toolName || ""),
+      groupKey: trim(item.groupKey || ""),
+      current: item.current === true,
+      at: now(),
+      updatedAt: now()
+    });
+    while (state.progressEvents.length > 80) {
+      state.progressEvents.shift();
+    }
+    return state.progressEvents[state.progressEvents.length - 1];
+  }
+
+  function markProgressEventsIdle(state) {
+    if (!state || !state.progressEvents) {
+      return;
+    }
+    for (var i = 0; i < state.progressEvents.length; i++) {
+      if (state.progressEvents[i]) {
+        state.progressEvents[i].current = false;
+      }
+    }
+  }
+
+  function appendNarrativeEvent(state, text, source) {
+    text = cleanEventText(text);
+    if (!text.length) {
+      return;
+    }
+    pushProgressEvent(state, {
+      key: eventKeyForText("narrative", text),
+      type: "narrative",
+      text: text,
+      title: text,
+      status: "completed",
+      provider: source || state.provider || ""
+    });
+  }
+
+  function appendActivityEvent(state, text, current) {
+    text = cleanEventText(text);
+    if (!text.length) {
+      return;
+    }
+    if (current === true) {
+      markProgressEventsIdle(state);
+    }
+    pushProgressEvent(state, {
+      key: eventKeyForText("activity", text),
+      type: "activity",
+      text: text,
+      title: text,
+      status: current === true ? "running" : "completed",
+      current: current === true
+    });
+  }
+
+  function toolEventKey(data, title) {
+    var callId = toolCallId(data);
+    if (callId.length) {
+      return "tool:" + callId;
+    }
+    return eventKeyForText("tool", title || "tool");
+  }
+
+  function appendToolEvent(state, event, data, type) {
+    var rawTitle = eventToolTitle(event, data);
+    var title = normalizedToolTitle(state, data, rawTitle);
+    rememberToolCall(state, data, title);
+    var status = eventToolStatus(data);
+    if (type === "tool/start" && !status.length) {
+      status = "running";
+    }
+    var preview = eventToolResultPreview(data);
+    var label = progressTextForTool(state, title);
+    if (status === "failed" || status === "error") {
+      label = lang(state).toolRetry;
+    }
+    markProgressEventsIdle(state);
+    pushProgressEvent(state, {
+      key: toolEventKey(data, title),
+      type: "tool",
+      text: label,
+      title: title,
+      status: status || "running",
+      detail: preview,
+      provider: state.provider || "",
+      callId: toolCallId(data),
+      toolName: toolNameFromData(data),
+      groupKey: title.toLowerCase(),
+      current: !(status === "completed" || status === "complete" || status === "success" || status === "succeeded" || status === "failed" || status === "error")
+    });
+    state.lastStatusText = label;
+  }
+
   function compactLine(value) {
     var text = trim(String(value || "").replace(/\s+/g, " "));
     if (!text.length) {
@@ -1203,30 +1451,56 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return text;
   }
 
-  function appendProgress(state, text) {
+  function appendProgressLine(state, text) {
     var rawText = String(text || "");
     if (progressLineLooksLikeFinalAnswer(rawText)) {
       appendAnswerChunk(state, trim(rawText));
       state.answerIsFinal = true;
-      return;
+      return "";
     }
     text = compactLine(rawText);
     if (!text.length) {
-      return;
+      return "";
     }
     if (!state.progressLog) {
       state.progressLog = "";
     }
     if (state.lastProgressLine === text) {
-      return;
+      return text;
     }
     var existing = "\n" + state.progressLog + "\n";
     if (existing.indexOf("\n" + text + "\n") !== -1) {
-      return;
+      return text;
     }
     state.progressLog += (state.progressLog.length ? "\n" : "") + text;
     state.lastProgressLine = text;
     state.lastStatusText = text;
+    return text;
+  }
+
+  function appendProgress(state, text) {
+    text = appendProgressLine(state, text);
+    if (!text.length) {
+      return;
+    }
+    if (looksLikeShellCommand(text)) {
+      var title = shellCommandTitle(state, text);
+      markProgressEventsIdle(state);
+      pushProgressEvent(state, {
+        key: eventKeyForText("tool", "exec_command:" + text),
+        type: "tool",
+        text: progressTextForTool(state, title),
+        title: title,
+        status: "completed",
+        detail: text,
+        provider: state.provider || "",
+        toolName: "exec_command",
+        groupKey: "exec_command",
+        current: false
+      });
+      return;
+    }
+    appendNarrativeEvent(state, text, "progress");
   }
 
   function comparableAnswerText(value) {
@@ -1431,11 +1705,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid || "",
       phase: state.lastStatusText || "",
       progress: state.progressLog || "",
+      progressEvents: state.progressEvents || [],
       warnings: state.warnings || []
     });
   }
 
   function eventToolTitle(event, data) {
+    var namedTool = toolNameFromData(data);
+    if (namedTool.length && !isOpaqueCallId(namedTool)) {
+      return namedTool;
+    }
     if (data && data.title != null) {
       return String(data.title);
     }
@@ -1469,15 +1748,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return "";
     }
     var candidates = [
+      data.detail,
       data.preview,
       data.summary,
       data.text,
       data.output,
+      data.arguments,
       data.result && data.result.preview,
       data.result && data.result.summary,
       data.result && data.result.text,
       data.result && data.result.output,
-      data.result
+      data.result,
+      data.item && data.item.output,
+      data.item && data.item.result,
+      data.item && data.item.content,
+      data.item && data.item.arguments
     ];
     for (var i = 0; i < candidates.length; i++) {
       var value = candidates[i];
@@ -1498,8 +1783,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!text.length || text === "{}" || text === "[]") {
         continue;
       }
-      if (text.length > 260) {
-        text = text.substring(0, 257) + "...";
+      if (text.length > 1800) {
+        text = text.substring(0, 1797) + "...";
       }
       return text;
     }
@@ -1639,6 +1924,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.progressLog === "undefined" || state.progressLog === null) {
       state.progressLog = "";
     }
+    if (!state.progressEvents || typeof state.progressEvents.length === "undefined") {
+      state.progressEvents = [];
+    }
     if (typeof state.lastProgressLine === "undefined" || state.lastProgressLine === null) {
       state.lastProgressLine = "";
     }
@@ -1737,6 +2025,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       answer: record && trim(record.status) === "completed" ? String(record.lastAnswerPreview || "") : "",
       answerIsFinal: record && trim(record.status) === "completed" && trim(record.lastAnswerPreview).length > 0,
       progressLog: record && record.progress ? String(record.progress) : "",
+      progressEvents: record && record.progressEvents ? record.progressEvents : [],
       lastProgressLine: "",
       lastStatusText: record && record.phase ? String(record.phase) : "",
       warnings: record && record.warnings ? record.warnings : [],
@@ -1769,6 +2058,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       primaryProject: state.primaryProject || state.projectId || "",
       projectNames: state.projectNames || [],
       progress: state.progressLog || "",
+      progressEvents: state.progressEvents || [],
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
       setupRequired: state.setupRequired === true,
@@ -1795,6 +2085,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       status: state.status || "",
       runid: state.runid || "",
       progress: state.progressLog || "",
+      progressEvents: state.progressEvents || [],
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
       state: publicState(state),
@@ -1817,6 +2108,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         threadid: state.threadid,
         explanation: state.answer || state.error || "",
         progress: state.progressLog || "",
+        progressEvents: state.progressEvents || [],
         setupRequired: state.setupRequired === true,
         setup: state.setupReport || null,
         warnings: state.warnings || [],
@@ -2354,6 +2646,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.warnings = [];
     state.readErrors = 0;
     state.progressLog = "";
+    state.progressEvents = [];
     state.lastProgressLine = "";
     state.setupRequired = false;
     state.setupReport = null;
@@ -2651,31 +2944,32 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (codexAnswerChunkIsProgress(state, data)) {
             appendProgress(state, eventText(data));
           } else {
+            markProgressEventsIdle(state);
             appendAnswerChunk(state, eventText(data));
             state.answerIsFinal = true;
           }
         } else if (type === "reasoning/chunk") {
           if (!state.answer.length) {
-            appendProgress(state, lang(state).thinking);
+            appendActivityEvent(state, lang(state).thinking, true);
+            appendProgressLine(state, lang(state).thinking);
           }
         } else if (type === "tool/start" || type === "tool/update") {
           var toolStatus = eventToolStatus(data);
+          appendToolEvent(state, event, data, type);
           if (toolStatus === "failed" || toolStatus === "error") {
-            appendProgress(state, lang(state).toolRetry);
+            appendProgressLine(state, lang(state).toolRetry);
             state.warnings.push({
               type: type,
               title: eventToolTitle(event, data),
               status: toolStatus
             });
           } else if (type === "tool/start") {
-            appendProgress(state, progressTextForTool(state, eventToolTitle(event, data)));
+            appendProgressLine(state, progressTextForTool(state, eventToolTitle(event, data)));
           } else if (toolStatus === "completed" || toolStatus === "complete" || toolStatus === "success" || toolStatus === "succeeded") {
-            var preview = eventToolResultPreview(data);
-            if (preview.length) {
-              appendProgress(state, lang(state).mcpResult + preview);
-            }
+            state.lastStatusText = progressTextForTool(state, eventToolTitle(event, data));
           }
         } else if (type === "turn/end") {
+          markProgressEventsIdle(state);
           state.status = "completed";
           state.error = "";
           if (!trim(state.answer).length) {

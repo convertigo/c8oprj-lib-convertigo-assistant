@@ -148,7 +148,22 @@ scriptContent:
         		return '''' + (fallback == null ? key : fallback);
         	}
         	
+        	hasAgentControls() {
+        		try {
+        			var models = this.AgentModels;
+        			if (models && typeof models !== ''string'' && models.length != null && models.length > 0) {
+        				return true;
+        			}
+        		} catch (e0) {}
+        		var model = '''' + (this.AgentModelLabel || this.AgentModel || '''');
+        		model = model.replace(/^\s+|\s+$/g, '''').toLowerCase();
+        		return model.length > 0 && model !== ''null'' && model !== ''undefined'' && model !== ''agent'';
+        	}
+        
         	getActiveAgentLabel() {
+        		if (!this.hasAgentControls()) {
+        			return '''';
+        		}
         		var model = ('''' + (this.AgentModelLabel || this.AgentModel || '''')).toLowerCase();
         		if (model.indexOf(''gpt'') !== -1 || model.indexOf(''codex'') !== -1) {
         			return ''Codex'';
@@ -2162,6 +2177,12 @@ scriptContent:
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:$event.preventDefault(); this['showAddMenu'] = this['showAddMenu'] !== true; this.tick()
+          ↓HiddenWhenNoInputs [ngx.components.UIAttribute-1782236786423]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:!this.isAssetInputEnabled()
         ↓AccessMode [ngx.components.UIDynamicElement-1782125437300]: 
           beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
           tagName: ion-button
@@ -2170,7 +2191,7 @@ scriptContent:
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:codex-access-chip
+                - MobileSmartSourceType: 'script:(this.hasAgentControls && this.hasAgentControls()) ? ''codex-access-chip'' : ''codex-access-chip ion-hide'''
           ↓Aria [ngx.components.UIAttribute-1782125437304]: 
             attrName: aria-label
             attrValue: 
@@ -2204,6 +2225,12 @@ scriptContent:
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:$event.preventDefault(); this.ModelChange.emit('__configure_agent__')
+          ↓HiddenWhenNoAgentModel [ngx.components.UIAttribute-1782225131869]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:!this.hasAgentControls()
       ↓ControlsRight [ngx.components.UIDynamicElement-1782125437312]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
@@ -3569,7 +3596,31 @@ scriptContent:
       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
       - com.twinsoft.convertigo.beans.common.FormatedContent: 
         →: |
-          ':host-context(ion-footer.agent-footer-codex) .modern-input-form {
+          '.modern-stop-btn {
+            display: none !important;
+          }
+          .agent-prompt-controls,
+          .codex-add-panel {
+            display: none;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item ion-buttons[slot="end"],
+          :host-context(ion-footer.agent-footer-codex) .modern-attach-btn {
+            display: none !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls {
+            display: flex;
+          }
+          :host-context(ion-footer.agent-controls-enabled) .codex-add-panel {
+            display: flex;
+          }
+          :host-context(ion-footer.legacy-prompt-footer) .codex-add-panel {
+            display: none !important;
+          }
+          :host-context(ion-footer.legacy-prompt-footer) .codex-access-chip,
+          :host-context(ion-footer.legacy-prompt-footer) .agent-prompt-select {
+            display: none !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-form {
             box-shadow: none;
           }
           :host-context(ion-footer.agent-footer-codex) .modern-input-item,
@@ -3584,4 +3635,26 @@ scriptContent:
           :host-context(ion-footer.agent-footer-codex) .modern-input-field::part(native):focus {
             box-shadow: none;
             outline: none;
+          }'
+↓ContrastA11yStyle [ngx.components.UIStyle-1782230123571]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host-context(ion-footer.agent-footer-codex) .codex-access-chip {
+            color: #92400e !important;
+          }
+          :host-context(:root.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
+          :host-context(html.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
+          :host-context(body.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
+          :host-context(.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-access-chip {
+            color: #fbbf24 !important;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
+            :host-context(html:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
+            :host-context(body:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-access-chip {
+              color: #fbbf24 !important;
+            }
           }'

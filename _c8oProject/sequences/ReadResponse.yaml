@@ -987,6 +987,52 @@ responseTimeout: 120
               - ↑mode: JS
               - →→: AIData.clipboard
   ↓jElse [steps.ElseStep-1744822845333]: 
+↓result [steps.JsonObjectStep-1782223510340]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+  ↓status [steps.JsonFieldStep-1782223510345]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: status
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: JS
+          - →→: 'typeof jStatus === "undefined" ? "" : jStatus'
+  ↓AIData [steps.JsonFieldStep-1782223510347]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: AIData
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: JS
+          - →→: 'typeof AIData === "undefined" ? null : AIData'
+  ↓Message [steps.JsonFieldStep-1782223510349]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: Message
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: JS
+          - →→: 'typeof Messages === "undefined" ? [] : Messages'
 ↓fromStub [variables.RequestableVariable-1744901364156]: 
   value: false
   wsdl: false

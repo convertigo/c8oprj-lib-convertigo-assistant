@@ -124,6 +124,28 @@ componentScriptContent:
         		} catch (e3) {}
         		return null;
         	}
+        
+        	getFullSelectedPath(selectedPath) {
+        		var value = '''' + (selectedPath == null ? '''' : selectedPath);
+        		try {
+        			if (window && window.location) {
+        				if (value.indexOf(''?'') === -1 && window.location.search) {
+        					value += window.location.search;
+        				}
+        			}
+        		} catch (e) {}
+        		return value;
+        	}
+        
+        	isAgentAssistantSelected(selectedPath) {
+        		var value = this.getFullSelectedPath(selectedPath);
+        		return value.indexOf(''/path-to-agent'') === 0 || (value.indexOf(''/path-to-xfirst'') === 0 && value.indexOf(''agentBridge=1'') !== -1);
+        	}
+        
+        	isComponentAssistantSelected(selectedPath) {
+        		var value = this.getFullSelectedPath(selectedPath);
+        		return value.indexOf(''/path-to-xfirst'') === 0 && value.indexOf(''agentBridge=1'') === -1;
+        	}
         	/*End_c8o_AppFunction*/
         /*Begin_c8o_function:CTS1747213325348*/
         		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
@@ -185,6 +207,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
 ↓Page [ngx.components.PageComponent-1500538678074]: 🗏 mobilePages/Page.yaml
 ↓Figma [ngx.components.PageComponent-1752572046162]: 🗏 mobilePages/Figma.yaml
 ↓LightRag [ngx.components.PageComponent-1767170334148]: 🗏 mobilePages/LightRag.yaml
+↓Agent [ngx.components.PageComponent-1782236353406]: 🗏 mobilePages/Agent.yaml
 ↓AppEvent [ngx.components.UIAppEvent-1747213310646]: 
   appEvent: onAppInit
   ↓HandlePostMessage [ngx.components.UICustomAction-1747213325348]: 

@@ -1,4 +1,4 @@
-comment: AI Agent Assistant Page
+comment: Convertigo Assistant Page
 preloadPriority: high
 scriptContent: 
   - xmlizable: 
@@ -26,11 +26,13 @@ scriptContent:
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageInitialization*/
         		this.ensureFooterInputs();
+        		this.startAgentElapsedTicker();
         		/*End_c8o_PageInitialization*/
         /*Begin_c8o_PageAfterViewInit*/
         		this.refreshScrollButtons(350);
         		/*End_c8o_PageAfterViewInit*/
         /*Begin_c8o_PageFinalization*/
+        		this.stopAgentElapsedTicker();
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
         	public debug() {
@@ -59,18 +61,126 @@ scriptContent:
         		} catch (e) {}
         		return "" + (fallback == null ? key : fallback);
         	}
+        
         	getDefaultFooterSuggestions() {
+        		if (this.isAgentBridgeMode && this.isAgentBridgeMode()) {
+        			return [
+        				{ label: this.t("Agent_Suggestion_1_Label", "Corriger l''écran"), question: this.t("Agent_Suggestion_1_Question", "Repère le problème visible et corrige le projet."), icon: "bug-outline" },
+        				{ label: this.t("Agent_Suggestion_2_Label", "Créer une page"), question: this.t("Agent_Suggestion_2_Question", "Ajoute une page NGX complète dans le projet sélectionné."), icon: "document-text-outline" },
+        				{ label: this.t("Agent_Suggestion_3_Label", "Brancher des données"), question: this.t("Agent_Suggestion_3_Question", "Branche cette page sur une séquence Convertigo et affiche ses données."), icon: "git-network-outline" },
+        				{ label: this.t("Agent_Suggestion_4_Label", "Améliorer l''UI"), question: this.t("Agent_Suggestion_4_Question", "Rends cette vue plus claire et plus ergonomique."), icon: "color-wand-outline" },
+        				{ label: this.t("Agent_Suggestion_5_Label", "Expliquer le projet"), question: this.t("Agent_Suggestion_5_Question", "Analyse le projet et résume son fonctionnement."), icon: "search-outline" },
+        				{ label: this.t("Agent_Suggestion_6_Label", "Tester le flux"), question: this.t("Agent_Suggestion_6_Question", "Vérifie le flux principal et corrige les erreurs trouvées."), icon: "checkmark-circle-outline" }
+        			];
+        		}
         		return [
-                    { label: this.t("Agent_Suggestion_1_Label", "Corriger l''écran"), question: this.t("Agent_Suggestion_1_Question", "Repère le problème visible et corrige le projet."), icon: "bug-outline" },
-                    { label: this.t("Agent_Suggestion_2_Label", "Créer une page"), question: this.t("Agent_Suggestion_2_Question", "Ajoute une page NGX complète dans le projet sélectionné."), icon: "document-text-outline" },
-                    { label: this.t("Agent_Suggestion_3_Label", "Brancher des données"), question: this.t("Agent_Suggestion_3_Question", "Branche cette page sur une séquence Convertigo et affiche ses données."), icon: "git-network-outline" },
-                    { label: this.t("Agent_Suggestion_4_Label", "Améliorer l''UI"), question: this.t("Agent_Suggestion_4_Question", "Rends cette vue plus claire et plus ergonomique."), icon: "color-wand-outline" },
-                    { label: this.t("Agent_Suggestion_5_Label", "Expliquer le projet"), question: this.t("Agent_Suggestion_5_Question", "Analyse le projet et résume son fonctionnement."), icon: "search-outline" },
-                    { label: this.t("Agent_Suggestion_6_Label", "Tester le flux"), question: this.t("Agent_Suggestion_6_Question", "Vérifie le flux principal et corrige les erreurs trouvées."), icon: "checkmark-circle-outline" }
+        			{ label: this.t("Component_Suggestion_1_Label", "Formulaire de connexion"), question: this.t("Component_Suggestion_1_Question", "Crée un shared component de formulaire de connexion avec email, mot de passe et bouton de validation."), icon: "log-in-outline" },
+        			{ label: this.t("Component_Suggestion_2_Label", "Tableau de données"), question: this.t("Component_Suggestion_2_Question", "Crée un shared component de tableau de données responsive avec tri visuel et actions par ligne."), icon: "grid-outline" },
+        			{ label: this.t("Component_Suggestion_3_Label", "Cartes de tableau de bord"), question: this.t("Component_Suggestion_3_Question", "Crée un shared component de cartes de tableau de bord avec métriques, tendance et état vide."), icon: "bar-chart-outline" },
+        			{ label: this.t("Component_Suggestion_4_Label", "Téléverseur de fichiers"), question: this.t("Component_Suggestion_4_Question", "Crée un shared component de téléversement de fichiers avec zone de dépôt et liste des fichiers."), icon: "cloud-upload-outline" },
+        			{ label: this.t("Component_Suggestion_5_Label", "Fenêtre modale"), question: this.t("Component_Suggestion_5_Question", "Crée un shared component de fenêtre modale de confirmation avec titre, message et actions."), icon: "albums-outline" },
+        			{ label: this.t("Component_Suggestion_6_Label", "Assistant par étapes"), question: this.t("Component_Suggestion_6_Question", "Crée un shared component d''assistant par étapes avec progression et navigation."), icon: "list-outline" }
         		];
         	}
+        
+        	private isTruthyAgentFlag(value) {
+        		var text = ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "").toLowerCase();
+        		return text === "1" || text === "true" || text === "yes" || text === "agent" || text === "local-agent" || text === "local" || text === "bridge";
+        	}
+        	public isAgentBridgeMode() {
+        		try {
+        			if (typeof window !== "undefined" && window.location) {
+        				var params0 = new URLSearchParams(window.location.search || "");
+        				var explicit0 = "" + (params0.get("agentBridge") || params0.get("assistantMode") || params0.get("mode") || "");
+        				explicit0 = explicit0.replace(/^\s+|\s+$/g, "").toLowerCase();
+        				if (explicit0 === "0" || explicit0 === "false" || explicit0 === "component" || explicit0 === "components" || explicit0 === "legacy") {
+        					return false;
+        				}
+        				if (explicit0 === "1" || explicit0 === "true" || explicit0 === "agent" || explicit0 === "local-agent" || explicit0 === "bridge") {
+        					return true;
+        				}
+        				var path0 = "" + (window.location.pathname || "");
+        				if (path0.indexOf("/path-to-agent") !== -1) {
+        					return true;
+        				}
+        				if (path0.indexOf("/path-to-xfirst") !== -1) {
+        					return false;
+        				}
+        			}
+        		} catch (eUrl0) {}
+        		try {
+        			if (this.local && this.local.AgentBridgeMode === false) {
+        				return false;
+        			}
+        			if (this.local && this.local.AgentBridgeMode === true) {
+        				return true;
+        			}
+        		} catch (e0) {}
+        		try {
+        			var g: any = this.global || {};
+        			if (this.isTruthyAgentFlag(g.agentBridgeAvailable) || this.isTruthyAgentFlag(g.agentBridge) || this.isTruthyAgentFlag(g.localAgent) || this.isTruthyAgentFlag(g.aiAgent) || this.isTruthyAgentFlag(g.assistantMode)) {
+        				return true;
+        			}
+        		} catch (e1) {}
+        		try {
+        			var d: any = this.navParams && this.navParams.data ? this.navParams.data : {};
+        			if (this.isTruthyAgentFlag(d.agentBridgeAvailable) || this.isTruthyAgentFlag(d.agentBridge) || this.isTruthyAgentFlag(d.localAgent) || this.isTruthyAgentFlag(d.aiAgent) || this.isTruthyAgentFlag(d.assistantMode) || this.isTruthyAgentFlag(d.mode)) {
+        				return true;
+        			}
+        			if (d.agentProvider || d.provider || d.agent) {
+        				return true;
+        			}
+        		} catch (e2) {}
+        		try {
+        			if (typeof window !== "undefined" && window.location) {
+        				var params = new URLSearchParams(window.location.search || "");
+        				if (this.isTruthyAgentFlag(params.get("agentBridge")) || this.isTruthyAgentFlag(params.get("localAgent")) || this.isTruthyAgentFlag(params.get("aiAgent")) || this.isTruthyAgentFlag(params.get("assistantMode")) || this.isTruthyAgentFlag(params.get("mode"))) {
+        					return true;
+        				}
+        				if (params.get("agentProvider") || params.get("provider") || params.get("agent")) {
+        					return true;
+        				}
+        				var host = (window.location.hostname || "").toLowerCase();
+        				if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
+        					return true;
+        				}
+        			}
+        		} catch (e3) {}
+        		return false;
+        	}
+        	public isLegacyComponentMode() {
+        		return !(this.isAgentBridgeMode && this.isAgentBridgeMode());
+        	}
+        	public getAssistantTitle() {
+        		return this.isAgentBridgeMode() ? this.t("Agent_Title", "Agent IA") : this.t("AI_Component_Assistant", "Assistant IA de composants");
+        	}
+        	public getIntroTitle() {
+        		var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "";
+        		if (this.isAgentBridgeMode()) {
+        			return project.length ? (this.t("Agent_New_Title_Project", "Que devrions-nous construire pour le projet") + " " + project + " ?") : this.t("Agent_New_Title", "Que devrions-nous construire ?");
+        		}
+        		return this.t("Welcome_to_Convertigo_AI_Assistant", "Bienvenue dans l''assistant IA de composants Convertigo");
+        	}
+        	public getIntroCopy1() {
+        		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Copy", "Demandez une correction, une amélioration ou une explication sur le projet sélectionné.") : this.t("AI_Assistant_Intro", "Décrivez le composant dont vous avez besoin et laissez l''assistant le générer pour vous.");
+        	}
+        	public getIntroCopy2() {
+        		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Local", "L''agent utilise les outils Convertigo locaux quand ils sont disponibles.") : this.t("AI_Assistant_Intro_Details", "L''assistant génère des shared components prêts à intégrer dans votre application NGX.");
+        	}
+        	public getStartCardTitle() {
+        		if (!this.isAgentBridgeMode()) {
+        			return this.t("Start", "Commencer");
+        		}
+        		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Previous_Conversations", "Conversations précédentes") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation", "Conversation en cours") : this.t("New_Conversation", "Nouvelle conversation"));
+        	}
+        	public getStartCardCopy() {
+        		if (!this.isAgentBridgeMode()) {
+        			return this.t("Start_Component_Assistant_Copy", "Décrivez le composant dont vous avez besoin et laissez l''assistant de composants Convertigo le générer pour vous.");
+        		}
+        		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Conversation_List_Copy", "Reprenez ou supprimez une conversation existante.") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation_Copy", "Continuez cette conversation ou ouvrez la liste pour en choisir une autre.") : ((this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? this.t("Agent_Setup_Copy", "Choisissez ou préparez l''agent pour ce projet.") : this.t("New_Conversation_Copy", "Envoyez un premier message pour démarrer une nouvelle conversation sur le projet sélectionné.")));
+        	}
         	getNoProjectSelectedMessage() {
-                return this.t("Agent_Project_Select_Required", "Sélectionnez un projet NGX.");
+        		return this.isAgentBridgeMode && this.isAgentBridgeMode() ? this.t("Agent_Project_Select_Required", "Sélectionnez un projet NGX.") : this.t("Project_Select_Required", "Sélectionnez un projet NGX.");
         	}
         	private cleanProjectName(value) {
         		return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
@@ -231,6 +341,9 @@ scriptContent:
             return false;
         }
         public shouldShowAgentSettingsPanel() {
+            if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) {
+                return false;
+            }
             if (!this.local) {
                 return false;
             }
@@ -333,11 +446,14 @@ scriptContent:
                 if (msg.id === "__agent_setup__") {
                     continue;
                 }
-                if (msg.type === "user" || msg.type === "assistant" || msg.type === "worklog") {
-                    if (("" + (msg.msg == null ? "" : msg.msg)).replace(/^\s+|\s+$/g, "").length || msg.writing === true) {
+                if (msg.type === "user" || msg.type === "assistant" || msg.type === "worklog" || msg.type === "image") {
+                    if (("" + (msg.msg == null ? "" : msg.msg)).replace(/^\s+|\s+$/g, "").length || msg.writing === true || msg.file != null) {
                         return true;
                     }
                 }
+            }
+            if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) {
+                return false;
             }
             if (this.local.AgentConversationResumed === true || this.local.ConversationStarted === true) {
                 return true;
@@ -356,6 +472,9 @@ scriptContent:
             }
             if (this.hasConversationContent && this.hasConversationContent()) {
                 return false;
+            }
+            if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) {
+                return true;
             }
             return this.hasReadyAgentProvider ? this.hasReadyAgentProvider(this.getAgentProvider()) : true;
         }
@@ -507,7 +626,7 @@ scriptContent:
         		}
         		return project;
         	}
-        	syncFooterPlaceholder() {
+        		syncFooterPlaceholder() {
         		if (!this.local) {
         			this.local = {};
         		}
@@ -515,17 +634,19 @@ scriptContent:
         			this.local.QuestionPlaceholder = this.getNoProjectSelectedMessage();
         			return;
         		}
+        		var fallback = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...") : this.t("Question_Placeholder", "Demandez comment construire quelque chose...");
+        		var otherFallback = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Question_Placeholder", "Demandez comment construire quelque chose...") : this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
         		var placeholder = "" + (this.local.QuestionPlaceholder == null ? "" : this.local.QuestionPlaceholder);
-        		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage()) {
-                    this.local.QuestionPlaceholder = this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
+        		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage() || placeholder === otherFallback) {
+        			this.local.QuestionPlaceholder = fallback;
         		}
         	}
-        	refreshFooterLocale() {
+        		refreshFooterLocale() {
         		if (!this.local) {
         			this.local = {};
         		}
         		this.local.QuickSuggestions = this.getDefaultFooterSuggestions();
-                this.local.QuestionPlaceholder = this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
+        		this.local.QuestionPlaceholder = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...") : this.t("Question_Placeholder", "Demandez comment construire quelque chose...");
         		this.syncFooterPlaceholder();
         		this.tick();
         	}
@@ -954,6 +1075,134 @@ scriptContent:
                 this.tick();
                 this.scrollChatBottom(20);
             }
+        	private worklogTrim(value) {
+        		return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+        	}
+        	public formatAgentDuration(ms) {
+        		var seconds = Math.max(0, Math.round(Number(ms || 0) / 1000));
+        		if (seconds < 60) {
+        			return seconds + " s";
+        		}
+        		var minutes = Math.floor(seconds / 60);
+        		var rest = seconds % 60;
+        		return minutes + " min" + (rest ? " " + rest + " s" : "");
+        	}
+        	public getProgressTitle(item) {
+        		try {
+        			var count = item && item.progressItems && item.progressItems.length ? item.progressItems.length : 0;
+        			var start = Number(item && item.progressStartedAt ? item.progressStartedAt : 0);
+        			var end = item && item.writing === true ? (new Date()).getTime() : Number(item && item.progressEndedAt ? item.progressEndedAt : 0);
+        			var duration = start ? this.formatAgentDuration((end || (new Date()).getTime()) - start) : "0 s";
+        			var suffix = count ? (" en " + count + " étape" + (count > 1 ? "s" : "")) : "";
+        			return "A travaillé pendant " + duration + suffix;
+        		} catch (e) {}
+        		return item && item.progressTitle ? item.progressTitle : "A travaillé";
+        	}
+        	public getProgressToolSummary(step) {
+        		var title = this.worklogTrim(step && (step.title || step.text)) || "Outil";
+        		var status = this.worklogTrim(step && step.status).toLowerCase();
+        		var count = Number(step && (step.callCount || (step.calls && step.calls.length) || 0));
+        		var countLabel = count > 1 ? (count + " appels") : "";
+        		var label = "";
+        		if (status === "running" || status === "in_progress") {
+        			label = "en cours";
+        		} else if (status === "failed" || status === "error") {
+        			label = "échec";
+        		} else if (status === "completed" || status === "complete" || status === "success" || status === "succeeded") {
+        			label = "terminé";
+        		}
+        		var parts = [title];
+        		if (countLabel.length) {
+        			parts.push(countLabel);
+        		}
+        		if (label.length) {
+        			parts.push(label);
+        		}
+        		return parts.join(" · ");
+        	}
+        	public getProgressToolCalls(step) {
+        		try {
+        			if (step && step.calls && step.calls.length != null) {
+        				var calls = [];
+        				for (var i = 0; i < step.calls.length; i++) {
+        					calls.push(step.calls[i]);
+        				}
+        				return calls;
+        			}
+        		} catch (e) {}
+        		return [];
+        	}
+        	public hasProgressToolDetail(step) {
+        		if (this.worklogTrim(step && step.detail).length) {
+        			return true;
+        		}
+        		var calls = this.getProgressToolCalls(step);
+        		for (var i = 0; i < calls.length; i++) {
+        			if (this.worklogTrim(calls[i] && calls[i].detail).length) {
+        				return true;
+        			}
+        		}
+        		return false;
+        	}
+        	public getProgressToolCallSummary(call, index) {
+        		var status = this.worklogTrim(call && call.status).toLowerCase();
+        		var label = "";
+        		if (status === "running" || status === "in_progress") {
+        			label = "en cours";
+        		} else if (status === "failed" || status === "error") {
+        			label = "échec";
+        		} else if (status === "completed" || status === "complete" || status === "success" || status === "succeeded") {
+        			label = "terminé";
+        		}
+        		var title = "Appel " + (Number(index || 0) + 1);
+        		return label.length ? (title + " · " + label) : title;
+        	}
+        	public getProgressToolDetail(step) {
+        		var direct = this.worklogTrim(step && step.detail);
+        		var calls = this.getProgressToolCalls(step);
+        		if (!calls.length) {
+        			if (direct.length > 1800) {
+        				direct = direct.substring(0, 1800) + "…";
+        			}
+        			return direct;
+        		}
+        		var blocks = [];
+        		for (var i = 0; i < calls.length; i++) {
+        			var detail = this.worklogTrim(calls[i] && calls[i].detail);
+        			if (!detail.length) {
+        				continue;
+        			}
+        			if (detail.length > 1400) {
+        				detail = detail.substring(0, 1400) + "…";
+        			}
+        			detail = detail.replace(/\x60\x60\x60/g, "''''''");
+        			blocks.push("**" + this.getProgressToolCallSummary(calls[i], i) + "**\n\n\x60\x60\x60text\n" + detail + "\n\x60\x60\x60");
+        		}
+        		return blocks.join("\n\n");
+        	}
+        	public startAgentElapsedTicker() {
+        		try {
+        			if (this[''_agentElapsedTimer'']) {
+        				return;
+        			}
+        			this[''_agentElapsedTimer''] = setInterval(() => {
+        				try {
+        					if (this.local && this.local.IsProcessing === true) {
+        						this.tick();
+        					}
+        				} catch (e) {}
+        			}, 1000);
+        		} catch (e) {}
+        	}
+        	public stopAgentElapsedTicker() {
+        		try {
+        			if (this[''_agentElapsedTimer'']) {
+        				clearInterval(this[''_agentElapsedTimer'']);
+        				this[''_agentElapsedTimer''] = null;
+        			}
+        		} catch (e) {}
+        	}
+        
         	public closeConversationsPanel() {
         		if (!this.local) {
         			this.local = {};
@@ -961,10 +1210,9 @@ scriptContent:
         		this.local.ShowConversationPanel = false;
         		this.tick();
         	}
-        	/*End_c8o_PageFunction*/
-        '
+        	/*End_c8o_PageFunction*/'
 segment: path-to-xfirst/:threadid
-title: Agent assistant
+title: Convertigo assistant
 ↓Header [ngx.components.UIDynamicElement-1491634212350]: 
   beanData: '{"ionBean":"Header"}'
   comment: Page header
@@ -1034,7 +1282,7 @@ title: Agent assistant
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Agent IA
+                - MobileSmartSourceType: 'script:this.getAssistantTitle ? this.getAssistantTitle() : ''Assistant IA de composants'''
         ↓SubtitleText [ngx.components.UIDynamicElement-1774701000018]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -1061,7 +1309,7 @@ title: Agent assistant
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-header-btn
+              - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-header-btn'' : ''modern-header-btn agent-hidden'''
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
           beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
@@ -1319,7 +1567,7 @@ title: Agent assistant
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:(this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? (''Que devrions-nous construire pour le projet '' + this.getEffectiveProjectName() + '' ?'') : ''Que devrions-nous construire ?'''
+                - MobileSmartSourceType: 'script:this.getIntroTitle ? this.getIntroTitle() : ''Bienvenue dans l\''assistant IA de composants Convertigo'''
         ↓IntroCopy1 [ngx.components.UIDynamicElement-1772100000039]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -1328,12 +1576,12 @@ title: Agent assistant
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-copy agent-hidden
+                - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-copy agent-hidden'' : ''modern-copy'''
           ↓Text [ngx.components.UIText-1772100000041]: 
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Décrivez le changement attendu, ajoutez des fichiers si besoin, puis laissez l'agent intervenir.
+                - MobileSmartSourceType: 'script:this.getIntroCopy1 ? this.getIntroCopy1() : ''Décrivez le composant dont vous avez besoin et laissez l\''assistant le générer pour vous.'''
         ↓IntroCopy2 [ngx.components.UIDynamicElement-1772100000042]: 
           beanData: '{"ionBean":"Paragraph"}'
           tagName: p
@@ -1342,12 +1590,12 @@ title: Agent assistant
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-copy agent-hidden
+                - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-copy agent-hidden'' : ''modern-copy'''
           ↓Text [ngx.components.UIText-1772100000044]: 
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Choisissez l'agent, le modèle et le niveau de raisonnement au démarrage.
+                - MobileSmartSourceType: 'script:this.getIntroCopy2 ? this.getIntroCopy2() : ''L\''assistant génère des shared components prêts à intégrer dans votre application NGX.'''
         ↓Class [ngx.components.UIAttribute-1782121734063]: 
           attrName: class
           attrValue: 
@@ -1362,7 +1610,7 @@ title: Agent assistant
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-card agent-desktop-how-card
+              - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-card agent-desktop-how-card'' : ''modern-card'''
         ↓CardContent [ngx.components.UIDynamicElement-1772100000047]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -1379,7 +1627,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Ce que l'agent peut faire
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''Ce que l\''agent peut faire'' : ''Comment fonctionne l\''Assistant de composants ?'''
           ↓P1 [ngx.components.UIDynamicElement-1772100000051]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1393,7 +1641,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:L'agent travaille directement sur le projet sélectionné :
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''L\''agent travaille directement sur le projet sélectionné :'' : ''L\''assistant de composants vous aide à créer des composants prêts pour la production pour votre projet Convertigo :'''
           ↓Source1 [ngx.components.UIDynamicElement-1772100000201]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1407,7 +1655,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:• Analyser le projet et expliquer ce qu'il trouve
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''• Analyser le projet et expliquer ce qu\''il trouve'' : ''• Décrivez vos besoins en composants en langage naturel'''
           ↓Source2 [ngx.components.UIDynamicElement-1772100000204]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1421,7 +1669,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:• Modifier des pages, des séquences et la logique applicative
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''• Modifier des pages, des séquences et la logique applicative'' : ''• Obtenez le code des composants avec TypeScript, Tailwind CSS et l\''accessibilité'''
           ↓Source3 [ngx.components.UIDynamicElement-1772100000207]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1435,7 +1683,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:• Tester, sauvegarder et résumer le résultat
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''• Tester, sauvegarder et résumer le résultat'' : ''• Itérez et affinez grâce aux retours conversationnels'''
           ↓P2 [ngx.components.UIDynamicElement-1772100000210]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1449,7 +1697,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Demandes typiques :
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''Demandes typiques :'' : ''L\''assistant fournira :'''
           ↓B1 [ngx.components.UIDynamicElement-1772100000054]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1463,7 +1711,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:→ Corriger un écran ou une séquence cassée
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''→ Corriger un écran ou une séquence cassée'' : ''→ Implémentation complète du composant avec propriétés (props) et types'''
           ↓B2 [ngx.components.UIDynamicElement-1772100000057]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1477,7 +1725,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:→ Améliorer l'ergonomie d'une vue
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''→ Améliorer l\''ergonomie d\''une vue'' : ''→ Style avec Tailwind CSS selon votre système de conception'''
           ↓B3 [ngx.components.UIDynamicElement-1772100000060]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1491,7 +1739,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:→ Brancher une page sur des données backend
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''→ Brancher une page sur des données backend'' : ''→ Meilleures pratiques pour les modèles et l\''accessibilité'''
           ↓P3 [ngx.components.UIDynamicElement-1772100000213]: 
             beanData: '{"ionBean":"Paragraph"}'
             isEnabled: false
@@ -1533,7 +1781,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''Conversations précédentes'' : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Conversation en cours'' : ''Nouvelle conversation'')'
+                  - MobileSmartSourceType: 'script:this.getStartCardTitle ? this.getStartCardTitle() : ''Commencer'''
           ↓Copy [ngx.components.UIDynamicElement-1772100000099]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -1547,7 +1795,7 @@ title: Agent assistant
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''Reprenez ou supprimez une conversation existante.'' : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Continuez cette conversation ou ouvrez la liste pour en choisir une autre.'' : ((this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''Choisissez et préparez l’agent local à utiliser dans ce workspace.'' : (''Envoyez un premier message pour démarrer une nouvelle conversation sur le projet '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''sélectionné'') + ''.'')))'
+                  - MobileSmartSourceType: 'script:this.getStartCardCopy ? this.getStartCardCopy() : ''Décrivez le composant dont vous avez besoin et laissez l\''assistant de composants Convertigo le générer pour vous.'''
           ↓AgentSessionStrip [ngx.components.UIDynamicElement-1781604896725]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: div
@@ -1556,7 +1804,7 @@ title: Agent assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.local && this.local.Conversation && this.local.NewConversationMode !== true && this.local.ShowConversationPanel !== true) ? ''agent-session-strip'' : ''agent-session-strip agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && this.local.Conversation && this.local.NewConversationMode !== true && this.local.ShowConversationPanel !== true) ? ''agent-session-strip'' : ''agent-session-strip agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1781604896729]: 
               beanData: '{"ionBean":"Icon","IconName":"script:(this.local && this.local.AgentConversationResumed) ? ''time-outline'' : ''sparkles-outline''"}'
               tagName: ion-icon
@@ -1637,7 +1885,7 @@ title: Agent assistant
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.local && (this.local.ShowConversationPanel === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0 && this.local.NewConversationMode === true) || (this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()))
+                - MobileSmartSourceType: script:this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && (this.local.ShowConversationPanel === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0 && this.local.NewConversationMode === true) || (this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()))
             ↓Panel [ngx.components.UIDynamicElement-1781608119091]: 
               beanData: '{"ionBean":"DivTag"}'
               tagName: div
@@ -2740,7 +2988,7 @@ title: Agent assistant
                     textValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:item && item.progressTitle ? item.progressTitle : (item && item.writing === true ? ''Traitement en cours'' : ''A travaillé'')'
+                        - MobileSmartSourceType: 'script:this.getProgressTitle ? this.getProgressTitle(item) : (item && item.progressTitle ? item.progressTitle : (item && item.writing === true ? ''Traitement en cours'' : ''A travaillé''))'
               ↓Narrative [ngx.components.UIDynamicElement-1782143276091]: 
                 beanData: '{"ionBean":"DivTag"}'
                 isEnabled: false
@@ -2844,19 +3092,204 @@ title: Agent assistant
                   ↓Step [ngx.components.UIDynamicElement-1782146120655]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: div
-                    ↓Class [ngx.components.UIAttribute-1782146120657]: 
+                    ↓Class [ngx.components.UIAttribute-1782245565716]: 
                       attrName: class
                       attrValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: 'script:''agent-worklog-step agent-worklog-step-'' + ((step && step.type) ? step.type : ''narrative'') + ((step && step.current) ? '' is-current'' : '''')'
-                    ↓StepMd [ngx.components.UIUseShared-1782146120659]: 
-                      sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
-                      ↓data [ngx.components.UIUseVariable-1782146124895]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:step && step.text ? step.text : '''''
+                    ↓IsTool [ngx.components.UIControlDirective-1782245565718]: 
+                      directiveName: If
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:step && step.type == 'tool' && this.hasProgressToolDetail && this.hasProgressToolDetail(step)
+                      ↓ToolDetails [ngx.components.UIDynamicElement-1782245569894]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: details
+                        ↓Class [ngx.components.UIAttribute-1782245569896]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-worklog-tool
+                        ↓Open [ngx.components.UIAttribute-1782245569898]: 
+                          attrName: '[open]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:step && step.current === true
+                        ↓Summary [ngx.components.UIDynamicElement-1782245569900]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: summary
+                          ↓Class [ngx.components.UIAttribute-1782245569902]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-worklog-tool-summary
+                          ↓Icon [ngx.components.UIDynamicElement-1782245569904]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Icon",
+                               "IconName": "plain:terminal-outline",
+                               "IonSize": "plain:small"
+                              }'
+                            tagName: ion-icon
+                          ↓Text [ngx.components.UIDynamicElement-1782245569906]: 
+                            beanData: '{"ionBean":"SpanTag"}'
+                            tagName: span
+                            ↓Value [ngx.components.UIText-1782245569908]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:this.getProgressToolSummary ? this.getProgressToolSummary(step) : (step && (step.title || step.text) ? (step.title || step.text) : ''Outil'')'
+                        ↓Body [ngx.components.UIDynamicElement-1782245569910]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1782246831307]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-worklog-tool-body
+                          ↓Calls [ngx.components.UIControlDirective-1782246831581]: 
+                            directiveIndexName: callIndex
+                            directiveItemName: call
+                            directiveSource: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getProgressToolCalls ? this.getProgressToolCalls(step) : []'
+                            ↓Call [ngx.components.UIDynamicElement-1782246849851]: 
+                              beanData: '{"ionBean":"DivTag"}'
+                              tagName: div
+                              ↓Class [ngx.components.UIAttribute-1782246849853]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:agent-worklog-call
+                              ↓HasDetail [ngx.components.UIControlDirective-1782246849855]: 
+                                directiveName: If
+                                directiveSource: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:call && call.detail && ('' + call.detail).trim().length > 0
+                                ↓CallDetails [ngx.components.UIDynamicElement-1782246849857]: 
+                                  beanData: '{"ionBean":"DivTag"}'
+                                  tagName: details
+                                  ↓Class [ngx.components.UIAttribute-1782246849859]: 
+                                    attrName: class
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: plain:agent-worklog-call-details
+                                  ↓Open [ngx.components.UIAttribute-1782246849861]: 
+                                    attrName: '[open]'
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:call && call.current === true
+                                  ↓Summary [ngx.components.UIDynamicElement-1782246849863]: 
+                                    beanData: '{"ionBean":"DivTag"}'
+                                    tagName: summary
+                                    ↓Class [ngx.components.UIAttribute-1782246849865]: 
+                                      attrName: class
+                                      attrValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                          - MobileSmartSourceType: plain:agent-worklog-call-summary
+                                    ↓Text [ngx.components.UIDynamicElement-1782246849867]: 
+                                      beanData: '{"ionBean":"SpanTag"}'
+                                      tagName: span
+                                      ↓Value [ngx.components.UIText-1782246849869]: 
+                                        textValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: 'script:this.getProgressToolCallSummary ? this.getProgressToolCallSummary(call, callIndex) : (''Appel '' + ((callIndex || 0) + 1))'
+                                  ↓CallBody [ngx.components.UIDynamicElement-1782246849881]: 
+                                    beanData: '{"ionBean":"DivTag"}'
+                                    tagName: div
+                                    ↓Class [ngx.components.UIAttribute-1782246849892]: 
+                                      attrName: class
+                                      attrValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                          - MobileSmartSourceType: plain:agent-worklog-call-body
+                                    ↓CallMd [ngx.components.UIUseShared-1782246849912]: 
+                                      sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                                      ↓data [ngx.components.UIUseVariable-1782246854853]: 
+                                        varValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: 'script:call && call.detail ? call.detail : '''''
+                              ↓NoDetail [ngx.components.UIControlDirective-1782246854855]: 
+                                directiveName: If
+                                directiveSource: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:!call || !call.detail || !('' + call.detail).trim().length
+                                ↓CallLine [ngx.components.UIDynamicElement-1782246854857]: 
+                                  beanData: '{"ionBean":"DivTag"}'
+                                  tagName: div
+                                  ↓Class [ngx.components.UIAttribute-1782246854859]: 
+                                    attrName: class
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: plain:agent-worklog-call-summary agent-worklog-call-line
+                                  ↓Text [ngx.components.UIDynamicElement-1782246854861]: 
+                                    beanData: '{"ionBean":"SpanTag"}'
+                                    tagName: span
+                                    ↓Value [ngx.components.UIText-1782246854863]: 
+                                      textValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                          - MobileSmartSourceType: 'script:this.getProgressToolCallSummary ? this.getProgressToolCallSummary(call, callIndex) : (''Appel '' + ((callIndex || 0) + 1))'
+                    ↓IsText [ngx.components.UIControlDirective-1782245574152]: 
+                      directiveName: If
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:!step || step.type != 'tool'
+                      ↓StepMd [ngx.components.UIUseShared-1782245574154]: 
+                        sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                        ↓data [ngx.components.UIUseVariable-1782245574156]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:step && step.text ? step.text : '''''
+                    ↓IsToolNoDetail [ngx.components.UIControlDirective-1782246688374]: 
+                      directiveName: If
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:step && step.type == 'tool' && (!this.hasProgressToolDetail || !this.hasProgressToolDetail(step))
+                      ↓ToolLine [ngx.components.UIDynamicElement-1782246692550]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1782246692552]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-worklog-tool-summary agent-worklog-tool-line
+                        ↓Icon [ngx.components.UIDynamicElement-1782246692554]: 
+                          beanData: |
+                            '{
+                             "ionBean": "Icon",
+                             "IconName": "plain:terminal-outline",
+                             "IonSize": "plain:small"
+                            }'
+                          tagName: ion-icon
+                        ↓Text [ngx.components.UIDynamicElement-1782246692556]: 
+                          beanData: '{"ionBean":"SpanTag"}'
+                          tagName: span
+                          ↓Value [ngx.components.UIText-1782246692558]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getProgressToolSummary ? this.getProgressToolSummary(step) : (step && (step.title || step.text) ? (step.title || step.text) : ''Outil'')'
           ↓IsAssistant [ngx.components.UIControlDirective-1773100000007]: 
             directiveName: If
             directiveSource: 
@@ -3047,6 +3480,31 @@ title: Agent assistant
           }'
         tagName: ion-icon
 ↓PageEvent [ngx.components.UIPageEvent-1744269061199]: 
+  ↓ApplyAssistantModeFromUrl [ngx.components.UICustomAction-1782236253363]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '		try {
+            			var search = (typeof window !== "undefined" && window.location) ? (window.location.search || "") : "";
+            			var params = new URLSearchParams(search);
+            			var mode = "" + (params.get("agentBridge") || params.get("assistantMode") || params.get("mode") || "");
+            			mode = mode.replace(/^\s+|\s+$/g, "").toLowerCase();
+            			if (!page.local) {
+            				page.local = {};
+            			}
+            			if (mode === "0" || mode === "false" || mode === "component" || mode === "components" || mode === "legacy") {
+            				page.local.AgentBridgeMode = false;
+            				page.isAgentBridgeMode = function() { return false; };
+            				page.refreshFooterLocale && page.refreshFooterLocale();
+            			}
+            			if (mode === "1" || mode === "true" || mode === "agent" || mode === "local-agent" || mode === "bridge") {
+            				page.local.AgentBridgeMode = true;
+            				page.refreshFooterLocale && page.refreshFooterLocale();
+            			}
+            		} catch (e) {}
+            		resolve();'
   ↓RunID [ngx.components.UIDynamicAction-1744389840276]: 
     beanData: |
       '{
@@ -3151,7 +3609,7 @@ title: Agent assistant
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
+           "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentCreateConversation'' : ''ConvertigoAssistant.CreateConversation''",
            "noLoading": "plain:true"
           }'
         ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
@@ -3642,6 +4100,7 @@ title: Agent assistant
             				hasLines: history.length > 0
             			};
             		};
+            
             		var isProgressActivity = function(value) {
             			var text = trimText(value);
             			var lower = text.toLowerCase();
@@ -3664,59 +4123,279 @@ title: Agent assistant
             				lower.indexOf("a lu ") === 0 ||
             				lower.indexOf("a exécuté") === 0;
             		};
-            		var progressView = function(lines) {
-            			var details = [];
-            			var narrative = [];
+            		var asArray = function(value) {
+            			if (!value) {
+            				return [];
+            			}
+            			try {
+            				if (Array.isArray(value)) {
+            					return value;
+            				}
+            			} catch (e) {}
+            			if (value.length != null && typeof value !== "string") {
+            				var arr = [];
+            				for (var i = 0; i < value.length; i++) {
+            					arr.push(value[i]);
+            				}
+            				return arr;
+            			}
+            			return [];
+            		};
+            		var isOpaqueCallId = function(value) {
+            			return /^call_[A-Za-z0-9_-]+$/.test(trimText(value));
+            		};
+            		var toolDisplayName = function(eventItem, fallback) {
+            			eventItem = eventItem || {};
+            			var title = trimText(eventItem.title || fallback || "");
+            			var toolName = trimText(eventItem.toolName || eventItem.tool || eventItem.name || "");
+            			if ((!title.length || isOpaqueCallId(title)) && toolName.length && !isOpaqueCallId(toolName)) {
+            				title = toolName;
+            			}
+            			if (!title.length || isOpaqueCallId(title)) {
+            				title = "Outil Codex";
+            			}
+            			return title;
+            		};
+            		var isShellCommandLine = function(value) {
+            			var text = trimText(value).replace(/\s+/g, " ");
+            			if (!text.length) {
+            				return false;
+            			}
+            			if (text.charAt(text.length - 1) === ".") {
+            				text = trimText(text.substring(0, text.length - 1));
+            			}
+            			var lower = text.toLowerCase();
+            			return lower.indexOf("/bin/") === 0 ||
+            				lower.indexOf("zsh -lc ") === 0 ||
+            				lower.indexOf("bash -lc ") === 0 ||
+            				lower.indexOf("sh -c ") === 0 ||
+            				lower.indexOf("commande exécutée") === 0 ||
+            				lower.indexOf("command executed") === 0;
+            		};
+            		var shellCommandTitle = function(value) {
+            			var text = trimText(value).toLowerCase();
+            			if (text.indexOf("sed ") !== -1 || text.indexOf("sed -n ") !== -1) {
+            				return "Lecture de fichier";
+            			}
+            			if (text.indexOf("rg ") !== -1 || text.indexOf("grep ") !== -1) {
+            				return "Recherche dans les fichiers";
+            			}
+            			if (text.indexOf("ls ") !== -1 || text.indexOf("find ") !== -1) {
+            				return "Liste de fichiers";
+            			}
+            			return "Commande shell";
+            		};
+            		var toolCallLabel = function(call, index) {
+            			var label = "Appel " + (index + 1);
+            			var callId = trimText(call && call.callId);
+            			if (callId.length && !isOpaqueCallId(callId)) {
+            				label = callId;
+            			}
+            			return label;
+            		};
+            		var normalizeToolDetail = function(value) {
+            			var detail = trimText(value);
+            			if (!detail.length || detail === "{}" || detail === "[]") {
+            				return "";
+            			}
+            			return detail;
+            		};
+            		var upsertToolCall = function(group, call) {
+            			if (!group.calls) {
+            				group.calls = [];
+            			}
+            			var callId = trimText(call.callId);
+            			for (var i = 0; i < group.calls.length; i++) {
+            				var existing = group.calls[i];
+            				if (callId.length && existing.callId === callId) {
+            					existing.status = call.status || existing.status;
+            					existing.detail = call.detail || existing.detail;
+            					existing.current = call.current === true;
+            					existing.text = call.text || existing.text;
+            					return existing;
+            				}
+            			}
+            			group.calls.push(call);
+            			return call;
+            		};
+            		var updateToolGroupStatus = function(group, call) {
+            			if (call.current === true) {
+            				group.current = true;
+            				group.status = call.status || "running";
+            				return;
+            			}
+            			if (call.status === "failed" || call.status === "error") {
+            				group.status = call.status;
+            				return;
+            			}
+            			if (!group.current && (call.status === "completed" || call.status === "complete" || call.status === "success" || call.status === "succeeded")) {
+            				group.status = "completed";
+            			}
+            		};
+            		var normalizeProgressEvents = function(events, writing) {
+            			var list = asArray(events);
             			var items = [];
-            			var statusLine = "";
-            			for (var i = 0; i < lines.length; i++) {
-            				var line = trimText(lines[i]);
-            				if (!line.length || details.indexOf(line) !== -1) {
+            			var seen = {};
+            			for (var i = 0; i < list.length; i++) {
+            				var eventItem = list[i] || {};
+            				var rawType = trimText(eventItem.type || "").toLowerCase();
+            				var rawTitle = trimText(eventItem.title || eventItem.text || "");
+            				var text = localizeProgress(eventItem.text || rawTitle || "");
+            				var detail = normalizeToolDetail(eventItem.detail || "");
+            				var status = trimText(eventItem.status || "").toLowerCase();
+            				var type = rawType === "tool" ? "tool" : (rawType === "activity" ? "activity" : (isProgressActivity(text) ? "activity" : "narrative"));
+            				var commandLine = text || rawTitle;
+            				if (type !== "tool" && isShellCommandLine(commandLine)) {
+            					eventItem.toolName = "exec_command";
+            					eventItem.groupKey = "exec_command";
+            					eventItem.detail = commandLine;
+            					rawTitle = shellCommandTitle(commandLine);
+            					text = "J''exécute une commande locale.";
+            					detail = commandLine;
+            					status = status || "completed";
+            					type = "tool";
+            				}
+            				if (type === "tool") {
+            					var title = toolDisplayName(eventItem, rawTitle || text);
+            					var groupKey = trimText(eventItem.groupKey || eventItem.toolName || title).toLowerCase();
+            					if (!groupKey.length || isOpaqueCallId(groupKey)) {
+            						groupKey = title.toLowerCase();
+            					}
+            					var group = seen["tool:" + groupKey];
+            					if (!group) {
+            						group = {
+            							text: localizeProgress(eventItem.text || "J''utilise le MCP Convertigo."),
+            							title: title,
+            							detail: "",
+            							status: status || "running",
+            							type: "tool",
+            							current: false,
+            							calls: [],
+            							callCount: 0
+            						};
+            						items.push(group);
+            						seen["tool:" + groupKey] = group;
+            					}
+            					var call = {
+            						callId: trimText(eventItem.callId || eventItem.key || ""),
+            						text: text,
+            						title: title,
+            						detail: detail,
+            						status: status,
+            						current: writing === true && (eventItem.current === true || status === "running" || status === "in_progress")
+            					};
+            					upsertToolCall(group, call);
+            					group.callCount = group.calls.length;
+            					if (detail.length && !group.detail.length) {
+            						group.detail = detail;
+            					}
+            					updateToolGroupStatus(group, call);
             					continue;
             				}
-            				details.push(line);
-            				var activity = isProgressActivity(line);
-            				items.push({ text: line, type: activity ? "activity" : "narrative", current: false });
-            				if (activity) {
-            					statusLine = line;
-            				} else {
-            					narrative.push(line);
+            				var title = rawTitle;
+            				if (!title.length && text.length) {
+            					title = text;
+            				}
+            				if (!text.length && title.length) {
+            					text = title;
+            				}
+            				if (!text.length && !title.length) {
+            					continue;
+            				}
+            				var key = trimText(eventItem.key || (type + ":" + (eventItem.callId || title || text)));
+            				if (key.length && seen[key]) {
+            					var existing = seen[key];
+            					existing.text = text || existing.text;
+            					existing.title = title || existing.title;
+            					existing.detail = detail || existing.detail;
+            					existing.status = status || existing.status;
+            					existing.current = writing === true && eventItem.current === true;
+            					continue;
+            				}
+            				var item = {
+            					text: text,
+            					title: title,
+            					detail: detail,
+            					status: status,
+            					type: type,
+            					current: writing === true && (eventItem.current === true || status === "running" || status === "in_progress")
+            				};
+            				items.push(item);
+            				if (key.length) {
+            					seen[key] = item;
+            				}
+            			}
+            			return items;
+            		};
+            		var progressView = function(lines, events, writing) {
+            			var structuredItems = normalizeProgressEvents(events, writing);
+            			var items = [];
+            			var details = [];
+            			var statusLine = "";
+            			if (structuredItems.length) {
+            				items = structuredItems;
+            				for (var s = 0; s < items.length; s++) {
+            					var label = items[s].type === "tool" ? (items[s].title || items[s].text) : items[s].text;
+            					if (label.length && details.indexOf(label) === -1) {
+            						details.push(label);
+            					}
+            					if (items[s].current === true) {
+            						statusLine = items[s].text || items[s].title;
+            					}
+            				}
+            			} else {
+            				for (var i = 0; i < lines.length; i++) {
+            					var line = trimText(lines[i]);
+            					if (!line.length || details.indexOf(line) !== -1) {
+            						continue;
+            					}
+            					if (isShellCommandLine(line)) {
+            						var commandTitle = shellCommandTitle(line);
+            						if (details.indexOf(commandTitle) === -1) {
+            							details.push(commandTitle);
+            						}
+            						items.push({ text: "J''exécute une commande locale.", title: commandTitle, detail: line, status: "completed", type: "tool", current: false, callCount: 1, calls: [{ callId: "exec_command:" + line, text: "J''exécute une commande locale.", title: commandTitle, detail: line, status: "completed", current: false }] });
+            						continue;
+            					}
+            					details.push(line);
+            					var activity = isProgressActivity(line);
+            					items.push({ text: line, title: line, detail: "", status: activity ? "running" : "completed", type: activity ? "activity" : "narrative", current: false });
+            				}
+            			}
+            			if (writing === true) {
+            				for (var j = 0; j < items.length; j++) {
+            					if (items[j].current === true) {
+            						statusLine = items[j].text || items[j].title;
+            					}
+            				}
+            				if (!statusLine.length) {
+            					items.push({ text: "En réflexion", title: "En réflexion", detail: "", status: "running", type: "activity", current: true });
             					statusLine = "En réflexion";
+            				}
+            			} else {
+            				for (var k = 0; k < items.length; k++) {
+            					items[k].current = false;
+            					if (items[k].status === "running" || items[k].status === "in_progress") {
+            						items[k].status = "completed";
+            					}
             				}
             			}
             			return {
-            				narrativeText: narrative.join("\n\n"),
+            				narrativeText: "",
             				detailsText: details.join("\n\n"),
             				items: items,
             				status: statusLine || "En réflexion",
-            				count: details.length,
-            				hasLines: details.length > 0,
-            				summary: "Étapes et appels MCP (" + details.length + ")"
+            				count: items.length,
+            				hasLines: items.length > 0,
+            				summary: "Étapes et appels MCP (" + items.length + ")"
             			};
             		};
             		var progressItemsForWriting = function(view) {
-            			var source = view && view.items ? view.items : [];
-            			var items = [];
-            			for (var i = 0; i < source.length; i++) {
-            				items.push({ text: source[i].text, type: source[i].type || "narrative", current: false });
-            			}
-            			var status = trimText(view && view.status ? view.status : "En réflexion");
-            			if (!status.length) {
-            				status = "En réflexion";
-            			}
-            			if (items.length) {
-            				var last = items[items.length - 1];
-            				if (last.type === "activity" && trimText(last.text) === status) {
-            					last.current = true;
-            					return items;
-            				}
-            			}
-            			items.push({ text: status, type: "activity", current: true });
-            			return items;
+            			return view && view.items ? view.items : [{ text: "En réflexion", title: "En réflexion", type: "activity", status: "running", current: true }];
             		};
-            		var applyProgressView = function(snapshot) {
+            		var applyProgressView = function(snapshot, events, writing) {
             			var lines = snapshot && snapshot.text ? ("" + snapshot.text).split(/\n\s*\n/) : [];
-            			var view = progressView(lines);
+            			var view = progressView(lines, events, writing);
             			snapshot.text = view.detailsText;
             			snapshot.narrativeText = "";
             			snapshot.detailsText = view.detailsText;
@@ -3729,6 +4408,7 @@ title: Agent assistant
             		};
             		var currentProgress = state.progress != null ? state.progress : (aiData.progress != null ? aiData.progress : (page.local.Buffer && page.local.Buffer.progress != null ? page.local.Buffer.progress : ""));
             		var currentPhase = state.phase != null ? state.phase : (aiData.phase != null ? aiData.phase : (page.local.Buffer && page.local.Buffer.phase != null ? page.local.Buffer.phase : ""));
+            		var rawProgressEvents = state.progressEvents || aiData.progressEvents || response.progressEvents || [];
             		var progressRunKey = "" + (runid || page.local.RunID || "pending");
             		var progressNow = (new Date()).getTime();
             		if (!page.local.AgentProgressStartedAt || !page.local.AgentProgressStartedAtRunId || (page.local.AgentProgressStartedAtRunId !== progressRunKey && page.local.AgentProgressStartedAtRunId !== "pending")) {
@@ -3742,7 +4422,7 @@ title: Agent assistant
             		var progressTitle = function(done) {
             			return done ? ("A travaillé pendant " + progressElapsedLabel(true)) : ("Traitement en cours depuis " + progressElapsedLabel(false));
             		};
-            		var currentSnapshot = applyProgressView(appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid));
+            		var currentSnapshot = applyProgressView(appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid), rawProgressEvents, !isCompleted && !isFailed);
             		var findTarget = function() {
             			var idx = page.local.StreamingIndex;
                         if (idx != null && page.local.Messages[idx] && page.local.Messages[idx].writing === true) {
@@ -3861,7 +4541,7 @@ title: Agent assistant
                             lines.shift();
                         }
                         var providerLabel = state && state.provider ? (("" + state.provider).charAt(0).toUpperCase() + ("" + state.provider).slice(1)) : "Agent";
-                        var view = progressView(lines);
+                        var view = progressView(lines, rawProgressEvents, false);
                         page.local.AgentProgressFinishedAt = (new Date()).getTime();
                         var title = progressTitle(true);
                         var summary = view.summary || ("Étapes et appels MCP (" + lines.length + ")");
@@ -4047,7 +4727,7 @@ title: Agent assistant
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
+           "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentReadResponse'' : ''ConvertigoAssistant.ReadResponse''",
            "noLoading": "plain:true"
           }'
         ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
@@ -4457,7 +5137,7 @@ title: Agent assistant
                   beanData: |
                     '{
                      "ionBean": "CallSequenceAction",
-                     "requestable": "plain:ConvertigoAssistant.AgentSendMessage",
+                     "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentSendMessage'' : ''ConvertigoAssistant.SendMessage''",
                      "noLoading": "plain:true"
                     }'
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
@@ -4561,7 +5241,7 @@ title: Agent assistant
                       beanData: |
                         '{
                          "ionBean": "CallSequenceAction",
-                         "requestable": "plain:ConvertigoAssistant.AgentReadResponse",
+                         "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentReadResponse'' : ''ConvertigoAssistant.ReadResponse''",
                          "noLoading": "plain:true"
                         }'
                       ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
@@ -4626,7 +5306,7 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.EnableChat !== false && (!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (local.AgentProvider || '''')))'
+          - MobileSmartSourceType: 'script:local && local.EnableChat !== false && ((!this.isAgentBridgeMode || !this.isAgentBridgeMode()) || ((!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (local.AgentProvider || '''')))))'
     ↓IsProcessing [ngx.components.UIUseVariable-1775200000004]: 
       varValue: 
         - xmlizable: 
@@ -4725,7 +5405,7 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.AgentModels ? local.AgentModels : []'
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentModels) ? local.AgentModels : []'
     ↓AgentReasoningEffort [ngx.components.UIUseVariable-1782124572364]: 
       varValue: 
         - xmlizable: 
@@ -4735,17 +5415,17 @@ title: Agent assistant
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.AgentReasoningLevels ? local.AgentReasoningLevels : []'
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningLevels) ? local.AgentReasoningLevels : []'
     ↓AgentModelLabel [ngx.components.UIUseVariable-1782124580836]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.AgentModel ? local.AgentModel : ''Modèle'''
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentModel) ? local.AgentModel : '''''
     ↓AgentReasoningLabel [ngx.components.UIUseVariable-1782124585072]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.AgentReasoningEffort ? local.AgentReasoningEffort : ''Raisonnement'''
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningEffort) ? local.AgentReasoningEffort : '''''
     ↓ModelChange [ngx.components.UIControlEvent-1782124897336]: 
       attrName: (ModelChange)
       eventName: ModelChange
@@ -4820,7 +5500,7 @@ title: Agent assistant
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: 'script:(this.local && this.local.EnableChat !== false && (!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (this.local.AgentProvider || '''')))) ? ''modern-footer agent-footer-codex'' : ''modern-footer agent-footer-codex agent-footer-hidden'''
+        - MobileSmartSourceType: 'script:(local && local.EnableChat !== false) ? ((this.isAgentBridgeMode && this.isAgentBridgeMode()) ? (((!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (local.AgentProvider || '''')))) ? ''modern-footer agent-footer-codex agent-controls-enabled'' : ''modern-footer agent-footer-hidden'') : ''modern-footer agent-footer-codex legacy-prompt-footer'') : ''modern-footer agent-footer-hidden'''
 ↓Subscribe_Handler1 [ngx.components.UIEventSubscriber-1750758766481]: 
   topic: JavaMessage
   ↓enableChat [ngx.components.UICustomAction-1750759185953]: 
@@ -4879,7 +5559,7 @@ title: Agent assistant
                     page.tick();
                     resolve();'
     ↓SwitchProjectIf [ngx.components.UIDynamicAction-1782139100462]: 
-      beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.ProjectSelectionChanged === true && this.local.EnableChat !== false"}'
+      beanData: '{"ionBean":"IfAction","condition":"script:this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && this.local.ProjectSelectionChanged === true && this.local.EnableChat !== false"}'
       ↓ReloadProjectConversation [ngx.components.UIDynamicAction-1782139101968]: 
         beanData: |
           '{
@@ -5844,4 +6524,144 @@ title: Agent assistant
           .agent-worklog-pulse {
             display: none !important;
           }
-          '
+          
+          .agent-worklog-tool {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, transparent 18%);
+            margin: 0;
+          }
+          .agent-worklog-tool-summary {
+            align-items: center;
+            cursor: pointer;
+            display: inline-flex;
+            gap: 8px;
+            list-style: none;
+            min-height: 22px;
+          }
+          .agent-worklog-tool-summary::-webkit-details-marker {
+            display: none;
+          }
+          .agent-worklog-tool-summary::before {
+            content: ''›'';
+            display: inline-block;
+            font-size: 15px;
+            line-height: 1;
+            transition: transform 160ms ease;
+          }
+          .agent-worklog-tool[open] > .agent-worklog-tool-summary::before {
+            transform: rotate(90deg);
+          }
+          .agent-worklog-tool-summary ion-icon {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 74%, transparent 26%);
+            font-size: 15px;
+          }
+          .agent-worklog-tool-body {
+            border-left: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 18%, transparent 82%);
+            margin: 8px 0 0 19px;
+            max-height: 260px;
+            overflow: auto;
+            padding: 8px 0 2px 12px;
+          }
+          :host ::ng-deep .agent-worklog-tool-body markdown p,
+          :host ::ng-deep .agent-worklog-tool-body markdown li,
+          :host ::ng-deep .agent-worklog-tool-body markdown code {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, var(--modern-text, #f1f5f9) 18%);
+            font-size: 12px;
+            line-height: 18px;
+          }
+          .agent-worklog-step-tool.is-current .agent-worklog-tool-summary {
+            animation: agent-worklog-pulse 1.45s ease-in-out infinite;
+          }
+          
+          
+          .agent-worklog-tool-line {
+            cursor: default;
+          }
+          .agent-worklog-tool-line::before {
+            content: none;
+          }
+          .agent-worklog-call {
+            margin: 0 0 8px 0;
+          }
+          .agent-worklog-call:last-child {
+            margin-bottom: 0;
+          }
+          .agent-worklog-call-details {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, transparent 18%);
+          }
+          .agent-worklog-call-summary {
+            align-items: center;
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 82%, var(--modern-text, #f1f5f9) 18%);
+            cursor: pointer;
+            display: inline-flex;
+            font-size: 12px;
+            gap: 7px;
+            line-height: 18px;
+            list-style: none;
+          }
+          .agent-worklog-call-summary::-webkit-details-marker {
+            display: none;
+          }
+          .agent-worklog-call-summary::before {
+            content: ''›'';
+            display: inline-block;
+            font-size: 13px;
+            line-height: 1;
+            transition: transform 160ms ease;
+          }
+          .agent-worklog-call-details[open] > .agent-worklog-call-summary::before {
+            transform: rotate(90deg);
+          }
+          .agent-worklog-call-line {
+            cursor: default;
+          }
+          .agent-worklog-call-line::before {
+            content: none;
+          }
+          .agent-worklog-call-body {
+            border-left: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 16%, transparent 84%);
+            margin: 6px 0 0 6px;
+            padding: 6px 0 2px 10px;
+          }
+          :host ::ng-deep .agent-worklog-call-body markdown p,
+          :host ::ng-deep .agent-worklog-call-body markdown li,
+          :host ::ng-deep .agent-worklog-call-body markdown code {
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 80%, var(--modern-text, #f1f5f9) 20%);
+            font-size: 12px;
+            line-height: 18px;
+          }'
+↓ContrastA11yStyle [ngx.components.UIStyle-1782229801896]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.agent-session-title {
+            color: var(--modern-text, #0f172a) !important;
+          }
+          .agent-session-meta {
+            color: var(--modern-muted, #475569) !important;
+          }
+          :host-context(:root.force-dark) .agent-session-title,
+          :host-context(html.force-dark) .agent-session-title,
+          :host-context(body.force-dark) .agent-session-title,
+          :host-context(.force-dark) .agent-session-title {
+            color: #ffffff !important;
+          }
+          :host-context(:root.force-dark) .agent-session-meta,
+          :host-context(html.force-dark) .agent-session-meta,
+          :host-context(body.force-dark) .agent-session-meta,
+          :host-context(.force-dark) .agent-session-meta {
+            color: #e0f7ff !important;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) .agent-session-title,
+            :host-context(html:not(.force-light)) .agent-session-title,
+            :host-context(body:not(.force-light)) .agent-session-title {
+              color: #ffffff !important;
+            }
+            :host-context(:root:not(.force-light)) .agent-session-meta,
+            :host-context(html:not(.force-light)) .agent-session-meta,
+            :host-context(body:not(.force-light)) .agent-session-meta {
+              color: #e0f7ff !important;
+            }
+          }'

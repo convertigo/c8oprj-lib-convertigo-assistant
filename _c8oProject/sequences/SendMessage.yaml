@@ -316,6 +316,52 @@ responseTimeout: 300
       - SmartType: 
         - ↑mode: JS
         - →→: response.id
+↓result [steps.JsonObjectStep-1782223478744]: 
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+  ↓id [steps.JsonFieldStep-1782223478777]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: id
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: JS
+          - →→: 'response && response.id ? response.id : ""'
+  ↓threadid [steps.JsonFieldStep-1782223478781]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: threadid
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: JS
+          - →→: 'typeof threadid === "undefined" ? "" : threadid'
+  ↓error [steps.JsonFieldStep-1782223478783]: 
+    key: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: PLAIN
+          - →→: error
+    value: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+        - SmartType: 
+          - ↑mode: JS
+          - →→: null
 ↓Question [variables.RequestableVariable-1744201780525]: 
 ↓threadid [variables.RequestableVariable-1744201831244]: 
 ↓AIFiles [variables.RequestableVariable-1749739846542]: 

@@ -86,13 +86,47 @@ tagName: ion-menu
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Agent IA
+              - MobileSmartSourceType: plain:Assistant IA de composants
       ↓Attr [ngx.components.UIAttribute-1753180304616]: 
         attrName: '[class.selected]'
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:((selectedPath$ | async) || '').startsWith('/path-to-xfirst')
+            - MobileSmartSourceType: script:isComponentAssistantSelected((selectedPath$ | async) || '')
+    ↓AgentItem [ngx.components.UIDynamicElement-1782236319579]: 
+      beanData: |
+        '{
+         "ionBean": "ListItem",
+         "Button": "plain:true",
+         "Lines": "plain:inset",
+         "IonSlot": "plain:start",
+         "LinkRouterPath": "script:''path-to-agent\/:threadid''",
+         "LinkRouterDirection": "plain:root"
+        }'
+      tagName: ion-item
+      ↓Icon [ngx.components.UIDynamicElement-1782236319603]: 
+        beanData: |
+          '{
+           "ionBean": "Icon",
+           "IonColor": "plain:dark",
+           "IconName": "plain:sparkles-outline",
+           "IconSlot": "plain:start"
+          }'
+        tagName: ion-icon
+      ↓Label [ngx.components.UIDynamicElement-1782236319620]: 
+        beanData: '{"ionBean":"Label"}'
+        tagName: ion-label
+        ↓Text [ngx.components.UIText-1782236319706]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:Agent IA
+      ↓Attr [ngx.components.UIAttribute-1782236319727]: 
+        attrName: '[class.selected]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:isAgentAssistantSelected((selectedPath$ | async) || '')
     ↓FigmaItem [ngx.components.UIDynamicElement-1753180404710]: 
       beanData: |
         '{

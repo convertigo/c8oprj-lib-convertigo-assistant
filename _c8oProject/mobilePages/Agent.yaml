@@ -1,0 +1,34 @@
+comment: Agent AI entry page
+scriptContent: 
+  - xmlizable: 
+    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+      →: |
+        '/*Begin_c8o_PageImport*/
+        /*End_c8o_PageImport*/
+        /*Begin_c8o_PageDeclaration*/
+        	/*End_c8o_PageDeclaration*/
+        /*Begin_c8o_PageConstructor*/
+        		/*End_c8o_PageConstructor*/
+        /*Begin_c8o_PageInitialization*/
+        		try {
+        			var thread = '':threadid'';
+        			try {
+        				if (this.navParams && this.navParams.data && this.navParams.data.threadid && this.navParams.data.threadid !== '':threadid'') {
+        					thread = this.navParams.data.threadid;
+        				}
+        			} catch (e1) {}
+        			try {
+        				if ((!thread || thread === '':threadid'') && this.route && this.route.snapshot && this.route.snapshot.paramMap) {
+        					thread = this.route.snapshot.paramMap.get(''threadid'') || '':threadid'';
+        				}
+        			} catch (e2) {}
+        			if (this.angularRouter && this.angularRouter.navigate) {
+        				this.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: { agentBridge: ''1'' }, replaceUrl: true });
+        			}
+        		} catch (e) {}
+        		/*End_c8o_PageInitialization*/
+        /*Begin_c8o_PageFunction*/
+        	/*End_c8o_PageFunction*/'
+segment: path-to-agent/:threadid
+title: Agent IA

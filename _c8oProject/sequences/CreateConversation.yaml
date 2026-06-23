@@ -15,6 +15,43 @@ responseTimeout: 80
               - ↑value: 1744201674481
             - java.lang.String: 
               - ↑value: ./document/object/*
+    ↓result [steps.JsonObjectStep-1782223553975]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: result
+      ↓id [steps.JsonFieldStep-1782223553989]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: id
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: SOURCE
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1744201674481
+                - java.lang.String: 
+                  - ↑value: ./document/object/id/text()
+      ↓AIData [steps.JsonFieldStep-1782223554004]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: AIData
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: null
   ↓jElse [steps.ElseStep-1748450887725]: 
     ↓Call_Transaction [steps.TransactionStep-1748451097185]: 
       sourceTransaction: ConvertigoAssistant.OpenAI.GetThread
@@ -270,4 +307,37 @@ responseTimeout: 80
                   - SmartType: 
                     - ↑mode: JS
                     - →→: item.msg
+    ↓result [steps.JsonObjectStep-1782223554452]: 
+      key: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+          - SmartType: 
+            - ↑mode: PLAIN
+            - →→: result
+      ↓id [steps.JsonFieldStep-1782223554454]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: id
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: 'typeof threadid === "undefined" ? "" : threadid'
+      ↓AIData [steps.JsonFieldStep-1782223554456]: 
+        key: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: PLAIN
+              - →→: AIData
+        value: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+            - SmartType: 
+              - ↑mode: JS
+              - →→: 'typeof AIData === "undefined" ? null : AIData'
 ↓threadid [variables.RequestableVariable-1748450588626]: 
