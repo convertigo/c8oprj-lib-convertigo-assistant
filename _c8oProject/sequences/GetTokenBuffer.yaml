@@ -1,3 +1,44 @@
+↓Get_hosted_cookie_from_session [steps.SessionGetObjectStep-1782306919517]: 
+  key: HostedAssistantCookie
+  output: false
+↓Poll_Hosted_Buffer [steps.TransactionStep-1782306951387]: 
+  sourceTransaction: ConvertigoAssistant.HostedAssistantBuffer.GetTokenBuffer
+  ↓__header_Cookie [variables.StepVariable-1782306951397]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1782306919517
+          - java.lang.String: 
+            - ↑value: .
+    value: 
+      - ↑traceable: false
+    visibility: 3
+↓hostedBuffer [steps.SimpleSourceStep-1782307493472]: 
+  sourceDefinition: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - java.lang.String: 
+          - ↑value: 1782306951387
+        - java.lang.String: 
+          - ↑value: ./document/object/C8OAiAssistantBuffer/text()
+  variableName: hostedBuffer
+↓Store_Hosted_Buffer [steps.SimpleStep-1782307513215]: 
+  expression: |
+    'if (typeof hostedBuffer != ''undefined'' && hostedBuffer) {
+    	var hb = String(hostedBuffer);
+    	var parsed = null;
+    	try {
+    		parsed = JSON.parse(hb);
+    	} catch (e) {
+    		parsed = {"size": hb.length, "content": hb};
+    	}
+    	if (parsed && (String(parsed.content || '''').length > 0 || Number(parsed.size || 0) > 0)) {
+    		context.httpSession.setAttribute(''C8OAiAssistantBuffer'', parsed);
+    	}
+    }'
 ↓Get_object_from_session [steps.SessionGetObjectStep-1749314256062]: 
   key: C8OAiAssistantBuffer
 ↓data1 [steps.JsonSourceStep-1749314204106]: 

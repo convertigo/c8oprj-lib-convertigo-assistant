@@ -1321,6 +1321,11 @@ title: Title for LightRag
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:item.status || 'writing'
+              ↓rawStreamTicker [ngx.components.UIUseVariable-1782308625043]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:item.rawStreamTicker === true
         ↓SpinnerWrap [ngx.components.UIDynamicElement-1782600000291]: 
           beanData: '{"ionBean":"DivTag"}'
           tagName: div
@@ -1486,6 +1491,10 @@ title: Title for LightRag
                         }
                         this.local.Buffer = {};
                         this.local.StreamingIndex = null;
+                        this.local.LightRagProgressIndex = null;
+                        this.local.LightRagAnswerIndex = null;
+                        this.local.LightRagProgressLines = [];
+                        this.local.LightRagStreamText = '''';
                         this.local.AutoScrollEnabled = true;
                         this.local.AutoScrollLockUntil = Date.now() + 1400;
                         this.local.IsProcessing = true;
@@ -1512,6 +1521,8 @@ title: Title for LightRag
                                 }
                                 page.local.Buffer = {};
                                 page.local.StreamingIndex = null;
+                                page.local.LightRagProgressIndex = null;
+                                page.local.LightRagAnswerIndex = null;
                                 page.local.IsProcessing = false;
                                 page.local.spinner = false;
                                 page.local.ProcessingWatchdogId = null;
@@ -1543,8 +1554,7 @@ title: Title for LightRag
                         } catch (e1) {}
                         lang = lang.toLowerCase();
                         var isFr = lang.indexOf(''fr'') === 0;
-                        var progressIntro = isFr ? ''Je prépare la recherche dans la base de connaissances Convertigo.'' : ''I am preparing the search in the Convertigo knowledge base.'';
-                        var progressStatus = isFr ? ''Recherche en cours'' : ''Searching'';
+                        var progressStatus = isFr ? ''Je prépare la recherche dans la base de connaissances Convertigo.'' : ''I am preparing the search in the Convertigo knowledge base.'';
                         this.local.Messages.push({
                             msg: message,
                             type: ''user'',
@@ -1552,7 +1562,7 @@ title: Title for LightRag
                             time: hh + '':'' + mm
                         });
                         this.local.Messages.push({
-                            msg: progressIntro,
+                            msg: '''',
                             type: ''assistant'',
                             author: ''Assistant'',
                             time: hh + '':'' + mm,
@@ -1562,7 +1572,7 @@ title: Title for LightRag
                             status: progressStatus,
                             writing: true
                         });
-                        this.local.StreamingIndex = this.local.Messages.length - 1;
+                        this.local.LightRagProgressIndex = this.local.Messages.length - 1;
                         this.local.Question = '''';
                         if (page.chatfooter && page.chatfooter.setQuestionText) {
                             page.chatfooter.setQuestionText('''', false);
@@ -1604,6 +1614,7 @@ title: Title for LightRag
                                 page.local.AgentBufferPollId = null;
                                 page.local.LightRagStreamText = '''';
                                 page.local.LightRagBufferBusy = false;
+                                page.local.LightRagProgressLines = page.local.LightRagProgressLines || [];
                                 var lang = ''en'';
                                 try {
                                     if (page.global && page.global.currentLanguage) {
@@ -1647,20 +1658,6 @@ title: Title for LightRag
                                     }
                                     return sec + ''s'';
                                 };
-                                var findTarget = function() {
-                                    var idx = page.local.StreamingIndex;
-                                    if (idx != null && page.local.Messages && page.local.Messages[idx]) {
-                                        return page.local.Messages[idx];
-                                    }
-                                    var messages = page.local.Messages || [];
-                                    for (var i = messages.length - 1; i >= 0; i--) {
-                                        if (messages[i] && messages[i].type === ''assistant'' && messages[i].writing === true) {
-                                            page.local.StreamingIndex = i;
-                                            return messages[i];
-                                        }
-                                    }
-                                    return null;
-                                };
                                 var elapsed = function() {
                                     var startedAt = Number(page.local.LightRagProgressStartedAt || 0);
                                     if (!startedAt || isNaN(startedAt)) {
@@ -1669,13 +1666,159 @@ title: Title for LightRag
                                     }
                                     return Date.now() - startedAt;
                                 };
+                                var ensureMessages = function() {
+                                    if (!page.local.Messages) {
+                                        page.local.Messages = [];
+                                    }
+                                    return page.local.Messages;
+                                };
+                                var timestamp = function() {
+                                    var now = new Date();
+                                    return (''0'' + now.getHours()).slice(-2) + '':'' + (''0'' + now.getMinutes()).slice(-2);
+                                };
+                                var findProgressTarget = function(create) {
+                                    var messages = ensureMessages();
+                                    var idx = page.local.LightRagProgressIndex;
+                                    if (idx != null && messages[idx] && messages[idx].tag3 === ''Progression'') {
+                                        return messages[idx];
+                                    }
+                                    for (var i = messages.length - 1; i >= 0; i--) {
+                                        if (messages[i] && messages[i].type === ''assistant'' && messages[i].tag3 === ''Progression'') {
+                                            page.local.LightRagProgressIndex = i;
+                                            return messages[i];
+                                        }
+                                    }
+                                    if (create !== true) {
+                                        return null;
+                                    }
+                                    var target = {
+                                        msg: '''',
+                                        type: ''assistant'',
+                                        author: ''Assistant'',
+                                        time: timestamp(),
+                                        tag1: ''How-To'',
+                                        tag2: ''Convertigo'',
+                                        tag3: ''Progression'',
+                                        status: isFr ? ''Je prépare la recherche dans la base de connaissances Convertigo.'' : ''I am preparing the search in the Convertigo knowledge base.'',
+                                        writing: true
+                                    };
+                                    messages.push(target);
+                                    page.local.LightRagProgressIndex = messages.length - 1;
+                                    return target;
+                                };
+                                var compactProgressTarget = function(active) {
+                                    try {
+                                        var target = findProgressTarget(true);
+                                        if (!target) {
+                                            return false;
+                                        }
+                                        target.msg = '''';
+                                        target.type = ''assistant'';
+                                        target.author = ''Assistant'';
+                                        target.time = target.time || timestamp();
+                                        target.tag1 = ''How-To'';
+                                        target.tag2 = ''Convertigo'';
+                                        target.tag3 = ''Progression'';
+                                        target.status = (isFr ? ''Traitement en cours depuis '' : ''Working for '') + elapsedLabel(elapsed());
+                                        target.writing = active === true;
+                                        page.local.LightRagProgressLines = [];
+                                        return true;
+                                    } catch (eCompact) {}
+                                    return false;
+                                };
+                                var findAnswerTarget = function(create) {
+                                    var messages = ensureMessages();
+                                    var idx = page.local.LightRagAnswerIndex;
+                                    if (idx != null && messages[idx]) {
+                                        return messages[idx];
+                                    }
+                                    idx = page.local.StreamingIndex;
+                                    if (idx != null && messages[idx] && messages[idx].tag3 !== ''Progression'') {
+                                        page.local.LightRagAnswerIndex = idx;
+                                        return messages[idx];
+                                    }
+                                    if (create !== true) {
+                                        return null;
+                                    }
+                                    var target = {
+                                        msg: '''',
+                                        type: ''assistant'',
+                                        author: ''Assistant'',
+                                        time: timestamp(),
+                                        tag1: ''How-To'',
+                                        tag2: ''Convertigo'',
+                                        tag3: ''Guide'',
+                                        status: '''',
+                                        writing: true
+                                    };
+                                    messages.push(target);
+                                    page.local.LightRagAnswerIndex = messages.length - 1;
+                                    page.local.StreamingIndex = page.local.LightRagAnswerIndex;
+                                    return target;
+                                };
+                                var normalizeLine = function(text) {
+                                    return ('''' + (text == null ? '''' : text)).replace(/\s+/g, '' '').replace(/^\s+|\s+$/g, '''');
+                                };
+                                var humanizeProgress = function(text) {
+                                    var value = normalizeLine(text).replace(/\.{3,}$/g, ''...'');
+                                    var lower = value.toLowerCase();
+                                    if (!isFr) {
+                                        return value;
+                                    }
+                                    if (lower.indexOf(''reasoning'') === 0 || lower.indexOf(''thinking'') === 0) {
+                                        return ''Je réfléchis.'';
+                                    }
+                                    if (lower.indexOf(''querying the documentation'') === 0) {
+                                        return ''Je consulte la documentation.'';
+                                    }
+                                    if (lower.indexOf(''querying the marketplace'') === 0) {
+                                        return ''Je consulte le Marketplace.'';
+                                    }
+                                    if (lower.indexOf(''querying the knowledge'') === 0) {
+                                        return ''Je consulte la base de connaissances.'';
+                                    }
+                                    if (lower.indexOf(''querying the tutorial'') === 0) {
+                                        return ''Je consulte la base de tutoriels.'';
+                                    }
+                                    if (lower.indexOf(''querying'') === 0) {
+                                        return ''Je consulte les contenus pertinents.'';
+                                    }
+                                    return value;
+                                };
+                                var renderProgress = function(line) {
+                                    try {
+                                        var target = findProgressTarget(true);
+                                        if (!target) {
+                                            return false;
+                                        }
+                                        line = humanizeProgress(line);
+                                        var lines = page.local.LightRagProgressLines || [];
+                                        if (line.length && (!lines.length || lines[lines.length - 1] !== line)) {
+                                            lines.push(line);
+                                        }
+                                        while (lines.length > 8) {
+                                            lines.shift();
+                                        }
+                                        page.local.LightRagProgressLines = lines;
+                                        var current = lines.length ? lines[lines.length - 1] : (isFr ? ''Je réfléchis.'' : ''Reasoning.'');
+                                        var previous = lines.length > 1 ? lines.slice(0, lines.length - 1) : [];
+                                        target.msg = previous.join(''\n\n'');
+                                        target.status = current + '' · '' + elapsedLabel(elapsed());
+                                        target.tag1 = ''How-To'';
+                                        target.tag2 = ''Convertigo'';
+                                        target.tag3 = ''Progression'';
+                                        target.writing = true;
+                                        page.tick();
+                                        page.scrollChatBottom(0);
+                                        return true;
+                                    } catch (e2) {}
+                                    return false;
+                                };
                                 var showFallbackProgress = function() {
                                     try {
-                                        var target = findTarget();
-                                        if (!target) {
-                                            return;
-                                        }
                                         if ((page.local.LightRagStreamText || '''').length) {
+                                            compactProgressTarget(true);
+                                            page.tick();
                                             return;
                                         }
                                         var step = Number(page.local.LightRagProgressStep || 0);
@@ -1689,65 +1832,120 @@ title: Title for LightRag
                                         if (step > maxStep) {
                                             step = maxStep;
                                         }
-                                        var visibleCount = Math.min(steps.length, step + 1);
-                                        var lines = [];
-                                        for (var j = 0; j < visibleCount; j++) {
-                                            lines.push(steps[j]);
+                                        var line = steps[step];
+                                        if (elapsed() > 18000 && step >= maxStep) {
+                                            line = isFr ? ''La réponse prend un peu plus de temps, je continue.'' : ''The answer is taking a little longer, I am still working.'';
                                         }
-                                        var ms = elapsed();
-                                        if (ms > 18000 && visibleCount >= steps.length) {
-                                            lines.push(isFr ? ''La réponse prend un peu plus de temps, je continue.'' : ''The answer is taking a little longer, I am still working.'');
-                                        }
-                                        target.msg = lines.join(''\n\n'');
-                                        target.status = statuses[step] + '' · '' + elapsedLabel(ms);
-                                        target.tag1 = ''How-To'';
-                                        target.tag2 = ''Convertigo'';
-                                        target.tag3 = ''Progression'';
-                                        target.writing = true;
+                                        renderProgress(line || statuses[step] || statuses[0]);
                                         page.local.LightRagProgressStep = Math.min(step + 1, maxStep);
-                                        page.tick();
-                                        page.scrollChatBottom(0);
                                     } catch (e2) {}
                                 };
                                 var extractChunk = function(response) {
                                     try {
-                                        var node = null;
-                                        if (response) {
-                                            node = response.C8OAiAssistantBuffer || response.c8oAiAssistantBuffer || response.buffer || null;
-                                            if (!node && response.object) {
-                                                node = response.object.C8OAiAssistantBuffer || response.object.buffer || response.object;
+                                        var candidates = [];
+                                        var pushCandidate = function(node) {
+                                            if (node != null && node !== '''') {
+                                                candidates.push(node);
                                             }
-                                            if (!node && response.document) {
-                                                node = response.document.C8OAiAssistantBuffer || response.document.buffer || response.document;
+                                        };
+                                        var normalizeNode = function(node) {
+                                            if (node == null || node === '''') {
+                                                return null;
                                             }
-                                        }
-                                        if (!node || typeof node === ''string'') {
+                                            if (typeof node === ''string'') {
+                                                try {
+                                                    return JSON.parse(node);
+                                                } catch (eParse) {
+                                                    return {content: node};
+                                                }
+                                            }
+                                            return node;
+                                        };
+                                        var readContent = function(node) {
+                                            node = normalizeNode(node);
+                                            if (!node) {
+                                                return '''';
+                                            }
+                                            if (typeof node === ''string'') {
+                                                return node;
+                                            }
+                                            if (node.content != null) {
+                                                return '''' + node.content;
+                                            }
+                                            if (node.text != null) {
+                                                return '''' + node.text;
+                                            }
+                                            if (node.value != null) {
+                                                return '''' + node.value;
+                                            }
+                                            if (node.C8OAiAssistantBuffer != null) {
+                                                return readContent(node.C8OAiAssistantBuffer);
+                                            }
+                                            if (node.buffer != null) {
+                                                return readContent(node.buffer);
+                                            }
+                                            if (node.object != null) {
+                                                return readContent(node.object);
+                                            }
                                             return '''';
+                                        };
+                                        if (response) {
+                                            pushCandidate(response.C8OAiAssistantBuffer);
+                                            pushCandidate(response.c8oAiAssistantBuffer);
+                                            pushCandidate(response.buffer);
+                                            if (response.object) {
+                                                pushCandidate(response.object.C8OAiAssistantBuffer);
+                                                pushCandidate(response.object.c8oAiAssistantBuffer);
+                                                pushCandidate(response.object.buffer);
+                                                pushCandidate(response.object.object);
+                                                pushCandidate(response.object);
+                                            }
+                                            if (response.document) {
+                                                pushCandidate(response.document.C8OAiAssistantBuffer);
+                                                pushCandidate(response.document.c8oAiAssistantBuffer);
+                                                pushCandidate(response.document.buffer);
+                                                pushCandidate(response.document.object);
+                                                pushCandidate(response.document);
+                                            }
                                         }
-                                        if (node.content != null) {
-                                            return '''' + node.content;
-                                        }
-                                        if (node.text != null) {
-                                            return '''' + node.text;
-                                        }
-                                        if (node.value != null) {
-                                            return '''' + node.value;
+                                        for (var i = 0; i < candidates.length; i++) {
+                                            var content = readContent(candidates[i]);
+                                            if (content && content.length) {
+                                                return content;
+                                            }
                                         }
                                     } catch (e3) {}
                                     return '''';
                                 };
-                                var showStreamChunk = function(chunk) {
+                                var splitChunk = function(chunk) {
+                                    var source = '''' + (chunk == null ? '''' : chunk);
+                                    var progress = [];
+                                    var guard = 0;
+                                    var re = /^\s*((?:Reasoning|Thinking|Querying(?:\s+the\s+[^.]+)?|Searching|Reading(?:\s+sources)?|Summarizing|Writing|Checking)(?:\.{3}|…)|(?:Recherche|Lecture|Synthèse|Rédaction|Vérification)[^.]*?(?:\.{3}|…))\s*/i;
+                                    while (guard < 20) {
+                                        guard++;
+                                        var match = source.match(re);
+                                        if (!match) {
+                                            break;
+                                        }
+                                        progress.push(match[1]);
+                                        source = source.substring(match[0].length);
+                                    }
+                                    return {progress: progress, answer: source};
+                                };
+                                var showAnswerChunk = function(chunk) {
                                     try {
                                         if (!chunk || !('''' + chunk).length) {
                                             return false;
                                         }
-                                        var target = findTarget();
+                                        compactProgressTarget(true);
+                                        var target = findAnswerTarget(true);
                                         if (!target) {
                                             return false;
                                         }
                                         page.local.LightRagStreamText = (page.local.LightRagStreamText || '''') + chunk;
                                         target.msg = page.local.LightRagStreamText;
-                                        target.status = (isFr ? ''Réponse en cours'' : ''Writing'') + '' · '' + elapsedLabel(elapsed());
+                                        target.status = '''';
                                         target.tag1 = ''How-To'';
                                         target.tag2 = ''Convertigo'';
                                         target.tag3 = ''Guide'';
@@ -1755,6 +1953,23 @@ title: Title for LightRag
                                         page.tick();
                                         page.scrollChatBottom(0);
                                         return true;
+                                    } catch (e4) {}
+                                    return false;
+                                };
+                                var showStreamChunk = function(chunk) {
+                                    try {
+                                        if (!chunk || !('''' + chunk).length) {
+                                            return false;
+                                        }
+                                        var split = splitChunk(chunk);
+                                        var handled = false;
+                                        for (var i = 0; i < split.progress.length; i++) {
+                                            handled = renderProgress(split.progress[i]) || handled;
+                                        }
+                                        if (split.answer && split.answer.length) {
+                                            handled = showAnswerChunk(split.answer) || handled;
+                                        }
+                                        return handled;
                                     } catch (e4) {}
                                     return false;
                                 };
@@ -1772,7 +1987,7 @@ title: Title for LightRag
                                             return;
                                         }
                                         page.local.LightRagBufferBusy = true;
-                                        page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {__nolog: ''true''}).async().then(function(response) {
+                                        page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {__nolog: ''true'', __context: ''lightrag_buffer''}).async().then(function(response) {
                                             var chunk = extractChunk(response);
                                             if (!showStreamChunk(chunk)) {
                                                 showFallbackProgress();
@@ -1900,6 +2115,58 @@ title: Title for LightRag
                   - com.twinsoft.convertigo.beans.common.FormatedContent: 
                     →: |
                       '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                              var elapsedLabel = function(ms) {
+                                  var total = Math.max(0, Math.floor(ms / 1000));
+                                  var min = Math.floor(total / 60);
+                                  var sec = total % 60;
+                                  if (min > 0) {
+                                      return min + ''m '' + sec + ''s'';
+                                  }
+                                  return sec + ''s'';
+                              };
+                              var lang = ''en'';
+                              try {
+                                  if (page.global && page.global.currentLanguage) {
+                                      lang = '''' + (page.global.currentLanguage() || ''en'');
+                                  }
+                              } catch (e1) {}
+                              lang = lang.toLowerCase();
+                              var isFr = lang.indexOf(''fr'') === 0;
+                              var startedAt = Number(this.local && this.local.LightRagProgressStartedAt ? this.local.LightRagProgressStartedAt : 0);
+                              var durationLabel = startedAt && !isNaN(startedAt) ? elapsedLabel(Date.now() - startedAt) : '''';
+                              var finishProgressTarget = function() {
+                                  try {
+                                      if (!durationLabel.length || !page.local || !page.local.Messages) {
+                                          return;
+                                      }
+                                      var messages = page.local.Messages;
+                                      var idx = page.local.LightRagProgressIndex;
+                                      if (idx == null || !messages[idx] || messages[idx].tag3 !== ''Progression'') {
+                                          idx = null;
+                                          for (var i = messages.length - 1; i >= 0; i--) {
+                                              if (messages[i] && messages[i].type === ''assistant'' && messages[i].tag3 === ''Progression'') {
+                                                  idx = i;
+                                                  break;
+                                              }
+                                          }
+                                      }
+                                      if (idx == null || !messages[idx]) {
+                                          return;
+                                      }
+                                      var progress = messages[idx];
+                                      progress.msg = '''';
+                                      progress.type = ''assistant'';
+                                      progress.author = ''Assistant'';
+                                      progress.tag1 = ''How-To'';
+                                      progress.tag2 = ''Convertigo'';
+                                      progress.tag3 = ''Progression'';
+                                      progress.status = (isFr ? ''A travaillé pendant '' : ''Worked for '') + durationLabel;
+                                      progress.writing = false;
+                                      page.local.LightRagProgressIndex = idx;
+                                      page.local.LightRagProgressLines = [];
+                                  } catch (e2) {}
+                              };
+                              finishProgressTarget();
                               if (this.local.Buffer && this.local.Buffer.intId) {
                                   window.clearInterval(this.local.Buffer.intId);
                               }
@@ -2014,22 +2281,85 @@ title: Title for LightRag
                                 } catch (e1) {}
                                 lang = lang.toLowerCase();
                                 var isFr = lang.indexOf(''fr'') === 0;
-                                var unavailable = isFr ? "La base de connaissances Convertigo n''est pas disponible depuis cette instance.\n\nLe How-To utilise le service LightRAG configuré pour l''assistant hébergé. Utilisez l''assistant hébergé ou configurez le service LightRAG et sa clé sur cette instance." : "The Convertigo knowledge base is not available from this instance.\n\nHow-To uses the LightRAG service configured for the hosted assistant. Use the hosted assistant or configure the LightRAG service and key on this instance.";
-                                var idx = this.local.StreamingIndex;
-                                var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
-                                if (!target) {
-                                    var i = this.local.Messages ? this.local.Messages.length - 1 : -1;
-                                    for (; i >= 0; i--) {
-                                        if (this.local.Messages[i] && this.local.Messages[i].type === ''assistant'' && this.local.Messages[i].writing === true) {
-                                            target = this.local.Messages[i];
-                                            break;
+                                var unavailable = isFr ? "La base de connaissances Convertigo n''est pas disponible depuis cette instance.\n\nLe How-To utilise le service LightRAG configuré pour l''assistant hébergé. Utilisez l''assistant hébergé ou configurez le service LightRAG et sa clé sur cette instance." : "The Convertigo knowledge base is not available from this instance.\n\nHow-To uses the LightRAG service configured for the hosted assistant. Use the hosted assistant or configure the service LightRAG and its key on this instance.";
+                                var elapsedLabel = function(ms) {
+                                    var total = Math.max(0, Math.floor(ms / 1000));
+                                    var min = Math.floor(total / 60);
+                                    var sec = total % 60;
+                                    if (min > 0) {
+                                        return min + ''m '' + sec + ''s'';
+                                    }
+                                    return sec + ''s'';
+                                };
+                                if (!this.local) { this.local = {}; }
+                                if (!this.local.Messages) { this.local.Messages = []; }
+                                var startedAt = Number(this.local.LightRagProgressStartedAt || 0);
+                                var durationLabel = startedAt && !isNaN(startedAt) ? elapsedLabel(Date.now() - startedAt) : '''';
+                                var workStatus = durationLabel.length ? ((isFr ? ''A travaillé pendant '' : ''Worked for '') + durationLabel) : '''';
+                                var messages = this.local.Messages;
+                                var findAnswerTarget = function(create) {
+                                    var idx = page.local.LightRagAnswerIndex;
+                                    if (idx != null && messages[idx]) {
+                                        return messages[idx];
+                                    }
+                                    idx = page.local.StreamingIndex;
+                                    if (idx != null && messages[idx] && messages[idx].tag3 !== ''Progression'') {
+                                        page.local.LightRagAnswerIndex = idx;
+                                        return messages[idx];
+                                    }
+                                    for (var i = messages.length - 1; i >= 0; i--) {
+                                        if (messages[i] && messages[i].type === ''assistant'' && messages[i].tag3 !== ''Progression'' && messages[i].writing === true) {
+                                            page.local.LightRagAnswerIndex = i;
+                                            return messages[i];
                                         }
                                     }
-                                }
-                                if (!target) {
-                                    resolve();
-                                    return;
-                                }
+                                    if (create !== true) {
+                                        return null;
+                                    }
+                                    var target = {msg: '''', type: ''assistant'', author: ''Assistant'', time: hh + '':'' + mm, tag1: ''How-To'', tag2: ''Convertigo'', tag3: ''Guide'', status: '''', writing: true};
+                                    messages.push(target);
+                                    page.local.LightRagAnswerIndex = messages.length - 1;
+                                    return target;
+                                };
+                                var findProgressIndex = function() {
+                                    var idx = page.local.LightRagProgressIndex;
+                                    if (idx != null && messages[idx] && messages[idx].tag3 === ''Progression'') {
+                                        return idx;
+                                    }
+                                    for (var i = messages.length - 1; i >= 0; i--) {
+                                        if (messages[i] && messages[i].type === ''assistant'' && messages[i].tag3 === ''Progression'') {
+                                            return i;
+                                        }
+                                    }
+                                    return null;
+                                };
+                                var finishProgressTarget = function(target) {
+                                    if (!workStatus.length) {
+                                        return;
+                                    }
+                                    var idx = findProgressIndex();
+                                    var progress = idx != null ? messages[idx] : null;
+                                    if (!progress) {
+                                        var targetIndex = messages.indexOf(target);
+                                        if (targetIndex < 0) {
+                                            targetIndex = messages.length;
+                                        }
+                                        progress = {msg: '''', type: ''assistant'', author: ''Assistant'', time: hh + '':'' + mm, tag1: ''How-To'', tag2: ''Convertigo'', tag3: ''Progression'', status: '''', writing: false};
+                                        messages.splice(targetIndex, 0, progress);
+                                        idx = targetIndex;
+                                    }
+                                    progress.msg = '''';
+                                    progress.type = ''assistant'';
+                                    progress.author = ''Assistant'';
+                                    progress.time = progress.time || (hh + '':'' + mm);
+                                    progress.tag1 = ''How-To'';
+                                    progress.tag2 = ''Convertigo'';
+                                    progress.tag3 = ''Progression'';
+                                    progress.status = workStatus;
+                                    progress.writing = false;
+                                    page.local.LightRagProgressIndex = idx;
+                                    page.local.LightRagProgressLines = [];
+                                };
                                 var result = vars.response;
                                 var finalMessage = '''';
                                 if (result != null) {
@@ -2044,6 +2374,14 @@ title: Title for LightRag
                                     }
                                 }
                                 finalMessage = ('''' + finalMessage).trim();
+                                if (!finalMessage.length && this.local.LightRagStreamText) {
+                                    finalMessage = ('''' + this.local.LightRagStreamText).trim();
+                                }
+                                var target = findAnswerTarget(true);
+                                if (!target) {
+                                    resolve();
+                                    return;
+                                }
                                 if (finalMessage.length) {
                                     target.msg = finalMessage;
                                     target.tag1 = ''How-To'';
@@ -2060,7 +2398,9 @@ title: Title for LightRag
                                 target.time = hh + '':'' + mm;
                                 target.status = '''';
                                 target.writing = false;
+                                finishProgressTarget(target);
                                 this.local.StreamingIndex = null;
+                                this.local.LightRagAnswerIndex = null;
                                 this.local.Buffer = {};
                                 if (this.local.ProcessingWatchdogId) {
                                     window.clearTimeout(this.local.ProcessingWatchdogId);

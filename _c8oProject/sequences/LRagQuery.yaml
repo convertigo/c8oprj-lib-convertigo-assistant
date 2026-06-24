@@ -243,6 +243,25 @@ responseTimeout: 300
               - ↑mode: PLAIN
               - →→: conversation_history
         output: false
+    ↓Prime_Hosted_Buffer [steps.TransactionStep-1782306814622]: 
+      sourceTransaction: ConvertigoAssistant.HostedAssistantBuffer.GetTokenBuffer
+    ↓hostedCookie [steps.SimpleSourceStep-1782306850840]: 
+      sourceDefinition: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: 1782306814622
+            - java.lang.String: 
+              - ↑value: substring-before(./document/HttpInfo/responseHeaders/header[@name='Set-Cookie']/@value, ';')
+      variableName: hostedCookie
+    ↓Store_Hosted_Cookie [steps.SimpleStep-1782306866873]: 
+      expression: |
+        'if (typeof hostedCookie != ''undefined'' && hostedCookie) {
+        	context.httpSession.setAttribute(''HostedAssistantCookie'', String(hostedCookie));
+        } else {
+        	context.httpSession.removeAttribute(''HostedAssistantCookie'');
+        }'
     ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
       sourceTransaction: ConvertigoAssistant.HostedAssistant.LRagQuery
       ↓Question [variables.StepVariable-1782296021206]: 
@@ -273,7 +292,27 @@ responseTimeout: 300
               - java.lang.String: 
                 - ↑value: ./Prompt/text()
       ↓stream [variables.StepVariable-1782296021691]: 
-        value: false
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1767364410194
+              - java.lang.String: 
+                - ↑value: ./stream/text()
+        value: 
+      ↓__header_Cookie [variables.StepVariable-1782306884264]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1782306814622
+              - java.lang.String: 
+                - ↑value: substring-before(./document/HttpInfo/responseHeaders/header[@name='Set-Cookie']/@value, ';')
+        value: 
+          - ↑traceable: false
+        visibility: 3
     ↓Copy [steps.XMLCopyStep-1767365310190]: 
       sourceDefinition: 
         - xmlizable: 

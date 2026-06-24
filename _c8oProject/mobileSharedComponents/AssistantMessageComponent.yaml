@@ -193,9 +193,10 @@ scriptContent:
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: 'script:''chat-assistant-message'' + ((this.writing === true || this.tag3 === ''Progression'') ? '' chat-assistant-worklog'' : '''')'
+        - MobileSmartSourceType: 'script:''chat-assistant-message'' + ((this.tag3 === ''Progression'') ? '' chat-assistant-worklog'' : '''')'
   ↓Avatar [ngx.components.UIDynamicElement-1771949858743]: 
     beanData: '{"ionBean":"DivTag"}'
+    isEnabled: false
     tagName: div
     ↓Class [ngx.components.UIAttribute-1771949858746]: 
       attrName: class
@@ -223,6 +224,7 @@ scriptContent:
           - MobileSmartSourceType: plain:chat-assistant-body
     ↓Meta [ngx.components.UIDynamicElement-1771949858761]: 
       beanData: '{"ionBean":"DivTag"}'
+      isEnabled: false
       tagName: div
       ↓Class [ngx.components.UIAttribute-1771949858764]: 
         attrName: class
@@ -232,6 +234,7 @@ scriptContent:
             - MobileSmartSourceType: plain:chat-message-meta
       ↓Author [ngx.components.UIDynamicElement-1771949858767]: 
         beanData: '{"ionBean":"Paragraph"}'
+        isEnabled: false
         tagName: p
         ↓Class [ngx.components.UIAttribute-1771949858770]: 
           attrName: class
@@ -268,7 +271,7 @@ scriptContent:
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: 'script:''chat-assistant-bubble'' + ((this.writing === true || this.tag3 === ''Progression'') ? '' chat-assistant-worklog-bubble'' : '''')'
+            - MobileSmartSourceType: 'script:''chat-assistant-bubble'' + ((this.tag3 === ''Progression'') ? '' chat-assistant-worklog-bubble'' : '''')'
       ↓CardContent [ngx.components.UIDynamicElement-1771949858791]: 
         beanData: '{"ionBean":"CardContent"}'
         tagName: ion-card-content
@@ -359,7 +362,7 @@ scriptContent:
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.writing && !this.isRawStreamTickerActive()
+              - MobileSmartSourceType: script:(this.writing === true || (this.status && this.status !== 'writing' && ('' + this.status).length > 0)) && !this.isRawStreamTickerActive()
           ↓WritingState [ngx.components.UIDynamicElement-1771949858803]: 
             beanData: '{"ionBean":"Paragraph"}'
             tagName: p
@@ -368,12 +371,12 @@ scriptContent:
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:chat-writing-state
+                  - MobileSmartSourceType: 'script:''chat-writing-state'' + (this.writing === true ? '''' : '' chat-writing-state-done'')'
             ↓Text [ngx.components.UIText-1771949858809]: 
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:this.status || 'Agent is working...'
+                  - MobileSmartSourceType: 'script:(this.tag3 === ''Progression'' && this.status && ('''' + this.status).length > 0 && ('''' + this.status).indexOf('' - '') === -1) ? ((this.time || '''') + '' - '' + this.status) : (this.status || ''Agent is working...'')'
         ↓IfTags [ngx.components.UIControlDirective-1771949858812]: 
           directiveName: If
           directiveSource: 
@@ -690,5 +693,43 @@ scriptContent:
             .chat-assistant-body {
               width: 100%;
             }
+          }
+          '
+↓StatusDoneStyle [ngx.components.UIStyle-1782309697046]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.chat-writing-state.chat-writing-state-done {
+            animation: none;
+            box-shadow: none;
+            opacity: 0.82;
+          }
+          .chat-assistant-avatar,
+          .chat-message-author {
+            display: none !important;
+          }
+          .chat-assistant-message {
+            gap: 0;
+          }
+          .chat-assistant-worklog-bubble .chat-writing-state {
+            animation: agent-progress-pulse 1.45s ease-in-out infinite;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            color: color-mix(in srgb, var(--modern-muted, #94a3b8) 80%, var(--modern-text, #f1f5f9) 20%);
+            font-size: 13px;
+            line-height: 20px;
+            margin: 0;
+            padding: 0;
+          }
+          .chat-assistant-worklog-bubble .chat-writing-state.chat-writing-state-done {
+            animation: none;
+            box-shadow: none;
+            opacity: 0.72;
+          }
+          .chat-assistant-worklog-bubble ion-card-content {
+            padding: 0 0 8px;
           }
           '

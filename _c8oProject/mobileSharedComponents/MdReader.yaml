@@ -153,7 +153,7 @@
             margin: 0 0 8px;
             font-size: 16px;
             line-height: 26px;
-            letter-spacing: -0.3125px;
+            letter-spacing: 0;
           }
           
           :host ::ng-deep markdown p:last-child,
@@ -201,22 +201,55 @@
           
           :host ::ng-deep markdown pre {
             margin: 8px 0;
+            max-width: 100%;
+            overflow-x: hidden !important;
             padding: 10px 12px;
-            overflow-x: auto;
+            position: relative;
+            white-space: pre-wrap !important;
           }
           
           :host ::ng-deep markdown pre code {
             padding: 0;
             border: 0;
             background: transparent;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap !important;
+            word-break: break-word;
+          }
+          
+          :host ::ng-deep markdown pre[class*="language-"] {
+            overflow-x: hidden !important;
+            white-space: pre-wrap !important;
+          }
+          
+          :host ::ng-deep markdown pre[class*="language-"] code[class*="language-"] {
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+          
+          :host ::ng-deep markdown pre.line-numbers {
+            padding-left: 12px;
           }
           
           :host ::ng-deep markdown pre.line-numbers .line-numbers-rows {
-            border-right: 1px solid rgba(148, 163, 184, 0.3);
+            display: none;
           }
           
-          :host ::ng-deep markdown pre.line-numbers .line-numbers-rows > span:before {
+          :host ::ng-deep markdown button.clipboard,
+          :host ::ng-deep markdown .clipboard,
+          :host ::ng-deep markdown .copy-to-clipboard-button {
+            background: color-mix(in srgb, var(--modern-surface, #111827) 82%, transparent 18%);
+            border: 1px solid color-mix(in srgb, var(--modern-border, #334155) 84%, transparent 16%);
+            border-radius: 6px;
             color: var(--modern-muted, #94a3b8);
+            font-size: 11px;
+            line-height: 16px;
+            max-width: max-content;
+            padding: 1px 6px;
+            position: absolute;
+            right: 6px;
+            top: 6px;
           }
           
           :host-context(:root.force-light) ::ng-deep markdown code,
@@ -241,5 +274,22 @@
           :host-context(.force-light) ::ng-deep markdown code[class*="language-"] {
             background: rgba(226, 232, 240, 0.8) !important;
             border-color: rgba(148, 163, 184, 0.4) !important;
+          }
+          
+          :host-context(:root.force-light) ::ng-deep markdown button.clipboard,
+          :host-context(:root.force-light) ::ng-deep markdown .clipboard,
+          :host-context(:root.force-light) ::ng-deep markdown .copy-to-clipboard-button,
+          :host-context(html.force-light) ::ng-deep markdown button.clipboard,
+          :host-context(html.force-light) ::ng-deep markdown .clipboard,
+          :host-context(html.force-light) ::ng-deep markdown .copy-to-clipboard-button,
+          :host-context(body.force-light) ::ng-deep markdown button.clipboard,
+          :host-context(body.force-light) ::ng-deep markdown .clipboard,
+          :host-context(body.force-light) ::ng-deep markdown .copy-to-clipboard-button,
+          :host-context(.force-light) ::ng-deep markdown button.clipboard,
+          :host-context(.force-light) ::ng-deep markdown .clipboard,
+          :host-context(.force-light) ::ng-deep markdown .copy-to-clipboard-button {
+            background: rgba(248, 250, 252, 0.92);
+            border-color: rgba(148, 163, 184, 0.45);
+            color: #475569;
           }
           '

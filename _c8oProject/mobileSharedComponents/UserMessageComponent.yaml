@@ -27,6 +27,7 @@
             - MobileSmartSourceType: plain:chat-user-meta
       ↓Author [ngx.components.UIDynamicElement-1771949858896]: 
         beanData: '{"ionBean":"Paragraph"}'
+        isEnabled: false
         tagName: p
         ↓Class [ngx.components.UIAttribute-1771949858899]: 
           attrName: class
@@ -84,6 +85,7 @@
                 - MobileSmartSourceType: script:this.message
   ↓Action [ngx.components.UIDynamicElement-1771949858932]: 
     beanData: '{"ionBean":"DivTag"}'
+    isEnabled: false
     tagName: div
     ↓Class [ngx.components.UIAttribute-1771949858935]: 
       attrName: class
@@ -200,3 +202,22 @@
             color: #ffffff !important;
             letter-spacing: 0;
           }'
+↓CodexCompactStyle [ngx.components.UIStyle-1782312969170]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.chat-user-author,
+          .chat-user-action {
+            display: none !important;
+          }
+          .chat-user-message {
+            gap: 0;
+          }
+          @media (max-width: 768px) {
+            .chat-user-body {
+              width: min(100%, 560px);
+            }
+          }
+          '
