@@ -3651,10 +3651,53 @@ scriptContent:
           :host-context(.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-access-chip {
             color: #fbbf24 !important;
           }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) {
+            background: #2563eb !important;
+            color: #ffffff !important;
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.22);
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon {
+            color: #ffffff !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn).button-disabled,
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn)[disabled] {
+            background: #d7dde8 !important;
+            color: #64748b !important;
+            box-shadow: none;
+            opacity: 1;
+          }
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn).button-disabled ion-icon,
+          :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn)[disabled] ion-icon {
+            color: #64748b !important;
+          }
+          :host-context(:root.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn),
+          :host-context(html.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn),
+          :host-context(body.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn),
+          :host-context(.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) {
+            background: #93c5fd !important;
+            color: #06111f !important;
+          }
+          :host-context(:root.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon,
+          :host-context(html.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon,
+          :host-context(body.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon,
+          :host-context(.force-dark) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon {
+            color: #06111f !important;
+          }
           @media (prefers-color-scheme: dark) {
             :host-context(:root:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
             :host-context(html:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-access-chip,
             :host-context(body:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-access-chip {
               color: #fbbf24 !important;
+            }
+            :host-context(:root:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn),
+            :host-context(html:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn),
+            :host-context(body:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) {
+              background: #93c5fd !important;
+              color: #06111f !important;
+            }
+            :host-context(:root:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon,
+            :host-context(html:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon,
+            :host-context(body:not(.force-light)) :host-context(ion-footer.agent-footer-codex) .codex-prompt-send-btn:not(.codex-prompt-stop-btn) ion-icon {
+              color: #06111f !important;
             }
           }'

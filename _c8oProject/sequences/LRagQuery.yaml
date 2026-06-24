@@ -1,7 +1,7 @@
 responseTimeout: 300
 ↓inputVars [steps.InputVariablesStep-1767364410194]: 
 ↓jIfThenElse [steps.IfThenElseStep-1767180603000]: 
-  condition: stream == "true"
+  condition: '"${assistant.lrag.host.url}" != "" && stream == "true"'
   ↓jThen [steps.ThenStep-1767180604769]: 
     ↓Parallel [steps.ParallelStep-1768389197075]: 
       ↓InitProgressMessage [steps.SimpleStep-1767366401271]: 
@@ -244,18 +244,8 @@ responseTimeout: 300
               - →→: conversation_history
         output: false
     ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
-      sourceTransaction: ConvertigoAssistant.LightRAG.query_text
-      ↓__body [variables.StepVariable-1767113549281]: 
-        required: true
-        sourceDefinition: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1767113260210
-              - java.lang.String: 
-                - ↑value: ./*
-      ↓__stub [variables.StepVariable-1767364549032]: 
+      sourceTransaction: ConvertigoAssistant.HostedAssistant.LRagQuery
+      ↓Question [variables.StepVariable-1782296021206]: 
         sourceDefinition: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
@@ -263,8 +253,27 @@ responseTimeout: 300
               - java.lang.String: 
                 - ↑value: 1767364410194
               - java.lang.String: 
-                - ↑value: ./fromStub/text()
-        value: 
+                - ↑value: ./Question/text()
+      ↓History [variables.StepVariable-1782296021377]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1767364410194
+              - java.lang.String: 
+                - ↑value: ./History/text()
+      ↓Prompt [variables.StepVariable-1782296021565]: 
+        sourceDefinition: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: 1767364410194
+              - java.lang.String: 
+                - ↑value: ./Prompt/text()
+      ↓stream [variables.StepVariable-1782296021691]: 
+        value: false
     ↓Copy [steps.XMLCopyStep-1767365310190]: 
       sourceDefinition: 
         - xmlizable: 
@@ -273,7 +282,7 @@ responseTimeout: 300
             - java.lang.String: 
               - ↑value: 1767113489319
             - java.lang.String: 
-              - ↑value: ./document/object
+              - ↑value: ./document/object/object
 ↓Question [variables.RequestableVariable-1767113097776]: 
 ↓History [variables.RequestableVariable-1767698342784]: 
 ↓Prompt [variables.RequestableVariable-1767974017753]: 

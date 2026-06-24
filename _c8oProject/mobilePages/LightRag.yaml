@@ -622,12 +622,21 @@ title: Title for LightRag
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            		setTimeout(()=>{
-            			page.refreshFooterLocale();
-            			page.ref.detectChanges();
-            		},100);
-            		resolve();
-            
+            '        setTimeout(()=>{
+                        page.refreshFooterLocale();
+                        try {
+                            var lang = ''en'';
+                            if (page.global && page.global.currentLanguage) {
+                                lang = '''' + (page.global.currentLanguage() || ''en'');
+                            }
+                            lang = lang.toLowerCase();
+                            if (!page.local) { page.local = {}; }
+                            page.local.QuestionPlaceholder = lang.indexOf(''fr'') === 0 ? ''Demandez quelque chose à propos de Convertigo...'' : ''Ask something about Convertigo...'';
+                        } catch (e) {}
+                        page.ref.detectChanges();
+                    },100);
+                    resolve();
+            '
 ↓Subscribe_EnableChat [ngx.components.UIEventSubscriber-1771949749178]: 
   topic: JavaMessage
   ↓EnableChat [ngx.components.UICustomAction-1771949749181]: 
@@ -867,17 +876,21 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    '		var selected = event && event.detail ? event.detail.value : null;
-                    		selected = "" + (selected || "en");
-                    		selected = selected.trim().toLowerCase();
-                    		if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
-                    		page.global.currentLanguage = function() { return selected; };
-                    		page.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
-                    		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e1) {}
-                    		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-lang", selected); } } catch (e2) {}
-                    		if (page.refreshFooterLocale) { page.refreshFooterLocale(); }
-                    		try { page.tick(); } catch (e3) {}
-                    		resolve();
+                    '        var selected = event && event.detail ? event.detail.value : null;
+                            selected = "" + (selected || "en");
+                            selected = selected.trim().toLowerCase();
+                            if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
+                            page.global.currentLanguage = function() { return selected; };
+                            page.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
+                            try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e1) {}
+                            try { if (window && window.localStorage) { window.localStorage.setItem("c8o-lang", selected); } } catch (e2) {}
+                            if (page.refreshFooterLocale) { page.refreshFooterLocale(); }
+                            try {
+                                if (!page.local) { page.local = {}; }
+                                page.local.QuestionPlaceholder = selected === "fr" ? "Demandez quelque chose à propos de Convertigo..." : "Ask something about Convertigo...";
+                            } catch (e3) {}
+                            try { page.tick(); } catch (e4) {}
+                            resolve();
                     '
             comment: Persists and applies the selected language
         ↓LangEN [ngx.components.UIDynamicElement-1771937738015]: 
@@ -1452,110 +1465,113 @@ title: Title for LightRag
             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
             - com.twinsoft.convertigo.beans.common.FormatedContent: 
               →: |
-                '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                		if (!this.local) {
-                			this.local = {};
-                		}
-                		var message = ('''' + (vars.message || '''')).trim();
-                		if (this.local && this.local.IsProcessing === true) {
-                			resolve(null);
-                			return;
-                		}
-                		if (!message.length) {
-                			resolve(null);
-                			return;
-                		}
-                		
-                		if (!this.local.Messages) {
-                			this.local.Messages = [];
-                		}
-                		
-                		if (this.local.Buffer && this.local.Buffer.intId) {
-                			window.clearInterval(this.local.Buffer.intId);
-                		}
-                		
-                		this.local.Buffer = {};
-                		this.local.StreamingIndex = null;
-                		this.local.AutoScrollEnabled = true;
-                		this.local.AutoScrollLockUntil = Date.now() + 1400;
-                		this.local.IsProcessing = true;
-                		var processingToken = Date.now() + ''-'' + Math.floor(Math.random() * 1000000);
-                		this.local.ProcessingToken = processingToken;
-                		if (this.local.ProcessingWatchdogId) {
-                			window.clearTimeout(this.local.ProcessingWatchdogId);
-                		}
-                		this.local.ProcessingWatchdogId = window.setTimeout(function() {
-                			try {
-                				if (!page.local) {
-                					return;
-                				}
-                				if (page.local.IsProcessing !== true) {
-                					return;
-                				}
-                				if (page.local.ProcessingToken !== processingToken) {
-                					return;
-                				}
-                				if (page.local.Buffer && page.local.Buffer.intId) {
-                					window.clearInterval(page.local.Buffer.intId);
-                				}
-                				page.local.Buffer = {};
-                				page.local.StreamingIndex = null;
-                				page.local.IsProcessing = false;
-                				page.local.spinner = false;
-                				page.local.ProcessingWatchdogId = null;
-                				page.local.ProcessingToken = null;
-                				page.c8o.log.warn(''[MB] Processing watchdog released blocked input state'');
-                				page.tick();
-                			} catch (e) {}
-                		}, 90000);
-                		page.tick();
-                		
-                		var history = [];
-                		(this.local.Messages || []).forEach(function(item) {
-                			if (item && item.type && item.msg != null) {
-                				history.push({
-                					role: item.type,
-                					content: item.msg
-                				});
-                			}
-                		});
-                		
-                		var now = new Date();
-                		var hh = (''0'' + now.getHours()).slice(-2);
-                		var mm = (''0'' + now.getMinutes()).slice(-2);
-                		
-                		this.local.Messages.push({
-                			msg: message,
-                			type: ''user'',
-                			author: ''You'',
-                			time: hh + '':'' + mm
-                		});
-                		
-                		this.local.Messages.push({
-                			msg: '''',
-                			type: ''assistant'',
-                			author: ''Assistant'',
-                			time: hh + '':'' + mm,
-                			tag1: ''How-To'',
-                			tag2: ''Convertigo'',
-                			tag3: ''Guide'',
-                			status: ''writing'',
-                			writing: true
-                		});
-                		
-                		this.local.StreamingIndex = this.local.Messages.length - 1;
-                		
-                		this.local.Question = '''';
-                		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                			page.chatfooter.setQuestionText('''', false);
-                		}
-                		
-                		page.scrollChatBottom(0, true);
-                		
-                		resolve({
-                			message: message,
-                			history: JSON.stringify(history)
-                		});
+                '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                        if (!this.local) {
+                            this.local = {};
+                        }
+                        var message = ('''' + (vars.message || '''')).trim();
+                        if (this.local && this.local.IsProcessing === true) {
+                            resolve(null);
+                            return;
+                        }
+                        if (!message.length) {
+                            resolve(null);
+                            return;
+                        }
+                        if (!this.local.Messages) {
+                            this.local.Messages = [];
+                        }
+                        if (this.local.Buffer && this.local.Buffer.intId) {
+                            window.clearInterval(this.local.Buffer.intId);
+                        }
+                        this.local.Buffer = {};
+                        this.local.StreamingIndex = null;
+                        this.local.AutoScrollEnabled = true;
+                        this.local.AutoScrollLockUntil = Date.now() + 1400;
+                        this.local.IsProcessing = true;
+                        this.local.LightRagProgressStartedAt = Date.now();
+                        this.local.LightRagProgressStep = 0;
+                        var processingToken = Date.now() + ''-'' + Math.floor(Math.random() * 1000000);
+                        this.local.ProcessingToken = processingToken;
+                        if (this.local.ProcessingWatchdogId) {
+                            window.clearTimeout(this.local.ProcessingWatchdogId);
+                        }
+                        this.local.ProcessingWatchdogId = window.setTimeout(function() {
+                            try {
+                                if (!page.local) {
+                                    return;
+                                }
+                                if (page.local.IsProcessing !== true) {
+                                    return;
+                                }
+                                if (page.local.ProcessingToken !== processingToken) {
+                                    return;
+                                }
+                                if (page.local.Buffer && page.local.Buffer.intId) {
+                                    window.clearInterval(page.local.Buffer.intId);
+                                }
+                                page.local.Buffer = {};
+                                page.local.StreamingIndex = null;
+                                page.local.IsProcessing = false;
+                                page.local.spinner = false;
+                                page.local.ProcessingWatchdogId = null;
+                                page.local.ProcessingToken = null;
+                                page.local.LightRagProgressStartedAt = null;
+                                page.local.LightRagProgressStep = 0;
+                                page.c8o.log.warn(''[MB] Processing watchdog released blocked input state'');
+                                page.tick();
+                            } catch (e) {}
+                        }, 90000);
+                        page.tick();
+                        var history = [];
+                        (this.local.Messages || []).forEach(function(item) {
+                            if (item && item.type && item.msg != null && item.writing !== true) {
+                                history.push({
+                                    role: item.type,
+                                    content: item.msg
+                                });
+                            }
+                        });
+                        var now = new Date();
+                        var hh = (''0'' + now.getHours()).slice(-2);
+                        var mm = (''0'' + now.getMinutes()).slice(-2);
+                        var lang = ''en'';
+                        try {
+                            if (this.global && this.global.currentLanguage) {
+                                lang = '''' + (this.global.currentLanguage() || ''en'');
+                            }
+                        } catch (e1) {}
+                        lang = lang.toLowerCase();
+                        var isFr = lang.indexOf(''fr'') === 0;
+                        var progressIntro = isFr ? ''Je prépare la recherche dans la base de connaissances Convertigo.'' : ''I am preparing the search in the Convertigo knowledge base.'';
+                        var progressStatus = isFr ? ''Recherche en cours'' : ''Searching'';
+                        this.local.Messages.push({
+                            msg: message,
+                            type: ''user'',
+                            author: ''You'',
+                            time: hh + '':'' + mm
+                        });
+                        this.local.Messages.push({
+                            msg: progressIntro,
+                            type: ''assistant'',
+                            author: ''Assistant'',
+                            time: hh + '':'' + mm,
+                            tag1: ''How-To'',
+                            tag2: ''Convertigo'',
+                            tag3: ''Progression'',
+                            status: progressStatus,
+                            writing: true
+                        });
+                        this.local.StreamingIndex = this.local.Messages.length - 1;
+                        this.local.Question = '''';
+                        if (page.chatfooter && page.chatfooter.setQuestionText) {
+                            page.chatfooter.setQuestionText('''', false);
+                        }
+                        page.scrollChatBottom(0, true);
+                        resolve({
+                            message: message,
+                            history: JSON.stringify(history)
+                        });
                 '
         ↓message [ngx.components.UIControlVariable-1773100000103]: 
           varValue: 
@@ -1570,25 +1586,133 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    '		try {
-                    			page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
-                    			if (!page.local) {
-                    				page.local = {};
-                    			}
-                    			if (page.local.Buffer && page.local.Buffer.intId) {
-                    				window.clearInterval(page.local.Buffer.intId);
-                    			}
-                    			if (page.local.AgentBufferPollId) {
-                    				window.clearInterval(page.local.AgentBufferPollId);
-                    			}
-                    			if (!page.local.Buffer) {
-                    				page.local.Buffer = {};
-                    			}
-                    			page.local.Buffer.intId = null;
-                    			page.local.AgentBufferPollId = null;
-                    		} catch (e) {
-                    			page.c8o.log.warn(''[MB] ERROR : '' + e.message);
-                    		}
+                    '        try {
+                                page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
+                                if (!page.local) {
+                                    page.local = {};
+                                }
+                                if (page.local.Buffer && page.local.Buffer.intId) {
+                                    window.clearInterval(page.local.Buffer.intId);
+                                }
+                                if (page.local.AgentBufferPollId) {
+                                    window.clearInterval(page.local.AgentBufferPollId);
+                                }
+                                if (!page.local.Buffer) {
+                                    page.local.Buffer = {};
+                                }
+                                page.local.Buffer.intId = null;
+                                page.local.AgentBufferPollId = null;
+                                var lang = ''en'';
+                                try {
+                                    if (page.global && page.global.currentLanguage) {
+                                        lang = '''' + (page.global.currentLanguage() || ''en'');
+                                    }
+                                } catch (e1) {}
+                                lang = lang.toLowerCase();
+                                var isFr = lang.indexOf(''fr'') === 0;
+                                var steps = isFr ? [
+                                    ''Je prépare la recherche dans la base de connaissances Convertigo.'',
+                                    ''Je consulte les contenus pertinents.'',
+                                    ''J\''organise les éléments trouvés.'',
+                                    ''Je rédige une réponse exploitable.'',
+                                    ''Je vérifie que la réponse reste centrée sur Convertigo.''
+                                ] : [
+                                    ''I am preparing the search in the Convertigo knowledge base.'',
+                                    ''I am reading the relevant content.'',
+                                    ''I am organizing the matching information.'',
+                                    ''I am drafting a useful answer.'',
+                                    ''I am checking that the answer stays focused on Convertigo.''
+                                ];
+                                var statuses = isFr ? [
+                                    ''Recherche en cours'',
+                                    ''Lecture des sources'',
+                                    ''Synthèse en cours'',
+                                    ''Rédaction en cours'',
+                                    ''Vérification en cours''
+                                ] : [
+                                    ''Searching'',
+                                    ''Reading sources'',
+                                    ''Summarizing'',
+                                    ''Writing'',
+                                    ''Checking''
+                                ];
+                                var elapsedLabel = function(ms) {
+                                    var total = Math.max(0, Math.floor(ms / 1000));
+                                    var min = Math.floor(total / 60);
+                                    var sec = total % 60;
+                                    if (min > 0) {
+                                        return min + ''m '' + sec + ''s'';
+                                    }
+                                    return sec + ''s'';
+                                };
+                                var findTarget = function() {
+                                    var idx = page.local.StreamingIndex;
+                                    if (idx != null && page.local.Messages && page.local.Messages[idx]) {
+                                        return page.local.Messages[idx];
+                                    }
+                                    var messages = page.local.Messages || [];
+                                    for (var i = messages.length - 1; i >= 0; i--) {
+                                        if (messages[i] && messages[i].type === ''assistant'' && messages[i].writing === true) {
+                                            page.local.StreamingIndex = i;
+                                            return messages[i];
+                                        }
+                                    }
+                                    return null;
+                                };
+                                var update = function() {
+                                    try {
+                                        if (!page.local || page.local.IsProcessing !== true) {
+                                            if (page.local && page.local.Buffer && page.local.Buffer.intId) {
+                                                window.clearInterval(page.local.Buffer.intId);
+                                                page.local.Buffer.intId = null;
+                                            }
+                                            return;
+                                        }
+                                        var target = findTarget();
+                                        if (!target) {
+                                            return;
+                                        }
+                                        var startedAt = Number(page.local.LightRagProgressStartedAt || 0);
+                                        if (!startedAt || isNaN(startedAt)) {
+                                            startedAt = Date.now();
+                                            page.local.LightRagProgressStartedAt = startedAt;
+                                        }
+                                        var step = Number(page.local.LightRagProgressStep || 0);
+                                        if (isNaN(step)) {
+                                            step = 0;
+                                        }
+                                        if (step < 0) {
+                                            step = 0;
+                                        }
+                                        var maxStep = steps.length - 1;
+                                        if (step > maxStep) {
+                                            step = maxStep;
+                                        }
+                                        var visibleCount = Math.min(steps.length, step + 1);
+                                        var lines = [];
+                                        for (var j = 0; j < visibleCount; j++) {
+                                            lines.push(steps[j]);
+                                        }
+                                        var elapsed = Date.now() - startedAt;
+                                        if (elapsed > 18000 && visibleCount >= steps.length) {
+                                            lines.push(isFr ? ''La réponse prend un peu plus de temps, je continue.'' : ''The answer is taking a little longer, I am still working.'');
+                                        }
+                                        target.msg = lines.join(''\n\n'');
+                                        target.status = statuses[step] + '' · '' + elapsedLabel(elapsed);
+                                        target.tag1 = ''How-To'';
+                                        target.tag2 = ''Convertigo'';
+                                        target.tag3 = ''Progression'';
+                                        target.writing = true;
+                                        page.local.LightRagProgressStep = Math.min(step + 1, maxStep);
+                                        page.tick();
+                                        page.scrollChatBottom(0);
+                                    } catch (e2) {}
+                                };
+                                update();
+                                page.local.Buffer.intId = window.setInterval(update, 2200);
+                            } catch (e) {
+                                page.c8o.log.warn(''[MB] ERROR : '' + e.message);
+                            }
                     '
           ↓CallSequence [ngx.components.UIDynamicAction-1773100000105]: 
             beanData: |
@@ -1597,6 +1721,80 @@ title: Title for LightRag
                "requestable": "plain:ConvertigoAssistant.LRagQuery",
                "noLoading": "plain:true"
               }'
+            ↓Failure_Handler [ngx.components.UIActionFailureEvent-1782295229930]: 
+              ↓ShowRequestFailure [ngx.components.UICustomAction-1782295231376]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                                var now = new Date();
+                                var hh = (''0'' + now.getHours()).slice(-2);
+                                var mm = (''0'' + now.getMinutes()).slice(-2);
+                                var lang = ''en'';
+                                try {
+                                    if (page.global && page.global.currentLanguage) {
+                                        lang = '''' + (page.global.currentLanguage() || ''en'');
+                                    }
+                                } catch (e1) {}
+                                lang = lang.toLowerCase();
+                                var isFr = lang.indexOf(''fr'') === 0;
+                                var detail = '''';
+                                try {
+                                    if (event && event.message) {
+                                        detail = '''' + event.message;
+                                    } else if (event && event.error && event.error.message) {
+                                        detail = '''' + event.error.message;
+                                    }
+                                } catch (e2) {}
+                                var message = isFr ? "La base de connaissances Convertigo n''est pas disponible depuis cette instance.\n\nLe How-To utilise le service LightRAG configuré pour l''assistant hébergé. Utilisez l''assistant hébergé ou configurez le service LightRAG et sa clé sur cette instance." : "The Convertigo knowledge base is not available from this instance.\n\nHow-To uses the LightRAG service configured for the hosted assistant. Use the hosted assistant or configure the LightRAG service and key on this instance.";
+                                if (detail.trim().length) {
+                                    message += ''\n\n'' + (isFr ? ''Détail : '' : ''Detail: '') + detail;
+                                }
+                                if (!this.local) { this.local = {}; }
+                                var idx = this.local.StreamingIndex;
+                                var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
+                                if (!target) {
+                                    var i = this.local.Messages ? this.local.Messages.length - 1 : -1;
+                                    for (; i >= 0; i--) {
+                                        if (this.local.Messages[i] && this.local.Messages[i].type === ''assistant'' && this.local.Messages[i].writing === true) {
+                                            target = this.local.Messages[i];
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!target) {
+                                    if (!this.local.Messages) { this.local.Messages = []; }
+                                    target = { type: ''assistant'', author: ''Assistant'' };
+                                    this.local.Messages.push(target);
+                                }
+                                target.msg = message;
+                                target.type = ''assistant'';
+                                target.author = ''Assistant'';
+                                target.time = hh + '':'' + mm;
+                                target.tag1 = isFr ? ''Erreur'' : ''Error'';
+                                target.tag2 = ''Convertigo'';
+                                target.tag3 = ''How-To'';
+                                target.status = '''';
+                                target.writing = false;
+                                this.local.StreamingIndex = null;
+                                if (this.local.Buffer && this.local.Buffer.intId) {
+                                    window.clearInterval(this.local.Buffer.intId);
+                                }
+                                this.local.Buffer = {};
+                                if (this.local.ProcessingWatchdogId) {
+                                    window.clearTimeout(this.local.ProcessingWatchdogId);
+                                }
+                                this.local.ProcessingWatchdogId = null;
+                                this.local.ProcessingToken = null;
+                                this.local.LightRagProgressStartedAt = null;
+                                this.local.LightRagProgressStep = 0;
+                                this.local.IsProcessing = false;
+                                page.tick();
+                                page.scrollChatBottom(0);
+                                resolve();
+                        '
             ↓Question [ngx.components.UIControlVariable-1773100000106]: 
               varValue: 
                 - xmlizable: 
@@ -1618,22 +1816,24 @@ title: Title for LightRag
                   - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                   - com.twinsoft.convertigo.beans.common.FormatedContent: 
                     →: |
-                      '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                      		if (this.local.Buffer && this.local.Buffer.intId) {
-                      			window.clearInterval(this.local.Buffer.intId);
-                      		}
-                      		if (this.local.ProcessingWatchdogId) {
-                      			window.clearTimeout(this.local.ProcessingWatchdogId);
-                      		}
-                      		if (!this.local.Buffer) {
-                      			this.local.Buffer = {};
-                      		}
-                      		this.local.Buffer.intId = null;
-                      		this.local.ProcessingWatchdogId = null;
-                      		this.local.ProcessingToken = null;
-                      		this.local.IsProcessing = false;
-                      		page.tick();
-                      		resolve();
+                      '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                              if (this.local.Buffer && this.local.Buffer.intId) {
+                                  window.clearInterval(this.local.Buffer.intId);
+                              }
+                              if (this.local.ProcessingWatchdogId) {
+                                  window.clearTimeout(this.local.ProcessingWatchdogId);
+                              }
+                              if (!this.local.Buffer) {
+                                  this.local.Buffer = {};
+                              }
+                              this.local.Buffer.intId = null;
+                              this.local.ProcessingWatchdogId = null;
+                              this.local.ProcessingToken = null;
+                              this.local.LightRagProgressStartedAt = null;
+                              this.local.LightRagProgressStep = 0;
+                              this.local.IsProcessing = false;
+                              page.tick();
+                              resolve();
                       '
             ↓IfError [ngx.components.UIDynamicAction-1773100000110]: 
               beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.LRagQuery\",\"marker\":\"\"}],\"path\":\"?.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
@@ -1643,45 +1843,68 @@ title: Title for LightRag
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                        		var now = new Date();
-                        		var hh = (''0'' + now.getHours()).slice(-2);
-                        		var mm = (''0'' + now.getMinutes()).slice(-2);
-                        		var idx = this.local.StreamingIndex;
-                        		var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
-                        		if (!target) {
-                        			var i = this.local.Messages ? this.local.Messages.length - 1 : -1;
-                        			for (; i >= 0; i--) {
-                        				if (this.local.Messages[i] && this.local.Messages[i].type === ''assistant'' && this.local.Messages[i].writing === true) {
-                        					target = this.local.Messages[i];
-                        					break;
-                        				}
-                        			}
-                        		}
-                        		if (!target) {
-                        			resolve();
-                        			return;
-                        		}
-                        		target.msg = vars.error && vars.error.message ? vars.error.message : ''Unable to get an answer.'';
-                        		target.type = ''assistant'';
-                        		target.author = ''Assistant'';
-                        		target.time = hh + '':'' + mm;
-                        		target.tag1 = ''Error'';
-                        		target.tag2 = ''Convertigo'';
-                        		target.tag3 = ''How-To'';
-                        		target.status = '''';
-                        		target.writing = false;
-                        		this.local.StreamingIndex = null;
-                        		this.local.Buffer = {};
-                        		if (this.local.ProcessingWatchdogId) {
-                        			window.clearTimeout(this.local.ProcessingWatchdogId);
-                        		}
-                        		this.local.ProcessingWatchdogId = null;
-                        		this.local.ProcessingToken = null;
-                        		this.local.IsProcessing = false;
-                        		page.tick();
-                        		page.scrollChatBottom(0);
-                        		resolve();
+                        '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                                var now = new Date();
+                                var hh = (''0'' + now.getHours()).slice(-2);
+                                var mm = (''0'' + now.getMinutes()).slice(-2);
+                                var lang = ''en'';
+                                try {
+                                    if (page.global && page.global.currentLanguage) {
+                                        lang = '''' + (page.global.currentLanguage() || ''en'');
+                                    }
+                                } catch (e1) {}
+                                lang = lang.toLowerCase();
+                                var isFr = lang.indexOf(''fr'') === 0;
+                                var unavailable = isFr ? "La base de connaissances Convertigo n''est pas disponible depuis cette instance.\n\nLe How-To utilise le service LightRAG configuré pour l''assistant hébergé. Utilisez l''assistant hébergé ou configurez le service LightRAG et sa clé sur cette instance." : "The Convertigo knowledge base is not available from this instance.\n\nHow-To uses the LightRAG service configured for the hosted assistant. Use the hosted assistant or configure the LightRAG service and key on this instance.";
+                                var raw = '''';
+                                try {
+                                    if (vars.error && vars.error.message) {
+                                        raw = '''' + vars.error.message;
+                                    } else if (vars.error) {
+                                        raw = '''' + vars.error;
+                                    }
+                                } catch (e2) {}
+                                var message = raw.trim().length ? raw : unavailable;
+                                if (!message.trim().length || /connection|connect|refused|timeout|timed|host|url|empty|undefined|null|network|failed/i.test(message)) {
+                                    message = unavailable + (raw.trim().length ? ''\n\n'' + (isFr ? ''Détail : '' : ''Detail: '') + raw : '''');
+                                }
+                                var idx = this.local.StreamingIndex;
+                                var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
+                                if (!target) {
+                                    var i = this.local.Messages ? this.local.Messages.length - 1 : -1;
+                                    for (; i >= 0; i--) {
+                                        if (this.local.Messages[i] && this.local.Messages[i].type === ''assistant'' && this.local.Messages[i].writing === true) {
+                                            target = this.local.Messages[i];
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!target) {
+                                    resolve();
+                                    return;
+                                }
+                                target.msg = message;
+                                target.type = ''assistant'';
+                                target.author = ''Assistant'';
+                                target.time = hh + '':'' + mm;
+                                target.tag1 = isFr ? ''Erreur'' : ''Error'';
+                                target.tag2 = ''Convertigo'';
+                                target.tag3 = ''How-To'';
+                                target.status = '''';
+                                target.writing = false;
+                                this.local.StreamingIndex = null;
+                                this.local.Buffer = {};
+                                if (this.local.ProcessingWatchdogId) {
+                                    window.clearTimeout(this.local.ProcessingWatchdogId);
+                                }
+                                this.local.ProcessingWatchdogId = null;
+                                this.local.ProcessingToken = null;
+                                this.local.LightRagProgressStartedAt = null;
+                                this.local.LightRagProgressStep = 0;
+                                this.local.IsProcessing = false;
+                                page.tick();
+                                page.scrollChatBottom(0);
+                                resolve();
                         '
                 ↓error [ngx.components.UIControlVariable-1773100000112]: 
                   varValue: 
@@ -1696,56 +1919,77 @@ title: Title for LightRag
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-                        		var now = new Date();
-                        		var hh = (''0'' + now.getHours()).slice(-2);
-                        		var mm = (''0'' + now.getMinutes()).slice(-2);
-                        		var idx = this.local.StreamingIndex;
-                        		var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
-                        		if (!target) {
-                        			var i = this.local.Messages ? this.local.Messages.length - 1 : -1;
-                        			for (; i >= 0; i--) {
-                        				if (this.local.Messages[i] && this.local.Messages[i].type === ''assistant'' && this.local.Messages[i].writing === true) {
-                        					target = this.local.Messages[i];
-                        					break;
-                        				}
-                        			}
-                        		}
-                        		if (!target) {
-                        			resolve();
-                        			return;
-                        		}
-                        		var result = vars.response;
-                        		var finalMessage = '''';
-                        		if (result != null) {
-                        			if (typeof result === ''string'') {
-                        				finalMessage = result;
-                        			} else if (result.object && result.object.response != null) {
-                        				finalMessage = '''' + result.object.response;
-                        			}
-                        		}
-                        		if (finalMessage.length) {
-                        			target.msg = finalMessage;
-                        		}
-                        		target.type = ''assistant'';
-                        		target.author = ''Assistant'';
-                        		target.time = hh + '':'' + mm;
-                        		target.tag1 = ''How-To'';
-                        		target.tag2 = ''Convertigo'';
-                        		target.tag3 = ''Guide'';
-                        		target.status = '''';
-                        		target.writing = false;
-                        		this.local.StreamingIndex = null;
-                        		this.local.Buffer = {};
-                        		if (this.local.ProcessingWatchdogId) {
-                        			window.clearTimeout(this.local.ProcessingWatchdogId);
-                        		}
-                        		this.local.ProcessingWatchdogId = null;
-                        		this.local.ProcessingToken = null;
-                        		this.local.IsProcessing = false;
-                        		page.tick();
-                        		page.scrollChatBottom(0);
-                        		resolve();
+                        '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                                var now = new Date();
+                                var hh = (''0'' + now.getHours()).slice(-2);
+                                var mm = (''0'' + now.getMinutes()).slice(-2);
+                                var lang = ''en'';
+                                try {
+                                    if (page.global && page.global.currentLanguage) {
+                                        lang = '''' + (page.global.currentLanguage() || ''en'');
+                                    }
+                                } catch (e1) {}
+                                lang = lang.toLowerCase();
+                                var isFr = lang.indexOf(''fr'') === 0;
+                                var unavailable = isFr ? "La base de connaissances Convertigo n''est pas disponible depuis cette instance.\n\nLe How-To utilise le service LightRAG configuré pour l''assistant hébergé. Utilisez l''assistant hébergé ou configurez le service LightRAG et sa clé sur cette instance." : "The Convertigo knowledge base is not available from this instance.\n\nHow-To uses the LightRAG service configured for the hosted assistant. Use the hosted assistant or configure the LightRAG service and key on this instance.";
+                                var idx = this.local.StreamingIndex;
+                                var target = idx != null && this.local.Messages && this.local.Messages[idx] ? this.local.Messages[idx] : null;
+                                if (!target) {
+                                    var i = this.local.Messages ? this.local.Messages.length - 1 : -1;
+                                    for (; i >= 0; i--) {
+                                        if (this.local.Messages[i] && this.local.Messages[i].type === ''assistant'' && this.local.Messages[i].writing === true) {
+                                            target = this.local.Messages[i];
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!target) {
+                                    resolve();
+                                    return;
+                                }
+                                var result = vars.response;
+                                var finalMessage = '''';
+                                if (result != null) {
+                                    if (typeof result === ''string'') {
+                                        finalMessage = result;
+                                    } else if (result.response != null) {
+                                        finalMessage = '''' + result.response;
+                                    } else if (result.object && result.object.response != null) {
+                                        finalMessage = '''' + result.object.response;
+                                    } else if (result.document && result.document.response != null) {
+                                        finalMessage = '''' + result.document.response;
+                                    }
+                                }
+                                finalMessage = ('''' + finalMessage).trim();
+                                if (finalMessage.length) {
+                                    target.msg = finalMessage;
+                                    target.tag1 = ''How-To'';
+                                    target.tag2 = ''Convertigo'';
+                                    target.tag3 = ''Guide'';
+                                } else {
+                                    target.msg = unavailable;
+                                    target.tag1 = isFr ? ''Erreur'' : ''Error'';
+                                    target.tag2 = ''Convertigo'';
+                                    target.tag3 = ''How-To'';
+                                }
+                                target.type = ''assistant'';
+                                target.author = ''Assistant'';
+                                target.time = hh + '':'' + mm;
+                                target.status = '''';
+                                target.writing = false;
+                                this.local.StreamingIndex = null;
+                                this.local.Buffer = {};
+                                if (this.local.ProcessingWatchdogId) {
+                                    window.clearTimeout(this.local.ProcessingWatchdogId);
+                                }
+                                this.local.ProcessingWatchdogId = null;
+                                this.local.ProcessingToken = null;
+                                this.local.LightRagProgressStartedAt = null;
+                                this.local.LightRagProgressStep = 0;
+                                this.local.IsProcessing = false;
+                                page.tick();
+                                page.scrollChatBottom(0);
+                                resolve();
                         '
                 ↓response [ngx.components.UIControlVariable-1773100000115]: 
                   varValue: 
