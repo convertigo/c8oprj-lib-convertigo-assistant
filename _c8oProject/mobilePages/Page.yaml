@@ -148,6 +148,91 @@ scriptContent:
         		} catch (e3) {}
         		return false;
         	}
+        	public getAssistantUrlSearch() {
+        		try {
+        			if (!(window && window.location)) { return ''''; }
+        			var chunks = [];
+        			var search = String(window.location.search == null ? '''' : window.location.search);
+        			if (search.length) { chunks.push(search.charAt(0) === ''?'' ? search.substring(1) : search); }
+        			var hash = String(window.location.hash == null ? '''' : window.location.hash);
+        			var qIndex = hash.indexOf(''?'');
+        			if (qIndex >= 0 && qIndex < hash.length - 1) { chunks.push(hash.substring(qIndex + 1)); }
+        			return chunks.join(''&'');
+        		} catch (e) {}
+        		return '''';
+        	}
+        
+        	public getAssistantQueryParam(name) {
+        		try {
+        			var raw = this.getAssistantUrlSearch ? this.getAssistantUrlSearch() : '''';
+        			if (!raw.length) { return ''''; }
+        			return '''' + ((new URLSearchParams(raw)).get(name) || '''');
+        		} catch (e) {}
+        		return '''';
+        	}
+        
+        	public getAssistantSurfaceHint() {
+        		var hint = '''';
+        		try { hint = '''' + (this.getAssistantQueryParam(''assistantSurface'') || this.getAssistantQueryParam(''surface'') || this.getAssistantQueryParam(''context'') || ''''); } catch (e) {}
+        		if (!hint.length) {
+        			try { hint = '''' + ((this.global && (this.global.assistantSurface || this.global.assistantContext)) || ''''); } catch (e2) {}
+        		}
+        		return hint.replace(/^\s+|\s+$/g, '''').toLowerCase();
+        	}
+        
+        	public isAssistantRemoteHost() {
+        		try {
+        			if (!(window && window.location)) { return false; }
+        			var host = ('''' + (window.location.hostname || '''')).toLowerCase();
+        			return !!host && host !== ''localhost'' && host !== ''127.0.0.1'' && host !== ''::1'' && host !== ''[::1]'';
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public isStudioAssistantSurface() {
+        		try {
+        			var hint = this.getAssistantSurfaceHint ? this.getAssistantSurfaceHint() : '''';
+        			if (hint === ''admin'' || hint === ''console'' || hint === ''knowledge'' || hint === ''lightrag'') { return false; }
+        			if (hint === ''studio'' || hint === ''java'' || hint === ''eclipse'') { return true; }
+        			if (this.global && this.global.studio === true) { return true; }
+        			if (window && window[''java''] && typeof window[''java''].receiveFromJS === ''function'') { return true; }
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public isServerAgentSurface() {
+        		try {
+        			var hint = this.getAssistantSurfaceHint ? this.getAssistantSurfaceHint() : '''';
+        			if (hint === ''server'' || hint === ''nocode'' || hint === ''c8oforms'') { return true; }
+        			if (this.isTruthyAgentFlag(this.getAssistantQueryParam(''serverAgent'')) || this.isTruthyAgentFlag(this.getAssistantQueryParam(''remoteAgent''))) { return true; }
+        			if (this.global && (this.global.serverAgent === true || this.global.remoteAgent === true || this.global.nocodeAgent === true)) { return true; }
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public hasLocalAgentBridgeCapability() {
+        		try {
+        			if (this.local && this.local.LocalAgentBridge === true) { return true; }
+        			if (this.global && (this.global.localAgent === true || this.global.agentBridgeLocal === true)) { return true; }
+        			if (this.isTruthyAgentFlag(this.getAssistantQueryParam(''localAgent''))) { return true; }
+        			var bridgeUrl = '''' + (this.getAssistantQueryParam(''bridgeBaseUrl'') || this.getAssistantQueryParam(''agentBridgeUrl'') || this.getAssistantQueryParam(''assistantLocalUrl'') || '''');
+        			bridgeUrl = bridgeUrl.toLowerCase();
+        			return bridgeUrl.indexOf(''localhost'') !== -1 || bridgeUrl.indexOf(''127.0.0.1'') !== -1 || bridgeUrl.indexOf(''[::1]'') !== -1;
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public shouldBlockRemoteStudioAgent() {
+        		try {
+        			return !!(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.isStudioAssistantSurface && this.isStudioAssistantSurface() && this.isAssistantRemoteHost && this.isAssistantRemoteHost() && !(this.hasLocalAgentBridgeCapability && this.hasLocalAgentBridgeCapability()) && !(this.isServerAgentSurface && this.isServerAgentSurface()));
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public isAgentBridgeOperational() {
+        		return !!(this.isAgentBridgeMode && this.isAgentBridgeMode() && !(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()));
+        	}
+        
         	public isLegacyComponentMode() {
         		return !(this.isAgentBridgeMode && this.isAgentBridgeMode());
         	}
@@ -156,24 +241,39 @@ scriptContent:
         	}
         	public getIntroTitle() {
         		var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "";
+        		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			return project.length ? (this.t("Agent_Local_Activation_Title_Project", "Activer l''agent local pour le projet") + " " + project) : this.t("Agent_Local_Activation_Title", "Activer l''agent local");
+        		}
         		if (this.isAgentBridgeMode()) {
         			return project.length ? (this.t("Agent_New_Title_Project", "Que devrions-nous construire pour le projet") + " " + project + " ?") : this.t("Agent_New_Title", "Que devrions-nous construire ?");
         		}
         		return this.t("Welcome_to_Convertigo_AI_Assistant", "Bienvenue dans l''assistant IA de composants Convertigo");
         	}
         	public getIntroCopy1() {
+        		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			return this.t("Agent_Local_Activation_Copy", "Cette page est servie depuis un serveur distant. Pour agir sur les projets du Studio, l''agent doit utiliser la stack locale Convertigo.");
+        		}
         		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Copy", "Demandez une correction, une amélioration ou une explication sur le projet sélectionné.") : this.t("AI_Assistant_Intro", "Décrivez le composant dont vous avez besoin et laissez l''assistant le générer pour vous.");
         	}
         	public getIntroCopy2() {
+        		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			return this.t("Agent_Local_Activation_Details", "Ouvrez l''assistant local ou installez Convertigo Studio 8.4.4+ avec Convertigo MCP, Convertigo Agent Bridge et Convertigo Assistant.");
+        		}
         		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Local", "L''agent utilise les outils Convertigo locaux quand ils sont disponibles.") : this.t("AI_Assistant_Intro_Details", "L''assistant génère des shared components prêts à intégrer dans votre application NGX.");
         	}
         	public getStartCardTitle() {
+        		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			return this.t("Agent_Local_Required_Title", "Agent local requis");
+        		}
         		if (!this.isAgentBridgeMode()) {
         			return this.t("Start", "Commencer");
         		}
         		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Previous_Conversations", "Conversations précédentes") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation", "Conversation en cours") : this.t("New_Conversation", "Nouvelle conversation"));
         	}
         	public getStartCardCopy() {
+        		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			return this.t("Agent_Local_Required_Copy", "L''Agent IA ne peut pas utiliser le bridge distant pour modifier un workspace Studio. Ouvrez l''assistant local ou mettez à jour le Studio pour activer la stack locale.");
+        		}
         		if (!this.isAgentBridgeMode()) {
         			return this.t("Start_Component_Assistant_Copy", "Décrivez le composant dont vous avez besoin et laissez l''assistant de composants Convertigo le générer pour vous.");
         		}
@@ -341,6 +441,9 @@ scriptContent:
             return false;
         }
         public shouldShowAgentSettingsPanel() {
+            if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+                return false;
+            }
             if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) {
                 return false;
             }
@@ -437,6 +540,9 @@ scriptContent:
             return value.length ? value : "Codex default";
         }
         public hasConversationContent() {
+            if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+                return false;
+            }
             if (!this.local) {
                 return false;
             }
@@ -461,6 +567,9 @@ scriptContent:
             return this.cleanProjectName(this.local.Conversation).length > 0;
         }
         public shouldShowInitialSuggestions() {
+            if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+                return false;
+            }
             if (!this.local || this.local.IsProcessing === true) {
                 return false;
             }
@@ -904,6 +1013,14 @@ scriptContent:
         		}
         	}
         	public setEnableChat() {
+        		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			if (!this.local) { this.local = {}; }
+        			this.local.EnableChat = false;
+        			this.local.QuestionPlaceholder = this.t("Agent_Local_Disabled_Placeholder", "Activez l''assistant local pour utiliser l''Agent IA dans le Studio.");
+        			try { if (this.chatfooter && this.chatfooter.setEnable) { this.chatfooter.setEnable(false); } } catch (e0) {}
+        			this.tick();
+        			return;
+        		}
         		if (this.global && this.global.studio) {
         			var enable = this.isEditionMode() || this.getEffectiveProjectName().length > 0;
         			if (!this.local) {
@@ -3609,7 +3726,7 @@ title: Convertigo assistant
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentCreateConversation'' : ''ConvertigoAssistant.CreateConversation''",
+           "requestable": "script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''ConvertigoAssistant.GetVersion'' : ((this.isAgentBridgeOperational && this.isAgentBridgeOperational()) ? ''ConvertigoAssistant.AgentCreateConversation'' : ''ConvertigoAssistant.CreateConversation'')",
            "noLoading": "plain:true"
           }'
         ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
@@ -4727,7 +4844,7 @@ title: Convertigo assistant
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentReadResponse'' : ''ConvertigoAssistant.ReadResponse''",
+           "requestable": "script:(this.isAgentBridgeOperational && this.isAgentBridgeOperational()) ? ''ConvertigoAssistant.AgentReadResponse'' : ''ConvertigoAssistant.ReadResponse''",
            "noLoading": "plain:true"
           }'
         ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
@@ -5137,7 +5254,7 @@ title: Convertigo assistant
                   beanData: |
                     '{
                      "ionBean": "CallSequenceAction",
-                     "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentSendMessage'' : ''ConvertigoAssistant.SendMessage''",
+                     "requestable": "script:(this.isAgentBridgeOperational && this.isAgentBridgeOperational()) ? ''ConvertigoAssistant.AgentSendMessage'' : ''ConvertigoAssistant.SendMessage''",
                      "noLoading": "plain:true"
                     }'
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
@@ -5241,7 +5358,7 @@ title: Convertigo assistant
                       beanData: |
                         '{
                          "ionBean": "CallSequenceAction",
-                         "requestable": "script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''ConvertigoAssistant.AgentReadResponse'' : ''ConvertigoAssistant.ReadResponse''",
+                         "requestable": "script:(this.isAgentBridgeOperational && this.isAgentBridgeOperational()) ? ''ConvertigoAssistant.AgentReadResponse'' : ''ConvertigoAssistant.ReadResponse''",
                          "noLoading": "plain:true"
                         }'
                       ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
@@ -5559,7 +5676,7 @@ title: Convertigo assistant
                     page.tick();
                     resolve();'
     ↓SwitchProjectIf [ngx.components.UIDynamicAction-1782139100462]: 
-      beanData: '{"ionBean":"IfAction","condition":"script:this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && this.local.ProjectSelectionChanged === true && this.local.EnableChat !== false"}'
+      beanData: '{"ionBean":"IfAction","condition":"script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() && this.local && this.local.ProjectSelectionChanged === true && this.local.EnableChat !== false"}'
       ↓ReloadProjectConversation [ngx.components.UIDynamicAction-1782139101968]: 
         beanData: |
           '{

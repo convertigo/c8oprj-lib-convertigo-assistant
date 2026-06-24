@@ -93,6 +93,12 @@ tagName: ion-menu
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: script:isComponentAssistantSelected((selectedPath$ | async) || '')
+      ↓VisibilityContext [ngx.components.UIAttribute-1782289340794]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:!canShowStudioBridgeAssistants()
     ↓AgentItem [ngx.components.UIDynamicElement-1782236319579]: 
       beanData: |
         '{
@@ -127,6 +133,12 @@ tagName: ion-menu
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: script:isAgentAssistantSelected((selectedPath$ | async) || '')
+      ↓VisibilityContext [ngx.components.UIAttribute-1782289349202]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:!canShowAgentAssistantEntry()
     ↓FigmaItem [ngx.components.UIDynamicElement-1753180404710]: 
       beanData: |
         '{
@@ -163,6 +175,12 @@ tagName: ion-menu
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: script:((selectedPath$ | async) || '').startsWith('/path-to-figma')
+      ↓VisibilityContext [ngx.components.UIAttribute-1782289344998]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:!canShowStudioBridgeAssistants()
 ↓Footer [ngx.components.UIDynamicElement-1750663875479]: 
   beanData: '{"ionBean":"Footer"}'
   tagName: ion-footer

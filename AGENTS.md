@@ -73,6 +73,16 @@ rediscovering the same context.
 - No WebSocket dependency for now. Use the existing long-polling path for agent
   event reads.
 - Keep polling reasonable; avoid noisy idle polling in Studio logs.
+- Runtime surface must drive navigation and capabilities:
+  - Admin Console / knowledge context shows only the How-To assistant.
+  - Studio Java bridge context may show How-To, component assistant, Figma, and
+    Agent IA.
+  - Server/NoCode Agent IA is allowed only when an explicit server/no-code
+    capability flag is provided; never infer it from the remote host alone.
+- `agentBridge=1` is not enough to call the bridge. If the Assistant is served
+  remotely inside Studio and no local bridge capability/local URL is provided,
+  show an integrated local-agent activation message and do not call the remote
+  beta/prod bridge.
 - Conversation management must expose resume/delete/new conversation flows and
   show useful metadata such as provider, model, state, and creation time.
 - Image attachment from files exists; clipboard image paste is a desired feature.

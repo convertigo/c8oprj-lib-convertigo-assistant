@@ -146,6 +146,126 @@ componentScriptContent:
         		var value = this.getFullSelectedPath(selectedPath);
         		return value.indexOf(''/path-to-xfirst'') === 0 && value.indexOf(''agentBridge=1'') === -1;
         	}
+        	
+        	isTruthyAssistantContextFlag(value) {
+        		var text = ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''').toLowerCase();
+        		return text === ''1'' || text === ''true'' || text === ''yes'' || text === ''on'' || text === ''studio'' || text === ''server'' || text === ''nocode'';
+        	}
+        
+        	getAssistantUrlSearch() {
+        		try {
+        			if (!(window && window.location)) {
+        				return '''';
+        			}
+        			var chunks = [];
+        			var search = String(window.location.search == null ? '''' : window.location.search);
+        			if (search.length) {
+        				chunks.push(search.charAt(0) === ''?'' ? search.substring(1) : search);
+        			}
+        			var hash = String(window.location.hash == null ? '''' : window.location.hash);
+        			var qIndex = hash.indexOf(''?'');
+        			if (qIndex >= 0 && qIndex < hash.length - 1) {
+        				chunks.push(hash.substring(qIndex + 1));
+        			}
+        			return chunks.join(''&'');
+        		} catch (e) {}
+        		return '''';
+        	}
+        
+        	getAssistantQueryParam(name) {
+        		try {
+        			var raw = this.getAssistantUrlSearch();
+        			if (!raw.length) {
+        				return '''';
+        			}
+        			var params = new URLSearchParams(raw);
+        			return '''' + (params.get(name) || '''');
+        		} catch (e) {}
+        		return '''';
+        	}
+        
+        	getAssistantSurfaceHint() {
+        		var hint = '''';
+        		try {
+        			hint = '''' + (this.getAssistantQueryParam(''assistantSurface'') || this.getAssistantQueryParam(''surface'') || this.getAssistantQueryParam(''context'') || '''');
+        		} catch (e) {}
+        		if (!hint.length) {
+        			try {
+        				hint = '''' + ((this.global && (this.global.assistantSurface || this.global.assistantContext)) || '''');
+        			} catch (e2) {}
+        		}
+        		return hint.replace(/^\s+|\s+$/g, '''').toLowerCase();
+        	}
+        
+        	isAssistantAdminSurface() {
+        		try {
+        			var hint = this.getAssistantSurfaceHint();
+        			if (hint === ''admin'' || hint === ''console'' || hint === ''knowledge'' || hint === ''lightrag'') {
+        				return true;
+        			}
+        			if (hint === ''studio'' || hint === ''server'' || hint === ''nocode'') {
+        				return false;
+        			}
+        			if (this.global && (this.global.adminConsole === true || this.global.adminAssistant === true)) {
+        				return true;
+        			}
+        			if (window && window.location) {
+        				var path = ('''' + (window.location.pathname || '''')).toLowerCase();
+        				return path.indexOf(''/admin/assistant'') !== -1;
+        			}
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	isAssistantStudioSurface() {
+        		try {
+        			if (this.isAssistantAdminSurface()) {
+        				return false;
+        			}
+        			var hint = this.getAssistantSurfaceHint();
+        			if (hint === ''studio'' || hint === ''java'' || hint === ''eclipse'') {
+        				return true;
+        			}
+        			if (hint === ''admin'' || hint === ''console'' || hint === ''knowledge'' || hint === ''lightrag'') {
+        				return false;
+        			}
+        			if (this.global && this.global.studio === true) {
+        				return true;
+        			}
+        			if (window && window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
+        				return true;
+        			}
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	isAssistantServerAgentSurface() {
+        		try {
+        			if (this.isAssistantAdminSurface()) {
+        				return false;
+        			}
+        			var hint = this.getAssistantSurfaceHint();
+        			if (hint === ''server'' || hint === ''nocode'' || hint === ''c8oforms'') {
+        				return true;
+        			}
+        			if (this.isTruthyAssistantContextFlag(this.getAssistantQueryParam(''serverAgent'')) || this.isTruthyAssistantContextFlag(this.getAssistantQueryParam(''remoteAgent''))) {
+        				return true;
+        			}
+        			if (this.global && (this.global.serverAgent === true || this.global.remoteAgent === true || this.global.nocodeAgent === true)) {
+        				return true;
+        			}
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	canShowStudioBridgeAssistants() {
+        		return this.isAssistantStudioSurface();
+        	}
+        
+        	canShowAgentAssistantEntry() {
+        		return this.isAssistantStudioSurface() || this.isAssistantServerAgentSurface();
+        	}
+        
         	/*End_c8o_AppFunction*/
         /*Begin_c8o_function:CTS1747213325348*/
         		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
