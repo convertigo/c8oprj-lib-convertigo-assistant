@@ -2250,10 +2250,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options = options || {};
     var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
     var providerFilter = providerSelector === "all" ? "" : providerSelector;
+    var explicitProject = trim(projectFilter || options.targetProject || options.projectName || options.projectId);
     var payload = {
       provider: providerFilter,
       workspaceRoot: workspaceRoot || resolveWorkspaceRoot(options),
-      projectId: projectFilter || trim(options.targetProject || options.projectName || options.projectId),
+      projectId: explicitProject,
       userId: trim(options.userId) || userKey || "studio",
       conversationId: normalizeConversationId(options.threadid || options.conversationId),
       mcpEndpoint: trim(options.mcpEndpoint) || defaultMcpEndpoint(),
@@ -2430,13 +2431,45 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var includeSettings = boolValue(options.includeSettings, true);
     var requestedThreadId = normalizeThreadId(options.threadid);
     var resumedLatest = false;
-    if (!requestedThreadId.length && !boolValue(options.forceNew, false)) {
+    var hasQuestion = trim(options.Question || options.question || options.userQuestion).length > 0;
+    var shouldResumeLatest = boolValue(options.resumeLatest, false);
+    if (!requestedThreadId.length && !boolValue(options.forceNew, false) && shouldResumeLatest) {
       var latest = latestConversationRecord(workspaceRoot, userKey, projectFilter, provider);
       if (latest !== null) {
         requestedThreadId = normalizeConversationId(latest.conversationId || latest.threadid);
         options.threadid = requestedThreadId;
         resumedLatest = requestedThreadId.length > 0;
       }
+    }
+    if (!requestedThreadId.length && !boolValue(options.forceNew, false) && !hasQuestion) {
+      setBuffer("", "");
+      var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      var resolvedProvider = provider === "all" ? "" : provider;
+      return {
+        ok: true,
+        id: "",
+        object: "agent.conversation",
+        provider: resolvedProvider,
+        model: "",
+        status: provider === "all" ? "agent_selection_required" : "new_conversation_ready",
+        setupRequired: false,
+        requiresAgentSelection: provider === "all",
+        resumed: false,
+        state: null,
+        conversation: null,
+        conversations: publicConversations(workspaceRoot, userKey, "", false, "all"),
+        settings: previewSettings,
+        AIData: {
+          type: "agent",
+          threadid: "",
+          explanation: "",
+          progress: "",
+          setupRequired: false,
+          setup: null,
+          warnings: [],
+          messages: []
+        }
+      };
     }
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
@@ -2453,7 +2486,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         resumed: false,
         state: null,
         conversation: null,
-        conversations: publicConversations(workspaceRoot, userKey, projectFilter, false, "all"),
+        conversations: publicConversations(workspaceRoot, userKey, "", false, "all"),
         settings: emptySettings,
         AIData: {
           type: "agent",
@@ -2498,7 +2531,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       resumed: resumedLatest || requestedThreadId.length > 0,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
-      conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all"),
+      conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all"),
       settings: includeSettings ? agentSettingsForOptions(options, state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, state.provider) : null,
       AIData: conversationAIData(state, options.historyLimit)
     };
@@ -2524,7 +2557,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         reasoning: ""
       },
       providers: settings.providers || [],
-      conversations: publicConversations(workspaceRoot, userKey, projectFilter, false, "all"),
+      conversations: publicConversations(workspaceRoot, userKey, "", false, "all"),
       timestamp: now()
     };
   };
@@ -3123,7 +3156,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
-      conversations: publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all"),
+      conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all"),
       AIData: conversationAIData(state, options.historyLimit)
     };
   };
@@ -3165,7 +3198,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     removeState(threadid);
     var dir = new File(state.conversationDir);
     var deleted = deleteRecursively(dir);
-    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, false, "all");
+    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all");
     setBuffer("", "");
     return {
       ok: deleted,

@@ -32,7 +32,9 @@ rediscovering the same context.
   it usable in a narrow Studio/C8Oforms drawer.
 - Keep conversation management in a compact top cartouche or popover, not in a
   permanent left sidebar. Show provider, model, state, and creation time.
-- New conversations must ask for agent provider, model, and reasoning level.
+- Agent provider selection is a global setting exposed in the agent management
+  panel/drawer, not in the prompt footer and not asked again for every new
+  conversation. Model and reasoning remain lightweight prompt/runtime controls.
   The Convertigo Generalist skill remains forced and invisible to the user.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
@@ -52,6 +54,9 @@ rediscovering the same context.
   ending with `codex-home`, not `.codex-home`.
 - Do not auto-start Vibe when no conversation exists; the user should be able to
   choose the agent/provider for a new conversation.
+- Do not auto-resume the latest conversation on view startup. Startup should
+  prepare settings and list conversations; the first prompt creates a new
+  conversation unless an explicit conversation is resumed.
 
 ## UI Expectations
 
@@ -79,8 +84,10 @@ rediscovering the same context.
     Agent IA.
   - C8Oforms / NoCode context should open Agent IA by default through the
     Assistant iframe with `assistantContext=nocode`, `agentProfile=nocode`,
-    `targetProject=C8Oforms`, the authenticated `userId`, and `user` home
-    scopes for Codex and Vibe.
+    the authenticated `userId`, `projectContext=optional`, and `user` home
+    scopes for Codex and Vibe. Do not force a working project from the iframe;
+    conversations are user/agent/conversation scoped and projects are only
+    metadata when explicitly selected or inferred from the conversation.
   - Server/NoCode Agent IA is allowed only when an explicit server/no-code
     capability flag is provided; never infer it from the remote host alone.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
@@ -89,6 +96,10 @@ rediscovering the same context.
   beta/prod bridge.
 - Conversation management must expose resume/delete/new conversation flows and
   show useful metadata such as provider, model, state, and creation time.
+- Conversations are scoped by user and agent/conversation id. Projects are
+  optional metadata (`projectNames`, `primaryProject`) and must not be inferred
+  from an unrelated Studio or NoCode selection unless the caller explicitly asks
+  for current/selected project context.
 - Image attachment from files exists; clipboard image paste is a desired feature.
 
 ## Validation

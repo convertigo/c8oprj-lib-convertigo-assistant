@@ -286,7 +286,7 @@ scriptContent:
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
         			return this.t("Agent_Local_Activation_Copy", "Cette page est servie depuis un serveur distant. Pour agir sur les projets du Studio, l''agent doit utiliser la stack locale Convertigo.");
         		}
-        		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Copy", "Demandez une correction, une amélioration ou une explication sur le projet sélectionné.") : this.t("AI_Assistant_Intro", "Décrivez le composant dont vous avez besoin et laissez l''assistant le générer pour vous.");
+        		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Copy", "Demandez une correction, une amélioration ou une explication.") : this.t("AI_Assistant_Intro", "Décrivez le composant dont vous avez besoin et laissez l''assistant le générer pour vous.");
         	}
         	public getIntroCopy2() {
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
@@ -310,7 +310,7 @@ scriptContent:
         		if (!this.isAgentBridgeMode()) {
         			return this.t("Start_Component_Assistant_Copy", "Décrivez le composant dont vous avez besoin et laissez l''assistant de composants Convertigo le générer pour vous.");
         		}
-        		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Conversation_List_Copy", "Reprenez ou supprimez une conversation existante.") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation_Copy", "Continuez cette conversation ou ouvrez la liste pour en choisir une autre.") : ((this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? this.t("Agent_Setup_Copy", "Choisissez ou préparez l''agent pour ce projet.") : this.t("New_Conversation_Copy", "Envoyez un premier message pour démarrer une nouvelle conversation sur le projet sélectionné.")));
+        		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Conversation_List_Copy", "Reprenez ou supprimez une conversation existante.") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation_Copy", "Continuez cette conversation ou ouvrez la liste pour en choisir une autre.") : ((this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? this.t("Agent_Setup_Copy", "Choisissez ou préparez l''agent.") : this.t("New_Conversation_Copy", "Envoyez un premier message pour démarrer une nouvelle conversation.")));
         	}
         	getNoProjectSelectedMessage() {
         		return this.isAgentBridgeMode && this.isAgentBridgeMode() ? this.t("Agent_Project_Select_Required", "Sélectionnez un projet NGX.") : this.t("Project_Select_Required", "Sélectionnez un projet NGX.");
@@ -486,9 +486,6 @@ scriptContent:
             if (this.local.ShowAgentConfigPanel === true) {
                 return true;
             }
-            if (!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)) {
-                return false;
-            }
             return !this.hasReadyAgentProvider(this.getAgentProvider());
         }
         public getAgentModelOptions(provider = null) {
@@ -621,7 +618,7 @@ scriptContent:
             return this.hasReadyAgentProvider ? this.hasReadyAgentProvider(this.getAgentProvider()) : true;
         }
         public getNewConversationLabel() {
-            var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "le projet sélectionné";
+            var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "sans projet";
             return "Nouvelle conversation · " + this.getAgentProviderLabel() + " · " + this.getAgentModelLabel() + " · " + project;
         }
         public getConversationAgentLabel(conversation) {
@@ -740,27 +737,29 @@ scriptContent:
         			}
         		} catch (e0) {}
         		try {
-        			project = this.cleanProjectName(this.global && this.global.projectName);
-        			if (project.length) {
-        				return project;
-        			}
-        		} catch (e) {}
-        		try {
         			project = this.cleanProjectName(this.local && this.local.ConversationProject);
         			if (project.length) {
         				return project;
         			}
         		} catch (e2) {}
-        		return this.getConversationProjectFromList(null);
+        		try {
+        			var mode = this.cleanProjectName(this.getAssistantQueryParam(''projectContext'') || this.getAssistantQueryParam(''projectMode'') || this.getAssistantQueryParam(''defaultProject'') || '''').toLowerCase();
+        			var allowAmbient = mode === ''selected'' || mode === ''current'' || mode === ''studio'';
+        			if (allowAmbient || !(this.isAgentBridgeMode && this.isAgentBridgeMode())) {
+        				project = this.cleanProjectName(this.global && this.global.projectName);
+        				if (project.length) {
+        					return project;
+        				}
+        			}
+        		} catch (e) {}
+        		return "";
         	}
         	public setConversationProject(project) {
         		if (!this.local) {
         			this.local = {};
         		}
         		var value = this.cleanProjectName(project);
-        		if (value.length) {
-        			this.local.ConversationProject = value;
-        		}
+        		this.local.ConversationProject = value.length ? value : "";
         		return value;
         	}
         	public setConversationProjectFromData(data, state) {
@@ -768,10 +767,8 @@ scriptContent:
         		if (!project.length) {
         			project = this.getConversationProjectFromList(data && data.id ? data.id : null);
         		}
-        		if (project.length) {
-        			this.setConversationProject(project);
-        			this.setEnableChat();
-        		}
+        		this.setConversationProject(project);
+        		this.setEnableChat();
         		return project;
         	}
         		syncFooterPlaceholder() {
@@ -1061,7 +1058,7 @@ scriptContent:
         			return;
         		}
         		if (this.global && this.global.studio) {
-        			var enable = this.isEditionMode() || this.getEffectiveProjectName().length > 0;
+        			var enable = this.isAgentBridgeMode && this.isAgentBridgeMode() ? (!(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel())) : (this.isEditionMode() || this.getEffectiveProjectName().length > 0);
         			if (!this.local) {
         				this.local = {};
         			}
@@ -1084,7 +1081,7 @@ scriptContent:
         			}
         			var project = this.getEffectiveProjectName();
         			if (!project.length) {
-                        return this.getNoProjectSelectedMessage();
+        				return (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? "" : this.getNoProjectSelectedMessage();
         			}
                     return project;
         		}
@@ -2000,7 +1997,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.Conversation) ? (this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (''Session '' + ('''' + this.local.Conversation).substring(0, 8))) : (''Choisissez un agent pour le projet '' + ((this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : ''sélectionné''))'
+                      - MobileSmartSourceType: 'script:(this.local && this.local.Conversation) ? (this.getCurrentConversationMetaLabel ? this.getCurrentConversationMetaLabel() : (''Session '' + ('''' + this.local.Conversation).substring(0, 8))) : ''Choisissez l’agent à utiliser pour cette conversation'''
             ↓Chevron [ngx.components.UIDynamicElement-1781676585879]: 
               beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
               tagName: ion-icon
@@ -2522,7 +2519,7 @@ title: Convertigo assistant
                 beanData: |
                   '{
                    "ionBean": "Button",
-                   "Disabled": "script:!(this.getEffectiveProjectName && this.getEffectiveProjectName().length > 0)",
+                   "Disabled": "script:false",
                    "IonFill": "plain:clear",
                    "IonSize": "plain:small"
                   }'
@@ -2560,11 +2557,6 @@ title: Convertigo assistant
                         - com.twinsoft.convertigo.beans.common.FormatedContent: 
                           →: |
                             '        var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
-                                    if (!project.length) {
-                                        page.setEnableChat();
-                                        resolve();
-                                        return;
-                                    }
                                     if (!page.local) {
                                         page.local = {};
                                     }
@@ -5799,50 +5791,13 @@ title: Convertigo assistant
                         return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
                     };
                     var selected = clean(page.global && page.global.projectName);
-                    var previous = clean(page.local.CurrentStudioProject || page.local.ConversationProject);
+                    page.local.CurrentStudioProject = selected;
                     page.local.ProjectSelectionChanged = false;
                     page.setEnableChat();
-                    if (!selected.length) {
-                        page.local.CurrentStudioProject = "";
-                        page.local.ConversationProject = "";
-                        page.local.Conversation = "";
-                        page.local.RunID = "";
-                        page.local.Messages = [];
-                        page.local.AgentConversations = [];
-                        page.local.AgentConversationResumed = false;
-                        page.local.ShowScrollTopButton = false;
-                        page.local.ShowScrollBottomButton = false;
-                        page.local.ProjectSelectionChanged = false;
-                        page.tick();
-                        resolve();
-                        return;
-                    }
-                    if (selected !== previous) {
-                        page.local.CurrentStudioProject = selected;
-                        page.local.ConversationProject = selected;
-                        page.local.Conversation = "";
-                        page.local.RunID = "";
-                        page.local.Messages = [];
-                        page.local.Buffer = {};
-                        page.local.StreamingIndex = null;
-                        page.local.IsProcessing = false;
-                        page.local.AgentProgressHistory = [];
-                        page.local.AgentProgressHistoryRunId = "";
-                        page.local.AgentConversationResumed = false;
-                        page.local.ShowConversationPanel = false;
-                        page.local.NewConversationMode = true;
-                        page.local.ShowAgentConfigPanel = false;
-                        page.local.ConversationStarted = false;
-                        page.local.ShowScrollTopButton = false;
-                        page.local.ShowScrollBottomButton = false;
-                        page.local.AgentProvider = page.getAgentProvider ? page.getAgentProvider() : "";
-                        page.local.AgentModel = page.getAgentModel ? page.getAgentModel() : "";
-                        page.local.ProjectSelectionChanged = true;
-                    }
                     page.tick();
                     resolve();'
     ↓SwitchProjectIf [ngx.components.UIDynamicAction-1782139100462]: 
-      beanData: '{"ionBean":"IfAction","condition":"script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() && this.local && this.local.ProjectSelectionChanged === true && this.local.EnableChat !== false"}'
+      beanData: '{"ionBean":"IfAction","condition":"script:false"}'
       ↓ReloadProjectConversation [ngx.components.UIDynamicAction-1782139101968]: 
         beanData: |
           '{
