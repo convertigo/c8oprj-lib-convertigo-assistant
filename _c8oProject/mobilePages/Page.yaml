@@ -171,6 +171,39 @@ scriptContent:
         		return '''';
         	}
         
+        	public getAgentContextUserId() {
+        		var value = '''';
+        		try { value = '''' + (this.getAssistantQueryParam(''userId'') || this.getAssistantQueryParam(''agentUserId'') || this.getAssistantQueryParam(''user'') || ''''); } catch (e) {}
+        		if (!value.length) { try { value = '''' + ((this.global && (this.global.user || this.global.email || this.global.login)) || ''''); } catch (e2) {} }
+        		value = value.replace(/^\s+|\s+$/g, '''');
+        		var lower = value.toLowerCase();
+        		if (!value.length || lower === ''unknown user'' || lower === ''anonymous'' || lower === ''undefined'' || lower === ''null'') {
+        			value = ''studio'';
+        		}
+        		return value;
+        	}
+        
+        	public getAgentHomeScope(provider) {
+        		var name = '''';
+        		try { name = ('''' + (provider || (this.getAgentProvider ? this.getAgentProvider() : ''''))).replace(/^\s+|\s+$/g, '''').toLowerCase(); } catch (e) {}
+        		var key = name === ''vibe'' ? ''vibeHomeScope'' : ''codexHomeScope'';
+        		var value = '''';
+        		try { value = '''' + (this.getAssistantQueryParam(key) || this.getAssistantQueryParam(''homeScope'') || ''''); } catch (e2) {}
+        		value = value.replace(/^\s+|\s+$/g, '''').toLowerCase();
+        		if (value === ''shared'' || value === ''workspace'' || value === ''conversation'' || value === ''default'') {
+        			return value;
+        		}
+        		return ''user'';
+        	}
+        
+        	public getAgentSkillProfile() {
+        		var value = '''';
+        		try { value = '''' + (this.getAssistantQueryParam(''agentProfile'') || this.getAssistantQueryParam(''skillProfile'') || this.getAssistantQueryParam(''assistantContext'') || this.getAssistantQueryParam(''assistantSurface'') || ''''); } catch (e) {}
+        		value = value.replace(/^\s+|\s+$/g, '''').toLowerCase();
+        		if (value === ''nocode'' || value === ''c8oforms'' || value === ''forms'') { return ''nocode''; }
+        		return '''';
+        	}
+        
         	public getAssistantSurfaceHint() {
         		var hint = '''';
         		try { hint = '''' + (this.getAssistantQueryParam(''assistantSurface'') || this.getAssistantQueryParam(''surface'') || this.getAssistantQueryParam(''context'') || ''''); } catch (e) {}
@@ -700,6 +733,12 @@ scriptContent:
         	}
         	public getEffectiveProjectName() {
         		var project = "";
+        		try {
+        			project = this.cleanProjectName(this.getAssistantQueryParam(''targetProject'') || this.getAssistantQueryParam(''projectName'') || this.getAssistantQueryParam(''project'') || '''');
+        			if (project.length) {
+        				return project;
+        			}
+        		} catch (e0) {}
         		try {
         			project = this.cleanProjectName(this.global && this.global.projectName);
         			if (project.length) {
@@ -2566,10 +2605,17 @@ title: Convertigo assistant
                                     var payload: any = {
                                         ''threadid'': page.local.Conversation || '''',
                                         ''targetProject'': project,
+                                        ''projectName'': project,
                                         ''provider'': provider,
                                         ''model'': model,
                                         ''reasoningEffort'': reasoningEffort,
                                         ''serviceTier'': serviceTier,
+                                        ''userId'': page.getAgentContextUserId ? page.getAgentContextUserId() : ''studio'',
+                                        ''codexHomeScope'': page.getAgentHomeScope ? page.getAgentHomeScope(''codex'') : ''user'',
+                                        ''vibeHomeScope'': page.getAgentHomeScope ? page.getAgentHomeScope(''vibe'') : ''user'',
+                                        ''homeScope'': page.getAgentHomeScope ? page.getAgentHomeScope(provider) : ''user'',
+                                        ''agentProfile'': page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
+                                        ''skillProfile'': page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
                                         ''install'': true,
                                         ''__context'': ''byside''
                                     };
@@ -2954,6 +3000,11 @@ title: Convertigo assistant
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+                              ↓userId [ngx.components.UIControlVariable-1782407708971]: 
+                                varValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
                           ↓SetConversationProject [ngx.components.UIDynamicAction-1781676328041]: 
                             beanData: |
                               '{
@@ -2970,6 +3021,36 @@ title: Convertigo assistant
                                       		page.setEnableChat();
                                       		page.closeConversationsPanel();
                                       		resolve();
+                          ↓userId [ngx.components.UIControlVariable-1782407698247]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+                          ↓codexHomeScope [ngx.components.UIControlVariable-1782407700033]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''codex'') : ''user'''
+                          ↓vibeHomeScope [ngx.components.UIControlVariable-1782407701821]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''vibe'') : ''user'''
+                          ↓homeScope [ngx.components.UIControlVariable-1782407703611]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope((this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ''codex'')) : ''user'''
+                          ↓agentProfile [ngx.components.UIControlVariable-1782407705403]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+                          ↓skillProfile [ngx.components.UIControlVariable-1782407707197]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
                     ↓DeleteButton [ngx.components.UIDynamicElement-1781608122143]: 
                       beanData: |
                         '{
@@ -3943,6 +4024,11 @@ title: Convertigo assistant
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+                ↓userId [ngx.components.UIControlVariable-1782407710745]: 
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
         ↓targetProject [ngx.components.UIControlVariable-1781590187587]: 
           varValue: 
             - xmlizable: 
@@ -4075,6 +4161,41 @@ title: Convertigo assistant
              "Property": "plain:AgentServiceTier",
              "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.serviceTier\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
+        ↓userId [ngx.components.UIControlVariable-1782407660593]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+        ↓codexHomeScope [ngx.components.UIControlVariable-1782407662385]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''codex'') : ''user'''
+        ↓vibeHomeScope [ngx.components.UIControlVariable-1782407664179]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''vibe'') : ''user'''
+        ↓homeScope [ngx.components.UIControlVariable-1782407665975]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope((this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ''codex'')) : ''user'''
+        ↓agentProfile [ngx.components.UIControlVariable-1782407667773]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+        ↓skillProfile [ngx.components.UIControlVariable-1782407669573]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+        ↓projectName [ngx.components.UIControlVariable-1782407671375]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
   ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
     actionValue: 
       - xmlizable: 
@@ -4874,6 +4995,11 @@ title: Convertigo assistant
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+        ↓userId [ngx.components.UIControlVariable-1782407712519]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
       ↓Else_Handler [ngx.components.UIActionElseEvent-1744618173305]: 
         ↓SetLocal [ngx.components.UIDynamicAction-1744618189222]: 
           beanData: |
@@ -5388,6 +5514,11 @@ title: Convertigo assistant
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+                      ↓userId [ngx.components.UIControlVariable-1782407714293]: 
+                        varValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
                   ↓targetProject [ngx.components.UIControlVariable-1781590190599]: 
                     varValue: 
                       - xmlizable: 
@@ -5408,6 +5539,41 @@ title: Convertigo assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:this.local && this.local.AgentServiceTier != null ? this.local.AgentServiceTier : '''''
+                  ↓userId [ngx.components.UIControlVariable-1782407685669]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+                  ↓codexHomeScope [ngx.components.UIControlVariable-1782407687463]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''codex'') : ''user'''
+                  ↓vibeHomeScope [ngx.components.UIControlVariable-1782407689259]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''vibe'') : ''user'''
+                  ↓homeScope [ngx.components.UIControlVariable-1782407691057]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope((this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ''codex'')) : ''user'''
+                  ↓agentProfile [ngx.components.UIControlVariable-1782407692857]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+                  ↓skillProfile [ngx.components.UIControlVariable-1782407694659]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+                  ↓projectName [ngx.components.UIControlVariable-1782407696463]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
         ↓attachments [ngx.components.UIControlVariable-1751373371973]: 
           varValue: 
             - xmlizable: 
@@ -5488,7 +5654,7 @@ title: Convertigo assistant
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:'studio'
+              - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
       ↓StopUiState [ngx.components.UICustomAction-1781872839642]: 
         actionValue: 
           - xmlizable: 
@@ -5846,6 +6012,46 @@ title: Convertigo assistant
                    "topic": "plain:AssistantResponse",
                    "async": "plain:false"
                   }'
+              ↓userId [ngx.components.UIControlVariable-1782407716067]: 
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+        ↓userId [ngx.components.UIControlVariable-1782407673155]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+        ↓codexHomeScope [ngx.components.UIControlVariable-1782407674937]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''codex'') : ''user'''
+        ↓vibeHomeScope [ngx.components.UIControlVariable-1782407676721]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''vibe'') : ''user'''
+        ↓homeScope [ngx.components.UIControlVariable-1782407678507]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope((this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ''codex'')) : ''user'''
+        ↓agentProfile [ngx.components.UIControlVariable-1782407680295]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+        ↓skillProfile [ngx.components.UIControlVariable-1782407682085]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+        ↓projectName [ngx.components.UIControlVariable-1782407683877]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
 ↓Subscribe_Handler2 [ngx.components.UIEventSubscriber-1751537016993]: 
   topic: JavaCapture
   ↓CustomAction [ngx.components.UICustomAction-1751537016996]: 

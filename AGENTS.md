@@ -77,6 +77,10 @@ rediscovering the same context.
   - Admin Console / knowledge context shows only the How-To assistant.
   - Studio Java bridge context may show How-To, component assistant, Figma, and
     Agent IA.
+  - C8Oforms / NoCode context should open Agent IA by default through the
+    Assistant iframe with `assistantContext=nocode`, `agentProfile=nocode`,
+    `targetProject=C8Oforms`, the authenticated `userId`, and `user` home
+    scopes for Codex and Vibe.
   - Server/NoCode Agent IA is allowed only when an explicit server/no-code
     capability flag is provided; never infer it from the remote host alone.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served

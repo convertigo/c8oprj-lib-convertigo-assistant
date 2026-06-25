@@ -2203,10 +2203,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         serviceTier: state.serviceTier || ""
       };
     }
+    var vibeScope = trim(options.vibeHomeScope || options.homeScope);
+    if (!vibeScope.length) {
+      vibeScope = "user";
+    }
     return {
       install: install ? "true" : "false",
       configure: "true",
-      vibeHome: state.vibeHome,
+      vibeHome: trim(options.vibeHome),
+      vibeHomeScope: vibeScope,
+      homeScope: vibeScope,
+      conversationId: state.threadid || state.conversationId || "",
+      projectId: state.primaryProject || state.projectId || "",
+      userId: state.userId || state.userKey || "",
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
       mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
@@ -2710,6 +2719,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!codexScope.length) {
         codexScope = "user";
       }
+      var vibeScope = trim(options.vibeHomeScope || options.homeScope);
+      if (!vibeScope.length) {
+        vibeScope = "user";
+      }
       var startPayload = provider === "codex" ? {
         handle: state.handle,
         cwd: state.cwd,
@@ -2740,7 +2753,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       } : {
         handle: state.handle,
         cwd: state.cwd,
-        vibeHome: state.vibeHome,
+        vibeHome: trim(options.vibeHome),
+        vibeHomeScope: vibeScope,
+        homeScope: vibeScope,
+        conversationId: state.threadid || state.conversationId || "",
+        projectId: state.primaryProject || state.projectId || "",
+        userId: state.userId || state.userKey || "",
         install: installRequested ? "true" : "false",
         mcpEndpoint: state.mcpEndpoint,
         model: state.model || "",
