@@ -17,12 +17,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var InputStreamReader = Packages.java.io.InputStreamReader;
   var URL = Packages.java.net.URL;
   var URLEncoder = Packages.java.net.URLEncoder;
+  var HashMap = Packages.java.util.HashMap;
   var UUID = Packages.java.util.UUID;
   var System = Packages.java.lang.System;
   var MessageDigest = Packages.java.security.MessageDigest;
+  var InternalRequester = Packages.com.twinsoft.convertigo.engine.requesters.InternalRequester;
+  var XMLUtils = Packages.com.twinsoft.convertigo.engine.util.XMLUtils;
+  var JsonOutput = Packages.com.twinsoft.convertigo.engine.enums.JsonOutput;
+  var Engine = Packages.com.twinsoft.convertigo.engine.Engine;
   var Files = Packages.java.nio.file.Files;
   var StandardOpenOption = Packages.java.nio.file.StandardOpenOption;
   var StandardCharsets = Packages.java.nio.charset.StandardCharsets;
+  var NOCODE_MCP_TOKEN_HANDLE_PREFIX = "ConvertigoAssistant.nocodeMcpToken.";
+  var NOCODE_MCP_TOKEN_SESSION_PREFIX = "ConvertigoAssistant.nocodeMcpTokenHandle.";
 
   function now() {
     return System.currentTimeMillis();
@@ -37,6 +44,96 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return "";
     }
     return String(value).replace(/^\s+|\s+$/g, "");
+  }
+
+  function requestParameter(name) {
+    try {
+      var request = context && context.httpServletRequest ? context.httpServletRequest : null;
+      if (request !== null) {
+        return trim(request.getParameter(String(name)));
+      }
+    } catch (_ignoreRequestParameter) {}
+    return "";
+  }
+
+  function optionOrRequest(options, name) {
+    options = options || {};
+    var value = trim(options[name]);
+    return value.length ? value : requestParameter(name);
+  }
+
+  function optionsWithRequestFallbacks(options) {
+    options = options || {};
+    var copy = {};
+    for (var key in options) {
+      if (Object.prototype.hasOwnProperty.call(options, key)) {
+        copy[key] = options[key];
+      }
+    }
+    [
+      "provider", "agentProvider", "targetProject", "projectName", "projectId",
+      "userId", "agentProfile", "skillProfile", "assistantContext",
+      "assistantSurface", "codexHomeScope", "vibeHomeScope", "homeScope",
+      "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormUrl",
+      "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
+      "formId", "pageId", "applicationId", "currentPage", "currentApplicationId",
+      "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
+      "settingsTimeoutMs", "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
+      "mcpBearerTokenHandle"
+    ].forEach(function (name) {
+      if (!trim(copy[name]).length) {
+        var value = requestParameter(name);
+        if (value.length) {
+          copy[name] = value;
+        }
+      }
+    });
+    return copy;
+  }
+
+  function firstOptionValue(options, names) {
+    options = options || {};
+    for (var i = 0; i < names.length; i++) {
+      var value = trim(options[names[i]]);
+      if (value.length) {
+        return value;
+      }
+    }
+    return "";
+  }
+
+  function noCodePromptContextBlock(options) {
+    if (normalizeSkillProfile(options) !== "nocode") {
+      return "";
+    }
+    var currentUrl = firstOptionValue(options, ["currentUrl", "nocodeCurrentUrl", "currentFormUrl", "nocodeCurrentFormUrl"]);
+    var currentRoute = firstOptionValue(options, ["currentRoute", "nocodeCurrentRoute", "currentPath"]);
+    var currentFormId = firstOptionValue(options, ["currentFormId", "nocodeCurrentFormId", "formId", "applicationId", "currentApplicationId"]);
+    var currentPage = firstOptionValue(options, ["pageId", "currentPage"]);
+    var lines = [];
+    lines.push("Runtime NoCode context supplied by the host application:");
+    lines.push("- Surface: C8Oforms / No-Code Studio.");
+    lines.push("- Current URL: " + (currentUrl.length ? currentUrl : "none"));
+    lines.push("- Current route: " + (currentRoute.length ? currentRoute : "none"));
+    lines.push("- Current form/application id: " + (currentFormId.length ? currentFormId : "none"));
+    lines.push("- Current page id/name: " + (currentPage.length ? currentPage : "none"));
+    lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
+    lines.push("- If a first tool discovery attempt does not show NoCode tools, retry with exact searches for `Convertigo NoCode form contract get edit update validate compile C8Oforms`, `nocode-form-contract-get nocode-form-edit nocode-form-update`, and `mcp__convertigo nocode_form_contract_get nocode_form_edit nocode_form_update` before reporting a blocker.");
+    return lines.join("\n");
+  }
+
+  function enrichNoCodePrompt(question, options) {
+    var block = noCodePromptContextBlock(options);
+    if (!block.length || String(question).indexOf("Runtime NoCode context supplied by the host application:") !== -1) {
+      return question;
+    }
+    var marker = "\nUser message:\n";
+    var text = String(question);
+    var markerIndex = text.indexOf(marker);
+    if (markerIndex >= 0) {
+      return text.substring(0, markerIndex) + "\n\n" + block + text.substring(markerIndex);
+    }
+    return block + "\n\nUser message:\n" + text;
   }
 
   function boolValue(value, defaultValue) {
@@ -134,6 +231,114 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function defaultMcpEndpoint() {
     return engineConvertigoBaseUrl().replace(/\/+$/g, "") + FALLBACK_MCP_PATH;
+  }
+
+  function callLocalSequence(project, sequence, variables) {
+    var params = new HashMap();
+    var projectArray = java.lang.reflect.Array.newInstance(java.lang.String, 1);
+    projectArray[0] = project;
+    params.put("__project", projectArray);
+    params.put("__sequence", sequence);
+    params.put("__context", "agentToken_" + String(now()));
+    variables = variables || {};
+    for (var key in variables) {
+      if (Object.prototype.hasOwnProperty.call(variables, key) && variables[key] !== null && typeof variables[key] !== "undefined") {
+        params.put(key, variables[key]);
+      }
+    }
+    var requester = new InternalRequester(params, context.httpServletRequest);
+    var response = requester.processRequest();
+    var json = JSON.parse(XMLUtils.XmlToJson(response.getDocumentElement(), true, true, JsonOutput.JsonRoot.docNode).toString());
+    try {
+      var ctx2 = requester.getContext();
+      Engine.theApp.contextManager.remove(ctx2);
+    } catch (_ignoreContextCleanup) {}
+    return json;
+  }
+
+  function unwrapSequenceResult(response) {
+    if (response && response.document && response.document.result) {
+      return response.document.result;
+    }
+    if (response && response.doc && response.doc.document && response.doc.document.result) {
+      return response.doc.document.result;
+    }
+    if (response && response.result) {
+      return response.result;
+    }
+    return response;
+  }
+
+  function createNoCodeMcpToken() {
+    try {
+      var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
+        name: "Convertigo Agent Bridge"
+      });
+      var result = unwrapSequenceResult(response) || {};
+      return trim(result.token);
+    } catch (_ignoreNoCodeTokenCreate) {
+      return "";
+    }
+  }
+
+  function sharedSecretGet(handle) {
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.get) {
+        var value = storage.get(handle);
+        return value === null || typeof value === "undefined" ? "" : trim(value);
+      }
+    } catch (_ignoreSecretGet) {}
+    return "";
+  }
+
+  function sharedSecretSet(handle, value) {
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.set) {
+        storage.set(handle, String(value));
+        return true;
+      }
+    } catch (_ignoreSecretSet) {}
+    return false;
+  }
+
+  function noCodeMcpTokenHandle(options) {
+    options = options || {};
+    if (normalizeSkillProfile(options) !== "nocode") {
+      return "";
+    }
+    var explicitHandle = trim(options.nocodeMcpTokenHandle || options.noCodeMcpTokenHandle || options.mcpBearerTokenHandle);
+    if (explicitHandle.length) {
+      return explicitHandle;
+    }
+    var userKey = normalizeUserKey(options.userId || "session");
+    var sessionKey = NOCODE_MCP_TOKEN_SESSION_PREFIX + userKey;
+    try {
+      var existingHandle = context.httpSession.getAttribute(sessionKey);
+      if (existingHandle !== null && typeof existingHandle !== "undefined") {
+        existingHandle = String(existingHandle);
+        if (trim(existingHandle).length && sharedSecretGet(existingHandle).length) {
+          return existingHandle;
+        }
+      }
+    } catch (_ignoreExistingTokenHandle) {}
+    var token = createNoCodeMcpToken();
+    if (!token.length) {
+      return "";
+    }
+    var handle = NOCODE_MCP_TOKEN_HANDLE_PREFIX + userKey + "." + String(UUID.randomUUID());
+    if (!sharedSecretSet(handle, token)) {
+      return "";
+    }
+    try {
+      context.httpSession.setAttribute(sessionKey, handle);
+    } catch (_ignoreTokenHandleSession) {}
+    return handle;
+  }
+
+  function shouldAttachNoCodeMcpTokenHandle(sequence) {
+    return sequence === "agent_codex_setup" || sequence === "agent_codex_start";
   }
 
   function normalizeWorkspaceRootPath(value) {
@@ -423,6 +628,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!payload.conversationId && (options.conversationId || options.threadid)) {
       payload.conversationId = options.conversationId || options.threadid;
     }
+    if (shouldAttachNoCodeMcpTokenHandle(sequence) && !trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
+      var tokenHandle = noCodeMcpTokenHandle(options);
+      if (tokenHandle.length) {
+        payload.nocodeMcpTokenHandle = tokenHandle;
+      }
+    }
     var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(), payload, timeoutMs || 70000);
     return response && typeof response.result !== "undefined" ? response.result : response;
   }
@@ -461,17 +672,28 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return out.substring(0, 16);
   }
 
+  function userPathSlug(value) {
+    var text = trim(value);
+    if (!text.length || text.toLowerCase() === "studio") {
+      return "studio";
+    }
+    var readable = safePathPart(text.toLowerCase()).replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+    if (!readable.length) {
+      readable = "user";
+    }
+    if (readable.length > 80) {
+      readable = readable.substring(0, 80).replace(/[_.-]+$/g, "");
+    }
+    return readable + "--" + hashShort(text);
+  }
+
   function normalizeConversationId(value) {
     var text = normalizeThreadId(value);
     return text.length ? safePathPart(text) : "";
   }
 
   function normalizeUserKey(value) {
-    var text = trim(value);
-    if (!text.length || text.toLowerCase() === "studio") {
-      return "studio";
-    }
-    return "u-" + hashShort(text);
+    return userPathSlug(value);
   }
 
   function normalizeProvider(value) {
@@ -491,6 +713,46 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return "all";
     }
     return normalizeProvider(raw);
+  }
+
+  function normalizeSkillProfile(options) {
+    options = options || {};
+    var value = trim(options.agentProfile || options.skillProfile || options.assistantContext || options.assistantSurface || options.profile).toLowerCase();
+    var project = trim(options.targetProject || options.projectName || options.projectId || options.primaryProject).toLowerCase();
+    if (value === "nocode" || value === "no-code" || value === "c8oforms" || value === "forms" || project === "c8oforms") {
+      return "nocode";
+    }
+    return "generalist";
+  }
+
+  function hasExplicitSkillProfile(record) {
+    record = record || {};
+    return trim(record.skillProfile || record.agentProfile || record.assistantContext || record.assistantSurface).length > 0;
+  }
+
+  function conversationSkillProfile(record) {
+    record = record || {};
+    if (hasExplicitSkillProfile(record)) {
+      return normalizeSkillProfile(record);
+    }
+    return normalizeSkillProfile({
+      primaryProject: record.primaryProject || record.projectId,
+      projectName: record.primaryProject || record.projectId
+    });
+  }
+
+  function conversationMatchesSkillProfile(record, profile) {
+    var requested = trim(profile).toLowerCase();
+    if (!requested.length || requested === "all" || requested === "any") {
+      return true;
+    }
+    if (requested === "nocode" && !hasExplicitSkillProfile(record)) {
+      return normalizeSkillProfile({
+        primaryProject: record && (record.primaryProject || record.projectId),
+        projectName: record && (record.primaryProject || record.projectId)
+      }) === "nocode";
+    }
+    return conversationSkillProfile(record) === requested;
   }
 
   function providerSearchList(value) {
@@ -523,6 +785,68 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return defaultModelForProvider(provider);
     }
     return model;
+  }
+
+  function providerSettings(settings, provider) {
+    settings = settings || {};
+    var providers = settings.providers || [];
+    var wanted = normalizeProvider(provider || (settings.defaults && settings.defaults.provider) || "");
+    for (var i = 0; i < providers.length; i++) {
+      if (normalizeProvider(providers[i] && providers[i].id) === wanted) {
+        return providers[i];
+      }
+    }
+    for (var j = 0; j < providers.length; j++) {
+      if (providers[j] && providers[j].ready === true) {
+        return providers[j];
+      }
+    }
+    return providers.length ? providers[0] : null;
+  }
+
+  function modelSettings(providerDescriptor, model) {
+    var models = providerDescriptor && providerDescriptor.models ? providerDescriptor.models : [];
+    var wanted = trim(model);
+    for (var i = 0; wanted.length && i < models.length; i++) {
+      if (trim(models[i] && models[i].id) === wanted) {
+        return models[i];
+      }
+    }
+    return models.length ? models[0] : null;
+  }
+
+  function applyAgentSettingsDefaults(options, settings, provider) {
+    options = options || {};
+    settings = settings || {};
+    var descriptor = providerSettings(settings, provider);
+    var resolvedProvider = descriptor && descriptor.id ? normalizeProvider(descriptor.id) : normalizeProvider(provider || (settings.defaults && settings.defaults.provider));
+    var model = trim(options.model || options.agentModel);
+    if (!model.length || model.toLowerCase() === "default" || model.toLowerCase() === "auto") {
+      model = trim((descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
+      if (!model.length) {
+        var firstModel = modelSettings(descriptor, "");
+        model = trim(firstModel && firstModel.id);
+      }
+      if (model.length) {
+        options.model = model;
+      }
+    }
+    var selectedModel = modelSettings(descriptor, trim(options.model || options.agentModel || model));
+    var reasoning = trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
+    if (!reasoning.length || reasoning.toLowerCase() === "default" || reasoning.toLowerCase() === "auto") {
+      reasoning = trim((selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
+      if (reasoning.length) {
+        options.reasoningEffort = reasoning;
+      }
+    }
+    if (resolvedProvider.length && (!trim(options.provider).length || normalizeProviderSelector(options.provider) === "all")) {
+      options.provider = resolvedProvider;
+    }
+    return {
+      provider: resolvedProvider,
+      model: trim(options.model || options.agentModel),
+      reasoningEffort: trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort)
+    };
   }
 
   function normalizeReasoningEffort(value) {
@@ -603,10 +927,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function publicConversation(record) {
+    var provider = normalizeProvider(record.provider);
     return {
       conversationId: String(record.conversationId || record.threadid || ""),
       provider: String(record.provider || "vibe"),
       userKey: String(record.userKey || "studio"),
+      agentProfile: String(record.agentProfile || record.skillProfile || ""),
+      skillProfile: conversationSkillProfile(record),
+      assistantContext: String(record.assistantContext || ""),
+      assistantSurface: String(record.assistantSurface || ""),
       status: String(record.status || ""),
       primaryProject: String(record.primaryProject || record.projectId || ""),
       projectNames: record.projectNames || [],
@@ -622,9 +951,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       reasoningEffort: String(record.reasoningEffort || ""),
       serviceTier: String(record.serviceTier || ""),
       warnings: record.warnings || [],
-      vibeHome: String(record.vibeHome || ""),
-      agentHome: String(record.agentHome || record.vibeHome || ""),
-      codexHome: normalizeProvider(record.provider) === "codex" ? String(record.codexHome || record.agentHome || record.vibeHome || "") : "",
+      vibeHome: provider === "codex" ? "" : String(record.vibeHome || ""),
+      agentHome: provider === "codex" ? "" : String(record.agentHome || record.vibeHome || ""),
+      codexHome: provider === "codex" ? sanitizeCodexHome(record.codexHome) : "",
       externalSessionId: String(record.externalSessionId || "")
     };
   }
@@ -646,7 +975,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return 1;
   }
 
-  function conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider) {
+  function conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider, skillProfile) {
     var records = [];
     var filter = trim(projectFilter);
     var providers = providerSearchList(provider);
@@ -675,6 +1004,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             continue;
           }
         }
+        if (!conversationMatchesSkillProfile(record, skillProfile)) {
+          continue;
+        }
         records.push(record);
       }
     }
@@ -692,8 +1024,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return records;
   }
 
-  function publicConversations(workspaceRoot, userKey, projectFilter, includeDeleted, provider) {
-    var records = conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider);
+  function publicConversations(workspaceRoot, userKey, projectFilter, includeDeleted, provider, skillProfile) {
+    var records = conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider, skillProfile);
     var conversations = [];
     for (var i = 0; i < records.length; i++) {
       conversations.push(publicConversation(records[i]));
@@ -701,8 +1033,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return conversations;
   }
 
-  function latestConversationRecord(workspaceRoot, userKey, projectFilter, provider) {
-    var records = conversationRecords(workspaceRoot, userKey, projectFilter, false, provider);
+  function latestConversationRecord(workspaceRoot, userKey, projectFilter, provider, skillProfile) {
+    var records = conversationRecords(workspaceRoot, userKey, projectFilter, false, provider, skillProfile);
     for (var i = 0; i < records.length; i++) {
       if (conversationActivityScore(records[i]) > 1) {
         return records[i];
@@ -711,8 +1043,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return records.length ? records[0] : null;
   }
 
-  function latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, provider) {
-    var records = conversationRecords(workspaceRoot, userKey, projectFilter, false, provider);
+  function latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, provider, skillProfile) {
+    var records = conversationRecords(workspaceRoot, userKey, projectFilter, false, provider, skillProfile);
     for (var i = 0; i < records.length; i++) {
       var status = trim(records[i] && records[i].status).toLowerCase();
       if (status === "starting" || status === "queued" || status === "running" || status === "in_progress") {
@@ -726,6 +1058,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state || !state.conversationFile) {
       return;
     }
+    var provider = normalizeProvider(state.provider);
     var answer = state.answerIsFinal === true || state.status === "completed" || state.status === "closed" ? String(state.answer || "") : "";
     var record = {
       version: 1,
@@ -733,6 +1066,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       provider: state.provider || "vibe",
       userKey: state.userKey || "studio",
+      userId: state.userId || "",
+      agentProfile: state.agentProfile || state.skillProfile || "",
+      skillProfile: normalizeSkillProfile(state),
+      assistantContext: state.assistantContext || "",
+      assistantSurface: state.assistantSurface || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
       model: state.model || "",
@@ -742,9 +1080,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectNames: state.projectNames || [],
       workspaceRoot: state.workspaceRoot || "",
       cwd: state.cwd || "",
-      vibeHome: state.vibeHome || "",
-      agentHome: state.agentHome || state.vibeHome || "",
-      codexHome: normalizeProvider(state.provider) === "codex" ? state.agentHome || state.vibeHome || "" : "",
+      vibeHome: provider === "codex" ? "" : state.vibeHome || "",
+      agentHome: provider === "codex" ? "" : state.agentHome || state.vibeHome || "",
+      codexHome: provider === "codex" ? sanitizeCodexHome(state.codexHome) : "",
       conversationDir: state.conversationDir || "",
       externalSessionId: state.externalSessionId || "",
       createdAt: Number(state.createdAt || now()),
@@ -827,7 +1165,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.serviceTier = String(record.serviceTier || state.serviceTier || "");
       state.cursor = Number(record.lastCursor || state.cursor || 0);
       state.runid = String(record.lastRunId || state.runid || "");
-      state.externalSessionId = String(record.externalSessionId || state.externalSessionId || "");
+      if (Object.prototype.hasOwnProperty.call(record, "externalSessionId")) {
+        state.externalSessionId = String(record.externalSessionId || "");
+      } else {
+        state.externalSessionId = String(state.externalSessionId || "");
+      }
       state.progressLog = String(record.progress || "");
       state.progressEvents = record.progressEvents || [];
       state.lastStatusText = String(record.phase || "");
@@ -1855,6 +2197,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return text;
   }
 
+  function isConversationScopedCodexHome(value) {
+    var text = trim(value).replace(/\\/g, "/");
+    return text.indexOf("/conversations/") >= 0 && /\/codex-home\/?$/.test(text);
+  }
+
+  function sanitizeCodexHome(value) {
+    var text = trim(value);
+    return isConversationScopedCodexHome(text) ? "" : text;
+  }
+
   function rebaseStateWorkspace(state, workspaceRoot) {
     var previousWorkspace = trim(state.workspaceRoot);
     var previousConversationDir = trim(state.conversationDir);
@@ -1869,6 +2221,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.conversationFile = filePath(conversationRecordFile(dir));
     state.transcriptFile = filePath(conversationTranscriptFile(dir));
     state.summaryFile = filePath(conversationSummaryFile(dir));
+    if (normalizeProvider(state.provider) === "codex") {
+      var legacyConversationHome = isConversationScopedCodexHome(state.codexHome) ||
+        isConversationScopedCodexHome(state.agentHome) ||
+        isConversationScopedCodexHome(state.vibeHome);
+      state.vibeHome = "";
+      state.agentHome = "";
+      state.codexHome = sanitizeCodexHome(state.codexHome);
+      if (legacyConversationHome) {
+        state.externalSessionId = "";
+      }
+      return;
+    }
     if (!trim(state.vibeHome).length || (previousConversationDir.length && state.vibeHome.indexOf(previousConversationDir) === 0)) {
       state.vibeHome = childPath(dir, homeLeafForProvider(state.provider));
     } else if (previousWorkspace.length) {
@@ -1904,10 +2268,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.transcriptFile = filePath(conversationTranscriptFile(dir));
       state.summaryFile = filePath(conversationSummaryFile(dir));
     }
-    if (!state.vibeHome) {
-      state.vibeHome = childPath(new File(state.conversationDir), homeLeafForProvider(state.provider));
+    if (normalizeProvider(state.provider) === "codex") {
+      var legacyCodexConversationHome = isConversationScopedCodexHome(state.codexHome) ||
+        isConversationScopedCodexHome(state.agentHome) ||
+        isConversationScopedCodexHome(state.vibeHome);
+      state.codexHome = sanitizeCodexHome(state.codexHome);
+      state.agentHome = "";
+      state.vibeHome = "";
+      if (legacyCodexConversationHome) {
+        state.externalSessionId = "";
+      }
+    } else {
+      if (!state.vibeHome) {
+        state.vibeHome = childPath(new File(state.conversationDir), homeLeafForProvider(state.provider));
+      }
+      state.agentHome = state.agentHome || state.vibeHome;
     }
-    state.agentHome = state.agentHome || state.vibeHome;
     if (!state.projectNames || typeof state.projectNames.length === "undefined") {
       state.projectNames = [];
     }
@@ -1948,6 +2324,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.serviceTier === "undefined" || state.serviceTier === null) {
       state.serviceTier = "";
     }
+    if (!state.skillProfile) {
+      state.skillProfile = normalizeSkillProfile(state);
+    }
+    if (!state.agentProfile) {
+      state.agentProfile = state.skillProfile;
+    }
+    if (typeof state.assistantContext === "undefined" || state.assistantContext === null) {
+      state.assistantContext = "";
+    }
+    if (typeof state.assistantSurface === "undefined" || state.assistantSurface === null) {
+      state.assistantSurface = "";
+    }
     return sanitizeProgressLog(refreshTerminalStateFromRecord(state));
   }
 
@@ -1986,18 +2374,38 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var projectNames = record && record.projectNames ? record.projectNames : [];
     projectNames = addArrayValue(projectNames, primaryProject);
-    var vibeHome = trim(options.vibeHome || options.agentHome || options.codexHome);
-    if (!vibeHome.length) {
+    var legacyRecordCodexHome = normalizeProvider(provider) === "codex" && (
+      isConversationScopedCodexHome(options.codexHome) ||
+      (record && (
+        isConversationScopedCodexHome(record.codexHome) ||
+        isConversationScopedCodexHome(record.agentHome) ||
+        isConversationScopedCodexHome(record.vibeHome)
+      ))
+    );
+    var codexHome = normalizeProvider(provider) === "codex" ? sanitizeCodexHome(options.codexHome || (record && record.codexHome)) : "";
+    var vibeHome = normalizeProvider(provider) === "codex" ? "" : trim(options.vibeHome || options.agentHome || options.codexHome);
+    if (normalizeProvider(provider) !== "codex" && !vibeHome.length) {
       vibeHome = record && trim(record.agentHome || record.vibeHome).length ? trim(record.agentHome || record.vibeHome) : childPath(conversationDir, homeLeafForProvider(provider));
     }
     var model = normalizeModel(provider, options.model || options.agentModel || (record && record.model));
     var reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort || (record && record.reasoningEffort));
     var serviceTier = trim(options.serviceTier || options.speedTier || (record && record.serviceTier));
+    var skillProfile = normalizeSkillProfile({
+      agentProfile: options.agentProfile || (record && record.agentProfile),
+      skillProfile: options.skillProfile || (record && record.skillProfile),
+      assistantContext: options.assistantContext || (record && record.assistantContext),
+      assistantSurface: options.assistantSurface || (record && record.assistantSurface),
+      projectName: primaryProject
+    });
     return {
       conversationId: threadid,
       threadid: threadid,
       handle: record && trim(record.handle).length ? trim(record.handle) : threadid,
       provider: provider,
+      agentProfile: trim(options.agentProfile || (record && record.agentProfile)) || skillProfile,
+      skillProfile: skillProfile,
+      assistantContext: trim(options.assistantContext || (record && record.assistantContext)),
+      assistantSurface: trim(options.assistantSurface || (record && record.assistantSurface)),
       model: model,
       reasoningEffort: reasoningEffort,
       serviceTier: serviceTier,
@@ -2006,8 +2414,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       workspaceRoot: workspaceRoot,
       cwd: trim(options.cwd) || (record && trim(record.cwd)) || workspaceRoot,
       userKey: userKey,
+      codexHome: codexHome,
       vibeHome: vibeHome,
-      agentHome: vibeHome,
+      agentHome: normalizeProvider(provider) === "codex" ? "" : vibeHome,
       conversationDir: filePath(conversationDir),
       conversationFile: filePath(conversationRecordFile(conversationDir)),
       transcriptFile: filePath(conversationTranscriptFile(conversationDir)),
@@ -2016,7 +2425,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       primaryProject: primaryProject,
       projectNames: projectNames,
       userId: trim(options.userId),
-      externalSessionId: record && trim(record.externalSessionId),
+      externalSessionId: legacyRecordCodexHome ? "" : record && trim(record.externalSessionId),
       language: detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
       status: record && trim(record.status).length ? trim(record.status) : "created",
@@ -2041,6 +2450,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       handle: state.handle,
       provider: state.provider,
+      agentProfile: state.agentProfile || state.skillProfile || "",
+      skillProfile: normalizeSkillProfile(state),
+      assistantContext: state.assistantContext || "",
+      assistantSurface: state.assistantSurface || "",
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
       serviceTier: state.serviceTier || "",
@@ -2050,8 +2463,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       conversationId: state.conversationId || state.threadid,
       userKey: state.userKey || "studio",
       workspaceRoot: state.workspaceRoot || "",
-      vibeHome: state.vibeHome,
-      agentHome: state.agentHome || state.vibeHome || "",
+      vibeHome: normalizeProvider(state.provider) === "codex" ? "" : state.vibeHome,
+      agentHome: normalizeProvider(state.provider) === "codex" ? "" : state.agentHome || state.vibeHome || "",
+      codexHome: normalizeProvider(state.provider) === "codex" ? sanitizeCodexHome(state.codexHome) : "",
       conversationDir: state.conversationDir || "",
       externalSessionId: state.externalSessionId || "",
       projectId: state.projectId,
@@ -2179,11 +2593,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         codexScope = "user";
       }
       return {
-        codexHome: trim(options.codexHome),
+        codexHome: sanitizeCodexHome(options.codexHome),
         codexHomeScope: codexScope,
         conversationId: state.threadid || state.conversationId || "",
         projectId: state.primaryProject || state.projectId || "",
         userId: state.userId || state.userKey || "",
+        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+        assistantContext: state.assistantContext || options.assistantContext || "",
+        assistantSurface: state.assistantSurface || options.assistantSurface || "",
         codexPath: trim(options.codexPath || options.commandPath),
         install: install ? "true" : "false",
         nodeVersion: trim(options.nodeVersion),
@@ -2216,6 +2634,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       conversationId: state.threadid || state.conversationId || "",
       projectId: state.primaryProject || state.projectId || "",
       userId: state.userId || state.userKey || "",
+      agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+      skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+      assistantContext: state.assistantContext || options.assistantContext || "",
+      assistantSurface: state.assistantSurface || options.assistantSurface || "",
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
       mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
@@ -2247,18 +2669,24 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) {
-    options = options || {};
+    options = optionsWithRequestFallbacks(options);
     var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
     var providerFilter = providerSelector === "all" ? "" : providerSelector;
     var explicitProject = trim(projectFilter || options.targetProject || options.projectName || options.projectId);
+    var agentProfile = trim(options.agentProfile || options.skillProfile || options.assistantContext || options.assistantSurface);
+    var skillProfile = normalizeSkillProfile(options);
     var payload = {
       provider: providerFilter,
       workspaceRoot: workspaceRoot || resolveWorkspaceRoot(options),
       projectId: explicitProject,
       userId: trim(options.userId) || userKey || "studio",
       conversationId: normalizeConversationId(options.threadid || options.conversationId),
+      agentProfile: agentProfile,
+      skillProfile: skillProfile,
+      assistantContext: trim(options.assistantContext),
+      assistantSurface: trim(options.assistantSurface),
       mcpEndpoint: trim(options.mcpEndpoint) || defaultMcpEndpoint(),
-      codexHome: trim(options.codexHome),
+      codexHome: sanitizeCodexHome(options.codexHome),
       codexHomeScope: trim(options.codexHomeScope || options.homeScope),
       codexPath: trim(options.codexPath || options.commandPath),
       vibeHome: trim(options.vibeHome || options.agentHome),
@@ -2427,6 +2855,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
+    var skillProfile = normalizeSkillProfile(options);
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var includeSettings = boolValue(options.includeSettings, true);
     var requestedThreadId = normalizeThreadId(options.threadid);
@@ -2434,7 +2863,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var hasQuestion = trim(options.Question || options.question || options.userQuestion).length > 0;
     var shouldResumeLatest = boolValue(options.resumeLatest, false);
     if (!requestedThreadId.length && !boolValue(options.forceNew, false) && shouldResumeLatest) {
-      var latest = latestConversationRecord(workspaceRoot, userKey, projectFilter, provider);
+      var latest = latestConversationRecord(workspaceRoot, userKey, projectFilter, provider, skillProfile);
       if (latest !== null) {
         requestedThreadId = normalizeConversationId(latest.conversationId || latest.threadid);
         options.threadid = requestedThreadId;
@@ -2444,20 +2873,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!requestedThreadId.length && !boolValue(options.forceNew, false) && !hasQuestion) {
       setBuffer("", "");
       var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
-      var resolvedProvider = provider === "all" ? "" : provider;
+      var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
+      var resolvedProvider = provider === "all" ? "" : (previewDefaults.provider || provider);
       return {
         ok: true,
         id: "",
         object: "agent.conversation",
         provider: resolvedProvider,
-        model: "",
+        model: previewDefaults.model || "",
         status: provider === "all" ? "agent_selection_required" : "new_conversation_ready",
         setupRequired: false,
         requiresAgentSelection: provider === "all",
         resumed: false,
         state: null,
         conversation: null,
-        conversations: publicConversations(workspaceRoot, userKey, "", false, "all"),
+        conversations: publicConversations(workspaceRoot, userKey, "", false, "all", skillProfile),
         settings: previewSettings,
         AIData: {
           type: "agent",
@@ -2474,6 +2904,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
       var emptySettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      applyAgentSettingsDefaults(options, emptySettings, provider);
       return {
         ok: true,
         id: "",
@@ -2486,7 +2917,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         resumed: false,
         state: null,
         conversation: null,
-        conversations: publicConversations(workspaceRoot, userKey, "", false, "all"),
+        conversations: publicConversations(workspaceRoot, userKey, "", false, "all", skillProfile),
         settings: emptySettings,
         AIData: {
           type: "agent",
@@ -2500,11 +2931,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       };
     }
+    var creationSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+    var creationDefaults = applyAgentSettingsDefaults(options, creationSettings, provider);
+    if (creationDefaults.provider.length) {
+      provider = creationDefaults.provider;
+    }
     var state = readState(requestedThreadId);
     if (state === null) {
       state = createState(options);
     }
     state = ensureState(state);
+    if (!trim(state.model).length && creationDefaults.model.length) {
+      state.model = creationDefaults.model;
+    }
+    if (!trim(state.reasoningEffort).length && creationDefaults.reasoningEffort.length) {
+      state.reasoningEffort = normalizeReasoningEffort(creationDefaults.reasoningEffort);
+    }
     state.updatedAt = now();
     saveState(state);
     if (!isTerminalStatus(state.status) && trim(state.runid).length && C8O.assistantAgentBridge.readResponse) {
@@ -2531,14 +2973,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       resumed: resumedLatest || requestedThreadId.length > 0,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
-      conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all"),
-      settings: includeSettings ? agentSettingsForOptions(options, state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, state.provider) : null,
+      conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state)),
+      settings: includeSettings ? (creationSettings || agentSettingsForOptions(options, state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, state.provider)) : null,
       AIData: conversationAIData(state, options.historyLimit)
     };
   };
 
   C8O.assistantAgentBridge.settings = function (options) {
-    options = options || {};
+    options = optionsWithRequestFallbacks(options);
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
@@ -2557,7 +2999,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         reasoning: ""
       },
       providers: settings.providers || [],
-      conversations: publicConversations(workspaceRoot, userKey, "", false, "all"),
+      conversations: publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options)),
       timestamp: now()
     };
   };
@@ -2629,8 +3071,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.sendMessage = function (options) {
-    options = options || {};
-    var question = String(options.Question || options.question || "");
+    options = optionsWithRequestFallbacks(options || {});
+    var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
+    options.Question = question;
     if (!trim(question).length) {
       return {
         ok: false,
@@ -2759,11 +3202,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var startPayload = provider === "codex" ? {
         handle: state.handle,
         cwd: state.cwd,
-        codexHome: trim(options.codexHome),
+        codexHome: sanitizeCodexHome(options.codexHome),
         codexHomeScope: codexScope,
         conversationId: state.threadid || state.conversationId || "",
         projectId: state.primaryProject || state.projectId || "",
         userId: state.userId || state.userKey || "",
+        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+        assistantContext: state.assistantContext || options.assistantContext || "",
+        assistantSurface: state.assistantSurface || options.assistantSurface || "",
         codexPath: trim(options.codexPath || options.commandPath),
         install: installRequested ? "true" : "false",
         nodeVersion: trim(options.nodeVersion),
@@ -2792,6 +3239,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         conversationId: state.threadid || state.conversationId || "",
         projectId: state.primaryProject || state.projectId || "",
         userId: state.userId || state.userKey || "",
+        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+        assistantContext: state.assistantContext || options.assistantContext || "",
+        assistantSurface: state.assistantSurface || options.assistantSurface || "",
         install: installRequested ? "true" : "false",
         mcpEndpoint: state.mcpEndpoint,
         model: state.model || "",
@@ -2812,8 +3263,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state.externalSessionId = String(start.sessionId);
       }
       if (provider === "codex" && start.home && trim(start.home.path).length) {
-        state.agentHome = String(start.home.path);
-        state.vibeHome = state.agentHome;
+        state.codexHome = sanitizeCodexHome(start.home.path);
+        state.agentHome = "";
+        state.vibeHome = "";
       }
       if (cancellationRequested(state.threadid)) {
         try {
@@ -3100,7 +3552,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var root = provider === "all" ? new File(workspaceRoot, "agents") : conversationsRoot(workspaceRoot, userKey, provider);
     var includeDeleted = boolValue(options.includeDeleted, false);
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
-    var conversations = publicConversations(workspaceRoot, userKey, projectFilter, includeDeleted, provider);
+    var conversations = publicConversations(workspaceRoot, userKey, projectFilter, includeDeleted, provider, normalizeSkillProfile(options));
     return {
       ok: true,
       provider: provider,
@@ -3156,7 +3608,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
-      conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all"),
+      conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state)),
       AIData: conversationAIData(state, options.historyLimit)
     };
   };
@@ -3198,7 +3650,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     removeState(threadid);
     var dir = new File(state.conversationDir);
     var deleted = deleteRecursively(dir);
-    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all");
+    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
     setBuffer("", "");
     return {
       ok: deleted,
@@ -3218,7 +3670,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var userKey = normalizeUserKey(options.userId);
       var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
       var providerFilter = trim(options.provider || options.agentProvider);
-      var latest = latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, providerFilter);
+      var latest = latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, providerFilter, normalizeSkillProfile(options));
       if (latest) {
         threadid = normalizeConversationId(latest.conversationId || latest.threadid);
         options.threadid = threadid;

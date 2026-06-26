@@ -35,7 +35,8 @@ rediscovering the same context.
 - Agent provider selection is a global setting exposed in the agent management
   panel/drawer, not in the prompt footer and not asked again for every new
   conversation. Model and reasoning remain lightweight prompt/runtime controls.
-  The Convertigo Generalist skill remains forced and invisible to the user.
+  Managed Convertigo skills remain invisible to the user: Studio uses
+  `convertigo-generalist`, while C8Oforms/NoCode uses `convertigo-nocode`.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
 - Keep start templates only on the new conversation screen.
@@ -90,6 +91,10 @@ rediscovering the same context.
     metadata when explicitly selected or inferred from the conversation.
   - Server/NoCode Agent IA is allowed only when an explicit server/no-code
     capability flag is provided; never infer it from the remote host alone.
+- In C8Oforms/NoCode, the MCP bearer token is created automatically from the
+  authenticated C8Oforms session and stored behind an opaque server-memory
+  handle. The Assistant may pass the handle to the bridge, but must never expose
+  the raw token in URLs, UI state, prompts, logs, or conversation records.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
   remotely inside Studio and no local bridge capability/local URL is provided,
   show an integrated local-agent activation message and do not call the remote
@@ -100,6 +105,11 @@ rediscovering the same context.
   optional metadata (`projectNames`, `primaryProject`) and must not be inferred
   from an unrelated Studio or NoCode selection unless the caller explicitly asks
   for current/selected project context.
+- Codex conversations must never use a conversation-local `codex-home`. If a
+  legacy conversation record has `codexHome`, `agentHome`, or `vibeHome` under
+  `/conversations/<id>/codex-home`, drop those values and clear
+  `externalSessionId` so the next run starts from the user-scoped `CODEX_HOME`
+  configured with MCP tools and the correct skill profile.
 - Image attachment from files exists; clipboard image paste is a desired feature.
 
 ## Validation

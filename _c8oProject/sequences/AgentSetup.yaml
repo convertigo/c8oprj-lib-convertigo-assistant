@@ -7,6 +7,10 @@ responseTimeout: 900
     if (!_targetProject && typeof projectName !== "undefined") {
       _targetProject = projectName;
     }
+    var _agentProfile = typeof agentProfile === "undefined" ? "" : agentProfile;
+    var _skillProfile = typeof skillProfile === "undefined" ? "" : skillProfile;
+    var _assistantContext = typeof assistantContext === "undefined" ? "" : assistantContext;
+    var _assistantSurface = typeof assistantSurface === "undefined" ? "" : assistantSurface;
     result = C8O.assistantAgentBridge.setupAgent({
       threadid: typeof threadid === "undefined" ? "" : threadid,
       provider: typeof provider === "undefined" ? "" : provider,
@@ -19,6 +23,10 @@ responseTimeout: 900
       codexHome: typeof codexHome === "undefined" ? "" : codexHome,
       codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
       homeScope: typeof homeScope === "undefined" ? "" : homeScope,
+      agentProfile: _agentProfile,
+      skillProfile: _skillProfile,
+      assistantContext: _assistantContext,
+      assistantSurface: _assistantSurface,
       model: typeof model === "undefined" ? "" : model,
       reasoningEffort: typeof reasoningEffort === "undefined" ? "" : reasoningEffort,
       serviceTier: typeof serviceTier === "undefined" ? "" : serviceTier,
@@ -211,3 +219,15 @@ responseTimeout: 900
 ↓serviceTier [variables.RequestableVariable-1782119962281]: 
   comment: Optional service tier selected for this conversation.
   description: Optional service tier selected for this conversation.
+↓agentProfile [variables.RequestableVariable-1782463327459]: 
+  comment: Agent surface profile, for example nocode or generalist.
+  description: Agent surface profile, for example nocode or generalist.
+↓skillProfile [variables.RequestableVariable-1782463327700]: 
+  comment: Preferred managed skill profile, for example nocode or generalist.
+  description: Preferred managed skill profile, for example nocode or generalist.
+↓assistantContext [variables.RequestableVariable-1782463328019]: 
+  comment: Assistant host context, for example nocode, studio, or admin.
+  description: Assistant host context, for example nocode, studio, or admin.
+↓assistantSurface [variables.RequestableVariable-1782463328360]: 
+  comment: Assistant UI surface, for example nocode, studio, or admin.
+  description: Assistant UI surface, for example nocode, studio, or admin.

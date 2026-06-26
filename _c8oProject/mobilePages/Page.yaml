@@ -9,6 +9,8 @@ scriptContent:
         /*End_c8o_PageImport*/
         /*Begin_c8o_PageDeclaration*/
         	private threadid = null;
+        	public agentHostContext: any = {};
+        	public agentHostContextMessageHandler: any = null;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		//this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
@@ -25,6 +27,7 @@ scriptContent:
         		this.log("[Assistant] loading with threadid: "+ this.threadid);
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageInitialization*/
+        		this.bindAgentHostContextListener();
         		this.ensureFooterInputs();
         		this.startAgentElapsedTicker();
         		/*End_c8o_PageInitialization*/
@@ -32,6 +35,7 @@ scriptContent:
         		this.refreshScrollButtons(350);
         		/*End_c8o_PageAfterViewInit*/
         /*Begin_c8o_PageFinalization*/
+        		this.unbindAgentHostContextListener();
         		this.stopAgentElapsedTicker();
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
@@ -162,8 +166,79 @@ scriptContent:
         		return '''';
         	}
         
+        	public normalizeAgentHostContextValue(value) {
+        		return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
+        	}
+        
+        	public applyAgentHostContext(context) {
+        		try {
+        			if (!context || typeof context !== ''object'') { return; }
+        			var next: any = {};
+        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId''];
+        			for (var i = 0; i < keys.length; i++) {
+        				var key = keys[i];
+        				var value = this.normalizeAgentHostContextValue(context[key]);
+        				if (value.length) { next[key] = value; }
+        			}
+        			this.agentHostContext = next;
+        			if (!this.local) { this.local = {}; }
+        			this.local.AgentHostContext = next;
+        		} catch (e) {}
+        	}
+        
+        	public bindAgentHostContextListener() {
+        		try {
+        			if (this.agentHostContextMessageHandler) { return; }
+        			this.agentHostContextMessageHandler = (event) => {
+        				try {
+        					var data = event && event.data ? event.data : null;
+        					if (!data || typeof data !== ''object'') { return; }
+        					var type = '''' + (data.type || data.kind || '''');
+        					if (type !== ''ConvertigoAssistant.context'' && type !== ''convertigo-assistant-context'') { return; }
+        					this.applyAgentHostContext(data.payload || data.context || data);
+        				} catch (e) {}
+        			};
+        			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
+        			try { window.parent && window.parent.postMessage({ type: ''ConvertigoAssistant.context.request'' }, ''*''); } catch (e2) {}
+        		} catch (e3) {}
+        	}
+        
+        	public unbindAgentHostContextListener() {
+        		try {
+        			if (this.agentHostContextMessageHandler) {
+        				window.removeEventListener(''message'', this.agentHostContextMessageHandler, false);
+        				this.agentHostContextMessageHandler = null;
+        			}
+        		} catch (e) {}
+        	}
+        
+        	public getAssistantHostContextParam(name) {
+        		try {
+        			var context = (this.local && this.local.AgentHostContext) || this.agentHostContext || {};
+        			var aliases: any = {
+        				currentUrl: [''currentUrl'',''nocodeCurrentUrl'',''currentFormUrl'',''nocodeCurrentFormUrl''],
+        				nocodeCurrentUrl: [''nocodeCurrentUrl'',''currentUrl'',''currentFormUrl'',''nocodeCurrentFormUrl''],
+        				currentRoute: [''currentRoute'',''nocodeCurrentRoute'',''currentPath''],
+        				nocodeCurrentRoute: [''nocodeCurrentRoute'',''currentRoute'',''currentPath''],
+        				currentFormId: [''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentApplicationId''],
+        				nocodeCurrentFormId: [''nocodeCurrentFormId'',''currentFormId'',''formId'',''applicationId'',''currentApplicationId''],
+        				formId: [''formId'',''currentFormId'',''nocodeCurrentFormId'',''applicationId'',''currentApplicationId''],
+        				currentPage: [''currentPage'',''pageId'',''page''],
+        				pageId: [''pageId'',''currentPage'',''page'']
+        			};
+        			var keys = aliases[name] || [name];
+        			for (var i = 0; i < keys.length; i++) {
+        				var value = this.normalizeAgentHostContextValue(context[keys[i]]);
+        				if (value.length) { return value; }
+        			}
+        		} catch (e) {}
+        		return '''';
+        	}
+        
         	public getAssistantQueryParam(name) {
         		try {
+        			var contextValue = this.getAssistantHostContextParam ? this.getAssistantHostContextParam(name) : '''';
+        			if (contextValue.length) { return contextValue; }
         			var raw = this.getAssistantUrlSearch ? this.getAssistantUrlSearch() : '''';
         			if (!raw.length) { return ''''; }
         			return '''' + ((new URLSearchParams(raw)).get(name) || '''');
@@ -172,15 +247,63 @@ scriptContent:
         	}
         
         	public getAgentContextUserId() {
-        		var value = '''';
-        		try { value = '''' + (this.getAssistantQueryParam(''userId'') || this.getAssistantQueryParam(''agentUserId'') || this.getAssistantQueryParam(''user'') || ''''); } catch (e) {}
-        		if (!value.length) { try { value = '''' + ((this.global && (this.global.user || this.global.email || this.global.login)) || ''''); } catch (e2) {} }
-        		value = value.replace(/^\s+|\s+$/g, '''');
-        		var lower = value.toLowerCase();
-        		if (!value.length || lower === ''unknown user'' || lower === ''anonymous'' || lower === ''undefined'' || lower === ''null'') {
-        			value = ''studio'';
+        		var trimValue = function(value) {
+        			return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
+        		};
+        		var isInvalid = function(value) {
+        			var text = trimValue(value);
+        			var lower = text.toLowerCase();
+        			return !text.length || lower === ''unknown user'' || lower === ''anonymous'' || lower === ''undefined'' || lower === ''null'';
+        		};
+        		var candidates = [];
+        		try {
+        			candidates.push(this.getAssistantQueryParam(''userId''));
+        			candidates.push(this.getAssistantQueryParam(''agentUserId''));
+        			candidates.push(this.getAssistantQueryParam(''user''));
+        		} catch (e) {}
+        		try {
+        			if (this.global) {
+        				var settings = this.global.settings || {};
+        				candidates.push(settings.mail);
+        				candidates.push(settings.email);
+        				candidates.push(settings.login);
+        				candidates.push(settings[''~c8oAcl'']);
+        				candidates.push(this.global.authenticatedUser);
+        				candidates.push(this.global.authenticatedUserID);
+        				candidates.push(this.global.userId);
+        				candidates.push(this.global.mail);
+        				candidates.push(this.global.email);
+        				candidates.push(this.global.login);
+        				candidates.push(this.global.user);
+        			}
+        		} catch (e2) {}
+        		try {
+        			var user: any = this.c8o && this.c8o.session && this.c8o.session.user ? this.c8o.session.user : null;
+        			if (user) {
+        				candidates.push(user.name);
+        				candidates.push(user.email);
+        				candidates.push(user.mail);
+        				candidates.push(user.login);
+        				candidates.push(user.id);
+        				candidates.push(user.authenticatedUserID);
+        				candidates.push(user.hash);
+        			}
+        		} catch (e3) {}
+        		for (var i = 0; i < candidates.length; i++) {
+        			var value = trimValue(candidates[i]);
+        			if (!isInvalid(value)) {
+        				return value;
+        			}
         		}
-        		return value;
+        		var noCode = false;
+        		try { noCode = this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode''; } catch (e4) {}
+        		if (!noCode) {
+        			try {
+        				var surface = trimValue(this.getAssistantQueryParam(''assistantSurface'') || this.getAssistantQueryParam(''assistantContext'') || this.getAssistantQueryParam(''agentProfile'') || this.getAssistantQueryParam(''skillProfile'')).toLowerCase();
+        				noCode = surface === ''nocode'' || surface === ''c8oforms'' || surface === ''forms'';
+        			} catch (e5) {}
+        		}
+        		return noCode ? ''nocode-anonymous'' : ''studio'';
         	}
         
         	public getAgentHomeScope(provider) {
@@ -1085,9 +1208,22 @@ scriptContent:
         			}
                     return project;
         		}
+                if (this.isAgentBridgeMode && this.isAgentBridgeMode()) {
+                    var agentProject = this.getEffectiveProjectName ? this.getEffectiveProjectName() : "";
+                    if (agentProject.length) {
+                        return agentProject;
+                    }
+                    if (this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode") {
+                        return "Studio NoCode";
+                    }
+                    return "";
+                }
                 return this.local ? this.local.Conversation : "";
         	}
         	public getProjectSubtitle() {
+                if (this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode" && (!this.getEffectiveProjectName || !this.getEffectiveProjectName().length)) {
+                    return "Studio NoCode";
+                }
         		let heading = "" + this.getProjectHeading();
                 if (heading === this.getNoProjectSelectedMessage()) {
                     return heading;
@@ -5566,6 +5702,26 @@ title: Convertigo assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+                  ↓currentUrl [ngx.components.UIControlVariable-1782486526319]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentUrl'') || this.getAssistantQueryParam(''nocodeCurrentUrl'') || '''') : '''''
+                  ↓currentRoute [ngx.components.UIControlVariable-1782486528073]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentRoute'') || this.getAssistantQueryParam(''nocodeCurrentRoute'') || this.getAssistantQueryParam(''currentPath'') || '''') : '''''
+                  ↓currentFormId [ngx.components.UIControlVariable-1782486529827]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentFormId'') || this.getAssistantQueryParam(''nocodeCurrentFormId'') || this.getAssistantQueryParam(''formId'') || '''') : '''''
+                  ↓currentPage [ngx.components.UIControlVariable-1782486531581]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentPage'') || this.getAssistantQueryParam(''pageId'') || this.getAssistantQueryParam(''page'') || '''') : '''''
         ↓attachments [ngx.components.UIControlVariable-1751373371973]: 
           varValue: 
             - xmlizable: 

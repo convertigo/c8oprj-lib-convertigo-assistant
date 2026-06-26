@@ -6,6 +6,10 @@ comment: Resume a durable local agent conversation from its conversation id.
     if (!_targetProject && typeof projectName !== "undefined") {
       _targetProject = projectName;
     }
+    var _agentProfile = typeof agentProfile === "undefined" ? "" : agentProfile;
+    var _skillProfile = typeof skillProfile === "undefined" ? "" : skillProfile;
+    var _assistantContext = typeof assistantContext === "undefined" ? "" : assistantContext;
+    var _assistantSurface = typeof assistantSurface === "undefined" ? "" : assistantSurface;
     result = C8O.assistantAgentBridge.resumeConversation({
       threadid: typeof threadid === "undefined" ? "" : threadid,
       conversationId: typeof conversationId === "undefined" ? "" : conversationId,
@@ -19,6 +23,10 @@ comment: Resume a durable local agent conversation from its conversation id.
       codexHome: typeof codexHome === "undefined" ? "" : codexHome,
       codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
       homeScope: typeof homeScope === "undefined" ? "" : homeScope,
+      agentProfile: _agentProfile,
+      skillProfile: _skillProfile,
+      assistantContext: _assistantContext,
+      assistantSurface: _assistantSurface,
       model: typeof model === "undefined" ? "" : model,
       reasoningEffort: typeof reasoningEffort === "undefined" ? "" : reasoningEffort,
       serviceTier: typeof serviceTier === "undefined" ? "" : serviceTier,
@@ -93,3 +101,15 @@ comment: Resume a durable local agent conversation from its conversation id.
 ↓serviceTier [variables.RequestableVariable-1782119962237]: 
   comment: Optional service tier selected for this conversation.
   description: Optional service tier selected for this conversation.
+↓agentProfile [variables.RequestableVariable-1782463328649]: 
+  comment: Agent surface profile, for example nocode or generalist.
+  description: Agent surface profile, for example nocode or generalist.
+↓skillProfile [variables.RequestableVariable-1782463328978]: 
+  comment: Preferred managed skill profile, for example nocode or generalist.
+  description: Preferred managed skill profile, for example nocode or generalist.
+↓assistantContext [variables.RequestableVariable-1782463329264]: 
+  comment: Assistant host context, for example nocode, studio, or admin.
+  description: Assistant host context, for example nocode, studio, or admin.
+↓assistantSurface [variables.RequestableVariable-1782463329506]: 
+  comment: Assistant UI surface, for example nocode, studio, or admin.
+  description: Assistant UI surface, for example nocode, studio, or admin.
