@@ -1,0 +1,43 @@
+comment: Rename a durable local agent conversation.
+↓Run [steps.SimpleStep-1782745222427]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.renameConversation({
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      conversationId: typeof conversationId === "undefined" ? "" : conversationId,
+      title: typeof title === "undefined" ? "" : title,
+      provider: typeof provider === "undefined" ? "" : provider,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      userId: typeof userId === "undefined" ? "" : userId
+    });'
+↓result [steps.JsonToXmlStep-1782745222443]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓threadid [variables.RequestableVariable-1782745222456]: 
+  comment: Agent conversation id.
+  description: Agent conversation id.
+↓conversationId [variables.RequestableVariable-1782745222458]: 
+  comment: Alias for threadid.
+  description: Alias for threadid.
+↓title [variables.RequestableVariable-1782745222460]: 
+  comment: New conversation title.
+  description: New conversation title.
+↓provider [variables.RequestableVariable-1782745222462]: 
+  comment: Agent provider. Defaults to all.
+  description: Agent provider. Defaults to all.
+↓workspaceRoot [variables.RequestableVariable-1782745222464]: 
+  comment: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+  description: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+↓userId [variables.RequestableVariable-1782745222466]: 
+  comment: Optional user id. Defaults to studio.
+  description: Optional user id. Defaults to studio.

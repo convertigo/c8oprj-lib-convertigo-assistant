@@ -79,7 +79,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "formId", "pageId", "applicationId", "currentPage", "currentApplicationId",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
       "settingsTimeoutMs", "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
-      "mcpBearerTokenHandle"
+      "mcpBearerTokenHandle", "browserDebugUrl", "browserDevToolsJsonUrl",
+      "browserDevToolsWebSocketUrl", "playwrightCdpEndpoint",
+      "playwrightMcpEndpoint", "viewerCdpEndpoint"
     ].forEach(function (name) {
       if (!trim(copy[name]).length) {
         var value = requestParameter(name);
@@ -915,21 +917,235 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function readConversationRecord(workspaceRoot, userKey, conversationId, provider) {
+    var file = conversationRecordFileFor(workspaceRoot, userKey, conversationId, provider);
+    return file ? readJsonFile(file) : null;
+  }
+
+  function conversationRecordFileFor(workspaceRoot, userKey, conversationId, provider) {
     var providers = providerSearchList(provider);
     for (var i = 0; i < providers.length; i++) {
       var file = conversationRecordFile(conversationDirectory(workspaceRoot, userKey, conversationId, providers[i]));
       var record = readJsonFile(file);
       if (record && record.deleted !== true) {
-        return record;
+        return file;
       }
     }
     return null;
   }
 
+  function conversationTitleFromText(value) {
+    var text = trim(value);
+    if (!text.length) {
+      return "";
+    }
+    text = text
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/[#>*_\[\]]+/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/^[-–—:\s]+|[-–—:\s]+$/g, "");
+    if (isTechnicalConversationTitle(text)) {
+      return "";
+    }
+    if (text.length > 76) {
+      text = text.substring(0, 73).replace(/\s+\S*$/, "") + "...";
+    }
+    return text;
+  }
+
+  function isTechnicalConversationTitle(value) {
+    var text = trim(value).toLowerCase();
+    if (!text.length) {
+      return true;
+    }
+    return text === "auto" ||
+      text === "default" ||
+      text === "untitled" ||
+      text === "new conversation" ||
+      text === "conversation" ||
+      text === "session";
+  }
+
+  function conversationTitleFromTranscriptFile(file) {
+    try {
+      if (!file || !file.exists()) {
+        return "";
+      }
+      var lines = readTextFile(file).split(/\r?\n/);
+      for (var i = 0; i < lines.length; i++) {
+        var line = trim(lines[i]);
+        if (!line.length) {
+          continue;
+        }
+        try {
+          var item = JSON.parse(line);
+          if (trim(item.role).toLowerCase() === "user") {
+            var title = conversationTitleFromText(item.content);
+            if (title.length) {
+              return title;
+            }
+          }
+        } catch (_ignoreTranscriptTitleLine) {}
+      }
+    } catch (_ignoreTranscriptTitle) {}
+    return "";
+  }
+
+  function conversationHasUserPrompt(record) {
+    if (!record || record.deleted === true) {
+      return false;
+    }
+    if (conversationTitleFromText(record.lastUserMessage).length) {
+      return true;
+    }
+    try {
+      var dir = record.conversationDir ? new File(String(record.conversationDir)) : null;
+      if (dir !== null && conversationTitleFromTranscriptFile(conversationTranscriptFile(dir)).length) {
+        return true;
+      }
+    } catch (_ignorePromptCheck) {}
+    return false;
+  }
+
+  function markEmptyConversationDeleted(record) {
+    try {
+      if (!record || record.deleted === true || !record.conversationDir) {
+        return;
+      }
+      var file = conversationRecordFile(new File(String(record.conversationDir)));
+      var stored = readJsonFile(file) || record;
+      stored.deleted = true;
+      stored.status = "deleted";
+      stored.deletedReason = "empty_prompt";
+      stored.updatedAt = java.lang.System.currentTimeMillis();
+      writeJsonFile(file, stored);
+    } catch (_ignoreEmptyConversationCleanup) {}
+  }
+
+  function codexHomeForRecord(record) {
+    var explicitHome = sanitizeCodexHome(record && record.codexHome);
+    if (explicitHome.length) {
+      return explicitHome;
+    }
+    var workspaceRoot = trim(record && record.workspaceRoot);
+    if (!workspaceRoot.length) {
+      return "";
+    }
+    return filePath(new File(new File(new File(new File(workspaceRoot, "agents/codex"), "homes/users"), safePathPart(record.userKey || "studio")), "codex-home"));
+  }
+
+  function codexSessionTitleFromFile(file) {
+    try {
+      if (!file || !file.exists()) {
+        return "";
+      }
+      var lines = readTextFile(file).split(/\r?\n/);
+      for (var i = 0; i < lines.length; i++) {
+        var line = trim(lines[i]);
+        if (!line.length) {
+          continue;
+        }
+        try {
+          var item = JSON.parse(line);
+          var type = trim(item.type);
+          var payload = item.payload || {};
+          var title = conversationTitleFromText(payload.title || payload.name || payload.summary);
+          if (title.length) {
+            return title;
+          }
+          if (type === "event_msg" && trim(payload.type) === "user_message") {
+            var message = String(payload.message || "");
+            var marker = "\nUser message:\n";
+            var markerIndex = message.lastIndexOf(marker);
+            if (markerIndex !== -1) {
+              message = message.substring(markerIndex + marker.length);
+            }
+            title = conversationTitleFromText(message);
+            if (title.length) {
+              return title;
+            }
+          }
+        } catch (_ignoreCodexSessionLine) {}
+      }
+    } catch (_ignoreCodexSessionTitle) {}
+    return "";
+  }
+
+  function codexSessionTitleForRecord(record) {
+    if (normalizeProvider(record && record.provider) !== "codex") {
+      return "";
+    }
+    var sessionId = trim(record.externalSessionId);
+    if (!sessionId.length) {
+      return "";
+    }
+    var codexHome = codexHomeForRecord(record);
+    if (!codexHome.length) {
+      return "";
+    }
+    try {
+      var root = new File(codexHome, "sessions");
+      if (!root.exists()) {
+        return "";
+      }
+      var stack = [root];
+      while (stack.length) {
+        var current = stack.pop();
+        var children = current && current.exists() ? current.listFiles() : null;
+        if (children === null) {
+          continue;
+        }
+        for (var i = 0; i < children.length; i++) {
+          var child = children[i];
+          if (child.isDirectory()) {
+            stack.push(child);
+          } else {
+            var name = String(child.getName() || "");
+            if (name.indexOf(sessionId) !== -1 && name.indexOf("rollout-") === 0 && name.lastIndexOf(".jsonl") === name.length - 6) {
+              var title = codexSessionTitleFromFile(child);
+              if (title.length) {
+                return title;
+              }
+            }
+          }
+        }
+      }
+    } catch (_ignoreCodexSessionLookup) {}
+    return "";
+  }
+
+  function conversationTitleForRecord(record) {
+    var title = codexSessionTitleForRecord(record || {});
+    if (title.length) {
+      return title;
+    }
+    title = conversationTitleFromText(record && record.title);
+    if (title.length) {
+      return title;
+    }
+    try {
+      var dir = record && record.conversationDir ? new File(String(record.conversationDir)) : null;
+      if (dir !== null) {
+        title = conversationTitleFromTranscriptFile(conversationTranscriptFile(dir));
+        if (title.length) {
+          return title;
+        }
+      }
+    } catch (_ignoreRecordTranscriptTitle) {}
+    title = conversationTitleFromText(record && record.lastUserMessage);
+    if (title.length) {
+      return title;
+    }
+    title = conversationTitleFromText(record && record.lastAnswerPreview);
+    return title.length ? title : "Conversation";
+  }
+
   function publicConversation(record) {
+    record = record || {};
     var provider = normalizeProvider(record.provider);
     return {
       conversationId: String(record.conversationId || record.threadid || ""),
+      title: conversationTitleForRecord(record || {}),
       provider: String(record.provider || "vibe"),
       userKey: String(record.userKey || "studio"),
       agentProfile: String(record.agentProfile || record.skillProfile || ""),
@@ -1007,6 +1223,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (!conversationMatchesSkillProfile(record, skillProfile)) {
           continue;
         }
+        if (!conversationHasUserPrompt(record)) {
+          if (includeDeleted !== true) {
+            markEmptyConversationDeleted(record);
+          }
+          continue;
+        }
         records.push(record);
       }
     }
@@ -1073,6 +1295,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       assistantSurface: state.assistantSurface || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
+      title: conversationTitleFromText(state.title) || conversationTitleFromText(state.userQuestion),
+      lastUserMessage: trim(state.userQuestion || ""),
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
       serviceTier: state.serviceTier || "",
@@ -1438,7 +1662,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   var TRANSLATIONS = {
     fr: {
-      starting: "Je pr\u00e9pare l'agent local.",
+      starting: "J'analyse la demande.",
       thinking: "J'analyse la demande.",
       projectList: "J'utilise le MCP Convertigo pour lister les projets.",
       inspect: "J'utilise le MCP Convertigo pour inspecter le projet.",
@@ -1453,23 +1677,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       tool: "J'utilise le MCP Convertigo.",
       mcpResult: "Résultat MCP : ",
       toolRetry: "Une tentative d'outil a \u00e9chou\u00e9, je cherche une autre piste.",
-      closedAfterAnswer: "L'agent a termin\u00e9 sa r\u00e9ponse.",
-      closedEarly: "L'agent s'est arr\u00eat\u00e9 avant d'avoir termin\u00e9.",
-      completedNoAnswer: "J'ai termin\u00e9 le traitement, mais l'agent n'a pas transmis de r\u00e9sum\u00e9 final d\u00e9taill\u00e9.",
-      completedIncomplete: "L'agent a termin\u00e9, mais sa r\u00e9ponse finale est incompl\u00e8te.",
+      closedAfterAnswer: "La r\u00e9ponse est termin\u00e9e.",
+      closedEarly: "Le traitement s'est arr\u00eat\u00e9 avant d'avoir termin\u00e9.",
+      completedNoAnswer: "Le traitement est termin\u00e9, mais aucun r\u00e9sum\u00e9 final d\u00e9taill\u00e9 n'a \u00e9t\u00e9 transmis.",
+      completedIncomplete: "Le traitement est termin\u00e9, mais la r\u00e9ponse finale est incompl\u00e8te.",
       lastObservedAction: "Derni\u00e8re action observ\u00e9e : ",
       observedSteps: "\u00c9tapes observ\u00e9es :",
       toolWarning: "Une tentative d'outil a \u00e9chou\u00e9 pendant le traitement.",
-      bridgeReadError: "Je n'arrive pas \u00e0 lire le retour de l'agent local.",
-      bridgeStateRecover: "Je v\u00e9rifie que l'agent local est toujours en cours.",
-      bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue parce que le process local de l'agent n'est plus disponible. Vous pouvez relancer une demande dans cette conversation.",
-      startFailed: "Je n'ai pas pu d\u00e9marrer l'agent local.",
-      setupRequired: "L'agent local n'est pas encore pr\u00eat.",
+      bridgeReadError: "Je n'arrive pas \u00e0 lire le retour du traitement.",
+      bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
+      bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
+      startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
+      setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
-      setupReady: "L'agent local est pr\u00eat."
+      setupReady: "L'environnement local est pr\u00eat."
     },
     en: {
-      starting: "I am preparing the local agent.",
+      starting: "I am analyzing the request.",
       thinking: "I am analyzing the request.",
       projectList: "I am using the Convertigo MCP to list projects.",
       inspect: "I am using the Convertigo MCP to inspect the project.",
@@ -1484,20 +1708,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       tool: "I am using the Convertigo MCP.",
       mcpResult: "MCP result: ",
       toolRetry: "A tool attempt failed, I am trying another path.",
-      closedAfterAnswer: "The agent finished its response.",
-      closedEarly: "The agent stopped before completion.",
-      completedNoAnswer: "I finished the task, but the agent did not send a detailed final summary.",
-      completedIncomplete: "The agent finished, but its final answer is incomplete.",
+      closedAfterAnswer: "The response is complete.",
+      closedEarly: "The task stopped before completion.",
+      completedNoAnswer: "The task is complete, but no detailed final summary was sent.",
+      completedIncomplete: "The task is complete, but the final answer is incomplete.",
       lastObservedAction: "Last observed action: ",
       observedSteps: "Observed steps:",
       toolWarning: "A tool attempt failed during processing.",
-      bridgeReadError: "I cannot read the local agent response.",
-      bridgeStateRecover: "I am checking that the local agent is still running.",
-      bridgeProcessLost: "The task was interrupted because the local agent process is no longer available. You can send a new request in this conversation.",
-      startFailed: "I could not start the local agent.",
-      setupRequired: "The local agent is not ready yet.",
+      bridgeReadError: "I cannot read the current response.",
+      bridgeStateRecover: "I am checking that the task is still running.",
+      bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
+      startFailed: "I could not start the task.",
+      setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
-      setupReady: "The local agent is ready."
+      setupReady: "The local environment is ready."
     }
   };
 
@@ -1506,10 +1730,39 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return TRANSLATIONS[code];
   }
 
+  function progressLineLooksLikeAgentLifecycle(value) {
+    var text = compactLine(String(value || "")).toLowerCase();
+    return text === "je prepare l'agent local." ||
+      text === "je pr\u00e9pare l'agent local." ||
+      text === "i am preparing the local agent." ||
+      text === "agent local pr\u00eat." ||
+      text === "l'agent local est pr\u00eat." ||
+      text === "the local agent is ready.";
+  }
+
+  function normalizeProgressLine(state, value) {
+    if (progressLineLooksLikeAgentLifecycle(value)) {
+      return lang(state).thinking;
+    }
+    return String(value || "");
+  }
+
   function progressTextForTool(state, title) {
     var text = String(title || "").toLowerCase();
     var t = lang(state);
-    if (text.indexOf("exec_command") !== -1 || text.indexOf("commande shell") !== -1 || text.indexOf("shell command") !== -1 || text.indexOf("lecture de fichier") !== -1 || text.indexOf("read file") !== -1) {
+    if (text.indexOf("exec_command") !== -1 ||
+        text.indexOf("commande shell") !== -1 ||
+        text.indexOf("shell command") !== -1 ||
+        text.indexOf("lecture de fichier") !== -1 ||
+        text.indexOf("read file") !== -1 ||
+        text.indexOf("recherche dans les fichiers") !== -1 ||
+        text.indexOf("search files") !== -1 ||
+        text.indexOf("liste de fichiers") !== -1 ||
+        text.indexOf("list files") !== -1 ||
+        text.indexOf("vérification devtools") !== -1 ||
+        text.indexOf("devtools check") !== -1 ||
+        text.indexOf("vérification environnement") !== -1 ||
+        text.indexOf("environment check") !== -1) {
       return t.shell;
     }
     if (text.indexOf("project-list") !== -1) {
@@ -1555,6 +1808,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lower.indexOf("zsh -lc ") === 0 ||
       lower.indexOf("bash -lc ") === 0 ||
       lower.indexOf("sh -c ") === 0 ||
+      lower.indexOf("sed ") === 0 ||
+      lower.indexOf("rg ") === 0 ||
+      lower.indexOf("grep ") === 0 ||
+      lower.indexOf("curl ") === 0 ||
+      lower.indexOf("node ") === 0 ||
+      lower.indexOf("python ") === 0 ||
+      lower.indexOf("python3 ") === 0 ||
+      lower.indexOf("npm ") === 0 ||
+      lower.indexOf("npx ") === 0 ||
       lower.indexOf("commande exécutée") === 0 ||
       lower.indexOf("command executed") === 0;
   }
@@ -1562,6 +1824,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function shellCommandTitle(state, value) {
     var text = trim(String(value || "")).toLowerCase();
     var french = state && state.language === "fr";
+    if (text.indexOf("chrome-remote-interface") !== -1 || text.indexOf("devtools") !== -1 || text.indexOf("/json") !== -1) {
+      return french ? "Vérification DevTools" : "DevTools check";
+    }
+    if (text.indexOf("python3 ") !== -1 || text.indexOf("require('") !== -1 || text.indexOf("require(\\\"") !== -1) {
+      return french ? "Vérification environnement" : "Environment check";
+    }
     if (text.indexOf("sed ") !== -1 || text.indexOf("sed -n ") !== -1) {
       return french ? "Lecture de fichier" : "Read file";
     }
@@ -1572,6 +1840,99 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return french ? "Liste de fichiers" : "List files";
     }
     return french ? "Commande shell" : "Shell command";
+  }
+
+  function managedSkillReadText(value) {
+    var text = trim(String(value || "")).replace(/\s+/g, " ").toLowerCase();
+    if (!text.length) {
+      return false;
+    }
+    var readsManagedSkill = text.indexOf("skills/convertigo-generalist/skill.md") !== -1 ||
+      text.indexOf("skills/convertigo-nocode/skill.md") !== -1;
+    return readsManagedSkill &&
+      (text.indexOf("sed -n") !== -1 ||
+        text.indexOf("cat ") !== -1 ||
+        text.indexOf("/bin/zsh -lc") !== -1 ||
+        text.indexOf("/bin/bash -lc") !== -1 ||
+        text.indexOf("zsh -lc") !== -1 ||
+        text.indexOf("bash -lc") !== -1);
+  }
+
+  function shellCommandFromValue(value) {
+    if (value == null) {
+      return "";
+    }
+    if (typeof value === "string") {
+      var text = trim(value);
+      if (!text.length) {
+        return "";
+      }
+      if (looksLikeShellCommand(text)) {
+        return text;
+      }
+      if ((text.charAt(0) === "{" && text.charAt(text.length - 1) === "}") ||
+          (text.charAt(0) === "[" && text.charAt(text.length - 1) === "]")) {
+        try {
+          return shellCommandFromValue(JSON.parse(text));
+        } catch (_ignoreShellJson) {}
+      }
+      return "";
+    }
+    if (typeof value !== "object") {
+      return "";
+    }
+    var candidates = [
+      value.cmd,
+      value.command,
+      value.shellCommand,
+      value.script,
+      value.input,
+      value.title,
+      value.name,
+      value.arguments,
+      value.detail,
+      value.text
+    ];
+    if (Array.isArray && Array.isArray(value)) {
+      candidates = value;
+    }
+    for (var i = 0; i < candidates.length; i++) {
+      var command = shellCommandFromValue(candidates[i]);
+      if (command.length) {
+        return command;
+      }
+    }
+    return "";
+  }
+
+  function toolShellCommandText(event, data, rawTitle) {
+    data = data || {};
+    var item = data.item || {};
+    var candidates = [
+      rawTitle,
+      data.command,
+      data.cmd,
+      data.arguments,
+      data.detail,
+      data.title,
+      data.name,
+      event && event.title,
+      item.command,
+      item.cmd,
+      item.arguments,
+      item.title,
+      item.name,
+      item.content,
+      item.result,
+      item.output
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      var command = shellCommandFromValue(candidates[i]);
+      if (command.length) {
+        return command;
+      }
+    }
+    return "";
   }
 
   function cleanEventText(value) {
@@ -1607,6 +1968,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function normalizedToolTitle(state, data, title) {
     title = trim(title);
+    var shellCommand = toolShellCommandText(null, data, title);
+    if (shellCommand.length) {
+      return shellCommandTitle(state, shellCommand);
+    }
     var callId = toolCallId(data);
     if (callId.length && state && state.toolCalls && state.toolCalls[callId] && state.toolCalls[callId].title) {
       if (!title.length || isOpaqueCallId(title)) {
@@ -1651,8 +2016,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.progressEvents = [];
     }
     item = item || {};
-    var text = cleanEventText(item.text || item.title || "");
-    var title = trim(item.title || text);
+    var text = cleanEventText(normalizeProgressLine(state, item.text || item.title || ""));
+    var title = trim(normalizeProgressLine(state, item.title || text));
     if (!text.length && !title.length) {
       return null;
     }
@@ -1754,20 +2119,30 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function appendToolEvent(state, event, data, type) {
     var rawTitle = eventToolTitle(event, data);
+    var shellCommand = toolShellCommandText(event, data, rawTitle);
+    var preview = eventToolResultPreview(data);
+    if (managedSkillReadText(shellCommand) || managedSkillReadText(rawTitle) || managedSkillReadText(preview)) {
+      return;
+    }
     var title = normalizedToolTitle(state, data, rawTitle);
+    if (shellCommand.length) {
+      title = shellCommandTitle(state, shellCommand);
+    }
     rememberToolCall(state, data, title);
     var status = eventToolStatus(data);
     if (type === "tool/start" && !status.length) {
       status = "running";
     }
-    var preview = eventToolResultPreview(data);
+    if (shellCommand.length) {
+      preview = preview.length && preview !== shellCommand ? shellCommand + "\n\n" + preview : shellCommand;
+    }
     var label = progressTextForTool(state, title);
     if (status === "failed" || status === "error") {
       label = lang(state).toolRetry;
     }
     markProgressEventsIdle(state);
     pushProgressEvent(state, {
-      key: toolEventKey(data, title),
+      key: shellCommand.length && !toolCallId(data).length ? eventKeyForText("tool", "exec_command:" + shellCommand) : toolEventKey(data, title),
       type: "tool",
       text: label,
       title: title,
@@ -1775,8 +2150,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       detail: preview,
       provider: state.provider || "",
       callId: toolCallId(data),
-      toolName: toolNameFromData(data),
-      groupKey: title.toLowerCase(),
+      toolName: shellCommand.length ? "exec_command" : toolNameFromData(data),
+      groupKey: shellCommand.length ? "exec_command" : title.toLowerCase(),
       current: !(status === "completed" || status === "complete" || status === "success" || status === "succeeded" || status === "failed" || status === "error")
     });
     state.lastStatusText = label;
@@ -1794,7 +2169,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function appendProgressLine(state, text) {
-    var rawText = String(text || "");
+    var rawText = normalizeProgressLine(state, text);
     if (progressLineLooksLikeFinalAnswer(rawText)) {
       appendAnswerChunk(state, trim(rawText));
       state.answerIsFinal = true;
@@ -1821,25 +2196,31 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function appendProgress(state, text) {
-    text = appendProgressLine(state, text);
-    if (!text.length) {
+    var rawText = normalizeProgressLine(state, text);
+    if (managedSkillReadText(rawText)) {
       return;
     }
-    if (looksLikeShellCommand(text)) {
-      var title = shellCommandTitle(state, text);
+    var shellCommand = shellCommandFromValue(rawText);
+    if (shellCommand.length || looksLikeShellCommand(rawText)) {
+      var commandText = shellCommand.length ? shellCommand : trim(String(rawText || ""));
+      var title = shellCommandTitle(state, commandText);
       markProgressEventsIdle(state);
       pushProgressEvent(state, {
-        key: eventKeyForText("tool", "exec_command:" + text),
+        key: eventKeyForText("tool", "exec_command:" + commandText),
         type: "tool",
         text: progressTextForTool(state, title),
         title: title,
         status: "completed",
-        detail: text,
+        detail: commandText,
         provider: state.provider || "",
         toolName: "exec_command",
         groupKey: "exec_command",
         current: false
       });
+      return;
+    }
+    text = appendProgressLine(state, rawText);
+    if (!text.length) {
       return;
     }
     appendNarrativeEvent(state, text, "progress");
@@ -1984,11 +2365,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state) {
       return state;
     }
+    sanitizeProgressEvents(state);
     var rawLines = String(state.progressLog || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
     var lines = [];
     var finalCandidate = "";
     for (var i = 0; i < rawLines.length; i++) {
-      var line = compactLine(rawLines[i]);
+      var line = compactLine(normalizeProgressLine(state, rawLines[i]));
       if (!line.length) {
         continue;
       }
@@ -2012,6 +2394,40 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state.lastProgressLine = lines.length ? lines[lines.length - 1] : "";
     return state;
+  }
+
+  function sanitizeProgressEvents(state) {
+    if (!state || !state.progressEvents || typeof state.progressEvents.length === "undefined") {
+      return;
+    }
+    var cleaned = [];
+    var seen = {};
+    for (var i = 0; i < state.progressEvents.length; i++) {
+      var item = state.progressEvents[i];
+      if (!item) {
+        continue;
+      }
+      var rawText = item.text || item.title || "";
+      var rawTitle = item.title || rawText;
+      var normalizedText = cleanEventText(normalizeProgressLine(state, rawText));
+      var normalizedTitle = trim(normalizeProgressLine(state, rawTitle || normalizedText));
+      if (!normalizedText.length && !normalizedTitle.length) {
+        continue;
+      }
+      item.text = normalizedText || normalizedTitle;
+      item.title = normalizedTitle || item.text;
+      if (progressLineLooksLikeAgentLifecycle(rawText) || progressLineLooksLikeAgentLifecycle(rawTitle)) {
+        item.key = eventKeyForText(trim(item.type || "narrative") || "narrative", item.title || item.text);
+      }
+      var key = trim(item.key || eventKeyForText(trim(item.type || "narrative") || "narrative", item.title || item.text));
+      if (seen[key]) {
+        continue;
+      }
+      item.key = key;
+      seen[key] = true;
+      cleaned.push(item);
+    }
+    state.progressEvents = cleaned;
   }
 
   function appendObservedSteps(state, text) {
@@ -2425,6 +2841,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       primaryProject: primaryProject,
       projectNames: projectNames,
       userId: trim(options.userId),
+      title: record ? conversationTitleFromText(record.title) : "",
       externalSessionId: legacyRecordCodexHome ? "" : record && trim(record.externalSessionId),
       language: detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
@@ -2616,6 +3033,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
         skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
         mcpEndpoint: state.mcpEndpoint,
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
         model: state.model || "",
         reasoningEffort: state.reasoningEffort || "",
         serviceTier: state.serviceTier || ""
@@ -2870,7 +3293,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         resumedLatest = requestedThreadId.length > 0;
       }
     }
-    if (!requestedThreadId.length && !boolValue(options.forceNew, false) && !hasQuestion) {
+    if (!requestedThreadId.length && !hasQuestion) {
       setBuffer("", "");
       var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
       var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
@@ -3005,7 +3428,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.setupAgent = function (options) {
-    options = options || {};
+    options = optionsWithRequestFallbacks(options || {});
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
     if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
@@ -3136,6 +3559,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.setupRequired = false;
     state.setupReport = null;
     state.userQuestion = trim(options.userQuestion || extractUserMessage(question));
+    if (!trim(state.title).length) {
+      state.title = conversationTitleFromText(state.userQuestion || question);
+    }
     state.language = detectLanguage(state.userQuestion || question);
     var currentProject = trim(options.targetProject || options.projectName || options.projectId);
     if (currentProject.length) {
@@ -3225,6 +3651,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
         skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
         mcpEndpoint: state.mcpEndpoint,
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
         env: JSON.stringify(env),
         codexThreadId: state.externalSessionId || "",
         model: state.model || "",
@@ -3659,6 +4091,70 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       conversationDir: filePath(dir),
       conversations: remainingConversations,
       bridge: bridge
+    };
+  };
+
+  C8O.assistantAgentBridge.renameConversation = function (options) {
+    options = options || {};
+    var threadid = normalizeConversationId(options.threadid || options.conversationId);
+    var title = conversationTitleFromText(options.title || options.name || "");
+    if (!threadid.length) {
+      return {
+        ok: false,
+        status: "not_found",
+        error: {
+          message: "conversationId is required"
+        }
+      };
+    }
+    if (!title.length) {
+      return {
+        ok: false,
+        status: "invalid_title",
+        threadid: threadid,
+        error: {
+          message: "title is required"
+        }
+      };
+    }
+    var workspaceRoot = resolveWorkspaceRoot(options);
+    var userKey = normalizeUserKey(options.userId);
+    var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
+    var state = readState(threadid);
+    var recordFile = conversationRecordFileFor(workspaceRoot, userKey, threadid, provider);
+    var record = recordFile ? readJsonFile(recordFile) : null;
+    if (state !== null) {
+      state = ensureState(state);
+      state.title = title;
+      state.updatedAt = now();
+      saveState(state);
+      writeConversationRecord(state);
+      recordFile = conversationRecordFileFor(state.workspaceRoot, state.userKey, threadid, state.provider);
+      record = recordFile ? readJsonFile(recordFile) : null;
+    } else if (record && record.deleted !== true) {
+      record.title = title;
+      record.updatedAt = now();
+      writeJsonFile(recordFile, record);
+    } else {
+      return {
+        ok: false,
+        status: "not_found",
+        threadid: threadid,
+        error: {
+          message: "Conversation not found"
+        }
+      };
+    }
+    var listWorkspaceRoot = state ? state.workspaceRoot : workspaceRoot;
+    var listUserKey = state ? state.userKey : userKey;
+    var listSkillProfile = state ? normalizeSkillProfile(state) : normalizeSkillProfile(options);
+    return {
+      ok: true,
+      status: "renamed",
+      threadid: threadid,
+      title: title,
+      conversation: publicConversation(record || readJsonFile(recordFile) || {}),
+      conversations: publicConversations(listWorkspaceRoot, listUserKey, "", false, "all", listSkillProfile)
     };
   };
 

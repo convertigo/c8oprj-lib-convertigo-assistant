@@ -336,51 +336,187 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            '		page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
-            		
-            		if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
-            			page.global.studio = true;
-            		}
-            		
-            		window[''sendToHost''] = (message) => {
-            			if (page.global.studio) {
-            				window[''java''].receiveFromJS(JSON.stringify(message));
-            			} else if (window.parent && window != window.parent) {
-            				window.parent.postMessage(message, ''*'');
-            			}
-            		};
-            		
-            		window[''setupMessageListener''] = (callback) => {
-            			if (page.global.studio) {
-            				window[''receiveFromJava''] = function(msg) {
-            					callback(msg);
-            				};
-            			} else {
-            				window.addEventListener(''message'', (event) => {
-            					callback(event.data);
-            				});
-            			}
-            		};
-            		
-            		window[''setupMessageListener'']((msg) => {
-            			if (''init'' == msg.type) {
-            				page.global.studio = true;
-            			}
-            			
-            			if (page.global.studio) {
-            				if (''select'' == msg.type) {
-            					page.global.projectName = msg.projectName;
-            					page.global.threadQname = msg.threadQname;
-            					page.tick();
-            					page.getInstance(Events).publish("JavaMessage",{});
-            				}
-            				if (''capture'' == msg.type) {
-            					page.getInstance(Events).publish("JavaCapture", msg);
-            				}
-            			}
-            		});
-            
-            		resolve();
+            '        page.c8o.log.debug(''[MB] ''+ props.actionFunction +'': ''+ props.actionName);
+                    var getAssistantRouteQuery = () => {
+                        try {
+                            var chunks = [];
+                            var search = String(window.location.search == null ? '''' : window.location.search);
+                            if (search.length) {
+                                chunks.push(search.charAt(0) === ''?'' ? search.substring(1) : search);
+                            }
+                            var hash = String(window.location.hash == null ? '''' : window.location.hash);
+                            var qIndex = hash.indexOf(''?'');
+                            if (qIndex >= 0 && qIndex < hash.length - 1) {
+                                chunks.push(hash.substring(qIndex + 1));
+                            }
+                            return new URLSearchParams(chunks.join(''&''));
+                        } catch (e) {}
+                        return new URLSearchParams('''');
+                    };
+                    var autoOpenAgentFromStudioView = () => {
+                        try {
+                            if (!page.global || page.global.studio !== true) {
+                                return false;
+                            }
+                            var params = getAssistantRouteQuery();
+                            var mode = ('''' + (params.get(''assistantMode'') || params.get(''mode'') || '''')).replace(/^\s+|\s+$/g, '''').toLowerCase();
+                            var surface = ('''' + (params.get(''assistantSurface'') || params.get(''surface'') || params.get(''context'') || '''')).replace(/^\s+|\s+$/g, '''').toLowerCase();
+                            if (mode === ''howto'' || mode === ''lightrag'' || mode === ''figma'' || mode === ''component'') {
+                                return false;
+                            }
+                            if (surface === ''admin'' || surface === ''console'' || surface === ''knowledge'' || surface === ''lightrag'') {
+                                return false;
+                            }
+                            var currentUrl = '''';
+                            try {
+                                currentUrl = '''' + ((page.angularRouter && page.angularRouter.url) || '''');
+                            } catch (e1) {}
+                            var currentPath = currentUrl;
+                            var q = currentPath.indexOf(''?'');
+                            if (q >= 0) {
+                                currentPath = currentPath.substring(0, q);
+                            }
+                            if (currentPath.indexOf(''/path-to-agent'') === 0 || (currentPath.indexOf(''/path-to-xfirst'') === 0 && currentUrl.indexOf(''agentBridge=1'') !== -1)) {
+                                return false;
+                            }
+                            if (!(currentPath === '''' || currentPath === ''/'' || currentPath.indexOf(''/path-to-lightrag'') === 0)) {
+                                return false;
+                            }
+                            if (!page.angularRouter || typeof page.angularRouter.navigate !== ''function'') {
+                                return false;
+                            }
+                            page.angularRouter.navigate([''/path-to-xfirst'', '':threadid''], {
+                                queryParams: {
+                                    agentBridge: ''1'',
+                                    assistantMode: ''agent'',
+                                    assistantSurface: ''studio''
+                                },
+                                replaceUrl: true
+                            });
+                            return true;
+                        } catch (e2) {
+                            try {
+                                page.c8o.log.warn(''[Assistant] unable to auto-open agent view'', e2);
+                            } catch (e3) {}
+                        }
+                        return false;
+                    };
+                    var cleanContextValue = function(value) {
+                        return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
+                    };
+                    var mergeAgentHostContext = function(context) {
+                        try {
+                            if (!context || typeof context !== ''object'') {
+                                return;
+                            }
+                            var keys = [
+                                ''assistantSurface'', ''assistantContext'', ''agentProfile'', ''skillProfile'',
+                                ''projectContext'', ''defaultProject'', ''projectScope'', ''userId'',
+                                ''codexHomeScope'', ''vibeHomeScope'', ''homeScope'',
+                                ''currentUrl'', ''nocodeCurrentUrl'', ''currentRoute'', ''nocodeCurrentRoute'',
+                                ''currentPath'', ''currentFormId'', ''nocodeCurrentFormId'', ''formId'',
+                                ''applicationId'', ''currentPage'', ''pageId'',
+                                ''browserDebugUrl'', ''browserDevToolsJsonUrl'', ''browserDevToolsWebSocketUrl'',
+                                ''playwrightCdpEndpoint'', ''playwrightMcpEndpoint'', ''viewerCdpEndpoint''
+                            ];
+                            if (!page.global) {
+                                page.global = {};
+                            }
+                            if (!page.local) {
+                                page.local = {};
+                            }
+                            var dynamicPage = page as any;
+                            try {
+                                if (dynamicPage.applyAgentHostContext) {
+                                    dynamicPage.applyAgentHostContext(context);
+                                }
+                            } catch (eApply) {}
+                            var hostContext = dynamicPage.agentHostContext || (page.local && page.local.AgentHostContext) || {};
+                            for (var i = 0; i < keys.length; i++) {
+                                var key = keys[i];
+                                var value = cleanContextValue(context[key]);
+                                if (value.length) {
+                                    hostContext[key] = value;
+                                    page.global[key] = value;
+                                }
+                            }
+                            var cdp = cleanContextValue(hostContext.playwrightCdpEndpoint || hostContext.viewerCdpEndpoint || hostContext.browserDebugUrl || hostContext.browserDevToolsWebSocketUrl || hostContext.browserDevToolsJsonUrl);
+                            if (cdp.length) {
+                                if (/\/json\/?$/.test(cdp)) {
+                                    cdp = cdp.replace(/\/json\/?$/, '''');
+                                }
+                                hostContext.playwrightCdpEndpoint = cdp;
+                                hostContext.viewerCdpEndpoint = cdp;
+                                page.global.playwrightCdpEndpoint = cdp;
+                                page.global.viewerCdpEndpoint = cdp;
+                            }
+                            dynamicPage.agentHostContext = hostContext;
+                            page.local.AgentHostContext = hostContext;
+                        } catch (eMerge) {
+                            try { page.c8o.log.warn(''[Assistant] unable to merge host context'', eMerge); } catch (eLog) {}
+                        }
+                    };
+                    var requestAssistantContext = function() {
+                        try {
+                            if (window[''sendToHost'']) {
+                                window[''sendToHost'']({ type: ''ConvertigoAssistant.context.request'' });
+                            } else if (window.parent && window != window.parent) {
+                                window.parent.postMessage({ type: ''ConvertigoAssistant.context.request'' }, ''*'');
+                            }
+                        } catch (e) {}
+                    };
+                    if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
+                        page.global.studio = true;
+                        setTimeout(autoOpenAgentFromStudioView, 0);
+                    }
+                    window[''sendToHost''] = (message) => {
+                        if (page.global.studio) {
+                            window[''java''].receiveFromJS(JSON.stringify(message));
+                        } else if (window.parent && window != window.parent) {
+                            window.parent.postMessage(message, ''*'');
+                        }
+                    };
+                    window[''setupMessageListener''] = (callback) => {
+                        if (page.global.studio) {
+                            window[''receiveFromJava''] = function(msg) {
+                                callback(msg);
+                            };
+                        } else {
+                            window.addEventListener(''message'', (event) => {
+                                callback(event.data);
+                            });
+                        }
+                    };
+                    window[''setupMessageListener'']((msg) => {
+                        if (''init'' == msg.type) {
+                            page.global.studio = true;
+                            setTimeout(autoOpenAgentFromStudioView, 0);
+                            setTimeout(requestAssistantContext, 0);
+                        }
+                        if (''ConvertigoAssistant.context'' == msg.type || ''convertigo-assistant-context'' == msg.type) {
+                            mergeAgentHostContext(msg.payload || msg.context || msg);
+                            page.tick();
+                        }
+                        if (page.global.studio) {
+                            if (''select'' == msg.type) {
+                                page.global.projectName = msg.projectName;
+                                page.global.threadQname = msg.threadQname;
+                                mergeAgentHostContext(Object.assign({
+                                    assistantSurface: ''studio'',
+                                    assistantContext: ''studio'',
+                                    defaultProject: msg.projectName,
+                                    projectName: msg.projectName
+                                }, msg));
+                                page.tick();
+                                page.getInstance(Events).publish("JavaMessage",{});
+                                setTimeout(autoOpenAgentFromStudioView, 0);
+                            }
+                            if (''capture'' == msg.type) {
+                                page.getInstance(Events).publish("JavaCapture", msg);
+                            }
+                        }
+                    });
+                    resolve();
             '
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
     beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.GetVersion"}'
