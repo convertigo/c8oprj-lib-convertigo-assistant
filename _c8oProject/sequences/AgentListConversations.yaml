@@ -12,7 +12,9 @@ comment: List durable local agent conversations for one Studio/NoCode user.
       targetProject: _targetProject,
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId,
-      includeDeleted: typeof includeDeleted === "undefined" ? "" : includeDeleted
+      includeDeleted: typeof includeDeleted === "undefined" ? "" : includeDeleted,
+      agentProfile: typeof agentProfile === "undefined" ? "" : agentProfile,
+      skillProfile: typeof skillProfile === "undefined" ? "" : skillProfile
     });'
 ↓result [steps.JsonToXmlStep-1781602411871]: 
   jsonObject: 
@@ -45,3 +47,9 @@ comment: List durable local agent conversations for one Studio/NoCode user.
 ↓targetProject [variables.RequestableVariable-1781602646281]: 
   comment: Optional project filter. Preferred over projectName.
   description: Optional project filter. Preferred over projectName.
+↓agentProfile [variables.RequestableVariable-1782831324287]: 
+  comment: Optional agent profile, for example nocode.
+  description: Optional agent profile, for example nocode.
+↓skillProfile [variables.RequestableVariable-1782831324385]: 
+  comment: Optional skill profile, for example nocode.
+  description: Optional skill profile, for example nocode.

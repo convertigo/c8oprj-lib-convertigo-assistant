@@ -174,7 +174,7 @@ scriptContent:
         		try {
         			if (!context || typeof context !== ''object'') { return; }
         			var next: any = {};
-        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId''];
+        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId''];
         			for (var i = 0; i < keys.length; i++) {
         				var key = keys[i];
         				var value = this.normalizeAgentHostContextValue(context[key]);
@@ -1600,7 +1600,7 @@ title: Convertigo assistant
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-header-btn'' : ''modern-header-btn agent-hidden'''
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''add-circle-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''home-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
           ↓OpenConversationPanel [ngx.components.UICustomAction-1781700500001]: 
@@ -1612,37 +1612,111 @@ title: Convertigo assistant
                     '        if (!page.local) {
                                 page.local = {};
                             }
-                            var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
-                            if (project && page.setConversationProject) {
+                            var clean = function(value) {
+                                return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                            };
+                            var projectFromQName = function(value) {
+                                var text = clean(value);
+                                if (!text.length) { return ""; }
+                                var dot = text.indexOf(".");
+                                if (dot > 0) { text = text.substring(0, dot); }
+                                return clean(text);
+                            };
+                            var project = "";
+                            try {
+                                if (page.getAssistantQueryParam) {
+                                    project = clean(page.getAssistantQueryParam("targetProject") || page.getAssistantQueryParam("projectName") || page.getAssistantQueryParam("project"));
+                                }
+                            } catch (e0) {}
+                            if (!project.length) { project = clean(page.local && page.local.CurrentStudioProject); }
+                            if (!project.length) { project = clean(page.global && page.global.projectName); }
+                            if (!project.length) { project = projectFromQName(page.global && page.global.threadQname); }
+                            if (!project.length && page.getEffectiveProjectName) { project = clean(page.getEffectiveProjectName()); }
+                            if (project.length && page.setConversationProject) {
                                 page.setConversationProject(project);
+                                page.local.ConversationProjectMode = "project";
+                            } else if (!project.length) {
+                                page.local.ConversationProjectMode = "";
                             }
                             page.local.NewConversationMode = true;
                             page.local.ShowConversationPanel = false;
                             page.local.ShowAgentConfigPanel = false;
                             page.local.ConversationStarted = false;
-                            page.local.Conversation = '''';
+                            page.local.Conversation = "";
                             page.local.AgentConversationResumed = false;
                             page.local.Messages = [];
-                            page.local.RunID = '''';
+                            page.local.RunID = "";
                             page.local.Buffer = {};
                             page.local.StreamingIndex = null;
                             page.local.IsProcessing = false;
                             page.local.AgentProgressHistory = [];
-                            page.local.AgentProgressHistoryRunId = '''';
-                            page.local.Question = '''';
+                            page.local.AgentProgressHistoryRunId = "";
+                            page.local.Question = "";
+                            page.local.AgentConversationsLoading = true;
                             if (page.chatfooter && page.chatfooter.setQuestionText) {
-                                page.chatfooter.setQuestionText('''', false);
+                                page.chatfooter.setQuestionText("", false);
                             }
                             page.setEnableChat();
                             page.tick();
                             page.focusQuestionInput(20);
                             resolve();'
+          ↓LoadConversations [ngx.components.UIDynamicAction-1782831330713]: 
+            beanData: |
+              '{
+               "ionBean": "CallSequenceAction",
+               "requestable": "plain:ConvertigoAssistant.AgentListConversations",
+               "noLoading": "plain:true"
+              }'
+            ↓provider [ngx.components.UIControlVariable-1782831332239]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:c8oPage.getConfiguredAgentProvider ? c8oPage.getConfiguredAgentProvider() : '''''
+            ↓userId [ngx.components.UIControlVariable-1782831332241]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:c8oPage.getAgentContextUserId ? c8oPage.getAgentContextUserId() : ''studio'''
+            ↓agentProfile [ngx.components.UIControlVariable-1782831332243]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
+            ↓skillProfile [ngx.components.UIControlVariable-1782831332245]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
+            ↓SetConversations [ngx.components.UIDynamicAction-1782831332247]: 
+              beanData: |
+                '{
+                 "ionBean": "SetLocalAction",
+                 "Property": "plain:AgentConversations",
+                 "Value": "script:(function(response) {\n    try {\n        var result = response && response.result ? response.result : (response || {});\n        var conversations = result.conversations || [];\n        return conversations && conversations.length != null ? conversations : [];\n    } catch (e) {\n        return [];\n    }\n})(out)"
+                }'
+            ↓OpenLoadedHistory [ngx.components.UICustomAction-1782831332249]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                              if (!page.local) {
+                                  page.local = {};
+                              }
+                              page.local.AgentConversationsLoading = false;
+                              page.local.NewConversationMode = true;
+                              page.local.ShowConversationPanel = false;
+                              page.local.ShowAgentConfigPanel = false;
+                              page.local.AgentConversationResumed = false;
+                              page.tick();
+                              page.focusQuestionInput(20);
+                              resolve();
         ↓AriaNewConversation [ngx.components.UIAttribute-1781604857325]: 
           attrName: aria-label
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:New conversation
+              - MobileSmartSourceType: plain:Home
       ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774703000001]: 
         beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
         tagName: ion-button
@@ -2093,7 +2167,7 @@ title: Convertigo assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel())) ? (''agent-session-strip agent-start-choice agent-project-choice'' + ((this.getEffectiveProjectName && this.getEffectiveProjectName()) ? '''' : '' agent-choice-disabled'') + ((this.getEffectiveProjectName && this.getEffectiveProjectName() && (!this.local.ConversationProjectMode || this.local.ConversationProjectMode !== ''none'') && (!this.local.ConversationProject || this.local.ConversationProject === this.getEffectiveProjectName())) ? '' agent-choice-selected'' : '''')) : ''agent-session-strip agent-start-choice agent-project-choice agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && !(this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'')) ? (''agent-session-strip agent-start-choice agent-project-choice'' + (((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? '''' : '' agent-choice-disabled'') + ((((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') && this.local.ConversationProjectMode !== ''none'' && (!this.local.ConversationProject || this.local.ConversationProject === ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName)))) ? '' agent-choice-selected'' : '''')) : ''agent-session-strip agent-start-choice agent-project-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746869516]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:folder-open-outline"}'
               tagName: ion-icon
@@ -2119,7 +2193,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.getEffectiveProjectName && this.getEffectiveProjectName()) ? (''Démarrer maintenant avec '' + this.getEffectiveProjectName()) : ''Sélectionnez le projet à continuer'''
+                      - MobileSmartSourceType: 'script:((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? (''Démarrer maintenant avec '' + ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''')) : ''Sélectionnez le projet à continuer'''
               ↓Meta [ngx.components.UIDynamicElement-1782746869528]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -2133,7 +2207,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.getEffectiveProjectName && this.getEffectiveProjectName()) ? ''Le premier message utilisera ce projet comme contexte.'' : ''Choisissez un projet dans Studio pour activer cette option.'''
+                      - MobileSmartSourceType: 'script:((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? ''Le premier message utilisera ce projet comme contexte.'' : ''Choisissez un projet dans Studio pour activer cette option.'''
             ↓Role [ngx.components.UIAttribute-1782746869534]: 
               attrName: role
               attrValue: 
@@ -2153,42 +2227,61 @@ title: Convertigo assistant
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                        '		if (!page.local) {
-                        			page.local = {};
-                        		}
-                        		var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
-                        		project = ('''' + (project == null ? '''' : project)).replace(/^\s+|\s+$/g, '''');
-                        		if (!project.length) {
-                        			resolve(false);
-                        			return;
-                        		}
-                        		if (page.setConversationProject) {
-                        			page.setConversationProject(project);
-                        		} else {
-                        			page.local.ConversationProject = project;
-                        		}
-                        		page.local.ConversationProjectMode = ''project'';
-                        		page.local.NewConversationMode = true;
-                        		page.local.ShowConversationPanel = false;
-                        		page.local.ShowAgentConfigPanel = false;
-                        		page.local.ConversationStarted = false;
-                        		page.local.Conversation = '''';
-                        		page.local.AgentConversationResumed = false;
-                        		page.local.Messages = [];
-                        		page.local.RunID = '''';
-                        		page.local.Buffer = {};
-                        		page.local.StreamingIndex = null;
-                        		page.local.IsProcessing = false;
-                        		page.local.AgentProgressHistory = [];
-                        		page.local.AgentProgressHistoryRunId = '''';
-                        		page.local.Question = '''';
-                        		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                        			page.chatfooter.setQuestionText('''', false);
-                        		}
-                        		page.setEnableChat();
-                        		page.tick();
-                        		page.focusQuestionInput(20);
-                        		resolve();'
+                        '        if (!page.local) {
+                                    page.local = {};
+                                }
+                                var clean = function(value) {
+                                    return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+                                };
+                                var projectFromQName = function(value) {
+                                    var text = clean(value);
+                                    if (!text.length) { return ""; }
+                                    var dot = text.indexOf(".");
+                                    if (dot > 0) { text = text.substring(0, dot); }
+                                    return clean(text);
+                                };
+                                var project = "";
+                                try {
+                                    if (page.getAssistantQueryParam) {
+                                        project = clean(page.getAssistantQueryParam("targetProject") || page.getAssistantQueryParam("projectName") || page.getAssistantQueryParam("project"));
+                                    }
+                                } catch (e0) {}
+                                if (!project.length) { project = clean(page.local && page.local.CurrentStudioProject); }
+                                if (!project.length) { project = clean(page.global && page.global.projectName); }
+                                if (!project.length) { project = projectFromQName(page.global && page.global.threadQname); }
+                                if (!project.length && page.getEffectiveProjectName) { project = clean(page.getEffectiveProjectName()); }
+                                if (!project.length) {
+                                    resolve(false);
+                                    return;
+                                }
+                                if (page.setConversationProject) {
+                                    page.setConversationProject(project);
+                                } else {
+                                    page.local.ConversationProject = project;
+                                }
+                                page.local.CurrentStudioProject = project;
+                                page.local.ConversationProjectMode = "project";
+                                page.local.NewConversationMode = true;
+                                page.local.ShowConversationPanel = false;
+                                page.local.ShowAgentConfigPanel = false;
+                                page.local.ConversationStarted = false;
+                                page.local.Conversation = "";
+                                page.local.AgentConversationResumed = false;
+                                page.local.Messages = [];
+                                page.local.RunID = "";
+                                page.local.Buffer = {};
+                                page.local.StreamingIndex = null;
+                                page.local.IsProcessing = false;
+                                page.local.AgentProgressHistory = [];
+                                page.local.AgentProgressHistoryRunId = "";
+                                page.local.Question = "";
+                                if (page.chatfooter && page.chatfooter.setQuestionText) {
+                                    page.chatfooter.setQuestionText("", false);
+                                }
+                                page.setEnableChat();
+                                page.tick();
+                                page.focusQuestionInput(20);
+                                resolve();'
           ↓AgentStartFreeChoice [ngx.components.UIDynamicElement-1782746911790]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: div
@@ -2399,7 +2492,7 @@ title: Convertigo assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && ((this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true && this.local.AgentConversations && this.local.AgentConversations.length > 0) || this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-conversations-title'' : ''agent-conversations-title agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-title agent-hidden'' : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-conversations-title'' : ''agent-conversations-title agent-hidden'')'
                 ↓Text [ngx.components.UIText-1781608119099]: 
                   textValue: 
                     - xmlizable: 
@@ -2418,7 +2511,7 @@ title: Convertigo assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'')'
                 ↓Aria [ngx.components.UIAttribute-1781676493785]: 
                   attrName: aria-label
                   attrValue: 
@@ -3472,8 +3565,23 @@ title: Convertigo assistant
                               '{
                                "ionBean": "SetLocalAction",
                                "Property": "plain:AgentConversations",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentDeleteConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                               "Value": "script:(function(page, conversation, response) {\n    var current: any[] = (page.local && Array.isArray(page.local.AgentConversations)) ? page.local.AgentConversations : [];\n    var target = '''';\n    try {\n        target = '''' + ((conversation && (conversation.conversationId || conversation.threadid || conversation.id)) || '''');\n    } catch (e) {}\n    var result: any = {};\n    try {\n        result = response && response.result ? response.result : (response || {});\n    } catch (e0) {\n        result = {};\n    }\n    if (result && (result.ok === false || result.status === ''delete_failed'')) {\n        return current;\n    }\n    if (result && Array.isArray(result.conversations)) {\n        return result.conversations;\n    }\n    if (!target.length) {\n        return current;\n    }\n    var next: any[] = [];\n    for (var i = 0; i < current.length; i++) {\n        var item: any = current[i] || {};\n        var id = '''' + (item.conversationId || item.threadid || item.id || '''');\n        if (id !== target) {\n            next.push(item);\n        }\n    }\n    return next;\n})(this, conversation, out)"
                               }'
+                          ↓userId [ngx.components.UIControlVariable-1782831326155]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:c8oPage.getAgentContextUserId ? c8oPage.getAgentContextUserId() : ''studio'''
+                          ↓agentProfile [ngx.components.UIControlVariable-1782831327681]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
+                          ↓skillProfile [ngx.components.UIControlVariable-1782831329207]: 
+                            varValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
                     ↓RenameButton [ngx.components.UIDynamicElement-1782745322278]: 
                       beanData: |
                         '{
@@ -3513,49 +3621,123 @@ title: Convertigo assistant
                                               return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
                                           };
                                           var conversationId = clean(vars.conversationId);
-                                          var currentTitle = clean(vars.title);
+                                          var currentTitle = clean(vars.title) || ''Conversation'';
                                           var provider = clean(vars.provider || (page.getAgentProvider ? page.getAgentProvider() : ''codex''));
                                           if (!conversationId.length) {
                                               resolve(false);
                                               return;
                                           }
-                                          var title = window.prompt(''Renommer la conversation'', currentTitle || ''Conversation'');
-                                          if (title == null) {
+                                          var sourceEvent = typeof event !== ''undefined'' ? event : null;
+                                          var target = sourceEvent && sourceEvent.target ? sourceEvent.target : null;
+                                          var active = document && document.activeElement ? document.activeElement : null;
+                                          var row = target && target.closest ? target.closest(''.agent-conversation-row'') : null;
+                                          if (!row && active && active.closest) {
+                                              row = active.closest(''.agent-conversation-row'');
+                                          }
+                                          if (!row) {
                                               resolve(false);
                                               return;
                                           }
-                                          title = clean(title);
-                                          if (!title.length || title === currentTitle) {
+                                          var titleNode = row.querySelector(''.agent-conversation-name'');
+                                          if (!titleNode || !titleNode.parentNode) {
                                               resolve(false);
                                               return;
                                           }
-                                          var payload: any = {
-                                              threadid: conversationId,
-                                              title: title,
-                                              provider: provider,
-                                              userId: page.getAgentContextUserId ? page.getAgentContextUserId() : ''studio'',
-                                              __context: ''byside''
+                                          var existingInput = row.querySelector(''.agent-conversation-rename-input'');
+                                          if (existingInput) {
+                                              existingInput.focus();
+                                              existingInput.select();
+                                              resolve(false);
+                                              return;
+                                          }
+                                          var previousDisplay = titleNode.style.display;
+                                          titleNode.style.display = ''none'';
+                                          var input = document.createElement(''input'');
+                                          input.type = ''text'';
+                                          input.className = ''agent-conversation-rename-input'';
+                                          input.value = currentTitle;
+                                          input.setAttribute(''aria-label'', ''Renommer la conversation'');
+                                          titleNode.parentNode.insertBefore(input, titleNode.nextSibling);
+                                          var done = false;
+                                          var cleanup = function() {
+                                              try {
+                                                  input.removeEventListener(''keydown'', onKeyDown);
+                                                  input.removeEventListener(''blur'', save);
+                                              } catch (e) {}
+                                              try {
+                                                  if (input.parentNode) {
+                                                      input.parentNode.removeChild(input);
+                                                  }
+                                              } catch (e) {}
+                                              titleNode.style.display = previousDisplay;
+                                              try {
+                                                  page.tick();
+                                              } catch (e) {}
                                           };
-                                          page.c8o.callJsonObject(''ConvertigoAssistant.AgentRenameConversation'', payload).async().then(function(response) {
-                                              var result = response && response.result ? response.result : {};
-                                              if (result.conversations) {
-                                                  page.local.AgentConversations = result.conversations;
+                                          var cancel = function() {
+                                              if (done) {
+                                                  return;
                                               }
-                                              if (page.local && page.local.AgentConversations) {
-                                                  for (var i = 0; i < page.local.AgentConversations.length; i++) {
-                                                      if (page.local.AgentConversations[i] && page.local.AgentConversations[i].conversationId === conversationId) {
-                                                          page.local.AgentConversations[i].title = result.title || title;
+                                              done = true;
+                                              cleanup();
+                                              resolve(false);
+                                          };
+                                          var save = function() {
+                                              if (done) {
+                                                  return;
+                                              }
+                                              var title = clean(input.value);
+                                              if (!title.length || title === currentTitle) {
+                                                  cancel();
+                                                  return;
+                                              }
+                                              done = true;
+                                              input.disabled = true;
+                                              var payload = {
+                                                  threadid: conversationId,
+                                                  title: title,
+                                                  provider: provider,
+                                                  userId: page.getAgentContextUserId ? page.getAgentContextUserId() : ''studio'',
+                                                  __context: ''byside''
+                                              };
+                                              page.c8o.callJsonObject(''ConvertigoAssistant.AgentRenameConversation'', payload).async().then(function(response) {
+                                                  var result = response && response.result ? response.result : {};
+                                                  if (result.conversations) {
+                                                      page.local.AgentConversations = result.conversations;
+                                                  }
+                                                  if (page.local && page.local.AgentConversations) {
+                                                      for (var i = 0; i < page.local.AgentConversations.length; i++) {
+                                                          if (page.local.AgentConversations[i] && page.local.AgentConversations[i].conversationId === conversationId) {
+                                                              page.local.AgentConversations[i].title = result.title || title;
+                                                          }
                                                       }
                                                   }
+                                                  cleanup();
+                                                  resolve(result);
+                                              }).catch(function(error) {
+                                                  try {
+                                                      page.c8o.log.warn(''[Assistant] Unable to rename conversation: '' + error);
+                                                  } catch (e) {}
+                                                  cleanup();
+                                                  resolve(false);
+                                              });
+                                          };
+                                          var onKeyDown = function(e) {
+                                              if (e && e.key === ''Escape'') {
+                                                  e.preventDefault();
+                                                  cancel();
                                               }
-                                              page.tick();
-                                              resolve(result);
-                                          }).catch(function(error) {
-                                              try {
-                                                  page.c8o.log.warn(''[Assistant] Unable to rename conversation: '' + error);
-                                              } catch (e) {}
-                                              resolve(false);
-                                          });'
+                                              if (e && e.key === ''Enter'') {
+                                                  e.preventDefault();
+                                                  save();
+                                              }
+                                          };
+                                          input.addEventListener(''keydown'', onKeyDown);
+                                          input.addEventListener(''blur'', save);
+                                          setTimeout(function() {
+                                              input.focus();
+                                              input.select();
+                                          }, 0);'
                           ↓conversationId [ngx.components.UIControlVariable-1782745325318]: 
                             varValue: 
                               - xmlizable: 
@@ -4682,6 +4864,11 @@ title: Convertigo assistant
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+        ↓language [ngx.components.UIControlVariable-1782813233130]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:(function(page) { try { if (page.getAssistantQueryParam) { var query = page.getAssistantQueryParam('language') || page.getAssistantQueryParam('locale') || page.getAssistantQueryParam('assistantLanguage') || ''; if (query) { return query; } } if (page.global && page.global.currentLanguage) { return page.global.currentLanguage(); } if (page.translate && page.translate.currentLang) { return page.translate.currentLang; } } catch (e) {} return ''; })(this)
   ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
     actionValue: 
       - xmlizable: 
@@ -6110,6 +6297,11 @@ title: Convertigo assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:(function(page){ return (page.getAssistantQueryParam ? page.getAssistantQueryParam(''playwrightMcpEndpoint'') : '''') || ((page.local && page.local.AgentHostContext && page.local.AgentHostContext.playwrightMcpEndpoint) || '''') || ((page.global && page.global.playwrightMcpEndpoint) || ''''); })(this)'
+                  ↓language [ngx.components.UIControlVariable-1782813229953]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(function(page) { try { if (page.getAssistantQueryParam) { var query = page.getAssistantQueryParam('language') || page.getAssistantQueryParam('locale') || page.getAssistantQueryParam('assistantLanguage') || ''; if (query) { return query; } } if (page.global && page.global.currentLanguage) { return page.global.currentLanguage(); } if (page.translate && page.translate.currentLang) { return page.translate.currentLang; } } catch (e) {} return ''; })(this)
         ↓attachments [ngx.components.UIControlVariable-1751373371973]: 
           varValue: 
             - xmlizable: 
@@ -6341,25 +6533,28 @@ title: Convertigo assistant
                         if (dot > 0) { text = text.substring(0, dot); }
                         return clean(text);
                     };
+                    var previousSelected = clean(page.local && page.local.CurrentStudioProject);
                     var selected = clean(page.global && page.global.projectName);
                     if (!selected.length) {
                         selected = projectFromQName(page.global && page.global.threadQname);
                     }
                     page.local.CurrentStudioProject = selected;
+                    var selectedChanged = selected.length > 0 && selected !== previousSelected;
                     var isNoCode = false;
                     try { isNoCode = page.getAgentSkillProfile && page.getAgentSkillProfile() === "nocode"; } catch (e0) {}
                     var explicitNoProject = clean(page.local && page.local.ConversationProjectMode) === "none";
                     var hasConversation = clean(page.local && page.local.Conversation).length > 0;
                     var hasProject = clean(page.local && page.local.ConversationProject).length > 0;
-                    var canSeedConversationProject = selected.length > 0 && !isNoCode && !explicitNoProject && page.isAgentBridgeMode && page.isAgentBridgeMode() && (!hasConversation || !hasProject || page.local.NewConversationMode === true);
+                    var canSeedConversationProject = selected.length > 0 && !isNoCode && page.isAgentBridgeMode && page.isAgentBridgeMode() && (!hasConversation || !hasProject || page.local.NewConversationMode === true) && (!explicitNoProject || selectedChanged);
                     if (canSeedConversationProject) {
                         if (page.setConversationProject) {
                             page.setConversationProject(selected);
                         } else {
                             page.local.ConversationProject = selected;
                         }
+                        page.local.ConversationProjectMode = "project";
                     }
-                    page.local.ProjectSelectionChanged = false;
+                    page.local.ProjectSelectionChanged = selectedChanged;
                     page.setEnableChat();
                     page.tick();
                     resolve();'
@@ -6575,6 +6770,11 @@ title: Convertigo assistant
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : (this.global && this.global.projectName ? this.global.projectName : '''')'
+        ↓language [ngx.components.UIControlVariable-1782813375389]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:(function(page) { try { if (page.getAssistantQueryParam) { var query = page.getAssistantQueryParam('language') || page.getAssistantQueryParam('locale') || page.getAssistantQueryParam('assistantLanguage') || ''; if (query) { return query; } } if (page.global && page.global.currentLanguage) { return page.global.currentLanguage(); } if (page.translate && page.translate.currentLang) { return page.translate.currentLang; } } catch (e) {} return ''; })(this)
 ↓Subscribe_Handler2 [ngx.components.UIEventSubscriber-1751537016993]: 
   topic: JavaCapture
   ↓CustomAction [ngx.components.UICustomAction-1751537016996]: 
@@ -7092,34 +7292,128 @@ title: Convertigo assistant
           .agent-header-new-hidden {
             display: none !important;
           }
+          ion-header.modern-header {
+            box-shadow: none !important;
+          }
+          ion-header.modern-header::after {
+            background-image: none !important;
+            display: none !important;
+          }
           ion-header.modern-header ion-toolbar {
-            --min-height: 50px;
+            --background: var(--modern-surface-soft, #ffffff);
+            --border-width: 0;
+            --min-height: 56px;
+            --padding-bottom: 0;
+            --padding-end: 12px;
+            --padding-start: 12px;
+            --padding-top: 0;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: none !important;
+          }
+          ion-header.modern-header ion-toolbar::part(container) {
+            min-height: 56px;
+            padding: 0 12px;
+          }
+          ion-header.modern-header ion-buttons {
+            gap: 8px;
+          }
+          ion-header.modern-header ion-buttons[slot=start] {
+            gap: 10px;
           }
           ion-header.modern-header .modern-menu-btn,
           ion-header.modern-header .modern-header-btn,
-          ion-header.modern-header .modern-theme-btn {
-            width: 30px;
-            height: 30px;
-            min-height: 30px;
+          ion-header.modern-header .modern-theme-btn,
+          ion-header.modern-header ion-back-button.modern-header-btn,
+          ion-header.modern-header ion-button.modern-header-btn,
+          ion-header.modern-header ion-menu-button.modern-header-btn {
+            --background: rgba(14, 165, 233, 0.1);
+            --background-activated: rgba(14, 165, 233, 0.2);
+            --background-hover: rgba(14, 165, 233, 0.16);
+            --border-radius: 999px;
+            --box-shadow: none;
+            border-radius: 999px;
+            height: 34px;
+            margin: 0;
+            min-height: 34px;
+            width: 34px;
           }
-          ion-header.modern-header .modern-header-main {
-            gap: 10px;
+          ion-header.modern-header .modern-header-btn::part(native),
+          ion-header.modern-header ion-back-button.modern-header-btn::part(native),
+          ion-header.modern-header ion-button.modern-header-btn::part(native),
+          ion-header.modern-header ion-menu-button.modern-header-btn::part(native) {
+            border-radius: 999px;
+            box-shadow: none;
+            padding: 7px;
+          }
+          ion-header.modern-header ion-button.modern-header-btn ion-icon {
+            font-size: 18px;
+          }
+          ion-header.modern-header ion-menu-button.modern-header-btn {
+            --icon-font-size: 18px;
+          }
+          ion-header.modern-header ion-button.toolbar-theme-button {
+            --background: rgba(14, 165, 233, 0.1);
+            --background-activated: rgba(14, 165, 233, 0.2);
+            --background-hover: rgba(14, 165, 233, 0.16);
+            --border-radius: 999px;
+            --box-shadow: none;
+            height: 34px;
+            margin: 0 0 0 4px;
+            min-height: 34px;
+            width: 34px;
+          }
+          ion-header.modern-header ion-button.toolbar-theme-button::part(native) {
+            border-radius: 999px;
+            box-shadow: none;
+            padding: 7px;
+          }
+          ion-header.modern-header ion-select.toolbar-lang-select {
+            --background: #ffffff;
+            --border-color: rgba(15, 23, 42, 0.12);
+            --border-radius: 999px;
+            --highlight-color-focused: transparent;
+            --highlight-color-invalid: transparent;
+            --highlight-color-valid: transparent;
+            --padding-end: 8px;
+            --padding-start: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 999px;
+            box-shadow: none;
+            color: var(--modern-text, #0f172a);
+            height: 34px;
+            margin: 0 0 0 6px;
+            min-height: 34px;
+          }
+          ion-header.modern-header ion-select.toolbar-lang-select::part(text) {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0;
+          }
+          ion-header.modern-header ion-select.toolbar-lang-select::part(icon) {
+            color: var(--modern-muted, #475569);
+            opacity: 0.9;
           }
           ion-header.modern-header .modern-logo-btn {
-            width: 44px;
             height: 34px;
+            margin: 0 4px 0 2px;
             min-height: 34px;
+            object-fit: contain;
+            width: 44px;
           }
           ion-header.modern-header .modern-logo {
             max-height: 29px;
           }
-          ion-header.modern-header .modern-header-title {
-            font-size: 18px;
-            line-height: 22px;
+          ion-header.modern-header .modern-title-wrap {
+            height: 34px;
+            justify-content: center;
           }
-          ion-header.modern-header .modern-header-subtitle {
-            font-size: 11px;
-            line-height: 15px;
+          ion-header.modern-header .modern-title-main {
+            font-size: 17px;
+            line-height: 20px;
+          }
+          ion-header.modern-header .modern-title-sub {
+            font-size: 10px;
+            line-height: 13px;
           }
           .agent-desktop-center {
             padding-top: 18px;
@@ -7572,27 +7866,293 @@ title: Convertigo assistant
           .agent-session-meta {
             color: var(--modern-muted, #475569) !important;
           }
+          .agent-conversations-panel {
+            background: #e6f8fc;
+            border-color: rgba(8, 145, 178, 0.28);
+            color: #0f172a;
+          }
+          .agent-conversation-row {
+            background: #ffffff;
+            border-color: rgba(15, 23, 42, 0.14);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+          }
+          .agent-conversation-row:hover {
+            background: #f8fdff;
+            border-color: rgba(8, 145, 178, 0.34);
+          }
+          .agent-conversation-row.active {
+            background: #d7f3f8;
+            border-color: rgba(8, 145, 178, 0.46);
+          }
+          .agent-conversation-name {
+            color: #0f172a !important;
+          }
+          .agent-conversation-meta {
+            color: #475569 !important;
+          }
+          .agent-conversation-action {
+            --background: rgba(15, 23, 42, 0.06);
+            --border-color: rgba(15, 23, 42, 0.16);
+            --color: #0f172a;
+          }
+          .agent-conversation-action.danger {
+            --background: rgba(239, 68, 68, 0.08);
+            --border-color: rgba(239, 68, 68, 0.26);
+            --color: #dc2626;
+          }
+          .agent-conversation-rename-input {
+            width: 100%;
+            min-height: 30px;
+            margin: 0 0 4px;
+            padding: 5px 8px;
+            color: #0f172a;
+            background: #ffffff;
+            border: 1px solid rgba(8, 145, 178, 0.45);
+            border-radius: 7px;
+            outline: none;
+            font: inherit;
+            font-weight: 650;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.14);
+          }
           :host-context(:root.force-dark) .agent-session-title,
           :host-context(html.force-dark) .agent-session-title,
           :host-context(body.force-dark) .agent-session-title,
-          :host-context(.force-dark) .agent-session-title {
+          :host-context(.force-dark) .agent-session-title,
+          :host-context(:root.force-dark) .agent-conversation-name,
+          :host-context(html.force-dark) .agent-conversation-name,
+          :host-context(body.force-dark) .agent-conversation-name,
+          :host-context(.force-dark) .agent-conversation-name {
             color: #ffffff !important;
           }
           :host-context(:root.force-dark) .agent-session-meta,
           :host-context(html.force-dark) .agent-session-meta,
           :host-context(body.force-dark) .agent-session-meta,
-          :host-context(.force-dark) .agent-session-meta {
+          :host-context(.force-dark) .agent-session-meta,
+          :host-context(:root.force-dark) .agent-conversation-meta,
+          :host-context(html.force-dark) .agent-conversation-meta,
+          :host-context(body.force-dark) .agent-conversation-meta,
+          :host-context(.force-dark) .agent-conversation-meta {
             color: #e0f7ff !important;
+          }
+          :host-context(:root.force-dark) .agent-conversations-panel,
+          :host-context(html.force-dark) .agent-conversations-panel,
+          :host-context(body.force-dark) .agent-conversations-panel,
+          :host-context(.force-dark) .agent-conversations-panel {
+            background: rgba(2, 8, 23, 0.98);
+            border-color: rgba(34, 211, 238, 0.26);
+            color: #e2e8f0;
+          }
+          :host-context(:root.force-dark) .agent-conversation-row,
+          :host-context(html.force-dark) .agent-conversation-row,
+          :host-context(body.force-dark) .agent-conversation-row,
+          :host-context(.force-dark) .agent-conversation-row {
+            background: rgba(15, 23, 42, 0.54);
+            border-color: rgba(148, 163, 184, 0.22);
+            box-shadow: none;
+          }
+          :host-context(:root.force-dark) .agent-conversation-row.active,
+          :host-context(html.force-dark) .agent-conversation-row.active,
+          :host-context(body.force-dark) .agent-conversation-row.active,
+          :host-context(.force-dark) .agent-conversation-row.active {
+            background: rgba(6, 78, 90, 0.64);
+            border-color: rgba(34, 211, 238, 0.48);
+          }
+          :host-context(:root.force-dark) .agent-conversation-rename-input,
+          :host-context(html.force-dark) .agent-conversation-rename-input,
+          :host-context(body.force-dark) .agent-conversation-rename-input,
+          :host-context(.force-dark) .agent-conversation-rename-input {
+            color: #e2e8f0;
+            background: rgba(15, 23, 42, 0.84);
+            border-color: rgba(34, 211, 238, 0.46);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
           }
           @media (prefers-color-scheme: dark) {
             :host-context(:root:not(.force-light)) .agent-session-title,
             :host-context(html:not(.force-light)) .agent-session-title,
-            :host-context(body:not(.force-light)) .agent-session-title {
+            :host-context(body:not(.force-light)) .agent-session-title,
+            :host-context(:root:not(.force-light)) .agent-conversation-name,
+            :host-context(html:not(.force-light)) .agent-conversation-name,
+            :host-context(body:not(.force-light)) .agent-conversation-name {
               color: #ffffff !important;
             }
             :host-context(:root:not(.force-light)) .agent-session-meta,
             :host-context(html:not(.force-light)) .agent-session-meta,
-            :host-context(body:not(.force-light)) .agent-session-meta {
+            :host-context(body:not(.force-light)) .agent-session-meta,
+            :host-context(:root:not(.force-light)) .agent-conversation-meta,
+            :host-context(html:not(.force-light)) .agent-conversation-meta,
+            :host-context(body:not(.force-light)) .agent-conversation-meta {
               color: #e0f7ff !important;
+            }
+            :host-context(:root:not(.force-light)) .agent-conversations-panel,
+            :host-context(html:not(.force-light)) .agent-conversations-panel,
+            :host-context(body:not(.force-light)) .agent-conversations-panel {
+              background: rgba(2, 8, 23, 0.98);
+              border-color: rgba(34, 211, 238, 0.26);
+              color: #e2e8f0;
+            }
+            :host-context(:root:not(.force-light)) .agent-conversation-row,
+            :host-context(html:not(.force-light)) .agent-conversation-row,
+            :host-context(body:not(.force-light)) .agent-conversation-row {
+              background: rgba(15, 23, 42, 0.54);
+              border-color: rgba(148, 163, 184, 0.22);
+              box-shadow: none;
+            }
+            :host-context(:root:not(.force-light)) .agent-conversation-row.active,
+            :host-context(html:not(.force-light)) .agent-conversation-row.active,
+            :host-context(body:not(.force-light)) .agent-conversation-row.active {
+              background: rgba(6, 78, 90, 0.64);
+              border-color: rgba(34, 211, 238, 0.48);
+            }
+            :host-context(:root:not(.force-light)) .agent-conversation-rename-input,
+            :host-context(html:not(.force-light)) .agent-conversation-rename-input,
+            :host-context(body:not(.force-light)) .agent-conversation-rename-input {
+              color: #e2e8f0;
+              background: rgba(15, 23, 42, 0.84);
+              border-color: rgba(34, 211, 238, 0.46);
+              box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+            }
+          }'
+↓AgentToolbarFineTuneStyle [ngx.components.UIStyle-1782836809306]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          'ion-header.modern-header,
+          ion-header.modern-header ion-toolbar {
+            --background: #ffffff;
+            background: #ffffff;
+          }
+          ion-header.modern-header ion-toolbar {
+            --border-width: 0;
+            --min-height: 56px;
+            --padding-bottom: 0;
+            --padding-end: 10px;
+            --padding-start: 10px;
+            --padding-top: 0;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: none !important;
+          }
+          ion-header.modern-header ion-toolbar::part(container) {
+            min-height: 56px;
+            padding: 0 10px;
+          }
+          ion-header.modern-header .modern-logo-btn {
+            margin: 0 6px 0 2px;
+          }
+          ion-header.modern-header .modern-title-wrap {
+            transform: translateY(-1px);
+          }
+          ion-header.modern-header ion-select.toolbar-lang-select {
+            --background: #ffffff;
+            --border-color: #e5e7eb;
+            --placeholder-color: #0f172a;
+            background: #ffffff;
+            border-color: #e5e7eb;
+            color: #0f172a;
+          }
+          ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+          ion-header.modern-header ion-select.toolbar-lang-select::part(icon) {
+            color: #0f172a;
+            opacity: 1;
+          }
+          :host-context(:root.force-dark) ion-header.modern-header,
+          :host-context(html.force-dark) ion-header.modern-header,
+          :host-context(body.force-dark) ion-header.modern-header,
+          :host-context(.force-dark) ion-header.modern-header,
+          :host-context(:root.force-dark) ion-header.modern-header ion-toolbar,
+          :host-context(html.force-dark) ion-header.modern-header ion-toolbar,
+          :host-context(body.force-dark) ion-header.modern-header ion-toolbar,
+          :host-context(.force-dark) ion-header.modern-header ion-toolbar {
+            --background: #020617;
+            background: #020617;
+          }
+          :host-context(:root.force-dark) ion-header.modern-header ion-toolbar,
+          :host-context(html.force-dark) ion-header.modern-header ion-toolbar,
+          :host-context(body.force-dark) ion-header.modern-header ion-toolbar,
+          :host-context(.force-dark) ion-header.modern-header ion-toolbar {
+            border-bottom-color: rgba(148, 163, 184, 0.18);
+          }
+          :host-context(:root.force-dark) ion-header.modern-header .modern-header-btn,
+          :host-context(html.force-dark) ion-header.modern-header .modern-header-btn,
+          :host-context(body.force-dark) ion-header.modern-header .modern-header-btn,
+          :host-context(.force-dark) ion-header.modern-header .modern-header-btn,
+          :host-context(:root.force-dark) ion-header.modern-header ion-button.toolbar-theme-button,
+          :host-context(html.force-dark) ion-header.modern-header ion-button.toolbar-theme-button,
+          :host-context(body.force-dark) ion-header.modern-header ion-button.toolbar-theme-button,
+          :host-context(.force-dark) ion-header.modern-header ion-button.toolbar-theme-button {
+            --background: rgba(14, 165, 233, 0.16);
+            --background-activated: rgba(14, 165, 233, 0.28);
+            --background-hover: rgba(14, 165, 233, 0.22);
+            --color: #e2e8f0;
+            color: #e2e8f0;
+          }
+          :host-context(:root.force-dark) ion-header.modern-header ion-select.toolbar-lang-select,
+          :host-context(html.force-dark) ion-header.modern-header ion-select.toolbar-lang-select,
+          :host-context(body.force-dark) ion-header.modern-header ion-select.toolbar-lang-select,
+          :host-context(.force-dark) ion-header.modern-header ion-select.toolbar-lang-select {
+            --background: rgba(15, 23, 42, 0.88);
+            --border-color: rgba(148, 163, 184, 0.28);
+            --placeholder-color: #e2e8f0;
+            background: rgba(15, 23, 42, 0.88);
+            border-color: rgba(148, 163, 184, 0.28);
+            color: #e2e8f0;
+          }
+          :host-context(:root.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+          :host-context(html.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+          :host-context(body.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+          :host-context(.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+          :host-context(:root.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(icon),
+          :host-context(html.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(icon),
+          :host-context(body.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(icon),
+          :host-context(.force-dark) ion-header.modern-header ion-select.toolbar-lang-select::part(icon) {
+            color: #e2e8f0;
+            opacity: 1;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) ion-header.modern-header,
+            :host-context(html:not(.force-light)) ion-header.modern-header,
+            :host-context(body:not(.force-light)) ion-header.modern-header,
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-toolbar,
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-toolbar,
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-toolbar {
+              --background: #020617;
+              background: #020617;
+            }
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-toolbar,
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-toolbar,
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-toolbar {
+              border-bottom-color: rgba(148, 163, 184, 0.18);
+            }
+            :host-context(:root:not(.force-light)) ion-header.modern-header .modern-header-btn,
+            :host-context(html:not(.force-light)) ion-header.modern-header .modern-header-btn,
+            :host-context(body:not(.force-light)) ion-header.modern-header .modern-header-btn,
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-button.toolbar-theme-button,
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-button.toolbar-theme-button,
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-button.toolbar-theme-button {
+              --background: rgba(14, 165, 233, 0.16);
+              --background-activated: rgba(14, 165, 233, 0.28);
+              --background-hover: rgba(14, 165, 233, 0.22);
+              --color: #e2e8f0;
+              color: #e2e8f0;
+            }
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select,
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select,
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select {
+              --background: rgba(15, 23, 42, 0.88);
+              --border-color: rgba(148, 163, 184, 0.28);
+              --placeholder-color: #e2e8f0;
+              background: rgba(15, 23, 42, 0.88);
+              border-color: rgba(148, 163, 184, 0.28);
+              color: #e2e8f0;
+            }
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(text),
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(icon),
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(icon),
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(icon) {
+              color: #e2e8f0;
+              opacity: 1;
             }
           }'

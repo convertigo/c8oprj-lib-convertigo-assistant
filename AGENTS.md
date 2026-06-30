@@ -92,9 +92,12 @@ rediscovering the same context.
   - Server/NoCode Agent IA is allowed only when an explicit server/no-code
     capability flag is provided; never infer it from the remote host alone.
 - In C8Oforms/NoCode, the MCP bearer token is created automatically from the
-  authenticated C8Oforms session and stored behind an opaque server-memory
-  handle. The Assistant may pass the handle to the bridge, but must never expose
-  the raw token in URLs, UI state, prompts, logs, or conversation records.
+  authenticated C8Oforms session. The raw token is persisted per user under the
+  Convertigo workspace `agents/nocode/users/<userKey>/mcp-token.json`, then
+  reloaded behind an opaque server-memory handle. The Assistant may pass the
+  handle to the bridge, but must never expose the raw token in URLs, UI state,
+  prompts, logs, or conversation records. Token labels must include the readable
+  authenticated user, for example `Convertigo Agent Bridge - user@example.com`.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
   remotely inside Studio and no local bridge capability/local URL is provided,
   show an integrated local-agent activation message and do not call the remote

@@ -8,7 +8,9 @@ comment: Delete a durable local agent conversation and its VIBE_HOME folder.
       provider: typeof provider === "undefined" ? "" : provider,
       bridgeBaseUrl: typeof bridgeBaseUrl === "undefined" ? "" : bridgeBaseUrl,
       workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
-      userId: typeof userId === "undefined" ? "" : userId
+      userId: typeof userId === "undefined" ? "" : userId,
+      agentProfile: typeof agentProfile === "undefined" ? "" : agentProfile,
+      skillProfile: typeof skillProfile === "undefined" ? "" : skillProfile
     });'
 ↓result [steps.JsonToXmlStep-1781602483101]: 
   jsonObject: 
@@ -41,3 +43,9 @@ comment: Delete a durable local agent conversation and its VIBE_HOME folder.
 ↓userId [variables.RequestableVariable-1781602483125]: 
   comment: Optional user id. Defaults to studio.
   description: Optional user id. Defaults to studio.
+↓agentProfile [variables.RequestableVariable-1782831324042]: 
+  comment: Optional agent profile, for example nocode.
+  description: Optional agent profile, for example nocode.
+↓skillProfile [variables.RequestableVariable-1782831324129]: 
+  comment: Optional skill profile, for example nocode.
+  description: Optional skill profile, for example nocode.

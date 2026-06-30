@@ -561,9 +561,19 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             			return isDark;
             		};
             		page.global.applyAssistantTheme = applyTheme;
+            		var noCodeSurface = false;
+            		try {
+            			var locationText = "";
+            			if (window && window.location) {
+            				locationText = String(window.location.search || "") + "&" + String(window.location.hash || "");
+            			}
+            			noCodeSurface = /(?:assistantSurface|assistantContext|agentProfile|skillProfile)=nocode/i.test(locationText) || /(?:assistantSurface|assistantContext)=c8oforms/i.test(locationText);
+            		} catch (eNoCodeSurface) {}
             		var forced = page.getUrlDarkThemeOverride ? page.getUrlDarkThemeOverride() : null;
-            		page.global.themeLockedFromUrl = forced !== null;
-            		if (forced !== null) {
+            		page.global.themeLockedFromUrl = noCodeSurface === true || forced !== null;
+            		if (noCodeSurface === true) {
+            			applyTheme(false, false, true);
+            		} else if (forced !== null) {
             			applyTheme(forced, false, true);
             		} else {
             			var stored = null;
@@ -587,22 +597,101 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
         - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
         - com.twinsoft.convertigo.beans.common.FormatedContent: 
           →: |
-            '		var selected = null;
-            		try { selected = window && window.localStorage ? window.localStorage.getItem("c8o-lang") : null; } catch (e1) {}
-            		selected = "" + (selected || "en");
-            		selected = selected.trim().toLowerCase();
-            		if (["en", "fr", "it", "es"].indexOf(selected) < 0) {
+            '		var normalize = function(value) {
+            			var selected = "" + (value || "");
+            			selected = selected.trim().toLowerCase();
+            			if (selected.indexOf("fr") === 0 || selected === "french" || selected === "français" || selected === "francais") { return "fr"; }
+            			if (selected.indexOf("it") === 0 || selected === "italian" || selected === "italiano") { return "it"; }
+            			if (selected.indexOf("es") === 0 || selected === "spanish" || selected === "espanol" || selected === "español") { return "es"; }
+            			if (selected.indexOf("en") === 0 || selected === "english") { return "en"; }
+            			return "";
+            		};
+            		var readQuery = function(name) {
+            			try {
+            				var chunks = [];
+            				var search = String(window.location.search || "");
+            				if (search.length) { chunks.push(search.charAt(0) === "?" ? search.substring(1) : search); }
+            				var hash = String(window.location.hash || "");
+            				var qIndex = hash.indexOf("?");
+            				if (qIndex >= 0 && qIndex < hash.length - 1) { chunks.push(hash.substring(qIndex + 1)); }
+            				var params = new URLSearchParams(chunks.join("&"));
+            				return params.get(name) || "";
+            			} catch (e) {}
+            			return "";
+            		};
+            		var readStorage = function(targetWindow, key) {
+            			try { return targetWindow && targetWindow.localStorage ? targetWindow.localStorage.getItem(key) : ""; } catch (e1) {}
+            			try { return targetWindow && targetWindow.sessionStorage ? targetWindow.sessionStorage.getItem(key) : ""; } catch (e2) {}
+            			return "";
+            		};
+            		var readParentLanguage = function() {
+            			try {
+            				if (!window || !window.parent || window.parent === window) { return ""; }
+            				var parentWindow = window.parent;
+            				var parentDocument = parentWindow.document;
+            				var candidates = [];
+            				if (parentDocument && parentDocument.documentElement) {
+            					candidates.push(parentDocument.documentElement.getAttribute("lang"));
+            					candidates.push(parentDocument.documentElement.lang);
+            					candidates.push(parentDocument.documentElement.getAttribute("data-language"));
+            					candidates.push(parentDocument.documentElement.getAttribute("data-lang"));
+            				}
+            				if (parentDocument && parentDocument.body) {
+            					candidates.push(parentDocument.body.getAttribute("lang"));
+            					candidates.push(parentDocument.body.getAttribute("data-language"));
+            					candidates.push(parentDocument.body.getAttribute("data-lang"));
+            				}
+            				candidates.push(readStorage(parentWindow, "c8oforms_language"));
+            				candidates.push(readStorage(parentWindow, "c8oforms_lang"));
+            				candidates.push(readStorage(parentWindow, "language"));
+            				candidates.push(readStorage(parentWindow, "lang"));
+            				for (var i = 0; i < candidates.length; i++) {
+            					var language = normalize(candidates[i]);
+            					if (language.length) { return language; }
+            				}
+            			} catch (e3) {}
+            			return "";
+            		};
+            		var selected = normalize(readQuery("language") || readQuery("locale") || readQuery("assistantLanguage"));
+            		if (!selected.length) {
+            			selected = readParentLanguage();
+            		}
+            		if (!selected.length) {
+            			try { selected = normalize(readStorage(window, "c8o-lang") || readStorage(window, "lang") || readStorage(window, "language")); } catch (e4) {}
+            		}
+            		if (!selected.length) {
+            			try { selected = normalize(navigator && navigator.language ? navigator.language : ""); } catch (e5) {}
+            		}
+            		if (!selected.length) {
             			selected = "en";
             		}
             		page.global.currentLanguage = function() { return selected; };
             		page.global.getLanguageLabelKey = function() {
             			return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English"));
             		};
-            		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e2) {}
-            		try { page.tick(); } catch (e3) {}
+            		var notifyLanguageChanged = function() {
+            			try { window.dispatchEvent(new CustomEvent("ConvertigoAssistant.languageChanged", { detail: { language: selected } })); } catch (e8) {}
+            			try { page.tick(); } catch (e9) {}
+            		};
+            		try { document.documentElement.setAttribute("lang", selected); } catch (e6a) {}
+            		try { if (document.body) { document.body.setAttribute("lang", selected); } } catch (e6b) {}
+            		try { window.localStorage.setItem("lang", selected); window.localStorage.setItem("c8o-lang", selected); } catch (e6c) {}
+            		try {
+            			if (page.translate && page.translate.use) {
+            				var translation: any = page.translate.use(selected);
+            				if (translation && translation.subscribe) {
+            					translation.subscribe(function() { notifyLanguageChanged(); }, function() { notifyLanguageChanged(); });
+            				} else {
+            					notifyLanguageChanged();
+            				}
+            			} else {
+            				notifyLanguageChanged();
+            			}
+            		} catch (e7) { notifyLanguageChanged(); }
+            		try { setTimeout(notifyLanguageChanged, 250); } catch (e10) {}
             		resolve();
             '
-    comment: Restores and applies the persisted language preference
+    comment: Applies host-provided language before falling back to the local assistant preference
 ↓Style [ngx.components.UIStyle-1771929741648]: 
   comment: You can add some global application styles here
   styleContent: 

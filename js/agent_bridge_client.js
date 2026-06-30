@@ -74,7 +74,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "provider", "agentProvider", "targetProject", "projectName", "projectId",
       "userId", "agentProfile", "skillProfile", "assistantContext",
       "assistantSurface", "codexHomeScope", "vibeHomeScope", "homeScope",
-      "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormUrl",
+      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormUrl",
       "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
       "formId", "pageId", "applicationId", "currentPage", "currentApplicationId",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
@@ -104,6 +104,44 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  function normalizeAssistantLanguage(value) {
+    var text = trim(value).toLowerCase();
+    if (!text.length) {
+      return "";
+    }
+    text = text.replace("_", "-");
+    if (text.indexOf("fr") === 0 || text.indexOf("french") === 0 || text.indexOf("français") === 0 || text.indexOf("francais") === 0) {
+      return "fr";
+    }
+    if (text.indexOf("en") === 0 || text.indexOf("english") === 0 || text.indexOf("anglais") === 0) {
+      return "en";
+    }
+    if (text.indexOf("es") === 0 || text.indexOf("spanish") === 0 || text.indexOf("espagnol") === 0) {
+      return "es";
+    }
+    if (text.indexOf("it") === 0 || text.indexOf("italian") === 0 || text.indexOf("italien") === 0) {
+      return "it";
+    }
+    return text.length <= 8 ? text : "";
+  }
+
+  function assistantLanguageName(value) {
+    var langCode = normalizeAssistantLanguage(value);
+    if (langCode === "fr") {
+      return "French";
+    }
+    if (langCode === "en") {
+      return "English";
+    }
+    if (langCode === "es") {
+      return "Spanish";
+    }
+    if (langCode === "it") {
+      return "Italian";
+    }
+    return langCode;
+  }
+
   function noCodePromptContextBlock(options) {
     if (normalizeSkillProfile(options) !== "nocode") {
       return "";
@@ -112,13 +150,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var currentRoute = firstOptionValue(options, ["currentRoute", "nocodeCurrentRoute", "currentPath"]);
     var currentFormId = firstOptionValue(options, ["currentFormId", "nocodeCurrentFormId", "formId", "applicationId", "currentApplicationId"]);
     var currentPage = firstOptionValue(options, ["pageId", "currentPage"]);
+    var language = assistantLanguageName(firstOptionValue(options, ["language", "locale", "assistantLanguage"]));
     var lines = [];
     lines.push("Runtime NoCode context supplied by the host application:");
     lines.push("- Surface: C8Oforms / No-Code Studio.");
+    lines.push("- User interface language: " + (language.length ? language : "unknown") + ".");
     lines.push("- Current URL: " + (currentUrl.length ? currentUrl : "none"));
     lines.push("- Current route: " + (currentRoute.length ? currentRoute : "none"));
     lines.push("- Current form/application id: " + (currentFormId.length ? currentFormId : "none"));
     lines.push("- Current page id/name: " + (currentPage.length ? currentPage : "none"));
+    if (language.length) {
+      lines.push("- Reply to the user and write progress/details in " + language + ".");
+    }
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
     lines.push("- If a first tool discovery attempt does not show NoCode tools, retry with exact searches for `Convertigo NoCode form contract get edit update validate compile C8Oforms`, `nocode-form-contract-get nocode-form-edit nocode-form-update`, and `mcp__convertigo nocode_form_contract_get nocode_form_edit nocode_form_update` before reporting a blocker.");
     return lines.join("\n");
@@ -271,13 +314,104 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return response;
   }
 
-  function createNoCodeMcpToken() {
+  function noCodeMcpUserId(options) {
+    options = options || {};
+    var userId = trim(options.userId || optionOrRequest(options, "userId"));
+    return userId.length ? userId : "session";
+  }
+
+  function noCodeMcpTokenLabel(options) {
+    return "Convertigo Agent Bridge - " + noCodeMcpUserId(options);
+  }
+
+  function noCodeMcpTokenFile(options, userKey) {
+    var root = new File(resolveWorkspaceRoot(options), "agents");
+    var usersDir = new File(new File(new File(root, "nocode"), "users"), safePathPart(userKey));
+    return new File(usersDir, "mcp-token.json");
+  }
+
+  function restrictSecretFile(file) {
     try {
-      var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
-        name: "Convertigo Agent Bridge"
+      file.setReadable(false, false);
+      file.setWritable(false, false);
+      file.setExecutable(false, false);
+      file.setReadable(true, true);
+      file.setWritable(true, true);
+    } catch (_ignoreSecretPermissions) {}
+  }
+
+  function decodeJwtPart(part) {
+    var text = String(part || "");
+    while (text.length % 4 !== 0) {
+      text += "=";
+    }
+    var bytes = Packages.java.util.Base64.getUrlDecoder().decode(text);
+    return String(new java.lang.String(bytes, StandardCharsets.UTF_8));
+  }
+
+  function validateNoCodeMcpToken(token) {
+    try {
+      var parts = String(token || "").split(".");
+      if (parts.length !== 3) {
+        return false;
+      }
+      var response = callLocalSequence("C8Oforms", "APIV2_McpTokenValidate", {
+        headerJson: decodeJwtPart(parts[0]),
+        payloadJson: decodeJwtPart(parts[1]),
+        signingInput: parts[0] + "." + parts[1],
+        signature: parts[2]
       });
       var result = unwrapSequenceResult(response) || {};
-      return trim(result.token);
+      if (result.result) {
+        result = result.result;
+      }
+      return trim(result.status).toLowerCase() === "ok" || result.authenticated === true;
+    } catch (_ignoreNoCodeTokenValidate) {
+      return false;
+    }
+  }
+
+  function readNoCodeMcpToken(options, userKey) {
+    var file = noCodeMcpTokenFile(options, userKey);
+    var record = readJsonFile(file);
+    var token = record && record.token ? trim(record.token) : "";
+    if (!token.length) {
+      return "";
+    }
+    if (!validateNoCodeMcpToken(token)) {
+      return "";
+    }
+    return token;
+  }
+
+  function writeNoCodeMcpToken(options, userKey, userId, token, tokenInfo) {
+    var file = noCodeMcpTokenFile(options, userKey);
+    writeJsonFile(file, {
+      userId: userId,
+      userKey: userKey,
+      name: noCodeMcpTokenLabel(options),
+      token: token,
+      tokenInfo: tokenInfo || null,
+      createdAt: now(),
+      updatedAt: now(),
+      source: "C8Oforms.APIV2_McpTokenCreate"
+    });
+    restrictSecretFile(file);
+  }
+
+  function createNoCodeMcpToken(options, userKey, userId) {
+    try {
+      var label = noCodeMcpTokenLabel(options);
+      var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
+        name: label
+      });
+      var result = unwrapSequenceResult(response) || {};
+      var token = trim(result.token);
+      if (!token.length) {
+        return "";
+      }
+      writeNoCodeMcpToken(options, userKey, userId, token, result.tokenInfo || null);
+      return token;
     } catch (_ignoreNoCodeTokenCreate) {
       return "";
     }
@@ -311,10 +445,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return "";
     }
     var explicitHandle = trim(options.nocodeMcpTokenHandle || options.noCodeMcpTokenHandle || options.mcpBearerTokenHandle);
-    if (explicitHandle.length) {
+    if (explicitHandle.length && sharedSecretGet(explicitHandle).length) {
       return explicitHandle;
     }
-    var userKey = normalizeUserKey(options.userId || "session");
+    var userId = noCodeMcpUserId(options);
+    var userKey = normalizeUserKey(userId);
+    var handle = NOCODE_MCP_TOKEN_HANDLE_PREFIX + userKey;
     var sessionKey = NOCODE_MCP_TOKEN_SESSION_PREFIX + userKey;
     try {
       var existingHandle = context.httpSession.getAttribute(sessionKey);
@@ -325,11 +461,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
     } catch (_ignoreExistingTokenHandle) {}
-    var token = createNoCodeMcpToken();
+    var token = readNoCodeMcpToken(options, userKey);
+    if (!token.length) {
+      token = createNoCodeMcpToken(options, userKey, userId);
+    }
     if (!token.length) {
       return "";
     }
-    var handle = NOCODE_MCP_TOKEN_HANDLE_PREFIX + userKey + "." + String(UUID.randomUUID());
     if (!sharedSecretSet(handle, token)) {
       return "";
     }
@@ -1115,11 +1253,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function conversationTitleForRecord(record) {
-    var title = codexSessionTitleForRecord(record || {});
-    if (title.length) {
-      return title;
-    }
-    title = conversationTitleFromText(record && record.title);
+    var title = conversationTitleFromText(record && record.title);
     if (title.length) {
       return title;
     }
@@ -1137,6 +1271,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return title;
     }
     title = conversationTitleFromText(record && record.lastAnswerPreview);
+    if (title.length) {
+      return title;
+    }
+    title = codexSessionTitleForRecord(record || {});
     return title.length ? title : "Conversation";
   }
 
@@ -1687,6 +1825,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour du traitement.",
       bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
+      codexAuthExpired: "La session Codex locale n'est plus valide. Le bridge va resynchroniser les identifiants Codex depuis le profil local ; si l'erreur revient, ouvrez Codex Desktop ou lancez `codex login`, puis renvoyez la demande.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -1718,6 +1857,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "I cannot read the current response.",
       bridgeStateRecover: "I am checking that the task is still running.",
       bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
+      codexAuthExpired: "The local Codex session is no longer valid. The bridge will resynchronize Codex credentials from the local profile; if this happens again, open Codex Desktop or run `codex login`, then send the request again.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -1728,6 +1868,54 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function lang(state) {
     var code = state && state.language === "fr" ? "fr" : "en";
     return TRANSLATIONS[code];
+  }
+
+  function extractAgentErrorText(value, depth) {
+    if (depth > 8 || value === null || typeof value === "undefined") {
+      return "";
+    }
+    if (typeof value === "string") {
+      var text = trim(value);
+      if (!text.length) {
+        return "";
+      }
+      if ((text.indexOf("{") === 0 && text.lastIndexOf("}") === text.length - 1) || (text.indexOf("[") === 0 && text.lastIndexOf("]") === text.length - 1)) {
+        try {
+          return extractAgentErrorText(JSON.parse(text), depth + 1) || text;
+        } catch (_ignoreErrorJson) {}
+      }
+      return text;
+    }
+    if (typeof value === "object") {
+      var message = extractAgentErrorText(value.message, depth + 1);
+      if (message.length) {
+        return message;
+      }
+      var nestedError = extractAgentErrorText(value.error, depth + 1);
+      if (nestedError.length) {
+        return nestedError;
+      }
+      var nestedDetails = extractAgentErrorText(value.details || value.detail || value.cause, depth + 1);
+      if (nestedDetails.length) {
+        return nestedDetails;
+      }
+      try {
+        return trim(JSON.stringify(value));
+      } catch (_ignoreErrorStringify) {}
+    }
+    return trim(value);
+  }
+
+  function userFacingAgentError(state, data) {
+    var raw = extractAgentErrorText(data, 0);
+    var lower = raw.toLowerCase();
+    if (lower.indexOf("refresh token") !== -1 || lower.indexOf("access token could not be refreshed") !== -1 || lower.indexOf("please log out and sign in again") !== -1) {
+      return lang(state).codexAuthExpired;
+    }
+    if (raw.length) {
+      return raw;
+    }
+    return lang(state).bridgeReadError;
   }
 
   function progressLineLooksLikeAgentLifecycle(value) {
@@ -2843,7 +3031,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userId: trim(options.userId),
       title: record ? conversationTitleFromText(record.title) : "",
       externalSessionId: legacyRecordCodexHome ? "" : record && trim(record.externalSessionId),
-      language: detectLanguage(options.userQuestion || options.Question || ""),
+      language: normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage) || detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
       status: record && trim(record.status).length ? trim(record.status) : "created",
       cursor: record && record.lastCursor ? Number(record.lastCursor) : 0,
@@ -3920,8 +4108,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
           state.status = "failed";
-          state.error = JSON.stringify(data);
-          appendProgress(state, lang(state).bridgeReadError);
+          state.error = userFacingAgentError(state, data);
+          state.answer = state.error;
+          state.answerIsFinal = true;
+          state.lastStatusText = state.error;
+          if (state.answerTranscriptRunid !== state.runid) {
+            appendTranscript(state, "assistant", state.answer);
+            state.answerTranscriptRunid = state.runid;
+          }
         } else if (type === "system/closed" && state.status !== "completed") {
           if (trim(state.answer).length) {
             state.status = "completed";
@@ -4062,6 +4256,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    var oldStatus = state.status;
+    var oldUpdatedAt = state.updatedAt;
+    var conversationsBeforeDelete = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
     markCancellationRequested(threadid);
     var bridge = {};
     try {
@@ -4074,23 +4271,63 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         error: String(e)
       };
     }
-    state.status = "deleted";
-    state.updatedAt = now();
-    try {
-      writeConversationRecord(state);
-    } catch (_ignoreDeletedRecord) {}
-    removeState(threadid);
     var dir = new File(state.conversationDir);
-    var deleted = deleteRecursively(dir);
-    var remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
-    setBuffer("", "");
+    var wasListed = false;
+    for (var beforeIndex = 0; beforeIndex < conversationsBeforeDelete.length; beforeIndex++) {
+      if (conversationsBeforeDelete[beforeIndex].conversationId === threadid) {
+        wasListed = true;
+        break;
+      }
+    }
+    var dirExistsBeforeDelete = dir.exists();
+    var deleted = dirExistsBeforeDelete ? deleteRecursively(dir) : false;
+    var remainingConversations = conversationsBeforeDelete;
+    if (deleted) {
+      state.status = "deleted";
+      state.updatedAt = now();
+      try {
+        writeConversationRecord(state);
+      } catch (_ignoreDeletedRecord) {}
+      removeState(threadid);
+      remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
+      var stillListed = false;
+      for (var afterIndex = 0; afterIndex < remainingConversations.length; afterIndex++) {
+        if (remainingConversations[afterIndex].conversationId === threadid) {
+          stillListed = true;
+          break;
+        }
+      }
+      if (stillListed) {
+        deleted = false;
+        remainingConversations = conversationsBeforeDelete;
+        state.status = oldStatus;
+        state.updatedAt = oldUpdatedAt || now();
+        try {
+          saveState(state);
+        } catch (_ignoreDeleteFailureRestore) {}
+      } else {
+        setBuffer("", "");
+      }
+    } else {
+      if (!wasListed && !dir.exists()) {
+        remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
+      }
+      state.status = oldStatus;
+      state.updatedAt = oldUpdatedAt || now();
+      try {
+        saveState(state);
+      } catch (_ignoreDeleteFailureState) {}
+    }
     return {
       ok: deleted,
       status: deleted ? "deleted" : "delete_failed",
       threadid: threadid,
       conversationDir: filePath(dir),
       conversations: remainingConversations,
-      bridge: bridge
+      bridge: bridge,
+      error: deleted ? undefined : {
+        message: "Conversation directory could not be deleted"
+      }
     };
   };
 
