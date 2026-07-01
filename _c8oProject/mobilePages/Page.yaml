@@ -1894,8 +1894,42 @@ title: Convertigo assistant
           - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
           - com.twinsoft.convertigo.beans.common.FormatedContent: 
             →: |
-              		page.handleContentScroll(event);
-              		resolve();
+              'try {
+                if (!page.local) {
+                  page.local = {};
+                }
+                var detail = event && event.detail ? event.detail : {};
+                var scrollTop = Number(detail.scrollTop || 0);
+                var previousTop = Number(page.local.LastScrollTop);
+                var scrollHeight = Number(detail.scrollHeight || 0);
+                var contentHeight = Number(detail.contentHeight || detail.clientHeight || 0);
+                if (isNaN(scrollTop)) {
+                  scrollTop = 0;
+                }
+                if (isNaN(previousTop)) {
+                  previousTop = scrollTop;
+                }
+                if (isNaN(scrollHeight)) {
+                  scrollHeight = 0;
+                }
+                if (isNaN(contentHeight)) {
+                  contentHeight = 0;
+                }
+                if (scrollHeight > 0 && contentHeight > 0) {
+                  var distanceToBottom = scrollHeight - (scrollTop + contentHeight);
+                  var nearBottom = distanceToBottom <= 32;
+                  var isGoingUp = scrollTop < (previousTop - 1);
+                  if (isGoingUp && !nearBottom) {
+                    page.local.AutoScrollEnabled = false;
+                    page.local.AutoScrollLockUntil = 0;
+                  } else if (nearBottom) {
+                    page.local.AutoScrollEnabled = true;
+                    page.local.AutoScrollLockUntil = Date.now() + 300;
+                  }
+                }
+              } catch (e) {}
+              page.handleContentScroll(event);
+              resolve();'
   ↓Main [ngx.components.UIDynamicElement-1772100000032]: 
     beanData: '{"ionBean":"DivTag"}'
     tagName: div
@@ -3833,7 +3867,7 @@ title: Convertigo assistant
                     textValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:(item && item.time ? item.time + '' - '' : '''') + (item && item.progressTitle ? item.progressTitle : (this.getProgressTitle ? this.getProgressTitle(item) : (item && item.writing === true ? ''Traitement en cours'' : ''A travaillé'')))'
+                        - MobileSmartSourceType: 'script:(item && item.time ? item.time + '' - '' : '''') + (item && item.writing === true && this.getProgressTitle ? this.getProgressTitle(item).replace(''A travaillé pendant '', ''Traitement en cours depuis '') : (item && item.progressTitle ? item.progressTitle : (this.getProgressTitle ? this.getProgressTitle(item) : (item && item.writing === true ? ''Traitement en cours'' : ''A travaillé''))))'
               ↓Narrative [ngx.components.UIDynamicElement-1782143276091]: 
                 beanData: '{"ionBean":"DivTag"}'
                 isEnabled: false
@@ -8028,14 +8062,23 @@ title: Convertigo assistant
             --background: #ffffff;
             background: #ffffff;
           }
+          ion-header.modern-header {
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: none !important;
+            min-height: 56px;
+          }
+          ion-header.modern-header::after {
+            background-image: none !important;
+            display: none !important;
+          }
           ion-header.modern-header ion-toolbar {
-            --border-width: 0;
+            --border-width: 0 !important;
             --min-height: 56px;
             --padding-bottom: 0;
             --padding-end: 10px;
             --padding-start: 10px;
             --padding-top: 0;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 0 !important;
             box-shadow: none !important;
           }
           ion-header.modern-header ion-toolbar::part(container) {
@@ -8072,10 +8115,10 @@ title: Convertigo assistant
             --background: #020617;
             background: #020617;
           }
-          :host-context(:root.force-dark) ion-header.modern-header ion-toolbar,
-          :host-context(html.force-dark) ion-header.modern-header ion-toolbar,
-          :host-context(body.force-dark) ion-header.modern-header ion-toolbar,
-          :host-context(.force-dark) ion-header.modern-header ion-toolbar {
+          :host-context(:root.force-dark) ion-header.modern-header,
+          :host-context(html.force-dark) ion-header.modern-header,
+          :host-context(body.force-dark) ion-header.modern-header,
+          :host-context(.force-dark) ion-header.modern-header {
             border-bottom-color: rgba(148, 163, 184, 0.18);
           }
           :host-context(:root.force-dark) ion-header.modern-header .modern-header-btn,
@@ -8124,9 +8167,9 @@ title: Convertigo assistant
               --background: #020617;
               background: #020617;
             }
-            :host-context(:root:not(.force-light)) ion-header.modern-header ion-toolbar,
-            :host-context(html:not(.force-light)) ion-header.modern-header ion-toolbar,
-            :host-context(body:not(.force-light)) ion-header.modern-header ion-toolbar {
+            :host-context(:root:not(.force-light)) ion-header.modern-header,
+            :host-context(html:not(.force-light)) ion-header.modern-header,
+            :host-context(body:not(.force-light)) ion-header.modern-header {
               border-bottom-color: rgba(148, 163, 184, 0.18);
             }
             :host-context(:root:not(.force-light)) ion-header.modern-header .modern-header-btn,
