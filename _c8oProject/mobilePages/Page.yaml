@@ -3192,7 +3192,12 @@ title: Convertigo assistant
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:Reprendre la conversation
                       ↓Icon [ngx.components.UIDynamicElement-1781608119133]: 
-                        beanData: '{"ionBean":"Icon","IconName":"plain:return-down-back-outline"}'
+                        beanData: |
+                          '{
+                           "ionBean": "Icon",
+                           "IconName": "plain:return-down-back-outline",
+                           "IconSlot": "plain:icon-only"
+                          }'
                         tagName: ion-icon
                       ↓Text [ngx.components.UIText-1781676432698]: 
                         textValue: 
@@ -8154,5 +8159,98 @@ title: Convertigo assistant
             :host-context(body:not(.force-light)) ion-header.modern-header ion-select.toolbar-lang-select::part(icon) {
               color: #e2e8f0;
               opacity: 1;
+            }
+          }'
+↓ConversationActionsLayoutStyle [ngx.components.UIStyle-1782903060434]:
+  styleContent:
+    - xmlizable:
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent:
+        →: |
+          '.agent-conversation-row {
+            align-items: center;
+            grid-template-columns: minmax(0, 1fr) auto;
+          }
+          .agent-conversation-actions {
+            align-self: center;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+            width: auto;
+          }
+          .agent-conversation-action {
+            --padding-end: 0;
+            --padding-start: 0;
+            color: #475569;
+            font-size: 0;
+            height: 32px;
+            margin: 0;
+            min-height: 32px;
+            min-width: 34px;
+            width: 34px;
+          }
+          .agent-conversation-action ion-icon,
+          .agent-conversations-close ion-icon,
+          .agent-conversation-action.danger ion-icon {
+            color: currentColor;
+            display: inline-block;
+            flex: 0 0 16px;
+            font-size: 16px;
+            height: 16px;
+            margin-right: 0;
+            min-width: 16px;
+            opacity: 1;
+            width: 16px;
+          }
+          .agent-conversation-action.danger {
+            min-width: 34px;
+            width: 34px;
+          }
+          .agent-conversation-action[disabled] {
+            opacity: 0.72;
+          }
+          :host-context(:root.force-dark) .agent-conversation-action,
+          :host-context(html.force-dark) .agent-conversation-action,
+          :host-context(body.force-dark) .agent-conversation-action,
+          :host-context(.force-dark) .agent-conversation-action {
+            --background: rgba(30, 41, 59, 0.9);
+            --border-color: rgba(125, 211, 252, 0.38);
+            --color: #dff8ff;
+            color: #dff8ff;
+          }
+          :host-context(:root.force-dark) .agent-conversation-action.danger,
+          :host-context(html.force-dark) .agent-conversation-action.danger,
+          :host-context(body.force-dark) .agent-conversation-action.danger,
+          :host-context(.force-dark) .agent-conversation-action.danger {
+            --background: rgba(127, 29, 29, 0.38);
+            --border-color: rgba(248, 113, 113, 0.58);
+            --color: #fecdd3;
+            color: #fecdd3;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) .agent-conversation-action,
+            :host-context(html:not(.force-light)) .agent-conversation-action,
+            :host-context(body:not(.force-light)) .agent-conversation-action {
+              --background: rgba(30, 41, 59, 0.9);
+              --border-color: rgba(125, 211, 252, 0.38);
+              --color: #dff8ff;
+              color: #dff8ff;
+            }
+            :host-context(:root:not(.force-light)) .agent-conversation-action.danger,
+            :host-context(html:not(.force-light)) .agent-conversation-action.danger,
+            :host-context(body:not(.force-light)) .agent-conversation-action.danger {
+              --background: rgba(127, 29, 29, 0.38);
+              --border-color: rgba(248, 113, 113, 0.58);
+              --color: #fecdd3;
+              color: #fecdd3;
+            }
+          }
+          @media (max-width: 360px) {
+            .agent-conversation-row {
+              align-items: flex-start;
+              grid-template-columns: minmax(0, 1fr);
+            }
+            .agent-conversation-actions {
+              justify-content: flex-end;
+              width: 100%;
             }
           }'

@@ -314,6 +314,102 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return response;
   }
 
+  function normalizeCdpEndpoint(value) {
+    var text = trim(value);
+    if (text.match(/\/json\/?$/)) {
+      text = text.replace(/\/json\/?$/, "");
+    }
+    return text;
+  }
+
+  function existingViewerCdpEndpoint(options) {
+    options = options || {};
+    return normalizeCdpEndpoint(
+      options.playwrightCdpEndpoint ||
+      options.viewerCdpEndpoint ||
+      options.browserDebugUrl ||
+      options.browserDevToolsWebSocketUrl ||
+      options.browserDevToolsJsonUrl ||
+      options.playwrightMcpEndpoint
+    );
+  }
+
+  function firstResultValue(result, names) {
+    if (!result) {
+      return "";
+    }
+    for (var i = 0; i < names.length; i++) {
+      var value = trim(result[names[i]]);
+      if (value.length) {
+        return value;
+      }
+    }
+    return "";
+  }
+
+  function unwrapBuilderStateResponse(response) {
+    var result = unwrapSequenceResult(response);
+    if (result && result.document && result.document.result) {
+      result = result.document.result;
+    }
+    if (result && result.result) {
+      result = result.result;
+    }
+    return result || {};
+  }
+
+  function enrichViewerDebugOptions(options, state) {
+    options = options || {};
+    if (existingViewerCdpEndpoint(options).length || boolValue(options.skipViewerDebugProbe, false)) {
+      return options;
+    }
+    var project = trim(options.targetProject || options.projectName || options.projectId);
+    if (!project.length && state) {
+      project = trim(state.primaryProject || state.projectId);
+    }
+    if (!project.length) {
+      return options;
+    }
+    try {
+      var builder = unwrapBuilderStateResponse(callLocalSequence("ConvertigoMCP", "tools_mobile_builder_open", {
+        project: project,
+        stateOnly: "true",
+        wait: "false",
+        timeoutSec: "0",
+        logsLimit: "0",
+        __nolog: "true"
+      }));
+      var debugUrl = firstResultValue(builder, ["browserDebugUrl", "browserRemoteDebuggingUrl"]);
+      var jsonUrl = firstResultValue(builder, ["browserDevToolsJsonUrl"]);
+      var wsUrl = firstResultValue(builder, ["browserDevToolsWebSocketUrl"]);
+      var cdp = normalizeCdpEndpoint(firstResultValue(builder, [
+        "playwrightCdpEndpoint",
+        "viewerCdpEndpoint",
+        "browserDebugUrl",
+        "browserDevToolsWebSocketUrl",
+        "browserDevToolsJsonUrl"
+      ]));
+      if (debugUrl.length && !trim(options.browserDebugUrl).length) {
+        options.browserDebugUrl = debugUrl;
+      }
+      if (jsonUrl.length && !trim(options.browserDevToolsJsonUrl).length) {
+        options.browserDevToolsJsonUrl = jsonUrl;
+      }
+      if (wsUrl.length && !trim(options.browserDevToolsWebSocketUrl).length) {
+        options.browserDevToolsWebSocketUrl = wsUrl;
+      }
+      if (cdp.length) {
+        if (!trim(options.playwrightCdpEndpoint).length) {
+          options.playwrightCdpEndpoint = cdp;
+        }
+        if (!trim(options.viewerCdpEndpoint).length) {
+          options.viewerCdpEndpoint = cdp;
+        }
+      }
+    } catch (_ignoreViewerDebugProbe) {}
+    return options;
+  }
+
   function noCodeMcpUserId(options) {
     options = options || {};
     var userId = trim(options.userId || optionOrRequest(options, "userId"));
@@ -1456,7 +1552,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progressEvents: state.progressEvents || [],
       phase: String(state.lastStatusText || ""),
       warnings: state.warnings || [],
-      deleted: false
+      deleted: state.status === "deleted" || state.deleted === true
     };
     writeJsonFile(new File(state.conversationFile), record);
   }
@@ -3653,6 +3749,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.serviceTier = trim(options.serviceTier || options.speedTier);
     }
     state.language = detectLanguage(options.userQuestion || options.Question || "");
+    enrichViewerDebugOptions(options, state);
     var install = boolValue(options.diagnosticOnly, false) ? false : true;
     var setupInfo = callAgentSetup(state, options, install);
     var setup = setupInfo.result || {};
@@ -3757,6 +3854,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.projectId = currentProject;
       state.projectNames = addArrayValue(state.projectNames, currentProject);
     }
+    enrichViewerDebugOptions(options, state);
     appendProgress(state, lang(state).starting);
     state.updatedAt = now();
     saveState(state);
@@ -3903,6 +4001,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         model: state.model || "",
         reasoningEffort: state.reasoningEffort || "",
         serviceTier: state.serviceTier || "",
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
         bypassApprovalsAndSandbox: typeof options.bypassApprovalsAndSandbox === "undefined" ? "true" : options.bypassApprovalsAndSandbox,
         sandbox: trim(options.sandbox)
       } : {
@@ -4285,9 +4389,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (deleted) {
       state.status = "deleted";
       state.updatedAt = now();
-      try {
-        writeConversationRecord(state);
-      } catch (_ignoreDeletedRecord) {}
       removeState(threadid);
       remainingConversations = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
       var stillListed = false;
