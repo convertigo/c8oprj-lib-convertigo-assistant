@@ -17,6 +17,8 @@ scriptContent:
         	assetPreviewUrls = {};
         	imagePreviewItemsSignal = signal([]);
         	attachmentPreviewItemsSignal = signal([]);
+        	speechRecognition = null;
+        	speechToastTs = 0;
         	/*End_c8o_CompDeclaration*/
         /*Begin_c8o_CompConstructor*/
         		/*End_c8o_CompConstructor*/
@@ -1007,6 +1009,140 @@ scriptContent:
         		} catch (e) {}
         	}
         	
+        	showSpeechToast(message) {
+        		try {
+        			var now = Date.now();
+        			var previous = Number(this.speechToastTs || 0);
+        			if (!isNaN(previous) && (now - previous) < 1200) {
+        				return;
+        			}
+        			this.speechToastTs = now;
+        			var toastCtrl = null;
+        			try {
+        				toastCtrl = this.getInstance(ToastController);
+        			} catch (e) {}
+        			if (!toastCtrl || !toastCtrl.create) {
+        				return;
+        			}
+        			var msg = "" + (message == null ? "Speech recognition is unavailable." : message);
+        			Promise.resolve(toastCtrl.create({
+        				message: msg,
+        				duration: 2600,
+        				position: "bottom",
+        				color: "warning"
+        			})).then(function(toast) {
+        				try {
+        					if (toast && toast.present) {
+        						toast.present();
+        					}
+        				} catch (e) {}
+        			}).catch(function() {});
+        		} catch (e) {}
+        	}
+        
+        	showSpeechToastForError(error) {
+        		var code = ("" + (error == null ? "" : error)).toLowerCase();
+        		var message = "Speech recognition is unavailable.";
+        		if (code === "network") {
+        			message = "Service de reconnaissance vocale indisponible dans ce navigateur.";
+        		} else if (code === "not-allowed" || code === "service-not-allowed") {
+        			message = "Microphone permission denied.";
+        		} else if (code === "audio-capture") {
+        			message = "No microphone detected.";
+        		} else if (code === "no-speech") {
+        			message = "No speech detected.";
+        		}
+        		this.showSpeechToast(message);
+        	}
+        
+        	isEmbeddedStudioBrowser() {
+        		try {
+        			var w: any = window;
+        			if (w && w.java) {
+        				return true;
+        			}
+        		} catch (e) {}
+        		try {
+        			var ua = "" + ((navigator && navigator.userAgent) ? navigator.userAgent : "");
+        			return ua.toLowerCase().indexOf("jxbrowser") !== -1;
+        		} catch (e2) {}
+        		return false;
+        	}
+        
+        	shouldHideVoiceInput() {
+        		return this.isEmbeddedStudioBrowser();
+        	}
+        
+        	isSpeechRecognitionAvailable() {
+        		try {
+        			if (this.isEmbeddedStudioBrowser()) {
+        				return false;
+        			}
+        			var w: any = window;
+        			var SpeechRecognition = w.webkitSpeechRecognition || w.SpeechRecognition;
+        			if (!SpeechRecognition) {
+        				return false;
+        			}
+        			var secure = false;
+        			try {
+        				secure = window.isSecureContext === true;
+        			} catch (e) {}
+        			if (!secure) {
+        				try {
+        					var hostname = "" + ((window.location && window.location.hostname) ? window.location.hostname : "");
+        					hostname = hostname.toLowerCase();
+        					secure = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+        				} catch (e) {}
+        			}
+        			return secure;
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	setSpeechRecognitionAvailable(value) {
+        		try {
+        			var available = value === true;
+        			if (this.SpeechRecognitionAvailable !== available) {
+        				this.SpeechRecognitionAvailable = available;
+        				this.SpeechRecognitionAvailableChange.emit(available);
+        				this.tick();
+        			}
+        		} catch (e) {}
+        	}
+        
+        	getSpeechLocale() {
+        		try {
+        			var lang = "";
+        			if (this.owner && this.owner.global && this.owner.global.currentLanguage) {
+        				lang = "" + this.owner.global.currentLanguage();
+        			}
+        			if (!lang && this.translate && this.translate.currentLang) {
+        				lang = "" + this.translate.currentLang;
+        			}
+        			lang = lang.toLowerCase();
+        			if (lang.indexOf("fr") === 0) {
+        				return "fr-FR";
+        			}
+        			if (lang.indexOf("en") === 0) {
+        				return "en-US";
+        			}
+        		} catch (e) {}
+        		return "fr-FR";
+        	}
+        
+        	appendQuestionText(text) {
+        		try {
+        			var transcript = ("" + (text == null ? "" : text)).replace(/^\s+|\s+$/g, "");
+        			if (!transcript.length) {
+        				return;
+        			}
+        			var current = "" + (this.getQuestionText ? this.getQuestionText() : (this.Question || ""));
+        			var next = current.replace(/\s+$/g, "") + (current.replace(/^\s+|\s+$/g, "").length ? " " : "") + transcript;
+        			this.setQuestionText(next, true);
+        			this.focusQuestionInputAtEnd(20);
+        		} catch (e) {}
+        	}
+        
         	requestVoice(event) {
         		try {
         			if (event && event.preventDefault) {
@@ -1015,8 +1151,79 @@ scriptContent:
         			if (this.EnableChat === false || this.IsProcessing === true) {
         				return;
         			}
-        			this.VoiceRequest.emit({});
-        		} catch (e) {}
+        			if (!this.isSpeechRecognitionAvailable()) {
+        				this.setSpeechRecognitionAvailable(false);
+        				this.showSpeechToast("Speech recognition is unavailable in this context.");
+        				return;
+        			}
+        			var w: any = window;
+        			var SpeechRecognition = w.webkitSpeechRecognition || w.SpeechRecognition;
+        			if (!SpeechRecognition) {
+        				this.setSpeechRecognitionAvailable(false);
+        				this.showSpeechToast("Speech recognition is not supported by this browser.");
+        				return;
+        			}
+        			if (this.speechRecognition && this.speechRecognition.abort) {
+        				try {
+        					this.speechRecognition.abort();
+        				} catch (e) {}
+        				this.speechRecognition = null;
+        				return;
+        			}
+        			var self = this;
+        			var recognition = new SpeechRecognition();
+        			this.speechRecognition = recognition;
+        			recognition.lang = this.getSpeechLocale();
+        			recognition.continuous = false;
+        			recognition.interimResults = false;
+        			recognition.maxAlternatives = 1;
+        			recognition.onresult = function(evt) {
+        				try {
+        					var transcript = "";
+        					var start = evt && evt.resultIndex != null ? evt.resultIndex : 0;
+        					if (evt && evt.results) {
+        						for (var i = start; i < evt.results.length; i++) {
+        							var result = evt.results[i];
+        							if (result && result[0] && result[0].transcript != null) {
+        								var chunk = ("" + result[0].transcript).replace(/^\s+|\s+$/g, "");
+        								if (chunk.length) {
+        									transcript += (transcript.length ? " " : "") + chunk;
+        								}
+        							}
+        						}
+        					}
+        					self.appendQuestionText(transcript);
+        				} catch (e) {}
+        			};
+        			recognition.onerror = function(evt) {
+        				try {
+        					var error = evt && evt.error ? ("" + evt.error) : "unknown";
+        					try {
+        						self.c8o.log.warn("[MB] Speech recognition error: " + error);
+        					} catch (logError) {}
+        					self.showSpeechToastForError(error);
+        					if (error === "network" || error === "service-not-allowed" || error === "not-allowed" || error === "audio-capture") {
+        						self.setSpeechRecognitionAvailable(false);
+        					}
+        				} catch (e) {}
+        			};
+        			recognition.onend = function() {
+        				try {
+        					if (self.speechRecognition === recognition) {
+        						self.speechRecognition = null;
+        					}
+        					self.tick();
+        				} catch (e) {}
+        			};
+        			recognition.start();
+        			this.setSpeechRecognitionAvailable(true);
+        			this.tick();
+        		} catch (e) {
+        			try {
+        				this.c8o.log.warn("[MB] Speech recognition exception: " + e.message);
+        			} catch (logError) {}
+        			this.showSpeechToastForError(e && e.name ? e.name : "unknown");
+        		}
         	}
         	/*End_c8o_CompFunction*/
         '
@@ -1979,7 +2186,7 @@ scriptContent:
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.SpeechRecognitionAvailable !== true
+                - MobileSmartSourceType: script:this.SpeechRecognitionAvailable !== true || (this.shouldHideVoiceInput && this.shouldHideVoiceInput())
           ↓Disabled [ngx.components.UIAttribute-1774000000007]: 
             attrName: '[disabled]'
             attrValue: 
@@ -2409,7 +2616,7 @@ scriptContent:
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.SpeechRecognitionAvailable !== true
+                - MobileSmartSourceType: script:this.SpeechRecognitionAvailable !== true || (this.shouldHideVoiceInput && this.shouldHideVoiceInput())
           ↓Disabled [ngx.components.UIAttribute-1782125441576]: 
             attrName: '[disabled]'
             attrValue: 

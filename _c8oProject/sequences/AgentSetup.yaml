@@ -60,7 +60,8 @@ responseTimeout: 900
       pythonArchiveFlavor: typeof pythonArchiveFlavor === "undefined" ? "" : pythonArchiveFlavor,
       allowPythonDownload: typeof allowPythonDownload === "undefined" ? "" : allowPythonDownload,
       mcpSkillsSourceDir: typeof mcpSkillsSourceDir === "undefined" ? "" : mcpSkillsSourceDir,
-      skipSkillsInstall: typeof skipSkillsInstall === "undefined" ? "" : skipSkillsInstall
+      skipSkillsInstall: typeof skipSkillsInstall === "undefined" ? "" : skipSkillsInstall,
+      agentRevealMode: typeof agentRevealMode === "undefined" ? "" : agentRevealMode
     });'
 ↓result [steps.JsonToXmlStep-1781810000102]: 
   jsonObject: 
@@ -249,3 +250,7 @@ responseTimeout: 900
 ↓playwrightMcpEndpoint [variables.RequestableVariable-1782753891484]: 
   comment: Optional Playwright MCP endpoint override.
   description: Optional Playwright MCP endpoint override.
+↓agentRevealMode [variables.RequestableVariable-1782955202001]: 
+  comment: Set true to tell the agent to pass reveal=true on supported Convertigo mutation/viewer tools.
+  description: Set true to tell the agent to pass reveal=true on supported Convertigo mutation/viewer tools.
+  value: false

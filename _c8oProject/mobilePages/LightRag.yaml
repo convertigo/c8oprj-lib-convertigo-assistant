@@ -1458,9 +1458,12 @@ title: Title for LightRag
             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
             - com.twinsoft.convertigo.beans.common.FormatedContent: 
               →: |
-                		page.startSpeechRecognition();
-                		resolve();
-                
+                'try {
+                	if (page.chatfooter && page.chatfooter.requestVoice) {
+                		page.chatfooter.requestVoice(event);
+                	}
+                } catch (e) {}
+                resolve();'
     ↓RunQuestion [ngx.components.UIControlEvent-1772100000137]: 
       attrName: (RunQuestion)
       eventName: RunQuestion

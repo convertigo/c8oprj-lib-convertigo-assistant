@@ -74,6 +74,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "provider", "agentProvider", "targetProject", "projectName", "projectId",
       "userId", "agentProfile", "skillProfile", "assistantContext",
       "assistantSurface", "codexHomeScope", "vibeHomeScope", "homeScope",
+      "agentRevealMode", "convertigoRevealMode", "uiRevealMode", "revealMode",
       "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormUrl",
       "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
       "formId", "pageId", "applicationId", "currentPage", "currentApplicationId",
@@ -102,6 +103,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     return "";
+  }
+
+  function revealModeOption(options) {
+    return firstOptionValue(options, ["agentRevealMode", "convertigoRevealMode", "uiRevealMode", "revealMode", "reveal"]);
   }
 
   function normalizeAssistantLanguage(value) {
@@ -3323,6 +3328,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
         playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
         viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+        agentRevealMode: revealModeOption(options),
         model: state.model || "",
         reasoningEffort: state.reasoningEffort || "",
         serviceTier: state.serviceTier || ""
@@ -3360,7 +3366,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       pythonVersion: trim(options.pythonVersion),
       pythonBuildTag: trim(options.pythonBuildTag),
       pythonPlatform: trim(options.pythonPlatform),
-      pythonArchiveFlavor: trim(options.pythonArchiveFlavor)
+      pythonArchiveFlavor: trim(options.pythonArchiveFlavor),
+      agentRevealMode: revealModeOption(options)
     };
   }
 
@@ -3943,6 +3950,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
         playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
         viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+        agentRevealMode: revealModeOption(options),
         env: JSON.stringify(env),
         codexThreadId: state.externalSessionId || "",
         model: state.model || "",
@@ -3965,6 +3973,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         mcpEndpoint: state.mcpEndpoint,
         model: state.model || "",
         env: JSON.stringify(env),
+        agentRevealMode: revealModeOption(options),
         requestTimeoutMs: "60000"
       };
       var start = bridgeCall(state, startSequence, startPayload, 90000);
@@ -4008,11 +4017,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
         viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
         bypassApprovalsAndSandbox: typeof options.bypassApprovalsAndSandbox === "undefined" ? "true" : options.bypassApprovalsAndSandbox,
-        sandbox: trim(options.sandbox)
+        sandbox: trim(options.sandbox),
+        agentRevealMode: revealModeOption(options)
       } : {
         handle: state.handle,
         prompt: question,
         model: state.model || "",
+        agentRevealMode: revealModeOption(options),
         waitForCompletion: "false"
       };
       var prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
