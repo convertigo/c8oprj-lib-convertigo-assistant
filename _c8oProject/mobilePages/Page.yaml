@@ -175,10 +175,16 @@ scriptContent:
         		try {
         			if (!context || typeof context !== ''object'') { return; }
         			var next: any = {};
-        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId''];
+        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAgentStackAvailable'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl''];
         			for (var i = 0; i < keys.length; i++) {
         				var key = keys[i];
-        				var value = this.normalizeAgentHostContextValue(context[key]);
+        				var raw = context[key];
+        				if (raw === undefined || raw === null) { continue; }
+        				if (typeof raw === ''boolean'' || typeof raw === ''number'') {
+        					next[key] = raw;
+        					continue;
+        				}
+        				var value = this.normalizeAgentHostContextValue(raw);
         				if (value.length) { next[key] = value; }
         			}
         			this.agentHostContext = next;
@@ -195,12 +201,18 @@ scriptContent:
         					var data = event && event.data ? event.data : null;
         					if (!data || typeof data !== ''object'') { return; }
         					var type = '''' + (data.type || data.kind || '''');
-        					if (type !== ''ConvertigoAssistant.context'' && type !== ''convertigo-assistant-context'') { return; }
-        					this.applyAgentHostContext(data.payload || data.context || data);
+        					if (type === ''ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
+        						this.applyAgentHostContext(data.payload || data.context || data);
+        						return;
+        					}
+        					if (type === ''ConvertigoAssistant.activateLocalAgent.status'') {
+        						this.applyAgentActivationStatus(data.payload || data.context || data);
+        						return;
+        					}
         				} catch (e) {}
         			};
         			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
-        			try { window.parent && window.parent.postMessage({ type: ''ConvertigoAssistant.context.request'' }, ''*''); } catch (e2) {}
+        			this.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
         		} catch (e3) {}
         	}
         
@@ -211,6 +223,25 @@ scriptContent:
         				this.agentHostContextMessageHandler = null;
         			}
         		} catch (e) {}
+        	}
+        
+        	public postAgentHostMessage(message) {
+        		try {
+        			var w: any = window;
+        			if (w && w[''sendToHost''] && typeof w[''sendToHost''] === ''function'') {
+        				w[''sendToHost''](message);
+        				return true;
+        			}
+        			if (w && w[''java''] && typeof w[''java''].receiveFromJS === ''function'') {
+        				w[''java''].receiveFromJS(JSON.stringify(message));
+        				return true;
+        			}
+        			if (w && w.parent && w !== w.parent) {
+        				w.parent.postMessage(message, ''*'');
+        				return true;
+        			}
+        		} catch (e) {}
+        		return false;
         	}
         
         	public getAssistantHostContextParam(name) {
@@ -245,6 +276,177 @@ scriptContent:
         			return '''' + ((new URLSearchParams(raw)).get(name) || '''');
         		} catch (e) {}
         		return '''';
+        	}
+        
+        
+        	public getAgentHostContextObject() {
+        		try { return (this.local && this.local.AgentHostContext) || this.agentHostContext || {}; } catch (e) {}
+        		return {};
+        	}
+        
+        	public getAgentHostContextValue(name) {
+        		try {
+        			var context = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        			return context ? context[name] : null;
+        		} catch (e) {}
+        		return null;
+        	}
+        
+        	public getAgentHostFlag(name) {
+        		try {
+        			var value = this.getAgentHostContextValue ? this.getAgentHostContextValue(name) : null;
+        			if (value === true) { return true; }
+        			if (value === false) { return false; }
+        			return this.isTruthyAgentFlag ? this.isTruthyAgentFlag(value) : false;
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public hasAgentOnboardingFeature() {
+        		try {
+        			var context = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        			return !!(context && (context.agentOnboardingFeatureVersion || context.studioAgentFeatureVersion));
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public applyAgentActivationStatus(status) {
+        		try {
+        			if (!this.local) { this.local = {}; }
+        			var text = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue(status && status.status) : '''';
+        			var message = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue(status && status.message) : '''';
+        			this.local.AgentActivationStatus = text;
+        			this.local.AgentActivationMessage = message;
+        			this.local.AgentActivationInProgress = text === ''running'' && !(status && status.done === true);
+        			if (text === ''success'') {
+        				var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        				context.localAgentStackAvailable = true;
+        				context.localAgentBridgeAvailable = true;
+        				context.agentBridgeAvailable = true;
+        				context.assistantRuntime = ''local'';
+        				if (status && status.localAssistantUrl) { context.localAssistantUrl = status.localAssistantUrl; }
+        				this.local.AgentHostContext = context;
+        				this.agentHostContext = context;
+        			}
+        			this.tick();
+        		} catch (e) {}
+        	}
+        
+        	public getAgentOnboardingState() {
+        		try {
+        			if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) { return ''legacy''; }
+        			if (this.isServerAgentSurface && this.isServerAgentSurface()) { return ''ready''; }
+        			if (!this.isStudioAssistantSurface || !this.isStudioAssistantSurface()) { return ''ready''; }
+        			var context = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        			var runtime = ('''' + (context.assistantRuntime || '''')).replace(/^s+|s+$/g, '''').toLowerCase();
+        			var hasFeature = this.hasAgentOnboardingFeature && this.hasAgentOnboardingFeature();
+        			var remoteHost = this.isAssistantRemoteHost && this.isAssistantRemoteHost();
+        			var canActivate = this.getAgentHostFlag && this.getAgentHostFlag(''canActivateLocalAgent'');
+        			var hasHostBridge = false;
+        			try {
+        				var w: any = window;
+        				hasHostBridge = !!(w && ((w[''sendToHost''] && typeof w[''sendToHost''] === ''function'') || (w[''java''] && typeof w[''java''].receiveFromJS === ''function'')));
+        			} catch (eBridge) {}
+        			if (this.getAgentHostFlag && (this.getAgentHostFlag(''localAgentBridgeAvailable'') || this.getAgentHostFlag(''agentBridgeAvailable''))) { return ''ready''; }
+        			if (!hasFeature && hasHostBridge) { return ''remote-activation''; }
+        			if (!hasFeature) { return ''unsupported''; }
+        			if (runtime === ''remote'' || remoteHost) {
+        				return (canActivate || hasHostBridge) ? ''remote-activation'' : ''unsupported'';
+        			}
+        			if (runtime === ''local'' || !remoteHost) {
+        				return (canActivate || hasHostBridge) ? ''local-install'' : ''local-missing'';
+        			}
+        		} catch (e) {}
+        		return ''ready'';
+        	}
+        
+        	public shouldShowAgentActivationChoice() {
+        		var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
+        		return state !== ''legacy'' && state !== ''ready'';
+        	}
+        
+        	public getAgentActivationTitle() {
+        		if (this.local && this.local.AgentActivationInProgress === true) { return this.t("Agent_Local_Activation_Running", "Activation en cours..."); }
+        		var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
+        		if (state === ''unsupported'') { return this.t("Agent_Download_Studio_Button", "Télécharger Convertigo Studio"); }
+        		if (state === ''remote-activation'' || state === ''local-install'' || state === ''local-missing'') { return this.t("Agent_Local_Install_Button", "Installer la stack Agent locale"); }
+        		return this.t("Agent_Local_Activation_Button", "Activer l''assistant local");
+        	}
+        
+        	public getAgentActivationMeta() {
+        		if (this.local && this.local.AgentActivationMessage) { return this.local.AgentActivationMessage; }
+        		var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
+        		if (state === ''unsupported'') { return this.t("Agent_Download_Studio_Meta", "Le mode Agent local nécessite Convertigo Studio 8.4.4 ou plus récent."); }
+        		if (state === ''remote-activation'' || state === ''local-install'' || state === ''local-missing'') { return this.t("Agent_Local_Install_Meta", "Installe Convertigo Assistant, Convertigo MCP et Convertigo Agent Bridge, configure l''URL locale, puis recharge la vue."); }
+        		return this.t("Agent_Local_Activation_Meta", "Télécharge les projets nécessaires, règle l''URL locale et recharge la vue Assistant.");
+        	}
+        
+        	public getAgentActivationIcon() {
+        		var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
+        		return state === ''unsupported'' ? ''download-outline'' : ''cloud-download-outline'';
+        	}
+        
+        	public getAgentActivationProjects() {
+        		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        		var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue.bind(this) : function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+        		return [
+        			{ name: ''ConvertigoAssistant'', importUrl: clean(context.convertigoAssistantImportUrl || ''ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=codex/assistant-agent-bridge'') },
+        			{ name: ''ConvertigoMCP'', importUrl: clean(context.convertigoMcpImportUrl || ''ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp.git:branch=codex'') },
+        			{ name: ''ConvertigoAgentBridge'', importUrl: clean(context.convertigoAgentBridgeImportUrl || ''ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge.git:branch=main'') }
+        		];
+        	}
+        
+        	public openAgentExternalUrl(url) {
+        		try {
+        			var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue(url) : ('''' + (url == null ? '''' : url)).replace(/^s+|s+$/g, '''');
+        			if (!clean.length) { return; }
+        			var message: any = { type: ''ConvertigoAssistant.openExternal'', url: clean, payload: { url: clean } };
+        			if (this.postAgentHostMessage && this.postAgentHostMessage(message)) { return; }
+        			try { window.open(clean, ''_blank'', ''noopener''); } catch (e0) { window.location.href = clean; }
+        		} catch (e) {}
+        	}
+        
+        	public triggerAgentOnboardingAction() {
+        		try {
+        			var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
+        			var context = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        			if (state === ''unsupported'') {
+        				var url = this.normalizeAgentHostContextValue(context.downloadUrl || ''https://www.convertigo.com/developers/download-low-code-studio'');
+        				if (this.openAgentExternalUrl) { this.openAgentExternalUrl(url); }
+        				return;
+        			}
+        			if (!this.local) { this.local = {}; }
+        			this.local.AgentActivationInProgress = true;
+        			this.local.AgentActivationMessage = this.t("Agent_Local_Activation_Start", "Activation de l''assistant local...");
+        			var message: any = {
+        				type: ''ConvertigoAssistant.activateLocalAgent'',
+        				payload: {
+        					projectName: this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''',
+        					agentOnboardingFeatureVersion: context.agentOnboardingFeatureVersion || '''',
+        					projects: this.getAgentActivationProjects ? this.getAgentActivationProjects() : []
+        				}
+        			};
+        			var stamp = (new Date()).getTime();
+        			this.local.AgentActivationStartedAt = stamp;
+        			var sent = this.postAgentHostMessage ? this.postAgentHostMessage(message) : false;
+        			if (!sent) {
+        				this.local.AgentActivationInProgress = false;
+        				this.local.AgentActivationStatus = ''no_host'';
+        				this.local.AgentActivationMessage = this.t("Agent_Local_Activation_No_Host", "Impossible de joindre la vue Studio. Ouvrez le menu pour utiliser les autres assistants, ou mettez à jour Convertigo Studio.");
+        			} else {
+        				setTimeout(() => {
+        					try {
+        						if (this.local && this.local.AgentActivationInProgress === true && this.local.AgentActivationStartedAt === stamp) {
+        							this.local.AgentActivationInProgress = false;
+        							this.local.AgentActivationStatus = ''no_response'';
+        							this.local.AgentActivationMessage = this.t("Agent_Local_Activation_No_Response", "Aucune réponse du Studio. Vérifiez que Convertigo Studio 8.4.4 ou plus récent est actif, puis réessayez.");
+        							this.tick();
+        						}
+        					} catch (e3) {}
+        				}, 15000);
+        			}
+        			this.tick();
+        		} catch (e) {}
         	}
         
         	public getAgentContextUserId() {
@@ -369,6 +571,12 @@ scriptContent:
         
         	public hasLocalAgentBridgeCapability() {
         		try {
+        			var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        			var hasLocalFlag = context && Object.prototype.hasOwnProperty.call(context, ''localAgentBridgeAvailable'');
+        			var hasBridgeFlag = context && Object.prototype.hasOwnProperty.call(context, ''agentBridgeAvailable'');
+        			if (hasLocalFlag || hasBridgeFlag) {
+        				return this.getAgentHostFlag(''localAgentBridgeAvailable'') || this.getAgentHostFlag(''agentBridgeAvailable'');
+        			}
         			if (this.local && this.local.LocalAgentBridge === true) { return true; }
         			if (this.global && (this.global.localAgent === true || this.global.agentBridgeLocal === true)) { return true; }
         			if (this.isTruthyAgentFlag(this.getAssistantQueryParam(''localAgent''))) { return true; }
@@ -381,7 +589,9 @@ scriptContent:
         
         	public shouldBlockRemoteStudioAgent() {
         		try {
-        			return !!(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.isStudioAssistantSurface && this.isStudioAssistantSurface() && this.isAssistantRemoteHost && this.isAssistantRemoteHost() && !(this.hasLocalAgentBridgeCapability && this.hasLocalAgentBridgeCapability()) && !(this.isServerAgentSurface && this.isServerAgentSurface()));
+        			if (!(this.isAgentBridgeMode && this.isAgentBridgeMode())) { return false; }
+        			var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
+        			return state !== ''legacy'' && state !== ''ready'';
         		} catch (e) {}
         		return false;
         	}
@@ -399,6 +609,9 @@ scriptContent:
         	public getIntroTitle() {
         		var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "";
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			if (this.getAgentOnboardingState && this.getAgentOnboardingState() === ''unsupported'') {
+        				return this.t("Agent_Studio_Update_Title", "Mettre à jour Convertigo Studio");
+        			}
         			return project.length ? (this.t("Agent_Local_Activation_Title_Project", "Activer l''agent local pour le projet") + " " + project) : this.t("Agent_Local_Activation_Title", "Activer l''agent local");
         		}
         		if (this.isAgentBridgeMode()) {
@@ -408,18 +621,27 @@ scriptContent:
         	}
         	public getIntroCopy1() {
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			if (this.getAgentOnboardingState && this.getAgentOnboardingState() === ''unsupported'') {
+        				return this.t("Agent_Studio_Update_Copy", "Le mode Agent est disponible à partir de Convertigo Studio 8.4.4.");
+        			}
         			return this.t("Agent_Local_Activation_Copy", "Cette page est servie depuis un serveur distant. Pour agir sur les projets du Studio, l''agent doit utiliser la stack locale Convertigo.");
         		}
         		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Copy", "Demandez une correction, une amélioration ou une explication.") : this.t("AI_Assistant_Intro", "Décrivez le composant dont vous avez besoin et laissez l''assistant le générer pour vous.");
         	}
         	public getIntroCopy2() {
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
-        			return this.t("Agent_Local_Activation_Details", "Ouvrez l''assistant local ou installez Convertigo Studio 8.4.4+ avec Convertigo MCP, Convertigo Agent Bridge et Convertigo Assistant.");
+        			if (this.getAgentOnboardingState && this.getAgentOnboardingState() === ''unsupported'') {
+        				return this.t("Agent_Studio_Update_Details", "Installez la dernière version de Convertigo Studio, puis rouvrez l''Assistant pour activer l''agent local. Les assistants How-To, composants et Figma restent disponibles depuis le menu.");
+        			}
+        			return this.t("Agent_Local_Activation_Details", "Installez la stack locale pour utiliser l''Agent sur ce workspace. Les assistants How-To, composants et Figma restent disponibles depuis le menu.");
         		}
         		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Local", "L''agent utilise les outils Convertigo locaux quand ils sont disponibles.") : this.t("AI_Assistant_Intro_Details", "L''assistant génère des shared components prêts à intégrer dans votre application NGX.");
         	}
         	public getStartCardTitle() {
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
+        			if (this.getAgentOnboardingState && this.getAgentOnboardingState() === ''unsupported'') {
+        				return this.t("Agent_Studio_Update_Card_Title", "Mise à jour requise");
+        			}
         			return this.t("Agent_Local_Required_Title", "Agent local requis");
         		}
         		if (!this.isAgentBridgeMode()) {
@@ -429,7 +651,10 @@ scriptContent:
         	}
         	public getStartCardCopy() {
         		if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
-        			return this.t("Agent_Local_Required_Copy", "L''Agent IA ne peut pas utiliser le bridge distant pour modifier un workspace Studio. Ouvrez l''assistant local ou mettez à jour le Studio pour activer la stack locale.");
+        			if (this.getAgentOnboardingState && this.getAgentOnboardingState() === ''unsupported'') {
+        				return this.t("Agent_Studio_Update_Card_Copy", "Téléchargez Convertigo Studio 8.4.4 ou plus récent pour utiliser le mode Agent local. Les assistants How-To, composants et Figma restent disponibles depuis le menu.");
+        			}
+        			return this.t("Agent_Local_Required_Copy", "Installez la stack locale pour permettre à l''Agent IA de modifier ce workspace Studio. Les assistants How-To, composants et Figma restent disponibles depuis le menu.");
         		}
         		if (!this.isAgentBridgeMode()) {
         			return this.t("Start_Component_Assistant_Copy", "Décrivez le composant dont vous avez besoin et laissez l''assistant de composants Convertigo le générer pour vous.");
@@ -1732,7 +1957,11 @@ scriptContent:
         		this.local.ShowConversationPanel = false;
         		this.tick();
         	}
-        	/*End_c8o_PageFunction*/'
+        	/*End_c8o_PageFunction*/
+        
+        
+        
+        '
 segment: path-to-xfirst/:threadid
 title: Convertigo assistant
 ↓Header [ngx.components.UIDynamicElement-1491634212350]: 
@@ -2466,7 +2695,7 @@ title: Convertigo assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && !(this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'')) ? (''agent-session-strip agent-start-choice agent-project-choice'' + (((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? '''' : '' agent-choice-disabled'') + ((((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') && this.local.ConversationProjectMode !== ''none'' && (!this.local.ConversationProject || this.local.ConversationProject === ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName)))) ? '' agent-choice-selected'' : '''')) : ''agent-session-strip agent-start-choice agent-project-choice agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && !(this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'') && !(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent())) ? (''agent-session-strip agent-start-choice agent-project-choice'' + (((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? '''' : '' agent-choice-disabled'') + ((((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') && this.local.ConversationProjectMode !== ''none'' && (!this.local.ConversationProject || this.local.ConversationProject === ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName)))) ? '' agent-choice-selected'' : '''')) : ''agent-session-strip agent-start-choice agent-project-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746869516]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:folder-open-outline"}'
               tagName: ion-icon
@@ -2589,9 +2818,9 @@ title: Convertigo assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel())) ? (''agent-session-strip agent-start-choice agent-free-choice'' + ((this.local.ConversationProjectMode === ''none'' || (!(this.getEffectiveProjectName && this.getEffectiveProjectName()) && !this.local.ConversationProject)) ? '' agent-choice-selected'' : '''')) : ''agent-session-strip agent-start-choice agent-free-choice agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && (!(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()))) ? (''agent-session-strip agent-start-choice agent-free-choice'' + ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? '' agent-choice-selected'' : ((this.local.ConversationProjectMode === ''none'' || (!(this.getEffectiveProjectName && this.getEffectiveProjectName()) && !this.local.ConversationProject)) ? '' agent-choice-selected'' : ''''))) : ''agent-session-strip agent-start-choice agent-free-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746911794]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:close-circle-outline"}'
+              beanData: '{"ionBean":"Icon","IconName":"script:(this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationIcon ? this.getAgentActivationIcon() : ''cloud-download-outline'') : ''close-circle-outline''"}'
               tagName: ion-icon
             ↓SessionCopy [ngx.components.UIDynamicElement-1782746911796]: 
               beanData: '{"ionBean":"DivTag"}'
@@ -2615,7 +2844,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Démarrer maintenant
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationTitle ? this.getAgentActivationTitle() : "Activer l''assistant local") : ''Démarrer maintenant'''
               ↓Meta [ngx.components.UIDynamicElement-1782746911806]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -2629,7 +2858,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Sans projet sélectionné, ou en ignorant le projet sélectionné.
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationMeta ? this.getAgentActivationMeta() : ''Installe les projets Agent locaux et recharge la vue Assistant.'') : ''Sans projet sélectionné, ou en ignorant le projet sélectionné.'''
             ↓Role [ngx.components.UIAttribute-1782746911812]: 
               attrName: role
               attrValue: 
@@ -2649,6 +2878,13 @@ title: Convertigo assistant
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
+                        		if (page.shouldShowAgentActivationChoice && page.shouldShowAgentActivationChoice()) {
+                        			if (page.triggerAgentOnboardingAction) {
+                        				page.triggerAgentOnboardingAction();
+                        			}
+                        			resolve();
+                        			return;
+                        		}
                         		if (!page.local) {
                         			page.local = {};
                         		}
@@ -2699,9 +2935,9 @@ title: Convertigo assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && (this.local.AgentConversationsLoading === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0))) ? (''agent-session-strip agent-history-choice'' + (this.local.AgentConversationsLoading === true ? '' agent-choice-disabled agent-history-loading'' : '''')) : ''agent-session-strip agent-history-choice agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.local.AgentConversationsLoading === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0)))) ? (''agent-session-strip agent-history-choice'' + ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? '' agent-menu-choice'' : (this.local.AgentConversationsLoading === true ? '' agent-choice-disabled agent-history-loading'' : ''''))) : ''agent-session-strip agent-history-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746946887]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:time-outline"}'
+              beanData: '{"ionBean":"Icon","IconName":"script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''menu-outline'' : ''time-outline''"}'
               tagName: ion-icon
             ↓SessionCopy [ngx.components.UIDynamicElement-1782748099204]: 
               beanData: '{"ionBean":"DivTag"}'
@@ -2725,7 +2961,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.AgentConversationsLoading === true) ? ''Récupération des conversations précédentes'' : ((this.local && this.local.AgentConversations && this.local.AgentConversations.length > 0) ? (''Reprendre une des '' + this.local.AgentConversations.length + '' conversations'') : ''Reprendre une conversation'')'
+                      - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''Ouvrir le menu des assistants'' : ((this.local && this.local.AgentConversationsLoading === true) ? ''Récupération des conversations précédentes'' : ((this.local && this.local.AgentConversations && this.local.AgentConversations.length > 0) ? (''Reprendre une des '' + this.local.AgentConversations.length + '' conversations'') : ''Reprendre une conversation''))'
               ↓Meta [ngx.components.UIDynamicElement-1782748152209]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -2739,9 +2975,9 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.AgentConversationsLoading === true) ? ''Lecture de l’historique local en cours.'' : ''Cliquez pour choisir une conversation existante.'''
+                      - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''Accédez à How-To, composants et Figma.'' : ((this.local && this.local.AgentConversationsLoading === true) ? ''Lecture de l’historique local en cours.'' : ''Cliquez pour choisir une conversation existante.'')'
             ↓Chevron [ngx.components.UIDynamicElement-1782746954600]: 
-              beanData: '{"ionBean":"Icon","IconName":"script:this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline''"}'
+              beanData: '{"ionBean":"Icon","IconName":"script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''chevron-forward-outline'' : (this.local && this.local.ShowConversationPanel ? ''chevron-up-outline'' : ''chevron-down-outline'')"}'
               tagName: ion-icon
               ↓Class [ngx.components.UIAttribute-1782747017406]: 
                 attrName: class
@@ -2758,6 +2994,18 @@ title: Convertigo assistant
                       →: |
                                 if (!page.local) {
                                     page.local = {};
+                                }
+                                if (page.shouldBlockRemoteStudioAgent && page.shouldBlockRemoteStudioAgent()) {
+                                    try {
+                                        if (page.menuCtrl && page.menuCtrl.open) {
+                                            page.menuCtrl.open();
+                                        } else if (page.menuCtrl && page.menuCtrl.toggle) {
+                                            page.menuCtrl.toggle();
+                                        }
+                                    } catch (e) {}
+                                    page.tick();
+                                    resolve();
+                                    return;
                                 }
                                 if (page.local.AgentConversationsLoading === true) {
                                     page.tick();
