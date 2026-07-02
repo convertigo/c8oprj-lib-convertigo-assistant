@@ -11,6 +11,8 @@ scriptContent:
         	private threadid = null;
         	public agentHostContext: any = {};
         	public agentHostContextMessageHandler: any = null;
+            public agentHostReceiveFromJavaOriginal: any = null;
+            public agentHostReceiveFromJavaWrapped: any = false;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		//this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
@@ -198,7 +200,7 @@ scriptContent:
         			if (this.agentHostContextMessageHandler) { return; }
         			this.agentHostContextMessageHandler = (event) => {
         				try {
-        					var data = event && event.data ? event.data : null;
+                            var data = event && event.data ? event.data : event;
         					if (!data || typeof data !== ''object'') { return; }
         					var type = '''' + (data.type || data.kind || '''');
         					if (type === ''ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
@@ -211,6 +213,21 @@ scriptContent:
         					}
         				} catch (e) {}
         			};
+                    var w: any = window;
+                    if (w && typeof w[''receiveFromJava''] === ''function'' && !this.agentHostReceiveFromJavaWrapped) {
+                        this.agentHostReceiveFromJavaOriginal = w[''receiveFromJava''];
+                        var previousReceiveFromJava = this.agentHostReceiveFromJavaOriginal;
+                        var page: any = this;
+                        w[''receiveFromJava''] = function(message) {
+                            try {
+                                if (page && page.agentHostContextMessageHandler) {
+                                    page.agentHostContextMessageHandler({ data: message });
+                                }
+                            } catch (eBridgeMessage) {}
+                            try { return previousReceiveFromJava.apply(this, arguments); } catch (ePrevious) {}
+                        };
+                        this.agentHostReceiveFromJavaWrapped = true;
+                    }
         			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
         			this.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
         		} catch (e3) {}
@@ -222,6 +239,12 @@ scriptContent:
         				window.removeEventListener(''message'', this.agentHostContextMessageHandler, false);
         				this.agentHostContextMessageHandler = null;
         			}
+                    var w: any = window;
+                    if (this.agentHostReceiveFromJavaWrapped && this.agentHostReceiveFromJavaOriginal && w) {
+                        w[''receiveFromJava''] = this.agentHostReceiveFromJavaOriginal;
+                    }
+                    this.agentHostReceiveFromJavaOriginal = null;
+                    this.agentHostReceiveFromJavaWrapped = false;
         		} catch (e) {}
         	}
         
@@ -387,12 +410,11 @@ scriptContent:
         	}
         
         	public getAgentActivationProjects() {
-        		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
         		var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue.bind(this) : function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
         		return [
-        			{ name: ''ConvertigoAssistant'', importUrl: clean(context.convertigoAssistantImportUrl || ''ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=codex/assistant-agent-bridge'') },
-        			{ name: ''ConvertigoMCP'', importUrl: clean(context.convertigoMcpImportUrl || ''ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp.git:branch=codex'') },
-        			{ name: ''ConvertigoAgentBridge'', importUrl: clean(context.convertigoAgentBridgeImportUrl || ''ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge.git:branch=main'') }
+                    { name: ''ConvertigoAssistant'', importUrl: clean(''ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.20-beta1/ConvertigoAssistant.car'') },
+                    { name: ''ConvertigoMCP'', importUrl: clean(''ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.36/ConvertigoMCP.car'') },
+                    { name: ''ConvertigoAgentBridge'', importUrl: clean(''ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.10/ConvertigoAgentBridge.car'') }
         		];
         	}
         
@@ -423,6 +445,8 @@ scriptContent:
         				payload: {
         					projectName: this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''',
         					agentOnboardingFeatureVersion: context.agentOnboardingFeatureVersion || '''',
+                            assistantPreferenceUrl: ''/projects/ConvertigoAssistant/DisplayObjects/mobile/'',
+                            localAssistantPath: ''/projects/ConvertigoAssistant/DisplayObjects/mobile/'',
         					projects: this.getAgentActivationProjects ? this.getAgentActivationProjects() : []
         				}
         			};
