@@ -247,7 +247,7 @@ responseTimeout: 300
     var BufferedReader = java.io.BufferedReader;
     
     // Set your API key and thread/run info
-    var apiKey = "${lib_C8Oforms_AI.GPT.apikey.secret}";
+    var apiKey = "${lib_C8Oforms_AI.GPT.apikey.secret=}";
     var url = new URL("https://api.openai.com/v1/threads/" + threadid + "/runs");
     
     var conn = url.openConnection();

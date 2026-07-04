@@ -57,7 +57,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:((selectedPath$ | async) || '').startsWith('/path-to-lightrag')
+            - MobileSmartSourceType: script:($any(this).selectedPath || (($any(this).selectedPath$ | async) || '')).startsWith('/path-to-lightrag')
     ↓ComponentItem [ngx.components.UIDynamicElement-1753179834069]: 
       beanData: |
         '{
@@ -92,7 +92,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:isComponentAssistantSelected((selectedPath$ | async) || '')
+            - MobileSmartSourceType: script:isComponentAssistantSelected($any(this).selectedPath || (($any(this).selectedPath$ | async) || ''))
       ↓VisibilityContext [ngx.components.UIAttribute-1782289340794]: 
         attrName: '[hidden]'
         attrValue: 
@@ -132,7 +132,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:isAgentAssistantSelected((selectedPath$ | async) || '')
+            - MobileSmartSourceType: script:isAgentAssistantSelected($any(this).selectedPath || (($any(this).selectedPath$ | async) || ''))
       ↓VisibilityContext [ngx.components.UIAttribute-1782289349202]: 
         attrName: '[hidden]'
         attrValue: 
@@ -174,7 +174,7 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:((selectedPath$ | async) || '').startsWith('/path-to-figma')
+            - MobileSmartSourceType: script:($any(this).selectedPath || (($any(this).selectedPath$ | async) || '')).startsWith('/path-to-figma')
       ↓VisibilityContext [ngx.components.UIAttribute-1782289344998]: 
         attrName: '[hidden]'
         attrValue: 

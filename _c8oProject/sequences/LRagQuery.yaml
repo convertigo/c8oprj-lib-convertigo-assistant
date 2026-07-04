@@ -1,7 +1,7 @@
 responseTimeout: 300
 ↓inputVars [steps.InputVariablesStep-1767364410194]: 
 ↓jIfThenElse [steps.IfThenElseStep-1767180603000]: 
-  condition: '"${assistant.lrag.host.url}" != "" && stream == "true"'
+  condition: '"${assistant.lrag.host.url=}" != "" && stream == "true"'
   ↓jThen [steps.ThenStep-1767180604769]: 
     ↓Parallel [steps.ParallelStep-1768389197075]: 
       ↓InitProgressMessage [steps.SimpleStep-1767366401271]: 
@@ -30,8 +30,8 @@ responseTimeout: 300
           var BufferedReader = java.io.BufferedReader;
           
           // Set your API key and thread/run info
-          var apiKey = "${assistant.lrag.apikey.secret}";
-          var hostUrl = "${assistant.lrag.host.url}";
+          var apiKey = "${assistant.lrag.apikey.secret=}";
+          var hostUrl = "${assistant.lrag.host.url=}";
           //var url = new URL("http://51.77.17.146:9621/query/stream");
           var url = new URL(hostUrl + "/query/stream");
           

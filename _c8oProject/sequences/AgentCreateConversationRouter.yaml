@@ -1,0 +1,99 @@
+comment: Static requestable router for the agent conversation bootstrap. Keeps NGX references plain while preserving local bridge and legacy fallback behavior.
+responseTimeout: 300
+↓Route [steps.SimpleStep-1783011163446]: 
+  expression: |
+    'var HashMap = Packages.java.util.HashMap;
+    var InternalRequester = Packages.com.twinsoft.convertigo.engine.requesters.InternalRequester;
+    var XMLUtils = Packages.com.twinsoft.convertigo.engine.util.XMLUtils;
+    var JsonOutput = Packages.com.twinsoft.convertigo.engine.enums.JsonOutput;
+    var Engine = Packages.com.twinsoft.convertigo.engine.Engine;
+    var System = Packages.java.lang.System;
+    
+    function trim(value) {
+      if (value === null || typeof value === ''undefined'') {
+        return '''';
+      }
+      return String(value).replace(/^\s+|\s+$/g, '''');
+    }
+    
+    function truthy(value) {
+      var text = trim(value).toLowerCase();
+      return text === ''true'' || text === ''1'' || text === ''yes'' || text === ''on'';
+    }
+    
+    function inputVariables() {
+      var vars = {};
+      try {
+        var request = context.httpServletRequest;
+        var names = request.getParameterNames();
+        while (names.hasMoreElements()) {
+          var name = String(names.nextElement());
+          if (name.indexOf(''__'') === 0) {
+            continue;
+          }
+          vars[name] = trim(request.getParameter(name));
+        }
+      } catch (e) {}
+      return vars;
+    }
+    
+    function unwrap(response) {
+      if (response && response.document && typeof response.document.result !== ''undefined'') {
+        return response.document.result;
+      }
+      if (response && response.doc && response.doc.document && typeof response.doc.document.result !== ''undefined'') {
+        return response.doc.document.result;
+      }
+      if (response && typeof response.result !== ''undefined'') {
+        return response.result;
+      }
+      return response || {};
+    }
+    
+    function callLocalSequence(sequenceName, variables) {
+      var params = new HashMap();
+      var projectArray = java.lang.reflect.Array.newInstance(java.lang.String, 1);
+      projectArray[0] = ''ConvertigoAssistant'';
+      params.put(''__project'', projectArray);
+      params.put(''__sequence'', sequenceName);
+      params.put(''__context'', ''agent_router_'' + sequenceName + ''_'' + String(System.currentTimeMillis()));
+      for (var key in variables) {
+        if (Object.prototype.hasOwnProperty.call(variables, key) && variables[key] !== null && typeof variables[key] !== ''undefined'') {
+          params.put(key, String(variables[key]));
+        }
+      }
+      var requester = new InternalRequester(params, context.httpServletRequest);
+      try {
+        var response = requester.processRequest();
+        var json = JSON.parse(XMLUtils.XmlToJson(response.getDocumentElement(), true, true, JsonOutput.JsonRoot.docNode).toString());
+        return unwrap(json);
+      } finally {
+        try {
+          Engine.theApp.contextManager.remove(requester.getContext());
+        } catch (e) {}
+      }
+    }
+    
+    var variables = inputVariables();
+    if (truthy(variables.blockRemoteStudioAgent)) {
+      result = {
+        ok: true,
+        status: ''agent_local_required'',
+        version: String(context.project.getVersion())
+      };
+    } else {
+      result = callLocalSequence(truthy(variables.agentBridgeOperational) ? ''AgentCreateConversation'' : ''CreateConversation'', variables);
+    }'
+↓result [steps.JsonToXmlStep-1783011163453]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result

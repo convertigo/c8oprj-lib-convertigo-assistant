@@ -1273,12 +1273,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return filePath(new File(new File(new File(new File(workspaceRoot, "agents/codex"), "homes/users"), safePathPart(record.userKey || "studio")), "codex-home"));
   }
 
-  function codexSessionTitleFromFile(file) {
+  function codexSessionIdFromFileName(name) {
+    var match = String(name || "").match(/rollout-.*-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i);
+    return match ? match[1] : "";
+  }
+
+  function codexSessionSummaryFromFile(file, conversationId) {
+    var summary = {
+      sessionId: "",
+      title: "",
+      conversationMatch: false
+    };
     try {
       if (!file || !file.exists()) {
-        return "";
+        return summary;
       }
-      var lines = readTextFile(file).split(/\r?\n/);
+      summary.sessionId = codexSessionIdFromFileName(file.getName());
+      var text = readTextFile(file);
+      var conversationMarker = trim(conversationId).length ? "Assistant conversation/thread id: " + trim(conversationId) : "";
+      summary.conversationMatch = conversationMarker.length && text.indexOf(conversationMarker) !== -1;
+      var lines = text.split(/\r?\n/);
       for (var i = 0; i < lines.length; i++) {
         var line = trim(lines[i]);
         if (!line.length) {
@@ -1288,26 +1302,116 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           var item = JSON.parse(line);
           var type = trim(item.type);
           var payload = item.payload || {};
-          var title = conversationTitleFromText(payload.title || payload.name || payload.summary);
-          if (title.length) {
-            return title;
+          if (type === "session_meta") {
+            summary.sessionId = trim(payload.id || payload.session_id || payload.sessionId || summary.sessionId);
           }
-          if (type === "event_msg" && trim(payload.type) === "user_message") {
+          if (!summary.title.length) {
+            var title = conversationTitleFromText(payload.title || payload.name || payload.summary);
+            if (title.length) {
+              summary.title = title;
+            }
+          }
+          if (!summary.title.length && type === "event_msg" && trim(payload.type) === "user_message") {
             var message = String(payload.message || "");
             var marker = "\nUser message:\n";
             var markerIndex = message.lastIndexOf(marker);
             if (markerIndex !== -1) {
               message = message.substring(markerIndex + marker.length);
             }
-            title = conversationTitleFromText(message);
+            var title = conversationTitleFromText(message);
             if (title.length) {
-              return title;
+              summary.title = title;
             }
           }
         } catch (_ignoreCodexSessionLine) {}
       }
     } catch (_ignoreCodexSessionTitle) {}
-    return "";
+    return summary;
+  }
+
+  function codexSessionTitleFromFile(file) {
+    return codexSessionSummaryFromFile(file, "").title;
+  }
+
+  function conversationRecoveryTitleForRecord(record) {
+    var title = conversationTitleFromText(record && record.title);
+    if (title.length) {
+      return title;
+    }
+    try {
+      var dir = record && record.conversationDir ? new File(String(record.conversationDir)) : null;
+      if (dir !== null) {
+        title = conversationTitleFromTranscriptFile(conversationTranscriptFile(dir));
+        if (title.length) {
+          return title;
+        }
+      }
+    } catch (_ignoreConversationRecoveryTitle) {}
+    return conversationTitleFromText(record && record.lastUserMessage);
+  }
+
+  function recoverCodexExternalSessionId(record, currentSessionId) {
+    currentSessionId = trim(currentSessionId);
+    if (normalizeProvider(record && record.provider) !== "codex") {
+      return currentSessionId;
+    }
+    var targetTitle = conversationRecoveryTitleForRecord(record);
+    var codexHome = codexHomeForRecord(record);
+    if (!codexHome.length) {
+      return currentSessionId;
+    }
+    try {
+      var root = new File(codexHome, "sessions");
+      if (!root.exists()) {
+        return currentSessionId;
+      }
+      var conversationId = trim(record.conversationId || record.threadid);
+      var createdAt = Number(record.createdAt || 0);
+      var bestSessionId = "";
+      var bestScore = 0;
+      var bestDistance = 9007199254740991;
+      var stack = [root];
+      while (stack.length) {
+        var current = stack.pop();
+        var children = current && current.exists() ? current.listFiles() : null;
+        if (children === null) {
+          continue;
+        }
+        for (var i = 0; i < children.length; i++) {
+          var child = children[i];
+          if (child.isDirectory()) {
+            stack.push(child);
+            continue;
+          }
+          var name = String(child.getName() || "");
+          if (name.indexOf("rollout-") !== 0 || name.lastIndexOf(".jsonl") !== name.length - 6) {
+            continue;
+          }
+          var summary = codexSessionSummaryFromFile(child, conversationId);
+          if (!summary.sessionId.length) {
+            continue;
+          }
+          var titleMatches = targetTitle.length && summary.title === targetTitle;
+          if (summary.sessionId === currentSessionId && titleMatches) {
+            return currentSessionId;
+          }
+          var score = titleMatches && summary.conversationMatch ? 3 : titleMatches ? 2 : (!currentSessionId.length && summary.conversationMatch ? 1 : 0);
+          if (score <= 0) {
+            continue;
+          }
+          var distance = createdAt > 0 ? Math.abs(Number(child.lastModified()) - createdAt) : 0;
+          if (score > bestScore || (score === bestScore && distance < bestDistance)) {
+            bestScore = score;
+            bestDistance = distance;
+            bestSessionId = summary.sessionId;
+          }
+        }
+      }
+      if (bestScore >= 2 || (!currentSessionId.length && bestScore > 0)) {
+        return bestSessionId;
+      }
+    } catch (_ignoreCodexSessionRecovery) {}
+    return currentSessionId;
   }
 
   function codexSessionTitleForRecord(record) {
@@ -2982,6 +3086,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.vibeHome = "";
       if (legacyCodexConversationHome) {
         state.externalSessionId = "";
+      } else {
+        state.externalSessionId = recoverCodexExternalSessionId(state, state.externalSessionId);
       }
     } else {
       if (!state.vibeHome) {
@@ -3095,6 +3201,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var model = normalizeModel(provider, options.model || options.agentModel || (record && record.model));
     var reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort || (record && record.reasoningEffort));
     var serviceTier = trim(options.serviceTier || options.speedTier || (record && record.serviceTier));
+    var externalSessionId = legacyRecordCodexHome ? "" : record && trim(record.externalSessionId);
+    if (!legacyRecordCodexHome && normalizeProvider(provider) === "codex" && record) {
+      externalSessionId = recoverCodexExternalSessionId(record, externalSessionId);
+    }
     var skillProfile = normalizeSkillProfile({
       agentProfile: options.agentProfile || (record && record.agentProfile),
       skillProfile: options.skillProfile || (record && record.skillProfile),
@@ -3131,7 +3241,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectNames: projectNames,
       userId: trim(options.userId),
       title: record ? conversationTitleFromText(record.title) : "",
-      externalSessionId: legacyRecordCodexHome ? "" : record && trim(record.externalSessionId),
+      externalSessionId: externalSessionId,
       language: normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage) || detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
       status: record && trim(record.status).length ? trim(record.status) : "created",
