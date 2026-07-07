@@ -20,6 +20,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var HashMap = Packages.java.util.HashMap;
   var UUID = Packages.java.util.UUID;
   var System = Packages.java.lang.System;
+  var Runnable = Packages.java.lang.Runnable;
+  var Thread = Packages.java.lang.Thread;
   var MessageDigest = Packages.java.security.MessageDigest;
   var InternalRequester = Packages.com.twinsoft.convertigo.engine.requesters.InternalRequester;
   var XMLUtils = Packages.com.twinsoft.convertigo.engine.util.XMLUtils;
@@ -877,6 +879,167 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(), payload, timeoutMs || 70000);
     return response && typeof response.result !== "undefined" ? response.result : response;
+  }
+
+  function bridgeStatus(value) {
+    return trim(value && value.status).toLowerCase();
+  }
+
+  function codexPromptRequiresStart(result) {
+    var status = bridgeStatus(result);
+    if (status === "not_found" || status === "not_running") {
+      return true;
+    }
+    var error = trim(result && result.error).toLowerCase();
+    return error.indexOf("unknown handle") >= 0 || error.indexOf("thread id is missing") >= 0;
+  }
+
+  function rememberCodexSessionFromResult(state, result) {
+    if (!state || !result) {
+      return;
+    }
+    if (result.state && (result.state.codexThreadId || result.state.sessionId)) {
+      state.externalSessionId = String(result.state.codexThreadId || result.state.sessionId);
+    } else if (result.codexThreadId) {
+      state.externalSessionId = String(result.codexThreadId);
+    } else if (result.state && result.state.sessionId) {
+      state.externalSessionId = String(result.state.sessionId);
+    } else if (result.sessionId) {
+      state.externalSessionId = String(result.sessionId);
+    }
+  }
+
+  function providerHomeScope(options, primaryName, secondaryName, defaultValue) {
+    var value = trim(options[primaryName] || options.homeScope);
+    if (!value.length && secondaryName) {
+      value = trim(options[secondaryName]);
+    }
+    return value.length ? value : defaultValue;
+  }
+
+  function agentStartPayload(state, options, provider, installRequested) {
+    options = options || {};
+    provider = normalizeProvider(provider || (state && state.provider));
+    var env = provider === "vibe" ? credentialsEnv() : {};
+    if (provider === "codex") {
+      var codexScope = providerHomeScope(options, "codexHomeScope", "homeScope", "user");
+      return {
+        handle: state.handle,
+        cwd: state.cwd,
+        codexHome: sanitizeCodexHome(options.codexHome),
+        codexHomeScope: codexScope,
+        conversationId: state.threadid || state.conversationId || "",
+        projectId: state.primaryProject || state.projectId || "",
+        userId: state.userId || state.userKey || "",
+        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+        assistantContext: state.assistantContext || options.assistantContext || "",
+        assistantSurface: state.assistantSurface || options.assistantSurface || "",
+        codexPath: trim(options.codexPath || options.commandPath),
+        install: installRequested ? "true" : "false",
+        nodeVersion: trim(options.nodeVersion),
+        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
+        npmPath: trim(options.npmPath),
+        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
+        codexPackage: trim(options.codexPackage || options.packageName),
+        codexVersion: trim(options.codexVersion || options.packageVersion),
+        codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
+        codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
+        forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
+        mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
+        skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
+        mcpEndpoint: state.mcpEndpoint,
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+        agentRevealMode: revealModeOption(options),
+        env: JSON.stringify(env),
+        codexThreadId: state.externalSessionId || "",
+        model: state.model || "",
+        reasoningEffort: state.reasoningEffort || "",
+        serviceTier: state.serviceTier || ""
+      };
+    }
+    var vibeScope = providerHomeScope(options, "vibeHomeScope", "homeScope", "user");
+    return {
+      handle: state.handle,
+      cwd: state.cwd,
+      vibeHome: trim(options.vibeHome),
+      vibeHomeScope: vibeScope,
+      homeScope: vibeScope,
+      conversationId: state.threadid || state.conversationId || "",
+      projectId: state.primaryProject || state.projectId || "",
+      userId: state.userId || state.userKey || "",
+      agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+      skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+      assistantContext: state.assistantContext || options.assistantContext || "",
+      assistantSurface: state.assistantSurface || options.assistantSurface || "",
+      install: installRequested ? "true" : "false",
+      mcpEndpoint: state.mcpEndpoint,
+      model: state.model || "",
+      env: JSON.stringify(env),
+      agentRevealMode: revealModeOption(options),
+      requestTimeoutMs: "60000"
+    };
+  }
+
+  function prewarmCodexAppServer(state, options) {
+    if (!state || normalizeProvider(state.provider) !== "codex") {
+      return false;
+    }
+    if (state.status === "deleted" || state.status === "setup_required") {
+      return false;
+    }
+    var bridgeOptions = {
+      bridgeBaseUrl: state.bridgeBaseUrl || (options && options.bridgeBaseUrl) || defaultBridgeUrl(),
+      workspaceRoot: state.workspaceRoot,
+      primaryProject: state.primaryProject || state.projectId || "",
+      projectId: state.projectId || state.primaryProject || "",
+      userId: state.userId || state.userKey || "",
+      conversationId: state.conversationId || state.threadid || "",
+      threadid: state.threadid || ""
+    };
+    if (state.codexPrewarmStartedAt && now() - Number(state.codexPrewarmStartedAt) < 60000) {
+      try {
+        var status = bridgeCall(bridgeOptions, "agent_status", { handle: state.handle }, 10000);
+        var alive = status && status.state && status.state.alive === true;
+        if (alive) {
+          state.codexPrewarmStatus = "ready";
+          state.updatedAt = now();
+          saveState(state);
+          return true;
+        }
+      } catch (_ignorePrewarmStatus) {}
+    }
+    state.codexPrewarmStartedAt = now();
+    state.codexPrewarmStatus = "starting";
+    state.updatedAt = now();
+    try {
+      saveState(state);
+    } catch (_ignorePrewarmSave) {}
+
+    var payload = agentStartPayload(state, options || {}, "codex", false);
+    if (!trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
+      try {
+        var tokenHandle = noCodeMcpTokenHandle(options || {});
+        if (tokenHandle.length) {
+          payload.nocodeMcpTokenHandle = tokenHandle;
+        }
+      } catch (_ignorePrewarmTokenHandle) {}
+    }
+    var thread = new Thread(new Runnable({
+      run: function () {
+        try {
+          bridgeCall(bridgeOptions, "agent_codex_start", payload, 90000);
+        } catch (_ignorePrewarmCodexStart) {}
+      }
+    }), "ConvertigoAssistant-codex-prewarm-" + state.threadid);
+    thread.setDaemon(true);
+    thread.start();
+    return true;
   }
 
   function normalizeThreadId(value) {
@@ -2137,7 +2300,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (progressLineLooksLikeAgentLifecycle(value)) {
       return lang(state).thinking;
     }
-    return String(value || "");
+    var text = String(value || "");
+    var compact = compactLine(text).toLowerCase();
+    if (compact === "i am using the convertigo mcp." || compact === "i am using the convertigo mcp") {
+      return "J'utilise le MCP Convertigo.";
+    }
+    return text;
   }
 
   function progressTextForTool(state, title) {
@@ -2471,8 +2639,36 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function appendNarrativeEvent(state, text, source) {
     text = cleanEventText(text);
-    if (!text.length) {
+    if (!state || !text.length) {
       return;
+    }
+    if (!state.progressEvents || typeof state.progressEvents.length === "undefined") {
+      state.progressEvents = [];
+    }
+    var compactText = trim(text.replace(/\s+/g, " "));
+    for (var i = state.progressEvents.length - 1; i >= 0; i--) {
+      var existing = state.progressEvents[i];
+      if (!existing || trim(existing.type || "narrative") !== "narrative") {
+        continue;
+      }
+      var existingText = trim(String(existing.text || existing.title || "").replace(/\s+/g, " "));
+      if (!existingText.length || existingText === compactText) {
+        return;
+      }
+      if (compactText.indexOf(existingText + " ") === 0) {
+        existing.key = eventKeyForText("narrative", text);
+        existing.text = text;
+        existing.title = text;
+        existing.status = "completed";
+        existing.provider = source || existing.provider || state.provider || "";
+        existing.current = false;
+        existing.updatedAt = now();
+        existing.completedAt = existing.completedAt || now();
+        return;
+      }
+      if (existingText.indexOf(compactText + " ") === 0) {
+        return;
+      }
     }
     pushProgressEvent(state, {
       key: eventKeyForText("narrative", text),
@@ -2575,6 +2771,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state.progressLog) {
       state.progressLog = "";
     }
+    state.progressChunkActive = false;
     if (state.lastProgressLine === text) {
       return text;
     }
@@ -2617,6 +2814,52 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     appendNarrativeEvent(state, text, "progress");
+  }
+
+  function appendProgressChunk(state, text) {
+    text = String(text || "").replace(/\r\n?/g, "\n");
+    if (!trim(text).length) {
+      return;
+    }
+    text = text.replace(/\n[ \t]*\n+/g, "\n");
+    var previousLog = String(state.progressLog || "");
+    if (!state.progressLog) {
+      state.progressLog = "";
+    }
+    if (state.progressLog.length && /[\n\r]$/.test(state.progressLog) && /^\n+/.test(text)) {
+      text = text.replace(/^\n+/, "");
+    }
+    if (state.progressLog.length && state.progressChunkActive !== true && !/[\n\r]$/.test(state.progressLog)) {
+      state.progressLog += "\n";
+    }
+    state.progressLog += text;
+    state.progressLog = state.progressLog.replace(/\n[ \t]*\n+/g, "\n");
+    state.progressChunkActive = true;
+    var lines = state.progressLog.split(/\n/);
+    for (var i = lines.length - 1; i >= 0; i--) {
+      var line = trim(lines[i]);
+      if (line.length) {
+        state.lastStatusText = line;
+        break;
+      }
+    }
+    var touchedText = state.progressLog.substring(Math.max(0, previousLog.length));
+    if (previousLog.length && !/[\n\r]$/.test(previousLog)) {
+      var lastBreak = previousLog.lastIndexOf("\n");
+      touchedText = state.progressLog.substring(lastBreak + 1);
+    }
+    var eventLines = (touchedText.length ? touchedText : text).split(/\n/);
+    for (var j = 0; j < eventLines.length; j++) {
+      var candidate = compactLine(normalizeProgressLine(state, eventLines[j]));
+      if (!candidate.length || progressLineLooksLikeFinalAnswer(candidate)) {
+        continue;
+      }
+      var isLast = j === eventLines.length - 1;
+      var complete = /[.!?]$/.test(candidate) || !isLast || /[\n\r]$/.test(text);
+      if (complete) {
+        appendNarrativeEvent(state, candidate, "progress");
+      }
+    }
   }
 
   function comparableAnswerText(value) {
@@ -3086,7 +3329,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.vibeHome = "";
       if (legacyCodexConversationHome) {
         state.externalSessionId = "";
-      } else {
+      } else if (!trim(state.externalSessionId).length) {
         state.externalSessionId = recoverCodexExternalSessionId(state, state.externalSessionId);
       }
     } else {
@@ -3256,6 +3499,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       warnings: record && record.warnings ? record.warnings : [],
       readErrors: 0,
       error: "",
+      codexPrewarmStartedAt: record && record.codexPrewarmStartedAt ? Number(record.codexPrewarmStartedAt) : 0,
+      codexPrewarmStatus: record && record.codexPrewarmStatus ? String(record.codexPrewarmStatus) : "",
       createdAt: record && record.createdAt ? Number(record.createdAt) : now(),
       updatedAt: now()
     };
@@ -3293,6 +3538,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       warnings: state.warnings || [],
       setupRequired: state.setupRequired === true,
       setup: state.setupReport || null,
+      codexPrewarmStartedAt: state.codexPrewarmStartedAt || 0,
+      codexPrewarmStatus: state.codexPrewarmStatus || "",
       createdAt: state.createdAt,
       updatedAt: state.updatedAt
     };
@@ -3787,6 +4034,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } else {
       setBuffer("", "");
     }
+    var prewarming = false;
+    if (!hasQuestion && (resumedLatest || requestedThreadId.length > 0)) {
+      prewarming = prewarmCodexAppServer(state, options);
+    }
     return {
       ok: true,
       id: state.threadid,
@@ -3795,6 +4046,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       model: state.model || "",
       status: state.status,
       resumed: resumedLatest || requestedThreadId.length > 0,
+      prewarming: prewarming,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
       conversations: publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state)),
@@ -3895,6 +4147,151 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   };
 
+  function sequenceScopeValue(scope, name) {
+    try {
+      if (scope && typeof scope[name] !== "undefined") {
+        return scope[name];
+      }
+    } catch (_ignoreSequenceScopeValue) {}
+    return requestParameter(name);
+  }
+
+  function sequenceArrayValue(value) {
+    return value && Object.prototype.toString.call(value) === "[object Array]";
+  }
+
+  function parseSequenceFiles(value) {
+    var text = trim(value);
+    if (!text.length) {
+      return [];
+    }
+    try {
+      var parsed = JSON.parse(text);
+      if (sequenceArrayValue(parsed)) {
+        return parsed;
+      }
+      if (parsed && sequenceArrayValue(parsed.files)) {
+        return parsed.files;
+      }
+      if (parsed) {
+        return [parsed];
+      }
+    } catch (_ignoreParseSequenceFiles) {}
+    return [{ raw: text }];
+  }
+
+  function sequenceFileValue(file, names) {
+    if (!file) {
+      return "";
+    }
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      if (file[name] !== null && typeof file[name] !== "undefined") {
+        var value = trim(file[name]);
+        if (value.length) {
+          return value;
+        }
+      }
+    }
+    return "";
+  }
+
+  function sequenceAttachmentLine(file, index) {
+    var label = sequenceFileValue(file, ["filename", "name", "file_name", "id", "object"]);
+    var path = sequenceFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath", "file"]);
+    var type = sequenceFileValue(file, ["type", "mime", "mimeType", "content_type", "contentType"]);
+    var id = sequenceFileValue(file, ["id", "file_id", "fileId"]);
+    var size = sequenceFileValue(file, ["bytes", "size", "length"]);
+    var raw = sequenceFileValue(file, ["raw"]);
+    var parts = [];
+    parts.push("attachment " + (index + 1));
+    if (label.length) parts.push("name=" + label);
+    if (path.length) parts.push("path=" + path);
+    if (type.length) parts.push("type=" + type);
+    if (id.length) parts.push("id=" + id);
+    if (size.length) parts.push("size=" + size);
+    if (raw.length) parts.push("raw=" + raw);
+    return parts.join("; ");
+  }
+
+  function buildSequencePrompt(rawQuestion, options) {
+    options = options || {};
+    var targetProject = trim(options.targetProject);
+    if (!targetProject.length) {
+      targetProject = trim(options.projectName);
+    }
+    var agentProfile = trim(options.agentProfile);
+    var skillProfile = trim(options.skillProfile);
+    var assistantContext = trim(options.assistantContext);
+    var assistantSurface = trim(options.assistantSurface);
+    var surfaceProfile = agentProfile.length ? agentProfile : (skillProfile.length ? skillProfile : (assistantContext.length ? assistantContext : assistantSurface));
+    var surfaceLower = surfaceProfile.toLowerCase();
+    var isNoCodeSurface = surfaceLower === "nocode" || surfaceLower === "no-code" || surfaceLower === "c8oforms" || surfaceLower === "forms";
+    var selectedThread = trim(options.threadid);
+    var uploadedFiles = parseSequenceFiles(options.AIFiles);
+    var promptParts = [];
+    promptParts.push(isNoCodeSurface ? "You are an AI agent integrated in Convertigo NoCode Studio (C8Oforms)." : "You are an AI coding agent integrated in Convertigo Studio.");
+    promptParts.push(isNoCodeSurface ? "Your job is to help the user inspect, explain, and improve forms, no-code applications, pages, fields, roles, publication, permissions, and data sources through Convertigo tools." : "Your job is to help the user by inspecting, editing, and validating Convertigo projects when the request requires project work.");
+    promptParts.push("Reply to the user in the same language as their message. The system and operational instructions are in English, but the user-facing answer must follow the user's language.");
+    promptParts.push("While working, provide short user-facing progress updates when the agent interface supports streamed updates. Keep them factual, one or two sentences, in the user's language, and do not reveal hidden chain-of-thought; summarize what you are doing, what you found, or what you will try next.");
+    promptParts.push("");
+    promptParts.push(isNoCodeSurface ? "Convertigo NoCode context:" : "Convertigo Studio context:");
+    promptParts.push("- Surface profile: " + (surfaceProfile.length ? surfaceProfile : "generalist"));
+    promptParts.push("- Selected project: " + (targetProject.length ? targetProject : "none"));
+    if (isNoCodeSurface) {
+      promptParts.push("- Project selection is optional in this surface. Do not require an Eclipse/Studio selected project before inspecting or explaining C8Oforms/no-code resources.");
+    }
+    promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
+    promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
+    promptParts.push("");
+    promptParts.push("Operational rules:");
+    promptParts.push("- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
+    promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- Work only on the selected Convertigo project unless the user explicitly asks for another project.");
+    promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- If no project is selected and the user asks for project changes, ask them to select a project first.");
+    promptParts.push(isNoCodeSurface ? "- Prefer the managed convertigo-nocode skill when the provider exposes skills." : "- Prefer the managed convertigo-generalist skill when the provider exposes skills.");
+    promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
+    promptParts.push("- If the user asks for advice only, answer without modifying the project.");
+    promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
+    promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
+    promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
+    promptParts.push("- Do not expose secrets, credentials, API keys, or private environment values.");
+    promptParts.push("- If installation, credentials, network access, or permissions block the work, explain the blocker and the next action clearly.");
+    if (uploadedFiles.length) {
+      promptParts.push("");
+      promptParts.push("User attachments:");
+      promptParts.push("The user attached file metadata through Convertigo Assistant. Image attachments are usually screenshots or UI evidence; inspect the referenced local file/path when one is available before acting on visual issues.");
+      promptParts.push("If this provider or bridge cannot access the binary image content, say it clearly and use the attachment metadata plus the user's description instead of pretending you saw the image.");
+      for (var fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
+        promptParts.push("- " + sequenceAttachmentLine(uploadedFiles[fileIndex], fileIndex));
+      }
+    }
+    promptParts.push("");
+    promptParts.push("User message:");
+    promptParts.push(String(rawQuestion));
+    return promptParts.join("\n");
+  }
+
+  C8O.assistantAgentBridge.sendMessageFromSequenceScope = function (scope) {
+    var names = [
+      "threadid", "provider", "bridgeBaseUrl", "mcpEndpoint", "workspaceRoot", "cwd",
+      "vibeHome", "agentHome", "codexHome", "codexHomeScope", "homeScope",
+      "agentProfile", "skillProfile", "assistantContext", "assistantSurface", "model",
+      "bypassApprovalsAndSandbox", "sandbox", "targetProject", "projectName", "userId",
+      "install", "installCodex", "installVibe", "codexPath", "nodeVersion", "nodeDir",
+      "npmPath", "allowNodeDownload", "codexPackage", "codexVersion", "codexInstallMethod",
+      "codexInstallTimeoutMs", "forceCodexInstall", "forceVibeInstall", "forcePythonInstall",
+      "allowPythonDownload", "mcpSkillsSourceDir", "skipSkillsInstall", "agentRevealMode",
+      "browserDebugUrl", "browserDevToolsJsonUrl", "browserDevToolsWebSocketUrl",
+      "playwrightCdpEndpoint", "viewerCdpEndpoint", "playwrightMcpEndpoint", "AIFiles"
+    ];
+    var options = {};
+    for (var i = 0; i < names.length; i++) {
+      options[names[i]] = sequenceScopeValue(scope, names[i]);
+    }
+    options.Question = buildSequencePrompt(sequenceScopeValue(scope, "Question"), options);
+    return C8O.assistantAgentBridge.sendMessage(options);
+  };
+
   C8O.assistantAgentBridge.sendMessage = function (options) {
     options = optionsWithRequestFallbacks(options || {});
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
@@ -3938,6 +4335,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    clearCancellationRequested(state.threadid);
     if (trim(options.model || options.agentModel).length) {
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
     } else if (!trim(state.model).length) {
@@ -3982,137 +4380,49 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var startSequence = provider === "codex" ? "agent_codex_start" : "agent_vibe_start";
       var promptSequence = provider === "codex" ? "agent_codex_prompt" : "agent_vibe_prompt";
       var installRequested = shouldInstallForRun(options, provider);
-      var setupInfo = callAgentSetup(state, options, installRequested);
-      var setup = setupInfo.result || {};
-      if (setup.ok === false) {
-        if (!installRequested && trim(setup.status).toLowerCase() === "missing") {
-          state.status = "setup_required";
-          state.setupRequired = true;
-          state.setupReport = publicSetupReport(setup);
-          state.answer = setupRequiredAnswer(state, setup);
-          state.answerIsFinal = true;
-          state.runid = makeRunId("setup");
-          appendTranscript(state, "user", state.userQuestion || question);
-          appendTranscript(state, "assistant", state.answer);
-          appendProgress(state, lang(state).setupRequired);
-          state.updatedAt = now();
-          saveState(state);
-          setStateBuffer(state);
-          return {
-            ok: false,
-            id: state.runid,
-            object: "agent.run",
-            status: "setup_required",
-            threadid: state.threadid,
-            setupRequired: true,
-            canInstall: true,
-            setup: state.setupReport,
-            AIData: responseForState(state).AIData,
-            state: publicState(state)
-          };
+      if (provider !== "codex") {
+        var setupInfo = callAgentSetup(state, options, installRequested);
+        var setup = setupInfo.result || {};
+        if (setup.ok === false) {
+          if (!installRequested && trim(setup.status).toLowerCase() === "missing") {
+            state.status = "setup_required";
+            state.setupRequired = true;
+            state.setupReport = publicSetupReport(setup);
+            state.answer = setupRequiredAnswer(state, setup);
+            state.answerIsFinal = true;
+            state.runid = makeRunId("setup");
+            appendTranscript(state, "user", state.userQuestion || question);
+            appendTranscript(state, "assistant", state.answer);
+            appendProgress(state, lang(state).setupRequired);
+            state.updatedAt = now();
+            saveState(state);
+            setStateBuffer(state);
+            return {
+              ok: false,
+              id: state.runid,
+              object: "agent.run",
+              status: "setup_required",
+              threadid: state.threadid,
+              setupRequired: true,
+              canInstall: true,
+              setup: state.setupReport,
+              AIData: responseForState(state).AIData,
+              state: publicState(state)
+            };
+          }
+          throw new Error(setup.error || setupInfo.sequence + " failed");
         }
-        throw new Error(setup.error || setupInfo.sequence + " failed");
+        state.setupRequired = false;
+        state.setupReport = publicSetupReport(setup);
+      } else {
+        state.setupRequired = false;
+        state.setupReport = null;
       }
-      state.setupRequired = false;
-      state.setupReport = publicSetupReport(setup);
       if (cancellationRequested(state.threadid)) {
         return cancelledRunResponse(state);
       }
 
-      var env = provider === "vibe" ? credentialsEnv() : {};
-      var codexScope = trim(options.codexHomeScope || options.homeScope);
-      if (!codexScope.length) {
-        codexScope = "user";
-      }
-      var vibeScope = trim(options.vibeHomeScope || options.homeScope);
-      if (!vibeScope.length) {
-        vibeScope = "user";
-      }
-      var startPayload = provider === "codex" ? {
-        handle: state.handle,
-        cwd: state.cwd,
-        codexHome: sanitizeCodexHome(options.codexHome),
-        codexHomeScope: codexScope,
-        conversationId: state.threadid || state.conversationId || "",
-        projectId: state.primaryProject || state.projectId || "",
-        userId: state.userId || state.userKey || "",
-        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
-        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
-        assistantContext: state.assistantContext || options.assistantContext || "",
-        assistantSurface: state.assistantSurface || options.assistantSurface || "",
-        codexPath: trim(options.codexPath || options.commandPath),
-        install: installRequested ? "true" : "false",
-        nodeVersion: trim(options.nodeVersion),
-        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
-        npmPath: trim(options.npmPath),
-        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
-        codexPackage: trim(options.codexPackage || options.packageName),
-        codexVersion: trim(options.codexVersion || options.packageVersion),
-        codexInstallMethod: trim(options.codexInstallMethod || options.installMethod),
-        codexInstallTimeoutMs: trim(options.codexInstallTimeoutMs),
-        forceCodexInstall: typeof options.forceCodexInstall === "undefined" ? "" : options.forceCodexInstall,
-        mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
-        skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
-        mcpEndpoint: state.mcpEndpoint,
-        browserDebugUrl: trim(options.browserDebugUrl),
-        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
-        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
-        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
-        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
-        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
-        agentRevealMode: revealModeOption(options),
-        env: JSON.stringify(env),
-        codexThreadId: state.externalSessionId || "",
-        model: state.model || "",
-        reasoningEffort: state.reasoningEffort || "",
-        serviceTier: state.serviceTier || ""
-      } : {
-        handle: state.handle,
-        cwd: state.cwd,
-        vibeHome: trim(options.vibeHome),
-        vibeHomeScope: vibeScope,
-        homeScope: vibeScope,
-        conversationId: state.threadid || state.conversationId || "",
-        projectId: state.primaryProject || state.projectId || "",
-        userId: state.userId || state.userKey || "",
-        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
-        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
-        assistantContext: state.assistantContext || options.assistantContext || "",
-        assistantSurface: state.assistantSurface || options.assistantSurface || "",
-        install: installRequested ? "true" : "false",
-        mcpEndpoint: state.mcpEndpoint,
-        model: state.model || "",
-        env: JSON.stringify(env),
-        agentRevealMode: revealModeOption(options),
-        requestTimeoutMs: "60000"
-      };
-      var start = bridgeCall(state, startSequence, startPayload, 90000);
-      if (start.ok === false) {
-        throw new Error(start.error || startSequence + " failed");
-      }
-      if (start.state && (start.state.codexThreadId || start.state.sessionId)) {
-        state.externalSessionId = String(start.state.codexThreadId || start.state.sessionId);
-      } else if (start.codexThreadId) {
-        state.externalSessionId = String(start.codexThreadId);
-      } else if (start.state && start.state.sessionId) {
-        state.externalSessionId = String(start.state.sessionId);
-      } else if (start.sessionId) {
-        state.externalSessionId = String(start.sessionId);
-      }
-      if (provider === "codex" && start.home && trim(start.home.path).length) {
-        state.codexHome = sanitizeCodexHome(start.home.path);
-        state.agentHome = "";
-        state.vibeHome = "";
-      }
-      if (cancellationRequested(state.threadid)) {
-        try {
-          bridgeCall(state, provider === "codex" ? "agent_codex_close" : "agent_vibe_close", {
-            handle: state.handle
-          }, 15000);
-        } catch (_ignoreCloseAfterStartCancel) {}
-        return cancelledRunResponse(state);
-      }
-
+      var startPayload = agentStartPayload(state, options, provider, installRequested);
       var promptPayload = provider === "codex" ? {
         handle: state.handle,
         prompt: question,
@@ -4136,9 +4446,49 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         agentRevealMode: revealModeOption(options),
         waitForCompletion: "false"
       };
-      var prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
+      var prompt = null;
+      if (provider === "codex" && trim(state.externalSessionId).length) {
+        prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
+        if (prompt.ok === false && codexPromptRequiresStart(prompt)) {
+          prompt = null;
+        } else if (prompt.ok === false) {
+          throw new Error(prompt.error || promptSequence + " failed");
+        } else {
+          rememberCodexSessionFromResult(state, prompt);
+        }
+      }
+      if (prompt === null) {
+        var start = bridgeCall(state, startSequence, startPayload, 90000);
+        if (start.ok === false) {
+          throw new Error(start.error || startSequence + " failed");
+        }
+        if (provider === "codex" && start.setup) {
+          state.setupReport = publicSetupReport(start.setup);
+        }
+        rememberCodexSessionFromResult(state, start);
+        if (provider === "codex" && start.home && trim(start.home.path).length) {
+          state.codexHome = sanitizeCodexHome(start.home.path);
+          state.agentHome = "";
+          state.vibeHome = "";
+        }
+        if (cancellationRequested(state.threadid)) {
+          try {
+            bridgeCall(state, provider === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+              handle: state.handle
+            }, 15000);
+          } catch (_ignoreCloseAfterStartCancel) {}
+          return cancelledRunResponse(state);
+        }
+        if (provider === "codex") {
+          promptPayload.codexThreadId = state.externalSessionId || "";
+        }
+        prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
+      }
       if (prompt.ok === false) {
         throw new Error(prompt.error || promptSequence + " failed");
+      }
+      if (provider === "codex") {
+        rememberCodexSessionFromResult(state, prompt);
       }
       if (cancellationRequested(state.threadid)) {
         try {
@@ -4288,9 +4638,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "progress/message" || type === "status/message") {
           appendProgress(state, eventText(data));
+        } else if (type === "progress/chunk") {
+          appendProgressChunk(state, eventText(data));
         } else if (type === "answer/chunk") {
           if (codexAnswerChunkIsProgress(state, data)) {
-            appendProgress(state, eventText(data));
+            appendProgressChunk(state, eventText(data));
           } else {
             markProgressEventsIdle(state);
             appendAnswerChunk(state, eventText(data));
@@ -4447,6 +4799,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.status = state.status === "deleted" ? "deleted" : (state.status || "created");
     state.updatedAt = now();
     saveState(state);
+    var prewarming = prewarmCodexAppServer(state, options);
     return {
       ok: state.status !== "deleted",
       id: state.threadid,
@@ -4456,6 +4809,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       reasoningEffort: state.reasoningEffort || "",
       serviceTier: state.serviceTier || "",
       status: state.status,
+      prewarming: prewarming,
       threadid: state.threadid,
       state: publicState(state),
       conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),

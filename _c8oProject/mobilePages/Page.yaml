@@ -4163,7 +4163,7 @@ title: Convertigo assistant
                                     			var hh = (''0'' + nowDate.getHours()).slice(-2);
                                     			var mm = (''0'' + nowDate.getMinutes()).slice(-2);
                                     			page.local.Messages.push({
-                                    				msg: lines.join(''\n\n''),
+                                    				msg: lines.join(''\n''),
                                     				type: ''assistant'',
                                     				author: ''Assistant'',
                                     				time: hh + '':'' + mm,
@@ -4708,7 +4708,7 @@ title: Convertigo assistant
                   directiveSource: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:item && item.progressItems ? item.progressItems : []'
+                      - MobileSmartSourceType: 'script:item && item.progressItems && item.progressItems.length ? item.progressItems : ((item && (item.progressDetails || item.msg || item.status)) ? ('''' + (item.progressDetails || item.msg || item.status)).split(''\n'') : (item && item.writing === true ? [''En réflexion''] : []))'
                   ↓Step [ngx.components.UIDynamicElement-1782146120655]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: div
@@ -4878,7 +4878,7 @@ title: Convertigo assistant
                           varValue: 
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: 'script:step && step.text ? step.text : '''''
+                              - MobileSmartSourceType: 'script:step && step.text ? step.text : (step ? ('''' + step) : '''')'
                     ↓IsToolNoDetail [ngx.components.UIControlDirective-1782246688374]: 
                       directiveName: If
                       directiveSource: 
@@ -5393,7 +5393,7 @@ title: Convertigo assistant
                     		var hh = (''0'' + nowDate.getHours()).slice(-2);
                     		var mm = (''0'' + nowDate.getMinutes()).slice(-2);
                     		page.local.Messages.push({
-                    			msg: lines.join(''\n\n''),
+                    			msg: lines.join(''\n''),
                     			type: ''assistant'',
                     			author: ''Assistant'',
                     			time: hh + '':'' + mm,
@@ -8523,7 +8523,7 @@ title: Convertigo assistant
             color: var(--modern-text, #f1f5f9);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
             margin: 18px 0 22px 0;
             max-width: min(100%, 760px);
             padding: 0 8px 0 18px;
@@ -8586,7 +8586,7 @@ title: Convertigo assistant
             align-items: stretch;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 3px;
             margin-top: 2px;
             text-align: left;
           }
@@ -8594,6 +8594,7 @@ title: Convertigo assistant
             margin: 0;
             text-align: left;
           }
+          :host ::ng-deep .agent-worklog-step markdown,
           :host ::ng-deep .agent-worklog-step markdown p,
           :host ::ng-deep .agent-worklog-step markdown li {
             margin: 0;
@@ -8602,13 +8603,13 @@ title: Convertigo assistant
           :host ::ng-deep .agent-worklog-step-narrative markdown li {
             color: color-mix(in srgb, var(--modern-text, #f1f5f9) 94%, var(--modern-muted, #94a3b8) 6%);
             font-size: 15px;
-            line-height: 24px;
+            line-height: 21px;
           }
           :host ::ng-deep .agent-worklog-step-activity markdown p,
           :host ::ng-deep .agent-worklog-step-activity markdown li {
             color: color-mix(in srgb, var(--modern-muted, #94a3b8) 78%, transparent 22%);
             font-size: 13px;
-            line-height: 21px;
+            line-height: 19px;
           }
           .agent-worklog-step.is-current {
             animation: agent-worklog-pulse 1.45s ease-in-out infinite;

@@ -29,6 +29,7 @@ parallel backend path for a local CLI agent managed by the
 - MCP endpoint: `http://localhost:18082/convertigo/api/mcp`
 - Provider: `vibe`
 - Per-conversation home: `<workspaceRoot>/agents/vibe/users/<userKey>/conversations/<conversationId>/vibe-home`
+- Codex managed home: `<workspaceRoot>/agents/codex/homes/users/<userKey>/codex-home`
 - Default Studio user key: `studio`
 - NoCode user key: `u-<sha256-16>` computed from `userId`, so raw logins/emails
   are not written in folder names.
@@ -44,6 +45,12 @@ parallel backend path for a local CLI agent managed by the
   summary.md
   vibe-home/
 ```
+
+Codex conversations use the same durable record shape under
+`<workspaceRoot>/agents/codex/users/<userKey>/conversations/<conversationId>/`,
+but the default Codex home is user-scoped instead of conversation-scoped. The
+conversation record stores `externalSessionId`, which is the Codex app-server
+thread id used when the bridge resumes a resident Codex server.
 
 `conversation.json` stores metadata only: provider, user key, primary project,
 project list, working directory, VIBE_HOME, last cursor/run id, status, and the
@@ -94,6 +101,19 @@ resumed, and non-active conversations can be deleted. Resuming a conversation
 also reloads the visible user/assistant transcript. `AgentDeleteConversation`
 returns the updated conversation list so the UI can refresh without a second
 parallel backend call.
+
+For Codex conversations, `AgentResumeConversation` and resumed
+`AgentCreateConversation` calls also prewarm the resident `codex app-server` by
+calling `ConvertigoAgentBridge.agent_codex_start` in a daemon thread. This is
+best-effort and does not block the UI response: the returned payload includes
+`prewarming=true` when a warmup was started or an already-running handle was
+confirmed. The first prompt still has the normal start fallback if the warmup has
+not finished yet.
+
+The prewarm guard is process-aware. A recent `codexPrewarmStartedAt` value only
+suppresses another warmup when `agent_status` confirms that the bridge handle is
+still alive; if the process was closed or lost from the bridge registry, resume
+starts it again.
 
 The component assistant page sends the selected Studio project as
 `targetProject`. The older `projectName` variable is kept as a compatibility
