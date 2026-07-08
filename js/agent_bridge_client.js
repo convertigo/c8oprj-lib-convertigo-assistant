@@ -84,7 +84,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "settingsTimeoutMs", "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
       "mcpBearerTokenHandle", "browserDebugUrl", "browserDevToolsJsonUrl",
       "browserDevToolsWebSocketUrl", "playwrightCdpEndpoint",
-      "playwrightMcpEndpoint", "viewerCdpEndpoint"
+      "playwrightMcpEndpoint", "viewerCdpEndpoint", "browserControlReady"
     ].forEach(function (name) {
       if (!trim(copy[name]).length) {
         var value = requestParameter(name);
@@ -365,9 +365,134 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return result || {};
   }
 
+  function blankBrowserTargetUrl(value) {
+    var text = trim(value).toLowerCase();
+    return !text.length || text === "about:blank";
+  }
+
+  function builderControlTargetUrl(builder) {
+    builder = builder || {};
+    var target = builder.browserDevToolsTarget || {};
+    var browser = builder.browser || {};
+    return trim(target.url || builder.browserControlTargetUrl || browser.currentUrl || browser.locationHref);
+  }
+
+  function builderBrowserControlReady(builder) {
+    builder = builder || {};
+    if (!firstResultValue(builder, ["browserDebugUrl", "browserRemoteDebuggingUrl", "browserDevToolsJsonUrl", "browserDevToolsWebSocketUrl"]).length) {
+      return false;
+    }
+    var targetUrl = builderControlTargetUrl(builder);
+    if (blankBrowserTargetUrl(targetUrl)) {
+      return false;
+    }
+    if (typeof builder.browserControlReady !== "undefined" && !boolValue(builder.browserControlReady, false)) {
+      return false;
+    }
+    return true;
+  }
+
+  function clearViewerDebugOptions(options) {
+    options.browserDebugUrl = "";
+    options.browserDevToolsJsonUrl = "";
+    options.browserDevToolsWebSocketUrl = "";
+    options.playwrightCdpEndpoint = "";
+    options.viewerCdpEndpoint = "";
+    options.browserControlReady = "false";
+  }
+
+  function shouldOpenViewerBeforeAgentStart(options, state) {
+    options = options || {};
+    if (boolValue(options.skipViewerDebugOpen || options.skipMobileBuilderPreopen, false)) {
+      return false;
+    }
+    if (boolValue(options.openViewerBeforeAgentStart || options.preopenMobileBuilder, false)) {
+      return true;
+    }
+    var text = trim(options.userQuestion || options.prompt || (state && state.userQuestion) || "");
+    if (!text.length) {
+      return false;
+    }
+    var normalized = (" " + text.toLowerCase().replace(/[’']/g, " ") + " ");
+    var directViewerActions = [
+      " bouton ", " boutons ", " clique ", " cliquer ", " clic ", " appuie ", " appuis ",
+      " appuyer ", " press ", " click ", " button "
+    ];
+    for (var i = 0; i < directViewerActions.length; i++) {
+      if (normalized.indexOf(directViewerActions[i]) !== -1) {
+        return true;
+      }
+    }
+    var proofActions = [
+      " teste ", " tester ", " test ", " vérifie ", " verifie ", " contrôle ", " controle ",
+      " analyse ", " analyser ", " inspecte ", " inspecter ", " regarde ", " regarder "
+    ];
+    var viewerContexts = [
+      " application ", " app ", " ui ", " ux ", " front ", " frontend ", " viewer ",
+      " écran ", " ecran ", " page ", " affichage ", " visuel ", " visible ", " builder ",
+      " ngx ", " mobile "
+    ];
+    var hasProofAction = false;
+    for (var j = 0; j < proofActions.length; j++) {
+      if (normalized.indexOf(proofActions[j]) !== -1) {
+        hasProofAction = true;
+        break;
+      }
+    }
+    if (!hasProofAction) {
+      return false;
+    }
+    for (var k = 0; k < viewerContexts.length; k++) {
+      if (normalized.indexOf(viewerContexts[k]) !== -1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function applyViewerDebugOptionsFromBuilder(options, builder, force) {
+    options = options || {};
+    builder = builder || {};
+    if (!builderBrowserControlReady(builder)) {
+      if (force === true) {
+        clearViewerDebugOptions(options);
+      }
+      return existingViewerCdpEndpoint(options);
+    }
+    var debugUrl = firstResultValue(builder, ["browserDebugUrl", "browserRemoteDebuggingUrl"]);
+    var jsonUrl = firstResultValue(builder, ["browserDevToolsJsonUrl"]);
+    var wsUrl = firstResultValue(builder, ["browserDevToolsWebSocketUrl"]);
+    var cdp = normalizeCdpEndpoint(firstResultValue(builder, [
+      "playwrightCdpEndpoint",
+      "viewerCdpEndpoint",
+      "browserDebugUrl",
+      "browserDevToolsWebSocketUrl",
+      "browserDevToolsJsonUrl"
+    ]));
+    if (debugUrl.length && (force === true || !trim(options.browserDebugUrl).length)) {
+      options.browserDebugUrl = debugUrl;
+    }
+    if (jsonUrl.length && (force === true || !trim(options.browserDevToolsJsonUrl).length)) {
+      options.browserDevToolsJsonUrl = jsonUrl;
+    }
+    if (wsUrl.length && (force === true || !trim(options.browserDevToolsWebSocketUrl).length)) {
+      options.browserDevToolsWebSocketUrl = wsUrl;
+    }
+    if (cdp.length) {
+      if (force === true || !trim(options.playwrightCdpEndpoint).length) {
+        options.playwrightCdpEndpoint = cdp;
+      }
+      if (force === true || !trim(options.viewerCdpEndpoint).length) {
+        options.viewerCdpEndpoint = cdp;
+      }
+    }
+    options.browserControlReady = "true";
+    return existingViewerCdpEndpoint(options);
+  }
+
   function enrichViewerDebugOptions(options, state) {
     options = options || {};
-    if (existingViewerCdpEndpoint(options).length || boolValue(options.skipViewerDebugProbe, false)) {
+    if (boolValue(options.skipViewerDebugProbe, false)) {
       return options;
     }
     var project = trim(options.targetProject || options.projectName || options.projectId);
@@ -386,31 +511,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         logsLimit: "0",
         __nolog: "true"
       }));
-      var debugUrl = firstResultValue(builder, ["browserDebugUrl", "browserRemoteDebuggingUrl"]);
-      var jsonUrl = firstResultValue(builder, ["browserDevToolsJsonUrl"]);
-      var wsUrl = firstResultValue(builder, ["browserDevToolsWebSocketUrl"]);
-      var cdp = normalizeCdpEndpoint(firstResultValue(builder, [
-        "playwrightCdpEndpoint",
-        "viewerCdpEndpoint",
-        "browserDebugUrl",
-        "browserDevToolsWebSocketUrl",
-        "browserDevToolsJsonUrl"
-      ]));
-      if (debugUrl.length && !trim(options.browserDebugUrl).length) {
-        options.browserDebugUrl = debugUrl;
-      }
-      if (jsonUrl.length && !trim(options.browserDevToolsJsonUrl).length) {
-        options.browserDevToolsJsonUrl = jsonUrl;
-      }
-      if (wsUrl.length && !trim(options.browserDevToolsWebSocketUrl).length) {
-        options.browserDevToolsWebSocketUrl = wsUrl;
-      }
-      if (cdp.length) {
-        if (!trim(options.playwrightCdpEndpoint).length) {
-          options.playwrightCdpEndpoint = cdp;
-        }
-        if (!trim(options.viewerCdpEndpoint).length) {
-          options.viewerCdpEndpoint = cdp;
+      if (!applyViewerDebugOptionsFromBuilder(options, builder, true).length && shouldOpenViewerBeforeAgentStart(options, state)) {
+        builder = unwrapBuilderStateResponse(callLocalSequence("ConvertigoMCP", "tools_mobile_builder_open", {
+          project: project,
+          stateOnly: "false",
+          wait: "false",
+          timeoutSec: "0",
+          logsLimit: "0",
+          reveal: revealModeOption(options),
+          __nolog: "true"
+        }));
+        if (!applyViewerDebugOptionsFromBuilder(options, builder, true).length) {
+          try { Thread.sleep(350); } catch (_ignoreViewerDebugSleep) {}
+          builder = unwrapBuilderStateResponse(callLocalSequence("ConvertigoMCP", "tools_mobile_builder_open", {
+            project: project,
+            stateOnly: "true",
+            wait: "false",
+            timeoutSec: "0",
+            logsLimit: "0",
+            __nolog: "true"
+          }));
+          applyViewerDebugOptionsFromBuilder(options, builder, true);
         }
       }
     } catch (_ignoreViewerDebugProbe) {}
@@ -887,7 +1008,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function codexPromptRequiresStart(result) {
     var status = bridgeStatus(result);
-    if (status === "not_found" || status === "not_running") {
+    if (status === "not_found" || status === "not_running" || status === "restart_required") {
       return true;
     }
     var error = trim(result && result.error).toLowerCase();
@@ -917,16 +1038,56 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return value.length ? value : defaultValue;
   }
 
+  function codexHomeScopeForRun(options) {
+    if (existingViewerCdpEndpoint(options).length) {
+      return "conversation";
+    }
+    var value = trim(options.codexHomeScope || options.homeScope || options.scope);
+    if (value.length) {
+      return value;
+    }
+    return "user";
+  }
+
+  function codexHomeForRun(options, scope) {
+    options = options || {};
+    var normalizedScope = trim(scope).toLowerCase();
+    if (existingViewerCdpEndpoint(options).length && normalizedScope === "conversation") {
+      return "";
+    }
+    return sanitizeCodexHome(options.codexHome);
+  }
+
+  function codexViewerSessionNeedsFreshThread(options, state) {
+    if (!state || !trim(state.externalSessionId).length) {
+      return false;
+    }
+    if (!existingViewerCdpEndpoint(options).length) {
+      return false;
+    }
+    var home = trim(state.codexHome || state.agentHome);
+    return home.length && !isConversationScopedCodexHome(home);
+  }
+
+  function clearCodexExternalSession(state) {
+    if (!state) {
+      return;
+    }
+    state.externalSessionId = "";
+    state.codexThreadId = "";
+    state.sessionId = "";
+  }
+
   function agentStartPayload(state, options, provider, installRequested) {
     options = options || {};
     provider = normalizeProvider(provider || (state && state.provider));
     var env = provider === "vibe" ? credentialsEnv() : {};
     if (provider === "codex") {
-      var codexScope = providerHomeScope(options, "codexHomeScope", "homeScope", "user");
+      var codexScope = codexHomeScopeForRun(options);
       return {
         handle: state.handle,
         cwd: state.cwd,
-        codexHome: sanitizeCodexHome(options.codexHome),
+        codexHome: codexHomeForRun(options, codexScope),
         codexHomeScope: codexScope,
         conversationId: state.threadid || state.conversationId || "",
         projectId: state.primaryProject || state.projectId || "",
@@ -1179,7 +1340,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function defaultModelForProvider(provider) {
-    return normalizeProvider(provider) === "vibe" ? "vibe-thinking" : "";
+    return normalizeProvider(provider) === "vibe" ? "vibe-thinking" : "gpt-5.5";
   }
 
   function normalizeModel(provider, value) {
@@ -1230,6 +1391,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!model.length) {
         var firstModel = modelSettings(descriptor, "");
         model = trim(firstModel && firstModel.id);
+      }
+      if (!model.length) {
+        model = defaultModelForProvider(resolvedProvider || provider);
       }
       if (model.length) {
         options.model = model;
@@ -1799,6 +1963,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
+      language: state.language || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
       title: conversationTitleFromText(state.title) || conversationTitleFromText(state.userQuestion),
@@ -2157,7 +2322,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     sample = sample.replace(/[’']/g, " ");
     var frenchHits = 0;
-    var words = [" je ", " tu ", " il ", " elle ", " nous ", " vous ", " les ", " des ", " une ", " pour ", " avec ", " dans ", " sur ", " le ", " la ", " de ", " du ", " au ", " aux ", " mes ", " ton ", " ta ", " tes ", " peux ", " peut ", " faut ", " projet ", " projets ", " liste ", " lister ", " affiche ", " afficher ", " montre ", " montrer ", " application ", " corrige ", " corriger ", " fonctionne ", " ajoute ", " ajouter ", " rajoute ", " rajouter ", " permet ", " ville ", " villes ", " colonne ", " colonnes ", " tri ", " fuseau "];
+    var words = [" je ", " j ", " tu ", " il ", " elle ", " nous ", " vous ", " les ", " des ", " une ", " pour ", " avec ", " dans ", " sur ", " le ", " la ", " l ", " de ", " d ", " du ", " au ", " aux ", " mes ", " ton ", " ta ", " tes ", " peux ", " peut ", " faut ", " test ", " teste ", " projet ", " projets ", " liste ", " lister ", " affiche ", " afficher ", " montre ", " montrer ", " application ", " corrige ", " corriger ", " fonctionne ", " ajoute ", " ajouter ", " rajoute ", " rajouter ", " permet ", " ville ", " villes ", " colonne ", " colonnes ", " tri ", " fuseau ", " encore ", " fois ", " bouton ", " boutons ", " appuie ", " appuis ", " appuyer ", " clique ", " cliquer "];
     for (var i = 0; i < words.length; i++) {
       if (sample.indexOf(words[i]) !== -1) {
         frenchHits++;
@@ -2197,7 +2362,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
-      setupReady: "L'environnement local est pr\u00eat."
+      setupReady: "L'environnement local est pr\u00eat.",
+      agentPreparing: "Je pr\u00e9pare l'agent local. Si le runtime n'est pas encore install\u00e9, l'installation peut prendre plusieurs minutes."
     },
     en: {
       starting: "I am analyzing the request.",
@@ -2229,7 +2395,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
-      setupReady: "The local environment is ready."
+      setupReady: "The local environment is ready.",
+      agentPreparing: "I am preparing the local agent. If the runtime is not installed yet, installation can take several minutes."
     }
   };
 
@@ -2302,8 +2469,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var text = String(value || "");
     var compact = compactLine(text).toLowerCase();
+    if (compact === "i am analyzing the request." || compact === "i am analyzing the request") {
+      return lang(state).thinking;
+    }
+    if (compact === "i am using the convertigo mcp to verify the app." || compact === "i am using the convertigo mcp to verify the app") {
+      return lang(state).builder;
+    }
     if (compact === "i am using the convertigo mcp." || compact === "i am using the convertigo mcp") {
-      return "J'utilise le MCP Convertigo.";
+      return lang(state).tool;
     }
     return text;
   }
@@ -2323,7 +2496,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         text.indexOf("vérification devtools") !== -1 ||
         text.indexOf("devtools check") !== -1 ||
         text.indexOf("vérification environnement") !== -1 ||
-        text.indexOf("environment check") !== -1) {
+        text.indexOf("environment check") !== -1 ||
+        text.indexOf("commande powershell") !== -1 ||
+        text.indexOf("powershell command") !== -1 ||
+        text.indexOf("contrôle ui local") !== -1 ||
+        text.indexOf("controle ui local") !== -1 ||
+        text.indexOf("local ui control") !== -1) {
       return t.shell;
     }
     if (text.indexOf("project-list") !== -1) {
@@ -2369,6 +2547,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lower.indexOf("zsh -lc ") === 0 ||
       lower.indexOf("bash -lc ") === 0 ||
       lower.indexOf("sh -c ") === 0 ||
+      lower.indexOf("powershell ") === 0 ||
+      lower.indexOf("powershell.exe ") === 0 ||
+      lower.indexOf("pwsh ") === 0 ||
+      lower.indexOf("pwsh.exe ") === 0 ||
+      lower.indexOf("\"c:\\program files\\powershell\\") === 0 ||
       lower.indexOf("sed ") === 0 ||
       lower.indexOf("rg ") === 0 ||
       lower.indexOf("grep ") === 0 ||
@@ -2385,6 +2568,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function shellCommandTitle(state, value) {
     var text = trim(String(value || "")).toLowerCase();
     var french = state && state.language === "fr";
+    if (text.indexOf("uiautomation") !== -1 || text.indexOf("automationelement") !== -1) {
+      return french ? "Contrôle UI local" : "Local UI control";
+    }
+    if (text.indexOf("powershell") !== -1 || text.indexOf("pwsh") !== -1) {
+      return french ? "Commande PowerShell" : "PowerShell command";
+    }
     if (text.indexOf("chrome-remote-interface") !== -1 || text.indexOf("devtools") !== -1 || text.indexOf("/json") !== -1) {
       return french ? "Vérification DevTools" : "DevTools check";
     }
@@ -2416,7 +2605,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         text.indexOf("/bin/zsh -lc") !== -1 ||
         text.indexOf("/bin/bash -lc") !== -1 ||
         text.indexOf("zsh -lc") !== -1 ||
-        text.indexOf("bash -lc") !== -1);
+        text.indexOf("bash -lc") !== -1 ||
+        text.indexOf("get-content ") !== -1 ||
+        text.indexOf("powershell") !== -1 ||
+        text.indexOf("pwsh") !== -1);
   }
 
   function shellCommandFromValue(value) {
@@ -3485,7 +3677,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userId: trim(options.userId),
       title: record ? conversationTitleFromText(record.title) : "",
       externalSessionId: externalSessionId,
-      language: normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage) || detectLanguage(options.userQuestion || options.Question || ""),
+      language: normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage || (record && record.language)) || detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
       status: record && trim(record.status).length ? trim(record.status) : "created",
       cursor: record && record.lastCursor ? Number(record.lastCursor) : 0,
@@ -3515,6 +3707,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
+      language: state.language || "",
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
       serviceTier: state.serviceTier || "",
@@ -3637,6 +3830,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return true;
   }
 
+  function shouldShowAgentPreparingProgress(state, options, provider, installRequested) {
+    if (installRequested !== true) {
+      return false;
+    }
+    if (normalizeProvider(provider) === "codex" && trim(state.externalSessionId || state.codexThreadId || state.sessionId).length) {
+      return false;
+    }
+    if (boolValue(options.forceCodexInstall || options.forceInstall || options.forceAgentInstall, false)) {
+      return true;
+    }
+    return state.setupRequired === true || !trim(state.setupReport && state.setupReport.status).length;
+  }
+
   function credentialsEnv() {
     var env = readEnvFile(new File(new File(String(System.getProperty("user.home")), ".vibe"), ".env"));
     var selected = {};
@@ -3651,12 +3857,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var provider = normalizeProvider(state.provider);
     var install = typeof installOverride === "undefined" ? boolValue(options.install || options.installCodex || options.installVibe, false) : installOverride === true;
     if (provider === "codex") {
-      var codexScope = trim(options.codexHomeScope || options.homeScope);
-      if (!codexScope.length) {
-        codexScope = "user";
-      }
+      var codexScope = codexHomeScopeForRun(options);
       return {
-        codexHome: sanitizeCodexHome(options.codexHome),
+        codexHome: codexHomeForRun(options, codexScope),
         codexHomeScope: codexScope,
         conversationId: state.threadid || state.conversationId || "",
         projectId: state.primaryProject || state.projectId || "",
@@ -3757,8 +3960,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       assistantContext: trim(options.assistantContext),
       assistantSurface: trim(options.assistantSurface),
       mcpEndpoint: trim(options.mcpEndpoint) || defaultMcpEndpoint(),
-      codexHome: sanitizeCodexHome(options.codexHome),
-      codexHomeScope: trim(options.codexHomeScope || options.homeScope),
+      codexHome: codexHomeForRun(options, codexHomeScopeForRun(options)),
+      codexHomeScope: codexHomeScopeForRun(options),
       codexPath: trim(options.codexPath || options.commandPath),
       vibeHome: trim(options.vibeHome || options.agentHome),
       vibeHomeScope: trim(options.vibeHomeScope || options.homeScope),
@@ -4129,9 +4332,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.updatedAt = now();
     saveState(state);
     setStateBuffer(state);
+    var setupConversationId = setup.ok === true ? "" : state.threadid;
     return {
       ok: setup.ok === true,
-      id: state.threadid,
+      id: setupConversationId,
       object: "agent.setup",
       status: setup.status || (setup.ok === true ? "ready" : "missing"),
       provider: state.provider,
@@ -4214,6 +4418,48 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return parts.join("; ");
   }
 
+  function simpleViewerFollowupText(value) {
+    var text = trim(String(value || ""));
+    if (!text.length || text.length > 160) {
+      return false;
+    }
+    var normalized = (" " + text.toLowerCase().replace(/[’']/g, " ") + " ");
+    var actionHits = [
+      " encore ", " fois ", " clique ", " cliquer ", " clic ", " appuie ", " appuis ",
+      " appuyer ", " bouton ", " boutons ", " reteste ", " re-teste ", " refais ",
+      " recommence ", " continue "
+    ];
+    var hasAction = false;
+    for (var i = 0; i < actionHits.length; i++) {
+      if (normalized.indexOf(actionHits[i]) !== -1) {
+        hasAction = true;
+        break;
+      }
+    }
+    if (!hasAction) {
+      return false;
+    }
+    var mutationHits = [
+      " modifie ", " modifier ", " corrige ", " corriger ", " change ", " changer ",
+      " ajoute ", " ajouter ", " supprime ", " supprimer ", " crée ", " creer ",
+      " créer ", " patch ", " yaml ", " code ", " composant ", " sequence ", " séquence "
+    ];
+    for (var j = 0; j < mutationHits.length; j++) {
+      if (normalized.indexOf(mutationHits[j]) !== -1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function shouldUseSimpleViewerFollowup(rawQuestion, options) {
+    return trim(options && options.threadid).length > 0 &&
+      trim(options && (options.targetProject || options.projectName || options.projectId)).length > 0 &&
+      existingViewerCdpEndpoint(options).length > 0 &&
+      boolValue(options && options.browserControlReady, true) &&
+      simpleViewerFollowupText(rawQuestion);
+  }
+
   function buildSequencePrompt(rawQuestion, options) {
     options = options || {};
     var targetProject = trim(options.targetProject);
@@ -4243,14 +4489,35 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
     promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
+    var viewerControlReady = boolValue(options.browserControlReady, true);
+    var viewerCdpEndpoint = viewerControlReady ? existingViewerCdpEndpoint(options) : "";
+    if (viewerCdpEndpoint.length) {
+      promptParts.push("- Latest Studio viewer CDP endpoint for this turn: " + viewerCdpEndpoint);
+      promptParts.push("- Ignore older Studio viewer CDP endpoints from previous conversation history; they are stale after a builder/view restart.");
+      promptParts.push("- Browser proof must use the managed Playwright MCP/browser-control tools attached to that Studio JxBrowser endpoint. If the browser tools show `about:blank` while the builder is not ready, poll `convertigo.mobile-builder-open` with `stateOnly=true`, `wait=true`, and a short timeout before retrying Playwright. If a waited builder result reports `browserControlReady:true` but the browser tools still show another URL, `about:blank`, or no config for that endpoint, report the managed Playwright MCP configuration problem and do not open a separate browser, tab, page, Node script, or raw CDP workaround.");
+    }
+    var simpleViewerFollowup = shouldUseSimpleViewerFollowup(rawQuestion, options);
+    if (simpleViewerFollowup) {
+      promptParts.push("");
+      promptParts.push("Fast path for this turn:");
+      promptParts.push("- This is a simple follow-up action on an already selected project and an already attached Studio viewer. Do not bootstrap the full Convertigo guidance again.");
+      promptParts.push("- Do not use or reread managed skills, do not read `SKILL.md`, do not call `resources/list`, `prompts/list`, `convertigo.read_mcp_resource`, `project-list`, or broad tree inspection before acting.");
+      promptParts.push("- Do not run shell, PowerShell, UIAutomation, Node scripts, raw CDP, external browsers, or new tabs.");
+      promptParts.push("- First call the managed Playwright/browser MCP current-tab/list-tabs tool and confirm it is on the selected project viewer URL. If it is already on the viewer, perform the requested click/check directly with Playwright.");
+      promptParts.push("- If the current browser target is stale or blank, poll `convertigo.mobile-builder-open` for the selected project with `stateOnly=true`, `wait=true`, and a short timeout such as 20-30 seconds, then retry Playwright when the result reports `browserControlReady:true`. Do not wait a full minute for this simple follow-up; report the blocker only if the waited result times out or Playwright is still attached elsewhere after readiness.");
+    }
     promptParts.push("");
     promptParts.push("Operational rules:");
     promptParts.push("- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
     promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- Work only on the selected Convertigo project unless the user explicitly asks for another project.");
     promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- If no project is selected and the user asks for project changes, ask them to select a project first.");
-    promptParts.push(isNoCodeSurface ? "- Prefer the managed convertigo-nocode skill when the provider exposes skills." : "- Prefer the managed convertigo-generalist skill when the provider exposes skills.");
+    if (!simpleViewerFollowup) {
+      promptParts.push(isNoCodeSurface ? "- Prefer the managed convertigo-nocode skill when the provider exposes skills." : "- Prefer the managed convertigo-generalist skill when the provider exposes skills.");
+    }
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
     promptParts.push("- If the user asks for advice only, answer without modifying the project.");
+    promptParts.push("- For UI clicks, button presses, visual checks, or browser interactions, target the Convertigo app/viewer, not the Studio shell or operating-system UI. First identify the selected project and open or reuse the mobile builder through Convertigo MCP when needed. Then use the managed Playwright MCP/browser-control tools attached to the returned Studio JxBrowser debug endpoint.");
+    promptParts.push("- If no project/viewer is identified, explain that blocker and ask for the missing project/button context. If the managed Playwright/browser-control tools are unavailable or not attached to the returned Studio JxBrowser endpoint, first distinguish builder warm-up from configuration failure: `about:blank` before `browserControlReady:true` means poll `mobile-builder-open(stateOnly=true, wait=true)`, while mismatch after `browserControlReady:true` means report the managed Playwright MCP configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround unless the user explicitly asks to operate the Studio/OS chrome itself.");
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
     promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
     promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
@@ -4288,13 +4555,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     for (var i = 0; i < names.length; i++) {
       options[names[i]] = sequenceScopeValue(scope, names[i]);
     }
-    options.Question = buildSequencePrompt(sequenceScopeValue(scope, "Question"), options);
+    var rawQuestion = sequenceScopeValue(scope, "Question");
+    options.rawUserQuestion = rawQuestion;
+    options.userQuestion = rawQuestion;
+    options.Question = buildSequencePrompt(rawQuestion, options);
     return C8O.assistantAgentBridge.sendMessage(options);
   };
 
   C8O.assistantAgentBridge.sendMessage = function (options) {
     options = optionsWithRequestFallbacks(options || {});
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
+    var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
     if (!trim(question).length) {
       return {
@@ -4358,11 +4629,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.lastProgressLine = "";
     state.setupRequired = false;
     state.setupReport = null;
-    state.userQuestion = trim(options.userQuestion || extractUserMessage(question));
+    state.userQuestion = rawUserQuestion;
     if (!trim(state.title).length) {
       state.title = conversationTitleFromText(state.userQuestion || question);
     }
-    state.language = detectLanguage(state.userQuestion || question);
+    var explicitLanguage = normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage);
+    var detectedLanguage = detectLanguage(state.userQuestion || question);
+    if (explicitLanguage.length) {
+      state.language = explicitLanguage;
+    } else if (!trim(state.language).length || detectedLanguage === "fr") {
+      state.language = detectedLanguage;
+    }
     var currentProject = trim(options.targetProject || options.projectName || options.projectId);
     if (currentProject.length) {
       state.primaryProject = state.primaryProject || currentProject;
@@ -4370,16 +4647,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.projectNames = addArrayValue(state.projectNames, currentProject);
     }
     enrichViewerDebugOptions(options, state);
+    if (trim(options.rawUserQuestion).length) {
+      question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
+      options.Question = question;
+    }
+    var runProvider = normalizeProvider(state.provider);
+    var runInstallRequested = shouldInstallForRun(options, runProvider);
     appendProgress(state, lang(state).starting);
+    if (shouldShowAgentPreparingProgress(state, options, runProvider, runInstallRequested)) {
+      appendProgress(state, lang(state).agentPreparing);
+    }
     state.updatedAt = now();
     saveState(state);
     setStateBuffer(state);
 
     try {
-      var provider = normalizeProvider(state.provider);
+      var provider = runProvider;
       var startSequence = provider === "codex" ? "agent_codex_start" : "agent_vibe_start";
       var promptSequence = provider === "codex" ? "agent_codex_prompt" : "agent_vibe_prompt";
-      var installRequested = shouldInstallForRun(options, provider);
+      var installRequested = runInstallRequested;
       if (provider !== "codex") {
         var setupInfo = callAgentSetup(state, options, installRequested);
         var setup = setupInfo.result || {};
@@ -4421,6 +4707,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (cancellationRequested(state.threadid)) {
         return cancelledRunResponse(state);
       }
+      if (provider === "codex" && codexViewerSessionNeedsFreshThread(options, state)) {
+        clearCodexExternalSession(state);
+      }
 
       var startPayload = agentStartPayload(state, options, provider, installRequested);
       var promptPayload = provider === "codex" ? {
@@ -4450,6 +4739,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (provider === "codex" && trim(state.externalSessionId).length) {
         prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
         if (prompt.ok === false && codexPromptRequiresStart(prompt)) {
+          if (existingViewerCdpEndpoint(options).length) {
+            clearCodexExternalSession(state);
+            promptPayload.codexThreadId = "";
+          }
           prompt = null;
         } else if (prompt.ok === false) {
           throw new Error(prompt.error || promptSequence + " failed");
@@ -4466,8 +4759,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           state.setupReport = publicSetupReport(start.setup);
         }
         rememberCodexSessionFromResult(state, start);
-        if (provider === "codex" && start.home && trim(start.home.path).length) {
-          state.codexHome = sanitizeCodexHome(start.home.path);
+        var startedHome = start.home || (start.state && start.state.home) || (start.setup && start.setup.setup && start.setup.setup.home);
+        if (provider === "codex" && startedHome && trim(startedHome.path).length) {
+          state.codexHome = sanitizeCodexHome(startedHome.path);
           state.agentHome = "";
           state.vibeHome = "";
         }
