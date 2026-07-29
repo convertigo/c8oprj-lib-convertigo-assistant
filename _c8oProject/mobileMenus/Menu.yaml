@@ -132,13 +132,89 @@ tagName: ion-menu
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: script:isAgentAssistantSelected($any(this).selectedPath || (($any(this).selectedPath$ | async) || ''))
+            - MobileSmartSourceType: script:isAgentAssistantSelected($any(this).selectedPath || (($any(this).selectedPath$ | async) || '')) && getFullSelectedPath($any(this).selectedPath || (($any(this).selectedPath$ | async) || '')).indexOf('agentConfig=1') === -1
       ↓VisibilityContext [ngx.components.UIAttribute-1782289349202]: 
         attrName: '[hidden]'
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: script:!canShowAgentAssistantEntry()
+      ↓Event [ngx.components.UIControlEvent-1785256989230]: 
+        ↓OpenAgentHome [ngx.components.UICustomAction-1785256990752]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  '        try {
+                              if (typeof window !== ''undefined'') {
+                                  if (window.sessionStorage) {
+                                      window.sessionStorage.removeItem(''ConvertigoAssistant.OpenAgentSettings'');
+                                  }
+                                  window.dispatchEvent(new CustomEvent(''ConvertigoAssistant.agentSettings'', { detail: { open: false } }));
+                              }
+                          } catch (e) {}
+                          resolve();'
+    ↓AgentSettingsItem [ngx.components.UIDynamicElement-1785257004701]: 
+      beanData: |
+        '{
+         "ionBean": "ListItem",
+         "Button": "plain:true",
+         "Lines": "plain:inset",
+         "IonSlot": "plain:start",
+         "LinkRouterPath": "script:''path-to-agent\/:threadid''",
+         "LinkRouterDirection": "plain:root"
+        }'
+      tagName: ion-item
+      ↓Icon [ngx.components.UIDynamicElement-1785257004703]: 
+        beanData: |
+          '{
+           "ionBean": "Icon",
+           "IonColor": "plain:dark",
+           "IconName": "plain:settings-outline",
+           "IconSlot": "plain:start"
+          }'
+        tagName: ion-icon
+      ↓Label [ngx.components.UIDynamicElement-1785257004705]: 
+        beanData: '{"ionBean":"Label"}'
+        tagName: ion-label
+        ↓Text [ngx.components.UIText-1785257004707]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Configuration Agent IA'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Configurazione Agente IA'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Configuración del Agente IA'' : ''AI Agent settings'')))'
+      ↓Selected [ngx.components.UIAttribute-1785257004709]: 
+        attrName: '[class.selected]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:isAgentAssistantSelected($any(this).selectedPath || (($any(this).selectedPath$ | async) || '')) && getFullSelectedPath($any(this).selectedPath || (($any(this).selectedPath$ | async) || '')).indexOf('agentConfig=1') !== -1
+      ↓VisibilityContext [ngx.components.UIAttribute-1785257004711]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:!canShowAgentAssistantEntry()
+      ↓Event [ngx.components.UIControlEvent-1785257004713]: 
+        ↓OpenAgentSettings [ngx.components.UICustomAction-1785257006235]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  '        try {
+                              if (typeof window !== ''undefined'') {
+                                  if (window.sessionStorage) {
+                                      window.sessionStorage.setItem(''ConvertigoAssistant.OpenAgentSettings'', ''true'');
+                                  }
+                                  window.setTimeout(function() {
+                                      try {
+                                          window.dispatchEvent(new CustomEvent(''ConvertigoAssistant.agentSettings'', { detail: { open: true } }));
+                                      } catch (eDispatch) {}
+                                  }, 120);
+                              }
+                          } catch (e) {}
+                          resolve();'
     ↓FigmaItem [ngx.components.UIDynamicElement-1753180404710]: 
       beanData: |
         '{

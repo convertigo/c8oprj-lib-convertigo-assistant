@@ -30,6 +30,8 @@ scriptContent:
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageInitialization*/
         		this.bindAgentHostContextListener();
+        		this.bindAgentSettingsNavigationListener();
+        		this.consumePendingAgentSettingsNavigation();
         		this.ensureFooterInputs();
         		this.refreshSpeechRecognitionAvailable(80);
         		this.startAgentElapsedTicker();
@@ -39,6 +41,7 @@ scriptContent:
         		/*End_c8o_PageAfterViewInit*/
         /*Begin_c8o_PageFinalization*/
         		this.unbindAgentHostContextListener();
+        		this.unbindAgentSettingsNavigationListener();
         		this.stopAgentElapsedTicker();
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
@@ -66,6 +69,133 @@ scriptContent:
         				}
         			}
         		} catch (e) {}
+        		var runtimeTranslations: any = {
+        			en: {
+        				Agent_Settings_Title: "AI Agent settings",
+        				Agent_Settings_Copy: "Choose the agent, model, reasoning level, and manage the local CLI runtime.",
+        				Agent_Settings_Continue: "Use these settings and continue",
+        				Agent_Runtime_Local: "Local runtime",
+        				Agent_Runtime_Checking: "Checking the environment...",
+        				Agent_Runtime_Not_Checked: "Version not checked",
+        				Agent_Runtime_Open_To_Check: "Open settings to check the runtime.",
+        				Agent_Runtime_Not_Installed: "Runtime not installed",
+        				Agent_Runtime_Installed: "Runtime installed",
+        				Agent_Runtime_Installed_Prefix: "Installed version ",
+        				Agent_Runtime_Latest_Infix: " · latest ",
+        				Agent_Runtime_Check_Failed: "Unable to check: ",
+        				Agent_Runtime_Update_Available: "An update is available.",
+        				Agent_Runtime_Up_To_Date: "The runtime is up to date.",
+        				Agent_Runtime_Ready: "Runtime ready.",
+        				Agent_Runtime_Must_Install: "The runtime must be installed.",
+        				Agent_Runtime_Install: "Install runtime",
+        				Agent_Runtime_Update: "Update",
+        				Agent_Runtime_Update_To: " to ",
+        				Agent_Runtime_Reinstall: "Reinstall runtime",
+        				Agent_Runtime_Install_Update: "Install or update",
+        				Agent_Runtime_Updating: "Update in progress...",
+        				Agent_Runtime_Select_Provider: "Choose Vibe or Codex before installation.",
+        				Agent_Runtime_Installation_Failed: "Installation failed: ",
+        				Agent_Runtime_Update_Remains: "The update is still available.",
+        				Agent_Runtime_New_Conversations: "Runtime up to date. New conversations will use this version.",
+        				Agent_Runtime_Updating_Codex: "Updating Codex...",
+        				Agent_Runtime_Updating_Vibe: "Updating Vibe..."
+        			},
+        			fr: {
+        				Agent_Settings_Title: "Configuration Agent IA",
+        				Agent_Settings_Copy: "Choisissez l’agent, le modèle, le niveau de raisonnement et gérez le runtime CLI local.",
+        				Agent_Settings_Continue: "Utiliser ces réglages et continuer",
+        				Agent_Runtime_Local: "Runtime local",
+        				Agent_Runtime_Checking: "Vérification de l’environnement...",
+        				Agent_Runtime_Not_Checked: "Version non vérifiée",
+        				Agent_Runtime_Open_To_Check: "Ouvrez la configuration pour vérifier le runtime.",
+        				Agent_Runtime_Not_Installed: "Runtime non installé",
+        				Agent_Runtime_Installed: "Runtime installé",
+        				Agent_Runtime_Installed_Prefix: "Version installée ",
+        				Agent_Runtime_Latest_Infix: " · dernière ",
+        				Agent_Runtime_Check_Failed: "Vérification impossible : ",
+        				Agent_Runtime_Update_Available: "Une mise à jour est disponible.",
+        				Agent_Runtime_Up_To_Date: "Le runtime est à jour.",
+        				Agent_Runtime_Ready: "Runtime prêt.",
+        				Agent_Runtime_Must_Install: "Le runtime doit être installé.",
+        				Agent_Runtime_Install: "Installer le runtime",
+        				Agent_Runtime_Update: "Mettre à jour",
+        				Agent_Runtime_Update_To: " vers ",
+        				Agent_Runtime_Reinstall: "Réinstaller le runtime",
+        				Agent_Runtime_Install_Update: "Installer ou mettre à jour",
+        				Agent_Runtime_Updating: "Mise à jour en cours...",
+        				Agent_Runtime_Select_Provider: "Choisissez Vibe ou Codex avant l’installation.",
+        				Agent_Runtime_Installation_Failed: "Installation impossible : ",
+        				Agent_Runtime_Update_Remains: "La mise à jour reste disponible.",
+        				Agent_Runtime_New_Conversations: "Runtime à jour. Les nouvelles conversations utiliseront cette version.",
+        				Agent_Runtime_Updating_Codex: "Mise à jour de Codex en cours...",
+        				Agent_Runtime_Updating_Vibe: "Mise à jour de Vibe en cours..."
+        			},
+        			it: {
+        				Agent_Settings_Title: "Configurazione Agente IA",
+        				Agent_Settings_Copy: "Scegli l’agente, il modello, il livello di ragionamento e gestisci il runtime CLI locale.",
+        				Agent_Settings_Continue: "Usa queste impostazioni e continua",
+        				Agent_Runtime_Local: "Runtime locale",
+        				Agent_Runtime_Checking: "Verifica dell’ambiente...",
+        				Agent_Runtime_Not_Checked: "Versione non verificata",
+        				Agent_Runtime_Open_To_Check: "Apri la configurazione per verificare il runtime.",
+        				Agent_Runtime_Not_Installed: "Runtime non installato",
+        				Agent_Runtime_Installed: "Runtime installato",
+        				Agent_Runtime_Installed_Prefix: "Versione installata ",
+        				Agent_Runtime_Latest_Infix: " · ultima ",
+        				Agent_Runtime_Check_Failed: "Verifica non riuscita: ",
+        				Agent_Runtime_Update_Available: "È disponibile un aggiornamento.",
+        				Agent_Runtime_Up_To_Date: "Il runtime è aggiornato.",
+        				Agent_Runtime_Ready: "Runtime pronto.",
+        				Agent_Runtime_Must_Install: "Il runtime deve essere installato.",
+        				Agent_Runtime_Install: "Installa runtime",
+        				Agent_Runtime_Update: "Aggiorna",
+        				Agent_Runtime_Update_To: " a ",
+        				Agent_Runtime_Reinstall: "Reinstalla runtime",
+        				Agent_Runtime_Install_Update: "Installa o aggiorna",
+        				Agent_Runtime_Updating: "Aggiornamento in corso...",
+        				Agent_Runtime_Select_Provider: "Scegli Vibe o Codex prima dell’installazione.",
+        				Agent_Runtime_Installation_Failed: "Installazione non riuscita: ",
+        				Agent_Runtime_Update_Remains: "L’aggiornamento è ancora disponibile.",
+        				Agent_Runtime_New_Conversations: "Runtime aggiornato. Le nuove conversazioni useranno questa versione.",
+        				Agent_Runtime_Updating_Codex: "Aggiornamento di Codex...",
+        				Agent_Runtime_Updating_Vibe: "Aggiornamento di Vibe..."
+        			},
+        			es: {
+        				Agent_Settings_Title: "Configuración del Agente IA",
+        				Agent_Settings_Copy: "Elija el agente, el modelo, el nivel de razonamiento y gestione el runtime CLI local.",
+        				Agent_Settings_Continue: "Usar esta configuración y continuar",
+        				Agent_Runtime_Local: "Runtime local",
+        				Agent_Runtime_Checking: "Comprobando el entorno...",
+        				Agent_Runtime_Not_Checked: "Versión no comprobada",
+        				Agent_Runtime_Open_To_Check: "Abra la configuración para comprobar el runtime.",
+        				Agent_Runtime_Not_Installed: "Runtime no instalado",
+        				Agent_Runtime_Installed: "Runtime instalado",
+        				Agent_Runtime_Installed_Prefix: "Versión instalada ",
+        				Agent_Runtime_Latest_Infix: " · última ",
+        				Agent_Runtime_Check_Failed: "No se pudo comprobar: ",
+        				Agent_Runtime_Update_Available: "Hay una actualización disponible.",
+        				Agent_Runtime_Up_To_Date: "El runtime está actualizado.",
+        				Agent_Runtime_Ready: "Runtime listo.",
+        				Agent_Runtime_Must_Install: "Debe instalarse el runtime.",
+        				Agent_Runtime_Install: "Instalar runtime",
+        				Agent_Runtime_Update: "Actualizar",
+        				Agent_Runtime_Update_To: " a ",
+        				Agent_Runtime_Reinstall: "Reinstalar runtime",
+        				Agent_Runtime_Install_Update: "Instalar o actualizar",
+        				Agent_Runtime_Updating: "Actualización en curso...",
+        				Agent_Runtime_Select_Provider: "Elija Vibe o Codex antes de la instalación.",
+        				Agent_Runtime_Installation_Failed: "Error de instalación: ",
+        				Agent_Runtime_Update_Remains: "La actualización sigue disponible.",
+        				Agent_Runtime_New_Conversations: "Runtime actualizado. Las nuevas conversaciones usarán esta versión.",
+        				Agent_Runtime_Updating_Codex: "Actualizando Codex...",
+        				Agent_Runtime_Updating_Vibe: "Actualizando Vibe..."
+        			}
+        		};
+        		try {
+        			var language = this.global && this.global.currentLanguage ? this.global.currentLanguage() : (this.translate && this.translate.currentLang ? this.translate.currentLang : "en");
+        			var localized = runtimeTranslations[language] && runtimeTranslations[language][key];
+        			if (localized) { return localized; }
+        		} catch (e2) {}
         		return "" + (fallback == null ? key : fallback);
         	}
         
@@ -280,17 +410,25 @@ scriptContent:
         		} catch (e) {}
         	}
         
-        	public refreshAgentSettingsAfterHostContext() {
+        	public refreshAgentSettingsAfterHostContext(forceFullSettings = false) {
         		try {
         			if (!this.local || !this.c8o || !this.c8o.callJsonObject) { return; }
         			if (this.local.AgentSettingsRefreshRunning === true) { return; }
-        			if (this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded()) { return; }
+        			if (forceFullSettings !== true && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded()) { return; }
         			if (!this.hasLocalAgentBridgeCapability || !this.hasLocalAgentBridgeCapability()) { return; }
         			this.local.AgentSettingsRefreshRunning = true;
+        			if (forceFullSettings === true) {
+        				this.local.AgentRuntimeLoading = true;
+        				this.local.AgentRuntimeError = '''';
+        			}
         			var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
         			var normalize = (value) => {
         				try { return this.normalizeAgentProviderValue ? this.normalizeAgentProviderValue(value) : clean(value).toLowerCase(); } catch (eNormalize) {}
         				return clean(value).toLowerCase();
+        			};
+        			var tr = (key, fallback) => {
+        				try { return this.t ? this.t(key, fallback) : fallback; } catch (eTranslate) {}
+        				return fallback;
         			};
         			var project = '''';
         			try { project = this.getEffectiveProjectName ? this.getEffectiveProjectName() : ''''; } catch (eProject) {}
@@ -306,6 +444,10 @@ scriptContent:
         				''homeScope'': this.getAgentHomeScope ? this.getAgentHomeScope('''') : ''user'',
         				''agentProfile'': this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''',
         				''skillProfile'': this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''',
+        				''runtimePresenceOnly'': forceFullSettings !== true,
+        				''checkUpdates'': forceFullSettings === true,
+        				''refreshUpdateCheck'': false,
+        				''updateCheckCacheMs'': 21600000,
         				''__context'': ''byside''
         			};
         			this.c8o.callJsonObject(''ConvertigoAssistant.AgentSettings'', payload).async().then((settingsResponse) => {
@@ -334,11 +476,36 @@ scriptContent:
         						var model = clean(this.local.AgentModel || result.model || selectedProvider && selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''));
         						if (!model.length && this.local.AgentModels.length) { model = clean(this.local.AgentModels[0] && this.local.AgentModels[0].id); }
         						this.local.AgentModel = model;
-        						this.local.ShowAgentConfigPanel = this.shouldShowAgentSettingsPanel ? this.shouldShowAgentSettingsPanel() : false;
+        						var selectedModel = null;
+        						for (var j = 0; j < this.local.AgentModels.length; j++) {
+        							if (clean(this.local.AgentModels[j] && this.local.AgentModels[j].id) === model) { selectedModel = this.local.AgentModels[j]; break; }
+        						}
+        						this.local.AgentReasoningLevels = this.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+        						if (!clean(this.local.AgentReasoningEffort).length) { this.local.AgentReasoningEffort = clean(selectedModel && selectedModel.defaultReasoning); }
+        						var runtime = selectedProvider && selectedProvider.runtime ? selectedProvider.runtime : {};
+        						this.local.AgentRuntime = runtime;
+        						var installed = clean(runtime.installedVersion);
+        						var latest = clean(runtime.latestVersion);
+        						this.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
+        						this.local.AgentRuntimeStatusText = runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.''))));
+        						this.local.AgentRuntimeActionText = runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime''));
+        						var providerReady = this.isAgentProviderReady && this.isAgentProviderReady(selectedProvider);
+        						if (providerReady) {
+        							this.local.AgentProviderChoiceConfirmed = true;
+        							try {
+        								if (typeof window !== ''undefined'' && window.localStorage) {
+        									window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+        								}
+        							} catch (eConfirm) {}
+        							if (this.local.AgentConfigExplicitOpen !== true) {
+        								this.local.ShowAgentConfigPanel = false;
+        							}
+        						}
         					}
         				} catch (eApply) {}
         				this.local.AgentSettingsRefreshRunning = false;
         				this.local.AgentSettingsRefreshDone = true;
+        				this.local.AgentRuntimeLoading = false;
         				if (this.setEnableChat) { this.setEnableChat(); }
         				if (this.syncFooterPlaceholder) { this.syncFooterPlaceholder(); }
         				this.tick();
@@ -346,12 +513,120 @@ scriptContent:
         				try { this.c8o.log.warn(''[Assistant] Unable to refresh agent settings after host context: '' + settingsError); } catch (eWarn) {}
         				this.local.AgentSettingsRefreshRunning = false;
         				this.local.AgentSettingsRefreshDone = true;
+        				this.local.AgentRuntimeLoading = false;
+        				if (forceFullSettings === true) {
+        					this.local.AgentRuntimeError = '''' + settingsError;
+        					this.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + settingsError;
+        				}
         				this.tick();
         			});
         		} catch (e) {
         			try { this.local.AgentSettingsRefreshRunning = false; } catch (eFlag) {}
         			try { this.local.AgentSettingsRefreshDone = true; } catch (eDone) {}
+        			try { this.local.AgentRuntimeLoading = false; } catch (eRuntime) {}
         		}
+        	}
+        
+        	public setAgentSettingsUrlState(open) {
+        		try {
+        			if (typeof window === ''undefined'' || !window.location || !window.history || !window.history.replaceState) { return; }
+        			var url = new URL(window.location.href);
+        			if (open === true) {
+        				url.searchParams.set(''agentConfig'', ''1'');
+        			} else {
+        				url.searchParams.delete(''agentConfig'');
+        			}
+        			window.history.replaceState(window.history.state, '''', url.toString());
+        		} catch (e) {}
+        	}
+        
+        	public openAgentSettingsPage() {
+        		if (!this.local) { this.local = {}; }
+        		if (this.local.ShowAgentConfigPanel !== true) {
+        			this.local.AgentConfigReturnState = {
+        				newConversationMode: this.local.NewConversationMode,
+        				showConversationPanel: this.local.ShowConversationPanel
+        			};
+        		}
+        		this.local.AgentConfigExplicitOpen = true;
+        		this.local.ShowConversationPanel = false;
+        		this.local.ShowAgentConfigPanel = true;
+        		this.local.AgentRuntimeLoading = true;
+        		this.local.AgentRuntimeError = '''';
+        		this.setAgentSettingsUrlState(true);
+        		if (this.setEnableChat) { this.setEnableChat(); }
+        		this.tick();
+        		this.refreshAgentSettingsAfterHostContext(true);
+        	}
+        
+        	public closeAgentSettingsPage() {
+        		if (!this.local) { this.local = {}; }
+        		this.local.AgentConfigExplicitOpen = false;
+        		this.local.ShowAgentConfigPanel = false;
+        		this.local.AgentRuntimeLoading = false;
+        		if (this.local.AgentConfigReturnState) {
+        			this.local.NewConversationMode = this.local.AgentConfigReturnState.newConversationMode;
+        			this.local.ShowConversationPanel = this.local.AgentConfigReturnState.showConversationPanel;
+        		}
+        		this.local.AgentConfigReturnState = null;
+        		this.setAgentSettingsUrlState(false);
+        		if (this.setEnableChat) { this.setEnableChat(); }
+        		this.tick();
+        	}
+        
+        	public toggleAgentSettingsPage() {
+        		if (this.local && this.local.ShowAgentConfigPanel === true && this.local.AgentConfigExplicitOpen === true) {
+        			this.closeAgentSettingsPage();
+        			return;
+        		}
+        		this.openAgentSettingsPage();
+        	}
+        
+        	public bindAgentSettingsNavigationListener() {
+        		try {
+        			if (this[''_agentSettingsNavigationHandler''] || typeof window === ''undefined'') { return; }
+        			this[''_agentSettingsNavigationHandler''] = (event) => {
+        				try {
+        					if (typeof window !== ''undefined'' && window.sessionStorage) {
+        						window.sessionStorage.removeItem(''ConvertigoAssistant.OpenAgentSettings'');
+        					}
+        				} catch (ePending) {}
+        				var detail = event && event.detail ? event.detail : {};
+        				if (detail.open === false) {
+        					this.closeAgentSettingsPage();
+        				} else {
+        					this.openAgentSettingsPage();
+        				}
+        			};
+        			window.addEventListener(''ConvertigoAssistant.agentSettings'', this[''_agentSettingsNavigationHandler'']);
+        		} catch (e) {}
+        	}
+        
+        	public unbindAgentSettingsNavigationListener() {
+        		try {
+        			if (typeof window !== ''undefined'' && this[''_agentSettingsNavigationHandler'']) {
+        				window.removeEventListener(''ConvertigoAssistant.agentSettings'', this[''_agentSettingsNavigationHandler'']);
+        			}
+        		} catch (e) {}
+        		this[''_agentSettingsNavigationHandler''] = null;
+        	}
+        
+        	public consumePendingAgentSettingsNavigation() {
+        		var pending = false;
+        		try {
+        			if (typeof window !== ''undefined'' && window.sessionStorage) {
+        				pending = window.sessionStorage.getItem(''ConvertigoAssistant.OpenAgentSettings'') === ''true'';
+        				window.sessionStorage.removeItem(''ConvertigoAssistant.OpenAgentSettings'');
+        			}
+        		} catch (e) {}
+        		try {
+        			var routeFlag = this.getAssistantQueryParam ? ('''' + this.getAssistantQueryParam(''agentConfig'')).toLowerCase() : '''';
+        			pending = pending || routeFlag === ''1'' || routeFlag === ''true'' || routeFlag === ''yes'';
+        		} catch (eRoute) {}
+        		if (!pending) { return; }
+        		setTimeout(() => {
+        			try { this.openAgentSettingsPage(); } catch (eOpen) {}
+        		}, 120);
         	}
         
         	public bindAgentHostContextListener() {
@@ -571,9 +846,9 @@ scriptContent:
         	public getAgentActivationProjects() {
         		var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue.bind(this) : function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
         		return [
-                    { name: ''ConvertigoAssistant'', importUrl: clean(''ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.22/ConvertigoAssistant.car'') },
-                    { name: ''ConvertigoMCP'', importUrl: clean(''ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.39/ConvertigoMCP.car'') },
-                    { name: ''ConvertigoAgentBridge'', importUrl: clean(''ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.12/ConvertigoAgentBridge.car'') }
+                    { name: ''ConvertigoAssistant'', importUrl: clean(''ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.24/ConvertigoAssistant.car'') },
+                    { name: ''ConvertigoMCP'', importUrl: clean(''ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.40/ConvertigoMCP.car'') },
+                    { name: ''ConvertigoAgentBridge'', importUrl: clean(''ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.13/ConvertigoAgentBridge.car'') }
         		];
         	}
         
@@ -800,6 +1075,9 @@ scriptContent:
         	}
         	public getIntroTitle() {
         		var project = (this.getEffectiveProjectName && this.getEffectiveProjectName().length) ? this.getEffectiveProjectName() : "";
+        		if (this.local && this.local.ShowAgentConfigPanel === true) {
+        			return this.t("Agent_Settings_Title", "Configuration Agent IA");
+        		}
         		if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) {
         			return this.t("Agent_Environment_Check_Title", "Vérification de l’environnement Agent");
         		}
@@ -815,6 +1093,9 @@ scriptContent:
         		return this.t("Welcome_to_Convertigo_AI_Assistant", "Bienvenue dans l''assistant IA de composants Convertigo");
         	}
         	public getIntroCopy1() {
+        		if (this.local && this.local.ShowAgentConfigPanel === true) {
+        			return this.t("Agent_Settings_Copy", "Choisissez l’agent, le modèle, le niveau de raisonnement et gérez le runtime CLI local.");
+        		}
         		if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) {
         			return this.t("Agent_Environment_Check_Copy", "L''assistant vérifie la stack Agent locale, le bridge Studio et les agents disponibles.");
         		}
@@ -827,6 +1108,9 @@ scriptContent:
         		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Copy", "Demandez une correction, une amélioration ou une explication.") : this.t("AI_Assistant_Intro", "Décrivez le composant dont vous avez besoin et laissez l''assistant le générer pour vous.");
         	}
         	public getIntroCopy2() {
+        		if (this.local && this.local.ShowAgentConfigPanel === true) {
+        			return "";
+        		}
         		if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) {
         			return "";
         		}
@@ -839,6 +1123,9 @@ scriptContent:
         		return this.isAgentBridgeMode() ? this.t("Agent_Intro_Local", "L''agent utilise les outils Convertigo locaux quand ils sont disponibles.") : this.t("AI_Assistant_Intro_Details", "L''assistant génère des shared components prêts à intégrer dans votre application NGX.");
         	}
         	public getStartCardTitle() {
+        		if (this.local && this.local.ShowAgentConfigPanel === true) {
+        			return "";
+        		}
         		if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) {
         			return this.t("Agent_Environment_Check_Title", "Vérification de l’environnement Agent");
         		}
@@ -854,6 +1141,9 @@ scriptContent:
         		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Previous_Conversations", "Conversations précédentes") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation", "Conversation en cours") : ((this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) ? this.t("Agent_Environment_Check_Title", "Vérification de l’environnement Agent") : this.t("New_Conversation", "Nouvelle conversation")));
         	}
         	public getStartCardCopy() {
+        		if (this.local && this.local.ShowAgentConfigPanel === true) {
+        			return "";
+        		}
         		if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) {
         			return this.t("Agent_Environment_Check_Copy", "L''assistant vérifie la stack Agent locale, le bridge Studio et les agents disponibles.");
         		}
@@ -1037,7 +1327,7 @@ scriptContent:
                 return false;
             }
             if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) {
-                return true;
+                return false;
             }
             if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
                 return false;
@@ -1046,13 +1336,10 @@ scriptContent:
             try {
                 providerReady = !!(this.hasReadyAgentProvider && this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (this.local.AgentProvider || "")));
             } catch (eReady) {}
-            if (providerReady) {
-                if (this.local.ShowAgentConfigPanel === true) {
-                    this.local.ShowAgentConfigPanel = false;
-                }
-                return false;
+            if (this.local.ShowAgentConfigPanel === true) {
+                return true;
             }
-            return this.local.ShowAgentConfigPanel === true || !providerReady;
+            return !providerReady;
         }
         public getAgentModelOptions(provider = null) {
             var p = this.normalizeAgentProviderValue(provider || this.getAgentProvider());
@@ -1065,18 +1352,7 @@ scriptContent:
                 }
                 return mapped;
             }
-            if (p === "codex") {
-                return [
-                    { id: "gpt-5.5", label: "GPT-5.5" },
-                    { id: "gpt-5-codex", label: "GPT-5 Codex" },
-                    { id: "gpt-5", label: "GPT-5" }
-                ];
-            }
-            return [
-                { id: "vibe-thinking", label: "Vibe thinking" },
-                { id: "mistral-medium-3.5", label: "Mistral medium" },
-                { id: "devstral-small-latest", label: "Devstral" }
-            ];
+            return [];
         }
         public getAgentFooterModelOptions() {
             var clean = function(value) {
@@ -1125,7 +1401,7 @@ scriptContent:
                     return model;
                 }
             }
-            return options.length ? options[0].id : (p === "codex" ? "gpt-5.5" : "vibe-thinking");
+            return options.length ? options[0].id : "";
         }
         public getAgentModel() {
             var model = "";
@@ -2412,6 +2688,51 @@ title: Convertigo assistant
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:Home
+      ↓AgentSettingsButton [ngx.components.UIDynamicElement-1785253151151]: 
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "Disabled": "script:this.local && this.local.AgentRuntimeLoading === true",
+           "IonFill": "plain:clear"
+          }'
+        tagName: ion-button
+        ↓Class [ngx.components.UIAttribute-1785253151153]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ((this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-header-btn agent-settings-button active'' : ''modern-header-btn agent-settings-button'') : ''modern-header-btn agent-settings-button agent-hidden'''
+        ↓Aria [ngx.components.UIAttribute-1785253151155]: 
+          attrName: aria-label
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.t('Agent_Settings_Title', 'Configuration de l’agent')
+        ↓Title [ngx.components.UIAttribute-1785253151157]: 
+          attrName: title
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.t('Agent_Settings_Title', 'Configuration de l’agent')
+        ↓Icon [ngx.components.UIDynamicElement-1785253151159]: 
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IconName": "plain:settings-outline",
+             "IconSlot": "plain:icon-only"
+            }'
+          tagName: ion-icon
+        ↓Event [ngx.components.UIControlEvent-1785253151161]: 
+          ↓OpenAgentSettings [ngx.components.UICustomAction-1785253152667]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                            if (page.toggleAgentSettingsPage) {
+                                page.toggleAgentSettingsPage();
+                            }
+                            resolve();
       ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774703000001]: 
         beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
         tagName: ion-button
@@ -2888,7 +3209,7 @@ title: Convertigo assistant
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-card modern-cta-card agent-start-card
+              - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'''
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -2900,7 +3221,7 @@ title: Convertigo assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:modern-card-title
+                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-card-title agent-hidden'' : ''modern-card-title'''
             ↓Text [ngx.components.UIText-1772100000098]: 
               textValue: 
                 - xmlizable: 
@@ -2914,7 +3235,7 @@ title: Convertigo assistant
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:modern-copy
+                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-copy agent-hidden'' : ''modern-copy'''
             ↓Text [ngx.components.UIText-1772100000101]: 
               textValue: 
                 - xmlizable: 
@@ -3281,7 +3602,7 @@ title: Convertigo assistant
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:agent-conversations-panel
+                    - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-conversations-panel agent-config-surface'' : ''agent-conversations-panel'''
               ↓Title [ngx.components.UIDynamicElement-1781608119095]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -3290,12 +3611,12 @@ title: Convertigo assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-title agent-hidden'' : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''agent-conversations-title'' : ''agent-conversations-title agent-hidden'')'
+                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-conversations-title agent-hidden'' : ''agent-conversations-title'''
                 ↓Text [ngx.components.UIText-1781608119099]: 
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? ''Nouvelle conversation'' : ''Conversations précédentes'''
+                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? this.t(''Agent_Settings_Title'', ''Configuration de l’agent'') : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? this.t(''New_Conversation'', ''Nouvelle conversation'') : this.t(''Previous_Conversations'', ''Conversations précédentes''))'
               ↓CloseButton [ngx.components.UIDynamicElement-1781676493781]: 
                 beanData: |
                   '{
@@ -3304,27 +3625,12 @@ title: Convertigo assistant
                    "IonSize": "plain:small"
                   }'
                 tagName: ion-button
-                ↓Class [ngx.components.UIAttribute-1781676493783]: 
-                  attrName: class
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'')'
                 ↓Aria [ngx.components.UIAttribute-1781676493785]: 
                   attrName: aria-label
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: plain:Fermer les conversations
-                ↓Event [ngx.components.UIControlEvent-1781676493787]: 
-                  ↓CloseConversations [ngx.components.UICustomAction-1781676495273]: 
-                    actionValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                          →: |
-                            		page.closeConversationsPanel();
-                            		resolve();
                 ↓Icon [ngx.components.UIDynamicElement-1781676495275]: 
                   beanData: |
                     '{
@@ -3333,6 +3639,29 @@ title: Convertigo assistant
                      "IconSlot": "plain:icon-only"
                     }'
                   tagName: ion-icon
+                ↓Class [ngx.components.UIAttribute-1785253485568]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden''))'
+                ↓Event [ngx.components.UIControlEvent-1785253485786]: 
+                  ↓CloseConversations [ngx.components.UICustomAction-1785253487292]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                                    if (!page.local) { page.local = {}; }
+                                    if (page.local.ShowAgentConfigPanel === true) {
+                                        page.local.ShowAgentConfigPanel = false;
+                                        page.local.AgentRuntimeLoading = false;
+                                        page.setEnableChat && page.setEnableChat();
+                                        page.tick();
+                                    } else {
+                                        page.closeConversationsPanel();
+                                    }
+                                    resolve();
               ↓CreateSettings [ngx.components.UIDynamicElement-1781700500010]: 
                 beanData: '{"ionBean":"DivTag"}'
                 tagName: div
@@ -3341,7 +3670,7 @@ title: Convertigo assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''agent-create-settings'' : ''agent-create-settings agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ((this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-create-settings agent-config-settings'' : ''agent-create-settings'') : ''agent-create-settings agent-hidden'''
                 ↓AgentLabel [ngx.components.UIDynamicElement-1781700500012]: 
                   beanData: '{"ionBean":"Paragraph"}'
                   tagName: p
@@ -3392,20 +3721,6 @@ title: Convertigo assistant
                                         var settings = page.local.AgentSettings || {};
                                         if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
                                         var providers = settings.providers || [];
-                                        var fallbackModels = function(provider) {
-                                            if (provider === ''vibe'') {
-                                                return [
-                                                    { id: ''vibe-thinking'', label: ''Vibe thinking'' },
-                                                    { id: ''mistral-medium-3.5'', label: ''Mistral medium'' },
-                                                    { id: ''devstral-small-latest'', label: ''Devstral'' }
-                                                ];
-                                            }
-                                            return [
-                                                { id: ''gpt-5.5'', label: ''GPT-5.5'' },
-                                                { id: ''gpt-5-codex'', label: ''GPT-5 Codex'' },
-                                                { id: ''gpt-5'', label: ''GPT-5'' }
-                                            ];
-                                        };
                                         var selectedProvider = null;
                                         for (var i = 0; i < providers.length; i++) {
                                             if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
@@ -3416,7 +3731,6 @@ title: Convertigo assistant
                                         page.local.AgentProvider = provider;
                                         page.local.AgentProviderChoiceConfirmed = true;
                                         var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
-                                        if (!models.length) { models = fallbackModels(provider); }
                                         page.local.AgentModels = models;
                                         page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
                                         var model = clean(selectedProvider && selectedProvider.defaultModel);
@@ -3454,6 +3768,48 @@ title: Convertigo assistant
                                             }
                                         } catch (e) {}
                                         page.tick();
+                                        resolve();'
+                      ↓SetRuntimeSummary [ngx.components.UICustomAction-1785253298346]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var tr = function(key, fallback) { try { return page.t ? page.t(key, fallback) : fallback; } catch (e) { return fallback; } };
+                                        var settings = page.local.AgentSettings || {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selected = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (clean(providers[i] && providers[i].id).toLowerCase() === ''vibe'') { selected = providers[i]; break; }
+                                        }
+                                        var runtime = selected && selected.runtime ? selected.runtime : {};
+                                        page.local.AgentRuntime = runtime;
+                                        page.local.AgentRuntimeError = runtime.error || '''';
+                                        var installed = clean(runtime.installedVersion);
+                                        var latest = clean(runtime.latestVersion);
+                                        page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
+                                        page.local.AgentRuntimeStatusText = runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.''))));
+                                        page.local.AgentRuntimeActionText = runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime''));
+                                        page.tick();
+                                        resolve();'
+                      ↓UseDiscoveredModels [ngx.components.UICustomAction-1785253502995]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '        var settings = page.local && page.local.AgentSettings ? page.local.AgentSettings : {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selected = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (('''' + (providers[i] && providers[i].id || '''')).toLowerCase() === ''vibe'') { selected = providers[i]; break; }
+                                        }
+                                        page.local.AgentModels = selected && selected.models ? selected.models : [];
+                                        if (!page.local.AgentModels.length) { page.local.AgentModel = ''''; }
                                         resolve();'
                     ↓Text [ngx.components.UIText-1781700500021]: 
                       textValue: 
@@ -3487,20 +3843,6 @@ title: Convertigo assistant
                                         var settings = page.local.AgentSettings || {};
                                         if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
                                         var providers = settings.providers || [];
-                                        var fallbackModels = function(provider) {
-                                            if (provider === ''vibe'') {
-                                                return [
-                                                    { id: ''vibe-thinking'', label: ''Vibe thinking'' },
-                                                    { id: ''mistral-medium-3.5'', label: ''Mistral medium'' },
-                                                    { id: ''devstral-small-latest'', label: ''Devstral'' }
-                                                ];
-                                            }
-                                            return [
-                                                { id: ''gpt-5.5'', label: ''GPT-5.5'' },
-                                                { id: ''gpt-5-codex'', label: ''GPT-5 Codex'' },
-                                                { id: ''gpt-5'', label: ''GPT-5'' }
-                                            ];
-                                        };
                                         var selectedProvider = null;
                                         for (var i = 0; i < providers.length; i++) {
                                             if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
@@ -3511,7 +3853,6 @@ title: Convertigo assistant
                                         page.local.AgentProvider = provider;
                                         page.local.AgentProviderChoiceConfirmed = true;
                                         var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
-                                        if (!models.length) { models = fallbackModels(provider); }
                                         page.local.AgentModels = models;
                                         page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
                                         var model = clean(selectedProvider && selectedProvider.defaultModel);
@@ -3550,164 +3891,53 @@ title: Convertigo assistant
                                         } catch (e) {}
                                         page.tick();
                                         resolve();'
-                    ↓Text [ngx.components.UIText-1781700500026]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: plain:Codex
-                ↓ModelLabel [ngx.components.UIDynamicElement-1781700500027]: 
-                  beanData: '{"ionBean":"Paragraph"}'
-                  isEnabled: false
-                  tagName: p
-                  ↓Class [ngx.components.UIAttribute-1781700500028]: 
-                    attrName: class
-                    attrValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: plain:agent-create-label
-                  ↓Text [ngx.components.UIText-1781700500029]: 
-                    textValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: plain:Modèle
-                ↓ModelChoices [ngx.components.UIControlDirective-1781700500030]: 
-                  directiveItemName: agentModel
-                  directiveSource: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
-                  isEnabled: false
-                  ↓ModelButton [ngx.components.UIDynamicElement-1781700500031]: 
-                    beanData: |
-                      '{
-                       "ionBean": "Button",
-                       "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
-                      }'
-                    tagName: ion-button
-                    ↓Class [ngx.components.UIAttribute-1781700500032]: 
-                      attrName: class
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:agentModel && agentModel.id === this.getAgentModel() ? ''agent-choice-button active'' : ''agent-choice-button'''
-                    ↓Event [ngx.components.UIControlEvent-1781700500033]: 
-                      ↓SetModel [ngx.components.UICustomAction-1781700500034]: 
+                      ↓SetRuntimeSummary [ngx.components.UICustomAction-1785253309717]: 
                         actionValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                '        var agentModel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.agentModel : null;
-                                        if (!page.local) { page.local = {}; }
+                                '        if (!page.local) { page.local = {}; }
                                         var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-                                        var modelId = clean(agentModel && agentModel.id);
-                                        page.local.AgentModel = modelId;
-                                        var provider = clean(page.local.AgentProvider).toLowerCase();
+                                        var tr = function(key, fallback) { try { return page.t ? page.t(key, fallback) : fallback; } catch (e) { return fallback; } };
                                         var settings = page.local.AgentSettings || {};
                                         if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
                                         var providers = settings.providers || [];
-                                        var selectedProvider = null;
+                                        var selected = null;
                                         for (var i = 0; i < providers.length; i++) {
-                                            if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
-                                                selectedProvider = providers[i];
-                                                break;
-                                            }
+                                            if (clean(providers[i] && providers[i].id).toLowerCase() === ''codex'') { selected = providers[i]; break; }
                                         }
-                                        page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                        page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && agentModel && agentModel.reasoningLevels ? agentModel.reasoningLevels : [];
-                                        var reasoning = clean(agentModel && agentModel.defaultReasoning);
-                                        if (page.local.AgentProviderSupportsReasoning !== true) {
-                                            reasoning = '''';
-                                        }
-                                        page.local.AgentReasoningEffort = reasoning;
-                                        var tiers = agentModel && agentModel.serviceTiers ? agentModel.serviceTiers : [];
-                                        var currentTier = clean(page.local.AgentServiceTier);
-                                        var tierOk = !currentTier.length;
-                                        for (var j = 0; j < tiers.length; j++) {
-                                            if (clean(tiers[j] && tiers[j].id) === currentTier) {
-                                                tierOk = true;
-                                                break;
-                                            }
-                                        }
-                                        page.local.AgentServiceTier = tierOk ? currentTier : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''');
+                                        var runtime = selected && selected.runtime ? selected.runtime : {};
+                                        page.local.AgentRuntime = runtime;
+                                        page.local.AgentRuntimeError = runtime.error || '''';
+                                        var installed = clean(runtime.installedVersion);
+                                        var latest = clean(runtime.latestVersion);
+                                        page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
+                                        page.local.AgentRuntimeStatusText = runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.''))));
+                                        page.local.AgentRuntimeActionText = runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime''));
                                         page.tick();
-                                        resolve();
-                                '
-                    ↓Text [ngx.components.UIText-1781700500035]: 
+                                        resolve();'
+                      ↓UseDiscoveredModels [ngx.components.UICustomAction-1785253510987]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '        var settings = page.local && page.local.AgentSettings ? page.local.AgentSettings : {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selected = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (('''' + (providers[i] && providers[i].id || '''')).toLowerCase() === ''codex'') { selected = providers[i]; break; }
+                                        }
+                                        page.local.AgentModels = selected && selected.models ? selected.models : [];
+                                        if (!page.local.AgentModels.length) { page.local.AgentModel = ''''; }
+                                        resolve();'
+                    ↓Text [ngx.components.UIText-1781700500026]: 
                       textValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:agentModel ? agentModel.label : '''''
-                ↓ReasoningIf [ngx.components.UIControlDirective-1782120764871]: 
-                  directiveName: If
-                  directiveSource: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
-                  isEnabled: false
-                  ↓ReasoningSettings [ngx.components.UIDynamicElement-1782120769047]: 
-                    beanData: '{"ionBean":"DivTag"}'
-                    tagName: div
-                    ↓Class [ngx.components.UIAttribute-1782120769049]: 
-                      attrName: class
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: plain:agent-create-settings-block
-                    ↓ReasoningLabel [ngx.components.UIDynamicElement-1782120769051]: 
-                      beanData: '{"ionBean":"Paragraph"}'
-                      tagName: p
-                      ↓Class [ngx.components.UIAttribute-1782120769053]: 
-                        attrName: class
-                        attrValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: plain:agent-create-label
-                      ↓Text [ngx.components.UIText-1782120769055]: 
-                        i18n: true
-                        textValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: plain:Raisonnement
-                    ↓ReasoningChoices [ngx.components.UIControlDirective-1782120769057]: 
-                      directiveItemName: reasoningLevel
-                      directiveSource: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
-                      ↓ReasoningButton [ngx.components.UIDynamicElement-1782120769059]: 
-                        beanData: |
-                          '{
-                           "ionBean": "Button",
-                           "IonFill": "plain:clear",
-                           "IonSize": "plain:small"
-                          }'
-                        tagName: ion-button
-                        ↓Class [ngx.components.UIAttribute-1782120769061]: 
-                          attrName: class
-                          attrValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.id === (this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : '''') ? ''agent-choice-button active'' : ''agent-choice-button'''
-                        ↓Event [ngx.components.UIControlEvent-1782120769063]: 
-                          ↓SetReasoning [ngx.components.UICustomAction-1782120770549]: 
-                            actionValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                  →: |
-                                    '        var reasoningLevel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.reasoningLevel : null;
-                                            if (!page.local) { page.local = {}; }
-                                            page.local.AgentReasoningEffort = reasoningLevel && reasoningLevel.id != null ? ('''' + reasoningLevel.id).replace(/^\s+|\s+$/g, '''') : '''';
-                                            page.tick();
-                                            resolve();
-                                    '
-                        ↓Text [ngx.components.UIText-1782120770551]: 
-                          textValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
+                          - MobileSmartSourceType: plain:Codex
                 ↓RevealSettings [ngx.components.UIDynamicElement-1782955202301]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -3777,6 +4007,434 @@ title: Convertigo assistant
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? ''Activé'' : ''Désactivé'''
+                ↓ModelLabel [ngx.components.UIDynamicElement-1785253202087]: 
+                  beanData: '{"ionBean":"Paragraph"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1785253229708]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-create-label
+                  ↓Text [ngx.components.UIText-1785253229710]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:Modèle
+                ↓ModelChoices [ngx.components.UIControlDirective-1785253202305]: 
+                  directiveItemName: agentModel
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  ↓ModelButton [ngx.components.UIDynamicElement-1785253248707]: 
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small"
+                      }'
+                    tagName: ion-button
+                    ↓Class [ngx.components.UIAttribute-1785253252933]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:agentModel && agentModel.id === this.getAgentModel() ? ''agent-choice-button active'' : ''agent-choice-button'''
+                    ↓Event [ngx.components.UIControlEvent-1785253252935]: 
+                      ↓SetModel [ngx.components.UICustomAction-1785253254441]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '        var agentModel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.agentModel : null;
+                                        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var modelId = clean(agentModel && agentModel.id);
+                                        page.local.AgentModel = modelId;
+                                        var provider = clean(page.local.AgentProvider).toLowerCase();
+                                        var settings = page.local.AgentSettings || {};
+                                        if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                        var providers = settings.providers || [];
+                                        var selectedProvider = null;
+                                        for (var i = 0; i < providers.length; i++) {
+                                            if (clean(providers[i] && providers[i].id).toLowerCase() === provider) { selectedProvider = providers[i]; break; }
+                                        }
+                                        page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                                        page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && agentModel && agentModel.reasoningLevels ? agentModel.reasoningLevels : [];
+                                        var reasoning = clean(agentModel && agentModel.defaultReasoning);
+                                        if (page.local.AgentProviderSupportsReasoning !== true) { reasoning = ''''; }
+                                        page.local.AgentReasoningEffort = reasoning;
+                                        var tiers = agentModel && agentModel.serviceTiers ? agentModel.serviceTiers : [];
+                                        var currentTier = clean(page.local.AgentServiceTier);
+                                        var tierOk = !currentTier.length;
+                                        for (var j = 0; j < tiers.length; j++) {
+                                            if (clean(tiers[j] && tiers[j].id) === currentTier) { tierOk = true; break; }
+                                        }
+                                        page.local.AgentServiceTier = tierOk ? currentTier : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''');
+                                        page.tick();
+                                        resolve();'
+                    ↓Text [ngx.components.UIText-1785253254443]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:agentModel ? agentModel.label : '''''
+                ↓ReasoningIf [ngx.components.UIControlDirective-1785253202523]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
+                  ↓ReasoningSettings [ngx.components.UIDynamicElement-1785253270230]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1785253274456]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-create-settings-block
+                    ↓ReasoningLabel [ngx.components.UIDynamicElement-1785253274458]: 
+                      beanData: '{"ionBean":"Paragraph"}'
+                      tagName: p
+                      ↓Class [ngx.components.UIAttribute-1785253274460]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-create-label
+                      ↓Text [ngx.components.UIText-1785253274462]: 
+                        i18n: true
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:Raisonnement
+                    ↓ReasoningChoices [ngx.components.UIControlDirective-1785253274464]: 
+                      directiveItemName: reasoningLevel
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                      ↓ReasoningButton [ngx.components.UIDynamicElement-1785253288370]: 
+                        beanData: |
+                          '{
+                           "ionBean": "Button",
+                           "IonFill": "plain:clear",
+                           "IonSize": "plain:small"
+                          }'
+                        tagName: ion-button
+                        ↓Class [ngx.components.UIAttribute-1785253292596]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.id === (this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : '''') ? ''agent-choice-button active'' : ''agent-choice-button'''
+                        ↓Event [ngx.components.UIControlEvent-1785253292598]: 
+                          ↓SetReasoning [ngx.components.UICustomAction-1785253294104]: 
+                            actionValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                  →: |
+                                    '        var reasoningLevel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.reasoningLevel : null;
+                                            if (!page.local) { page.local = {}; }
+                                            page.local.AgentReasoningEffort = reasoningLevel && reasoningLevel.id != null ? ('''' + reasoningLevel.id).replace(/^\s+|\s+$/g, '''') : '''';
+                                            page.tick();
+                                            resolve();'
+                        ↓Text [ngx.components.UIText-1785253294106]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
+                ↓RuntimeSettings [ngx.components.UIDynamicElement-1785253202525]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1785253202527]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-create-settings-block agent-runtime-settings
+                  ↓RuntimeLabel [ngx.components.UIDynamicElement-1785253202529]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1785253202531]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-create-label
+                    ↓Text [ngx.components.UIText-1785253202533]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.t('Agent_Runtime_Local', 'Runtime local')
+                  ↓RuntimeVersion [ngx.components.UIDynamicElement-1785253202535]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1785253202537]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-runtime-version
+                    ↓Text [ngx.components.UIText-1785253202539]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeLoading === true) ? this.t(''Agent_Runtime_Checking'', ''Vérification de l’environnement...'') : ((this.local && this.local.AgentRuntimeVersionText) ? this.local.AgentRuntimeVersionText : this.t(''Agent_Runtime_Not_Checked'', ''Version non vérifiée''))'
+                  ↓RuntimeStatus [ngx.components.UIDynamicElement-1785253202541]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1785253202543]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntime && this.local.AgentRuntime.updateAvailable === true) ? ''agent-runtime-status update'' : ((this.local && this.local.AgentRuntimeError) ? ''agent-runtime-status error'' : ''agent-runtime-status'')'
+                    ↓Text [ngx.components.UIText-1785253202545]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeStatusText) ? this.local.AgentRuntimeStatusText : this.t(''Agent_Runtime_Open_To_Check'', ''Ouvrez la configuration pour vérifier le runtime.'')'
+                  ↓RuntimeAction [ngx.components.UIDynamicElement-1785253202547]: 
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "Disabled": "script:this.local && this.local.AgentRuntimeLoading === true",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small"
+                      }'
+                    tagName: ion-button
+                    ↓Class [ngx.components.UIAttribute-1785253202549]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-runtime-action
+                    ↓Icon [ngx.components.UIDynamicElement-1785253202551]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Icon",
+                         "IconName": "plain:download-outline",
+                         "IconSlot": "plain:start"
+                        }'
+                      tagName: ion-icon
+                    ↓Text [ngx.components.UIText-1785253202553]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeLoading === true) ? this.t(''Agent_Runtime_Updating'', ''Mise à jour en cours...'') : ((this.local && this.local.AgentRuntimeActionText) ? this.local.AgentRuntimeActionText : this.t(''Agent_Runtime_Install_Update'', ''Installer ou mettre à jour''))'
+                    ↓Event [ngx.components.UIControlEvent-1785253202555]: 
+                      ↓InstallOrUpdateRuntime [ngx.components.UICustomAction-1785253204061]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var tr = function(key, fallback) { try { return page.t ? page.t(key, fallback) : fallback; } catch (e) { return fallback; } };
+                                        var normalize = function(value) {
+                                            var provider = clean(value).toLowerCase();
+                                            if (provider === ''codex-cli'' || provider === ''openai-codex'') { return ''codex''; }
+                                            if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') { return ''vibe''; }
+                                            return provider;
+                                        };
+                                        var provider = normalize(page.local.AgentProvider);
+                                        if (!provider.length && page.getConfiguredAgentProvider) { provider = normalize(page.getConfiguredAgentProvider()); }
+                                        if (!provider.length) {
+                                            page.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Select_Provider'', ''Choisissez Vibe ou Codex avant l’installation.'');
+                                            page.tick();
+                                            resolve();
+                                            return;
+                                        }
+                                        var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
+                                        var payload: any = {
+                                            threadid: page.local.Conversation || '''',
+                                            targetProject: project,
+                                            projectName: project,
+                                            provider: provider,
+                                            model: clean(page.local.AgentModel),
+                                            reasoningEffort: clean(page.local.AgentReasoningEffort),
+                                            serviceTier: clean(page.local.AgentServiceTier),
+                                            userId: page.getAgentContextUserId ? page.getAgentContextUserId() : ''studio'',
+                                            codexHomeScope: page.getAgentHomeScope ? page.getAgentHomeScope(''codex'') : ''user'',
+                                            vibeHomeScope: page.getAgentHomeScope ? page.getAgentHomeScope(''vibe'') : ''user'',
+                                            homeScope: page.getAgentHomeScope ? page.getAgentHomeScope(provider) : ''user'',
+                                            agentProfile: page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
+                                            skillProfile: page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
+                                            install: true,
+                                            updateRuntime: true,
+                                            checkUpdates: true,
+                                            refreshUpdateCheck: true,
+                                            __context: ''byside''
+                                        };
+                                        if (provider === ''codex'') { payload.forceCodexInstall = true; }
+                                        if (provider === ''vibe'') { payload.forceVibeInstall = true; }
+                                        page.local.AgentRuntimeLoading = true;
+                                        page.local.AgentRuntimeError = '''';
+                                        page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Runtime_Updating_Codex'', ''Mise à jour de Codex en cours...'') : tr(''Agent_Runtime_Updating_Vibe'', ''Mise à jour de Vibe en cours...'');
+                                        page.tick();
+                                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(response) {
+                                            var result = response && response.result ? response.result : {};
+                                            if (result.ok !== true) { throw new Error(result.message || result.error || tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible'')); }
+                                            var settings = result.settings || {};
+                                            if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                            if (settings.providers) { page.local.AgentSettings = settings; }
+                                            var providers = settings.providers || [];
+                                            var selected = null;
+                                            for (var i = 0; i < providers.length; i++) {
+                                                if (normalize(providers[i] && providers[i].id) === provider) { selected = providers[i]; break; }
+                                            }
+                                            page.local.AgentModels = selected && selected.models ? selected.models : [];
+                                            page.local.AgentProviderSupportsReasoning = !!(selected && selected.supports && selected.supports.reasoning === true);
+                                            var model = clean(page.local.AgentModel);
+                                            var selectedModel = null;
+                                            for (var mi = 0; mi < page.local.AgentModels.length; mi++) {
+                                                if (clean(page.local.AgentModels[mi] && page.local.AgentModels[mi].id) === model) {
+                                                    selectedModel = page.local.AgentModels[mi];
+                                                    break;
+                                                }
+                                            }
+                                            if (!selectedModel) {
+                                                model = clean(selected && selected.defaultModel);
+                                                for (var mdi = 0; mdi < page.local.AgentModels.length; mdi++) {
+                                                    if (clean(page.local.AgentModels[mdi] && page.local.AgentModels[mdi].id) === model) {
+                                                        selectedModel = page.local.AgentModels[mdi];
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            if (!selectedModel && page.local.AgentModels.length) {
+                                                selectedModel = page.local.AgentModels[0];
+                                                model = clean(selectedModel && selectedModel.id);
+                                            }
+                                            page.local.AgentModel = model;
+                                            page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                                            var reasoning = clean(page.local.AgentReasoningEffort);
+                                            var reasoningValid = false;
+                                            for (var ri = 0; ri < page.local.AgentReasoningLevels.length; ri++) {
+                                                if (clean(page.local.AgentReasoningLevels[ri] && page.local.AgentReasoningLevels[ri].id) === reasoning) {
+                                                    reasoningValid = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!reasoningValid) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
+                                            page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning ? reasoning : '''';
+                                            var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
+                                            var serviceTier = clean(page.local.AgentServiceTier);
+                                            var tierValid = !serviceTier.length;
+                                            for (var ti = 0; ti < tiers.length; ti++) {
+                                                if (clean(tiers[ti] && tiers[ti].id) === serviceTier) { tierValid = true; break; }
+                                            }
+                                            page.local.AgentServiceTier = tierValid ? serviceTier : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''');
+                                            var runtime = selected && selected.runtime ? selected.runtime : {};
+                                            page.local.AgentRuntime = runtime;
+                                            var installed = clean(runtime.installedVersion);
+                                            var latest = clean(runtime.latestVersion);
+                                            page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Installed'', ''Runtime installé'');
+                                            page.local.AgentRuntimeStatusText = runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Remains'', ''La mise à jour reste disponible.'') : tr(''Agent_Runtime_New_Conversations'', ''Runtime à jour. Les nouvelles conversations utiliseront cette version.'');
+                                            page.local.AgentRuntimeActionText = runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'');
+                                            page.local.AgentRuntimeLoading = false;
+                                            page.local.AgentProviderChoiceConfirmed = true;
+                                            try {
+                                                if (typeof window !== ''undefined'' && window.localStorage) {
+                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
+                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                                }
+                                            } catch (e) {}
+                                            if (page.local.AgentConfigExplicitOpen === true) {
+                                                page.local.ShowAgentConfigPanel = true;
+                                            } else {
+                                                page.local.ShowAgentConfigPanel = false;
+                                                page.local.NewConversationMode = true;
+                                                page.local.ShowConversationPanel = false;
+                                                page.local.AgentConfigReturnState = null;
+                                                if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
+                                            }
+                                            page.setEnableChat && page.setEnableChat();
+                                            page.tick();
+                                            if (page.local.AgentConfigExplicitOpen !== true && page.focusQuestionInput) { page.focusQuestionInput(40); }
+                                            resolve();
+                                        }).catch(function(error) {
+                                            page.local.AgentRuntimeLoading = false;
+                                            page.local.AgentRuntimeError = '''' + error;
+                                            page.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible : '') + error;
+                                            page.tick();
+                                            resolve();
+                                        });'
+                ↓ContinueActions [ngx.components.UIDynamicElement-1785315895962]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1785315895964]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-settings-actions
+                  ↓ContinueButton [ngx.components.UIDynamicElement-1785315895966]: 
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small"
+                      }'
+                    tagName: ion-button
+                    ↓Class [ngx.components.UIAttribute-1785315895968]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-settings-continue
+                    ↓Text [ngx.components.UIText-1785315895970]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.t('Agent_Settings_Continue', 'Utiliser ces réglages et continuer')
+                    ↓Icon [ngx.components.UIDynamicElement-1785315895972]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Icon",
+                         "IconName": "plain:arrow-forward-outline",
+                         "IconSlot": "plain:end"
+                        }'
+                      tagName: ion-icon
+                    ↓Event [ngx.components.UIControlEvent-1785315895974]: 
+                      ↓Continue [ngx.components.UICustomAction-1785315897480]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '        if (!page.local) { page.local = {}; }
+                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                        var provider = clean(page.local.AgentProvider).toLowerCase();
+                                        if (provider.length) {
+                                            page.local.AgentProviderChoiceConfirmed = true;
+                                            try {
+                                                if (typeof window !== ''undefined'' && window.localStorage) {
+                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
+                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                                }
+                                            } catch (e) {}
+                                        }
+                                        var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true;
+                                        if (!hasConversation) {
+                                            page.local.NewConversationMode = true;
+                                            page.local.ShowConversationPanel = false;
+                                        }
+                                        if (page.closeAgentSettingsPage) {
+                                            page.closeAgentSettingsPage();
+                                        } else {
+                                            page.local.AgentConfigExplicitOpen = false;
+                                            page.local.ShowAgentConfigPanel = false;
+                                            page.setEnableChat && page.setEnableChat();
+                                            page.tick();
+                                        }
+                                        if (!hasConversation && page.focusQuestionInput) { page.focusQuestionInput(40); }
+                                        resolve();'
               ↓NewConversationButton [ngx.components.UIDynamicElement-1781676410893]: 
                 beanData: |
                   '{
@@ -3872,7 +4530,7 @@ title: Convertigo assistant
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
+                      - MobileSmartSourceType: plain:agent-new-conversation-button agent-hidden
                 ↓Aria [ngx.components.UIAttribute-1781811000102]: 
                   attrName: aria-label
                   attrValue: 
@@ -3914,24 +4572,6 @@ title: Convertigo assistant
                                         return provider;
                                     };
                                     var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-                                    var fallbackModels = function(provider) {
-                                        provider = normalizeProvider(provider);
-                                        if (provider === ''vibe'') {
-                                            return [
-                                                { id: ''vibe-thinking'', label: ''Vibe thinking'' },
-                                                { id: ''mistral-medium-3.5'', label: ''Mistral medium'' },
-                                                { id: ''devstral-small-latest'', label: ''Devstral'' }
-                                            ];
-                                        }
-                                        if (provider === ''codex'') {
-                                            return [
-                                                { id: ''gpt-5.5'', label: ''GPT-5.5'' },
-                                                { id: ''gpt-5-codex'', label: ''GPT-5 Codex'' },
-                                                { id: ''gpt-5'', label: ''GPT-5'' }
-                                            ];
-                                        }
-                                        return [];
-                                    };
                                     var contextValue = function(name) {
                                         var value = '''';
                                         try {
@@ -3983,7 +4623,7 @@ title: Convertigo assistant
                                     } catch (eChoice) {}
                                     var model = page.local.AgentModel != null ? clean(page.local.AgentModel) : (page.getAgentModel ? page.getAgentModel() : '''');
                                     if (!model.length) {
-                                        var initialModels = page.local.AgentModels && page.local.AgentModels.length ? page.local.AgentModels : fallbackModels(provider);
+                                        var initialModels = page.local.AgentModels && page.local.AgentModels.length ? page.local.AgentModels : [];
                                         if (initialModels.length) { model = clean(initialModels[0] && initialModels[0].id); }
                                     }
                                     var reasoningEffort = clean(page.local.AgentReasoningEffort);
@@ -4072,7 +4712,7 @@ title: Convertigo assistant
                                             page.local.AgentSettings = settings;
                                             page.local.AgentProvider = provider;
                                             var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
-                                            if (!models.length) { models = fallbackModels(provider); }
+                                            
                                             page.local.AgentModels = models || [];
                                             page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
                                             var modelCandidate = clean(page.local.AgentModel);
@@ -5259,7 +5899,7 @@ title: Convertigo assistant
                 varValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:item.status || 'En réflexion'
+                    - MobileSmartSourceType: 'script:item && item.writing === true ? (item.status || ''En réflexion'') : '''''
               ↓rawStreamTicker [ngx.components.UIUseVariable-1772200844904]: 
                 varValue: 
                   - xmlizable: 
@@ -5844,24 +6484,6 @@ title: Convertigo assistant
                               if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') { return ''vibe''; }
                               return provider;
                           };
-                          var fallbackModels = function(provider) {
-                              provider = normalize(provider);
-                              if (provider === ''codex'') {
-                                  return [
-                                      { id: ''gpt-5.5'', label: ''GPT-5.5'' },
-                                      { id: ''gpt-5-codex'', label: ''GPT-5 Codex'' },
-                                      { id: ''gpt-5'', label: ''GPT-5'' }
-                                  ];
-                              }
-                              if (provider === ''vibe'') {
-                                  return [
-                                      { id: ''vibe-thinking'', label: ''Vibe thinking'' },
-                                      { id: ''mistral-medium-3.5'', label: ''Mistral medium'' },
-                                      { id: ''devstral-small-latest'', label: ''Devstral'' }
-                                  ];
-                              }
-                              return [];
-                          };
                           var state = result.state || {};
                           var settings = page.local.AgentSettings || {};
                           if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
@@ -5879,7 +6501,7 @@ title: Convertigo assistant
                           }
                           if (!provider.length || selectedProvider === null) {
                               page.local.AgentProvider = provider;
-                              page.local.AgentModels = fallbackModels(provider);
+                              page.local.AgentModels = [];
                               page.local.AgentProviderSupportsReasoning = false;
                               page.local.AgentReasoningLevels = [];
                               page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : true;
@@ -5887,7 +6509,7 @@ title: Convertigo assistant
                               return;
                           }
                           var models = selectedProvider.models || [];
-                          if (!models.length) { models = fallbackModels(provider); }
+                          
                           page.local.AgentProvider = provider;
                           page.local.AgentModels = models;
                           page.local.AgentProviderSupportsReasoning = selectedProvider.supports && selectedProvider.supports.reasoning === true;
@@ -5922,7 +6544,11 @@ title: Convertigo assistant
                               providerReady = selectedProvider && page.isAgentProviderReady ? page.isAgentProviderReady(selectedProvider) : false;
                           } catch (eReady) {}
                           if (providerReady) {
-                              page.local.ShowAgentConfigPanel = false;
+                              if (page.local.AgentConfigExplicitOpen !== true) {
+                                  page.local.ShowAgentConfigPanel = false;
+                                  page.local.AgentConfigExplicitOpen = false;
+                                  if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
+                              }
                               page.local.AgentProviderChoiceConfirmed = true;
                               try {
                                   if (typeof window !== ''undefined'' && window.localStorage) {
@@ -5931,6 +6557,29 @@ title: Convertigo assistant
                               } catch (eConfirm) {}
                           } else {
                               page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : false;
+                          }
+                          resolve();'
+        ↓UseDiscoveredAgentModels [ngx.components.UICustomAction-1785253494412]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  '        if (!page.local) { page.local = {}; }
+                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                          var provider = clean(page.local.AgentProvider).toLowerCase();
+                          var settings = page.local.AgentSettings || {};
+                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                          var providers = settings.providers || [];
+                          var selected = null;
+                          for (var i = 0; i < providers.length; i++) {
+                              if (clean(providers[i] && providers[i].id).toLowerCase() === provider) { selected = providers[i]; break; }
+                          }
+                          page.local.AgentModels = selected && selected.models ? selected.models : [];
+                          if (!page.local.AgentModels.length) {
+                              page.local.AgentModel = '''';
+                              page.local.AgentReasoningLevels = [];
+                              page.local.AgentReasoningEffort = '''';
                           }
                           resolve();'
         ↓RequireExplicitAgentChoice [ngx.components.UICustomAction-1783431366742]: 
@@ -5968,11 +6617,13 @@ title: Convertigo assistant
                               var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true || page.local.IsProcessing === true;
                               if (page.isAgentBridgeMode && page.isAgentBridgeMode() && !configured.length && !confirmed && !readyProvider && !hasConversation) {
                                   page.local.ShowConversationPanel = false;
+                                  page.local.AgentConfigExplicitOpen = false;
                                   page.local.ShowAgentConfigPanel = true;
                                   page.setEnableChat && page.setEnableChat();
                                   page.tick();
-                              } else if (readyProvider && page.local.ShowAgentConfigPanel === true && !hasConversation) {
+                              } else if (readyProvider && page.local.ShowAgentConfigPanel === true && page.local.AgentConfigExplicitOpen !== true && !hasConversation) {
                                   page.local.ShowAgentConfigPanel = false;
+                                  if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
                                   page.setEnableChat && page.setEnableChat();
                                   page.tick();
                               }
@@ -7774,36 +8425,7 @@ title: Convertigo assistant
                 		var modelId = clean(selected);
                 		if (!page.local) { page.local = {}; }
                 		if (modelId === "__configure_agent__") {
-                			try {
-                				var pageAny: any = page;
-                				if (!pageAny.__agentOriginalShouldShowAgentSettingsPanel && page.shouldShowAgentSettingsPanel) {
-                					pageAny.__agentOriginalShouldShowAgentSettingsPanel = page.shouldShowAgentSettingsPanel.bind(page);
-                					pageAny.shouldShowAgentSettingsPanel = function() {
-                						try {
-                							if (page.local && page.local.AgentConfigExplicitOpen === true && page.local.ShowAgentConfigPanel === true) {
-                								return true;
-                							}
-                						} catch (eExplicit) {}
-                						return pageAny.__agentOriginalShouldShowAgentSettingsPanel ? pageAny.__agentOriginalShouldShowAgentSettingsPanel() : false;
-                					};
-                				}
-                			} catch (ePatch) {}
-                			var provider = normalizeProvider(page.local.AgentProvider || (page.getAgentProvider ? page.getAgentProvider() : ''''));
-                			page.local.AgentConfigExplicitOpen = true;
-                			page.local.ShowAgentConfigPanel = true;
-                			page.local.ShowConversationPanel = false;
-                			page.local.NewConversationMode = true;
-                			page.local.AgentProviderChoiceConfirmed = false;
-                			if (provider.length) {
-                				page.local.AgentProvider = provider;
-                			}
-                			try {
-                				if (typeof window !== ''undefined'' && window.localStorage) {
-                					window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''false'');
-                				}
-                			} catch (eStore) {}
-                			page.setEnableChat && page.setEnableChat();
-                			page.tick();
+                			if (page.openAgentSettingsPage) { page.openAgentSettingsPage(); }
                 			resolve();
                 			return;
                 		}
@@ -8115,26 +8737,7 @@ title: Convertigo assistant
                               if (!page.local) { page.local = {}; }
                               var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
                               var provider = clean(page.local.AgentProvider).toLowerCase();
-                              var fallbackModels = function(provider) {
-                                  if (provider === ''vibe'') {
-                                      return [
-                                          { id: ''vibe-thinking'', label: ''Vibe thinking'' },
-                                          { id: ''mistral-medium-3.5'', label: ''Mistral medium'' },
-                                          { id: ''devstral-small-latest'', label: ''Devstral'' }
-                                      ];
-                                  }
-                                  if (provider === ''codex'') {
-                                      return [
-                                          { id: ''gpt-5.5'', label: ''GPT-5.5'' },
-                                          { id: ''gpt-5-codex'', label: ''GPT-5 Codex'' },
-                                          { id: ''gpt-5'', label: ''GPT-5'' }
-                                      ];
-                                  }
-                                  return [];
-                              };
-                              if (!(page.local.AgentModels && page.local.AgentModels.length)) {
-                                  page.local.AgentModels = fallbackModels(provider);
-                              }
+                              page.local.AgentModels = page.local.AgentModels && page.local.AgentModels.length ? page.local.AgentModels : [];
                               if (!clean(page.local.AgentModel).length && page.local.AgentModels && page.local.AgentModels.length) {
                                   page.local.AgentModel = clean(page.local.AgentModels[0] && page.local.AgentModels[0].id);
                               }
@@ -9735,6 +10338,274 @@ title: Convertigo assistant
             }
             .agent-conversation-actions {
               justify-content: flex-end;
+              width: 100%;
+            }
+          }'
+↓AgentRuntimeSettingsStyle [ngx.components.UIStyle-1785253351143]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          'ion-header.modern-header ion-button.agent-settings-button {
+            height: 36px;
+            margin: 0 4px;
+            width: 36px;
+          }
+          ion-header.modern-header ion-button.agent-settings-button ion-icon {
+            font-size: 18px;
+          }
+          .agent-create-settings > .agent-choice-row,
+          .agent-create-settings .agent-create-settings-block .agent-choice-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          .agent-runtime-settings {
+            align-items: center;
+            border-top: 1px solid rgba(100, 116, 139, 0.24);
+            display: grid;
+            gap: 4px 12px;
+            grid-template-columns: minmax(0, 1fr) auto;
+            margin-top: 8px;
+            padding-top: 12px;
+          }
+          .agent-runtime-settings .agent-create-label {
+            grid-column: 1 / -1;
+            margin: 0 0 2px;
+          }
+          .agent-runtime-version,
+          .agent-runtime-status {
+            letter-spacing: 0;
+            margin: 0;
+            min-width: 0;
+          }
+          .agent-runtime-version {
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 650;
+          }
+          .agent-runtime-status {
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.35;
+          }
+          .agent-runtime-status.update {
+            color: #0369a1;
+          }
+          .agent-runtime-status.error {
+            color: #b42318;
+          }
+          ion-button.agent-runtime-action {
+            --background: #f8fafc;
+            --background-hover: #eef6ff;
+            --border-color: #cbd5e1;
+            --border-radius: 6px;
+            --border-style: solid;
+            --border-width: 1px;
+            --color: #0f172a;
+            --padding-end: 12px;
+            --padding-start: 12px;
+            grid-column: 2;
+            grid-row: 2 / 4;
+            height: 36px;
+            letter-spacing: 0;
+            margin: 0;
+            text-transform: none;
+          }
+          :host-context(:root.force-dark) .agent-runtime-settings,
+          :host-context(html.force-dark) .agent-runtime-settings,
+          :host-context(body.force-dark) .agent-runtime-settings,
+          :host-context(.force-dark) .agent-runtime-settings {
+            border-top-color: rgba(148, 163, 184, 0.24);
+          }
+          :host-context(:root.force-dark) .agent-runtime-version,
+          :host-context(html.force-dark) .agent-runtime-version,
+          :host-context(body.force-dark) .agent-runtime-version,
+          :host-context(.force-dark) .agent-runtime-version {
+            color: #e2e8f0;
+          }
+          :host-context(:root.force-dark) .agent-runtime-status,
+          :host-context(html.force-dark) .agent-runtime-status,
+          :host-context(body.force-dark) .agent-runtime-status,
+          :host-context(.force-dark) .agent-runtime-status {
+            color: #94a3b8;
+          }
+          :host-context(:root.force-dark) .agent-runtime-status.update,
+          :host-context(html.force-dark) .agent-runtime-status.update,
+          :host-context(body.force-dark) .agent-runtime-status.update,
+          :host-context(.force-dark) .agent-runtime-status.update {
+            color: #7dd3fc;
+          }
+          :host-context(:root.force-dark) ion-button.agent-runtime-action,
+          :host-context(html.force-dark) ion-button.agent-runtime-action,
+          :host-context(body.force-dark) ion-button.agent-runtime-action,
+          :host-context(.force-dark) ion-button.agent-runtime-action {
+            --background: rgba(15, 23, 42, 0.72);
+            --background-hover: rgba(14, 165, 233, 0.16);
+            --border-color: rgba(148, 163, 184, 0.32);
+            --color: #e2e8f0;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) .agent-runtime-settings,
+            :host-context(html:not(.force-light)) .agent-runtime-settings,
+            :host-context(body:not(.force-light)) .agent-runtime-settings {
+              border-top-color: rgba(148, 163, 184, 0.24);
+            }
+            :host-context(:root:not(.force-light)) .agent-runtime-version,
+            :host-context(html:not(.force-light)) .agent-runtime-version,
+            :host-context(body:not(.force-light)) .agent-runtime-version {
+              color: #e2e8f0;
+            }
+            :host-context(:root:not(.force-light)) .agent-runtime-status,
+            :host-context(html:not(.force-light)) .agent-runtime-status,
+            :host-context(body:not(.force-light)) .agent-runtime-status {
+              color: #94a3b8;
+            }
+            :host-context(:root:not(.force-light)) ion-button.agent-runtime-action,
+            :host-context(html:not(.force-light)) ion-button.agent-runtime-action,
+            :host-context(body:not(.force-light)) ion-button.agent-runtime-action {
+              --background: rgba(15, 23, 42, 0.72);
+              --background-hover: rgba(14, 165, 233, 0.16);
+              --border-color: rgba(148, 163, 184, 0.32);
+              --color: #e2e8f0;
+            }
+          }
+          @media (max-width: 520px) {
+            .agent-runtime-settings {
+              grid-template-columns: minmax(0, 1fr);
+            }
+            ion-button.agent-runtime-action {
+              grid-column: 1;
+              grid-row: auto;
+              justify-self: stretch;
+              margin-top: 6px;
+            }
+          }
+          
+          ion-header.modern-header ion-button.agent-settings-button.active {
+            --background: rgba(8, 145, 178, 0.16);
+            --color: #0891b2;
+          }
+          .agent-start-card.agent-config-page {
+            --background: transparent;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            margin: 0;
+            overflow: visible;
+          }
+          .agent-start-card.agent-config-page ion-card-content {
+            padding: 0;
+          }
+          .agent-config-page .agent-config-surface {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            margin: 0;
+            max-height: none;
+            overflow: visible;
+            padding: 0;
+          }
+          .agent-config-page .agent-config-settings {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            gap: 14px;
+            margin: 0;
+            padding: 0;
+          }
+          .agent-config-page .agent-config-settings > .agent-create-label {
+            font-size: 12px;
+          }
+          .agent-config-page .agent-config-settings > .agent-choice-row {
+            margin-bottom: 4px;
+          }
+          .agent-config-page .agent-config-settings > .agent-create-settings-block {
+            border-top: 1px solid rgba(100, 116, 139, 0.22);
+            margin-top: 0;
+            padding-top: 14px;
+          }
+          .agent-config-page .agent-config-settings .agent-choice-button {
+            min-width: 86px;
+          }
+          :host-context(:root.force-dark) ion-header.modern-header ion-button.agent-settings-button.active,
+          :host-context(html.force-dark) ion-header.modern-header ion-button.agent-settings-button.active,
+          :host-context(body.force-dark) ion-header.modern-header ion-button.agent-settings-button.active,
+          :host-context(.force-dark) ion-header.modern-header ion-button.agent-settings-button.active {
+            --background: rgba(34, 211, 238, 0.14);
+            --color: #7dd3fc;
+          }
+          :host-context(:root.force-dark) .agent-config-page .agent-config-settings > .agent-create-settings-block,
+          :host-context(html.force-dark) .agent-config-page .agent-config-settings > .agent-create-settings-block,
+          :host-context(body.force-dark) .agent-config-page .agent-config-settings > .agent-create-settings-block,
+          :host-context(.force-dark) .agent-config-page .agent-config-settings > .agent-create-settings-block {
+            border-top-color: rgba(148, 163, 184, 0.24);
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) ion-header.modern-header ion-button.agent-settings-button.active,
+            :host-context(html:not(.force-light)) ion-header.modern-header ion-button.agent-settings-button.active,
+            :host-context(body:not(.force-light)) ion-header.modern-header ion-button.agent-settings-button.active {
+              --background: rgba(34, 211, 238, 0.14);
+              --color: #7dd3fc;
+            }
+            :host-context(:root:not(.force-light)) .agent-config-page .agent-config-settings > .agent-create-settings-block,
+            :host-context(html:not(.force-light)) .agent-config-page .agent-config-settings > .agent-create-settings-block,
+            :host-context(body:not(.force-light)) .agent-config-page .agent-config-settings > .agent-create-settings-block {
+              border-top-color: rgba(148, 163, 184, 0.24);
+            }
+          }
+          '
+↓AgentSettingsActionsStyle [ngx.components.UIStyle-1785315917048]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.agent-settings-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 8px;
+          }
+          ion-button.agent-settings-continue {
+            --background: #0891b2;
+            --background-activated: #0e7490;
+            --background-hover: #0e7490;
+            --border-radius: 6px;
+            --color: #ffffff;
+            --padding-end: 14px;
+            --padding-start: 14px;
+            height: 38px;
+            letter-spacing: 0;
+            margin: 0;
+            text-transform: none;
+          }
+          ion-button.agent-settings-continue ion-icon {
+            font-size: 17px;
+            margin-left: 6px;
+          }
+          :host-context(:root.force-dark) ion-button.agent-settings-continue,
+          :host-context(html.force-dark) ion-button.agent-settings-continue,
+          :host-context(body.force-dark) ion-button.agent-settings-continue,
+          :host-context(.force-dark) ion-button.agent-settings-continue {
+            --background: #0891b2;
+            --background-activated: #06b6d4;
+            --background-hover: #0e7490;
+            --color: #ffffff;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) ion-button.agent-settings-continue,
+            :host-context(html:not(.force-light)) ion-button.agent-settings-continue,
+            :host-context(body:not(.force-light)) ion-button.agent-settings-continue {
+              --background: #0891b2;
+              --background-activated: #06b6d4;
+              --background-hover: #0e7490;
+              --color: #ffffff;
+            }
+          }
+          @media (max-width: 520px) {
+            .agent-settings-actions,
+            ion-button.agent-settings-continue {
               width: 100%;
             }
           }'

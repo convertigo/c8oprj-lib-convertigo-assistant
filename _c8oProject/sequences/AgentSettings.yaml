@@ -23,7 +23,12 @@ responseTimeout: 120
       vibeHome: typeof vibeHome === "undefined" ? "" : vibeHome,
       vibeHomeScope: typeof vibeHomeScope === "undefined" ? "" : vibeHomeScope,
       agentHome: typeof agentHome === "undefined" ? "" : agentHome,
-      settingsTimeoutMs: typeof settingsTimeoutMs === "undefined" ? "" : settingsTimeoutMs
+      settingsTimeoutMs: typeof settingsTimeoutMs === "undefined" ? "" : settingsTimeoutMs,
+      checkUpdates: typeof checkUpdates === "undefined" ? "" : checkUpdates,
+      refreshUpdateCheck: typeof refreshUpdateCheck === "undefined" ? "" : refreshUpdateCheck,
+      updateCheckTimeoutMs: typeof updateCheckTimeoutMs === "undefined" ? "" : updateCheckTimeoutMs,
+      updateCheckCacheMs: typeof updateCheckCacheMs === "undefined" ? "" : updateCheckCacheMs,
+      runtimePresenceOnly: typeof runtimePresenceOnly === "undefined" ? "" : runtimePresenceOnly
     });'
 ↓result [steps.JsonToXmlStep-1782119857985]: 
   jsonObject: 
@@ -86,3 +91,18 @@ responseTimeout: 120
 ↓settingsTimeoutMs [variables.RequestableVariable-1782119888966]: 
   comment: Timeout in milliseconds for CLI settings discovery.
   description: Timeout in milliseconds for CLI settings discovery.
+↓checkUpdates [variables.RequestableVariable-1785252999105]: 
+  comment: Check package registries for newer CLI versions.
+  description: Check package registries for newer CLI versions.
+↓refreshUpdateCheck [variables.RequestableVariable-1785252999107]: 
+  comment: Bypass the cached CLI version check.
+  description: Bypass the cached CLI version check.
+↓updateCheckTimeoutMs [variables.RequestableVariable-1785252999109]: 
+  comment: Timeout in milliseconds for package registry checks.
+  description: Timeout in milliseconds for package registry checks.
+↓updateCheckCacheMs [variables.RequestableVariable-1785252999111]: 
+  comment: Cache duration in milliseconds for package registry checks.
+  description: Cache duration in milliseconds for package registry checks.
+↓runtimePresenceOnly [variables.RequestableVariable-1785255718254]: 
+  comment: Check only for runtime files without invoking the CLI.
+  description: Check only for runtime files without invoking the CLI.
