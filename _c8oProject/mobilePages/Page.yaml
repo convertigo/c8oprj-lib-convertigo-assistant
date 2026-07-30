@@ -911,6 +911,17 @@ scriptContent:
         		var trimValue = function(value) {
         			return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
         		};
+        		var noCode = false;
+        		try { noCode = this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode''; } catch (e) {}
+        		if (!noCode) {
+        			try {
+        				var surface = trimValue(this.getAssistantQueryParam(''assistantSurface'') || this.getAssistantQueryParam(''assistantContext'') || this.getAssistantQueryParam(''agentProfile'') || this.getAssistantQueryParam(''skillProfile'')).toLowerCase();
+        				noCode = surface === ''nocode'' || surface === ''c8oforms'' || surface === ''forms'';
+        			} catch (e2) {}
+        		}
+        		if (!noCode) {
+        			return ''studio'';
+        		}
         		var isInvalid = function(value) {
         			var text = trimValue(value);
         			var lower = text.toLowerCase();
@@ -921,7 +932,7 @@ scriptContent:
         			candidates.push(this.getAssistantQueryParam(''userId''));
         			candidates.push(this.getAssistantQueryParam(''agentUserId''));
         			candidates.push(this.getAssistantQueryParam(''user''));
-        		} catch (e) {}
+        		} catch (e3) {}
         		try {
         			if (this.global) {
         				var settings = this.global.settings || {};
@@ -937,7 +948,7 @@ scriptContent:
         				candidates.push(this.global.login);
         				candidates.push(this.global.user);
         			}
-        		} catch (e2) {}
+        		} catch (e4) {}
         		try {
         			var user: any = this.c8o && this.c8o.session && this.c8o.session.user ? this.c8o.session.user : null;
         			if (user) {
@@ -949,22 +960,14 @@ scriptContent:
         				candidates.push(user.authenticatedUserID);
         				candidates.push(user.hash);
         			}
-        		} catch (e3) {}
+        		} catch (e5) {}
         		for (var i = 0; i < candidates.length; i++) {
         			var value = trimValue(candidates[i]);
         			if (!isInvalid(value)) {
         				return value;
         			}
         		}
-        		var noCode = false;
-        		try { noCode = this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode''; } catch (e4) {}
-        		if (!noCode) {
-        			try {
-        				var surface = trimValue(this.getAssistantQueryParam(''assistantSurface'') || this.getAssistantQueryParam(''assistantContext'') || this.getAssistantQueryParam(''agentProfile'') || this.getAssistantQueryParam(''skillProfile'')).toLowerCase();
-        				noCode = surface === ''nocode'' || surface === ''c8oforms'' || surface === ''forms'';
-        			} catch (e5) {}
-        		}
-        		return noCode ? ''nocode-anonymous'' : ''studio'';
+        		return ''nocode-anonymous'';
         	}
         
         	public getAgentHomeScope(provider) {
