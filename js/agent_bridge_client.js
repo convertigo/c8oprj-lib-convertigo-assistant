@@ -4636,6 +4636,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
     var viewerControlReady = boolValue(options.browserControlReady, true);
     var viewerCdpEndpoint = viewerControlReady ? existingViewerCdpEndpoint(options) : "";
+    var establishedAgentFollowup = boolValue(options.establishedAgentFollowup, false);
     if (targetProject.length && viewerCdpEndpoint.length) {
       promptParts.push("- Latest Studio viewer CDP endpoint for this turn: " + viewerCdpEndpoint);
       promptParts.push("- Ignore older Studio viewer CDP endpoints from previous conversation history; they are stale after a builder/view restart.");
@@ -4650,13 +4651,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Do not run shell, PowerShell, UIAutomation, Node scripts, raw CDP, external browsers, or new tabs.");
       promptParts.push("- First call the managed Playwright/browser MCP current-tab/list-tabs tool and confirm it is on the selected project viewer URL. If it is already on the viewer, perform the requested click/check directly with Playwright.");
       promptParts.push("- If the current browser target is stale or blank, poll `convertigo.mobile-builder-open` for the selected project with `stateOnly=true`, `wait=true`, and a short timeout such as 20-30 seconds, then retry Playwright when the result reports `browserControlReady:true`. Do not wait a full minute for this simple follow-up; report the blocker only if the waited result times out or Playwright is still attached elsewhere after readiness.");
+    } else if (establishedAgentFollowup) {
+      promptParts.push("");
+      promptParts.push("Continuation rules for this turn:");
+      promptParts.push("- This agent conversation already completed its Convertigo bootstrap for the current MCP endpoint. Reuse the skill and guidance already present in the conversation context.");
+      promptParts.push("- Do not reread a managed `SKILL.md`, `convertigo://capabilities`, `convertigo://resources/convertigo-start`, or any guide already read in this conversation. Do not repeat catalog discovery.");
+      promptParts.push("- Read only the smallest new specialized recipe if this request introduces a genuinely new route not covered by the conversation, or repeat bootstrap only if the MCP reports a guidance-version mismatch or the endpoint changed.");
     }
     promptParts.push("");
     promptParts.push("Operational rules:");
     promptParts.push("- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
     promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- When a project is selected, work only on it unless the user explicitly asks for another project.");
     promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- A missing project selection does not block an explicit new-project or new-application request. Derive a concise valid technical name from the request when none was supplied, check for collisions with Convertigo MCP, create the starter project, and continue. Ask for a selection only when the user wants work on an existing project that cannot be identified.");
-    if (!simpleViewerFollowup) {
+    if (!simpleViewerFollowup && !establishedAgentFollowup) {
       promptParts.push(isNoCodeSurface ? "- Prefer the managed convertigo-nocode skill when the provider exposes skills." : "- Prefer the managed convertigo-generalist skill when the provider exposes skills.");
     }
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
@@ -4751,6 +4758,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    var previousMcpEndpoint = trim(state.mcpEndpoint);
+    var requestedMcpEndpoint = trim(options.mcpEndpoint);
+    var mcpEndpointChanged = previousMcpEndpoint.length > 0 &&
+      requestedMcpEndpoint.length > 0 &&
+      previousMcpEndpoint !== requestedMcpEndpoint;
+    options.establishedAgentFollowup = trim(state.externalSessionId).length > 0 && !mcpEndpointChanged;
+    if (requestedMcpEndpoint.length) {
+      state.mcpEndpoint = requestedMcpEndpoint;
+    }
     clearCancellationRequested(state.threadid);
     if (trim(options.model || options.agentModel).length) {
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
