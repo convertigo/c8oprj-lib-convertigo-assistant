@@ -37,6 +37,9 @@ rediscovering the same context.
   conversation. Model and reasoning remain lightweight prompt/runtime controls.
   Managed Convertigo skills remain invisible to the user: Studio uses
   `convertigo-generalist`, while C8Oforms/NoCode uses `convertigo-nocode`.
+  Experimental Flow conversations use `convertigo-flow-mcp` only on the private
+  Flow integration branch; do not expose that profile from the 8.4.4 release
+  branch yet.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
 - Keep start templates only on the new conversation screen.
@@ -120,6 +123,10 @@ rediscovering the same context.
   optional metadata (`projectNames`, `primaryProject`) and must not be inferred
   from an unrelated Studio or NoCode selection unless the caller explicitly asks
   for current/selected project context.
+- Keep `surface`, `authoringPolicy`, installed `capabilities`, and
+  `projectContext` independent. Consume the capability descriptor returned by
+  AgentBridge settings. Flow tool names and recipes belong to `lib_flow_mcp`;
+  do not duplicate them in Assistant prompts.
 - When a conversation starts without a selected project, infer its first
   `primaryProject` only from successful structured project/viewer tool events,
   such as an imported project or a `mobile-builder-open` result. Never infer it
