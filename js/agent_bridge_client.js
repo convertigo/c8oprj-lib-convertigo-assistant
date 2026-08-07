@@ -14,7 +14,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       id: "generalist",
       label: "Convertigo Generalist",
       authoringPolicy: "legacy-only",
-      aliases: ["generalist", "legacy", "studio"],
+      aliases: ["generalist", "legacy"],
       mcpPath: FALLBACK_MCP_PATH,
       skillSlug: "convertigo-generalist"
     },
@@ -1319,8 +1319,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function assistantProfileDescriptor(options) {
     options = options || {};
+    var userId = trim(options.userId);
+    var studioUser = !userId.length || userId.toLowerCase() === "studio";
+    if (!studioUser) {
+      return ASSISTANT_PROFILE_BOOTSTRAP.nocode;
+    }
     var authoritative = options.agentCapabilityProfile;
     var authoritativeId = authoritative && typeof authoritative === "object" ? trim(authoritative.id).toLowerCase() : "";
+    if (authoritativeId === "nocode") {
+      authoritativeId = "";
+    }
     if (authoritativeId.length && ASSISTANT_PROFILE_BOOTSTRAP[authoritativeId]) {
       var known = ASSISTANT_PROFILE_BOOTSTRAP[authoritativeId];
       return {
@@ -1332,28 +1340,24 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         skillSlug: trim(authoritative.skillSlug) || known.skillSlug
       };
     }
-    var value = trim(options.agentProfile || options.skillProfile || options.assistantContext || options.assistantSurface || options.profile).toLowerCase();
-    var project = trim(options.targetProject || options.projectName || options.projectId || options.primaryProject).toLowerCase();
+    var value = trim(options.agentProfile || options.skillProfile || options.assistantContext || options.profile).toLowerCase();
     for (var id in ASSISTANT_PROFILE_BOOTSTRAP) {
       if (!Object.prototype.hasOwnProperty.call(ASSISTANT_PROFILE_BOOTSTRAP, id)) {
         continue;
       }
       var descriptor = ASSISTANT_PROFILE_BOOTSTRAP[id];
       for (var i = 0; i < descriptor.aliases.length; i++) {
-        if (value === descriptor.aliases[i]) {
+        if (value === descriptor.aliases[i] && id !== "nocode") {
           return descriptor;
         }
       }
-    }
-    if (project === "c8oforms") {
-      return ASSISTANT_PROFILE_BOOTSTRAP.nocode;
     }
     return ASSISTANT_PROFILE_BOOTSTRAP.generalist;
   }
 
   function hasExplicitSkillProfile(record) {
     record = record || {};
-    return trim(record.skillProfile || record.agentProfile || record.assistantContext || record.assistantSurface).length > 0;
+    return trim(record.skillProfile || record.agentProfile || record.assistantContext).length > 0;
   }
 
   function conversationSkillProfile(record) {
@@ -1931,6 +1935,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function conversationRecords(workspaceRoot, userKey, projectFilter, includeDeleted, provider, skillProfile) {
     var records = [];
     var filter = trim(projectFilter);
+    var effectiveSkillProfile = userKey === "studio" ? "all" : skillProfile;
     var providers = providerSearchList(provider);
     for (var p = 0; p < providers.length; p++) {
       var providerFilter = providers[p];
@@ -1957,7 +1962,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             continue;
           }
         }
-        if (!conversationMatchesSkillProfile(record, skillProfile)) {
+        if (!conversationMatchesSkillProfile(record, effectiveSkillProfile)) {
           continue;
         }
         if (!conversationHasUserPrompt(record)) {
@@ -2665,7 +2670,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return false;
     }
     var readsManagedSkill = text.indexOf("skills/convertigo-generalist/skill.md") !== -1 ||
-      text.indexOf("skills/convertigo-nocode/skill.md") !== -1;
+      text.indexOf("skills/convertigo-nocode/skill.md") !== -1 ||
+      text.indexOf("skills/convertigo-studio/skill.md") !== -1 ||
+      text.indexOf("skills/convertigo-flow-mcp/skill.md") !== -1 ||
+      text.indexOf("skills/convertigo-flow-backend/skill.md") !== -1 ||
+      text.indexOf("skills/convertigo-flow-frontend-svelte/skill.md") !== -1;
     return readsManagedSkill &&
       (text.indexOf("sed -n") !== -1 ||
         text.indexOf("cat ") !== -1 ||
@@ -3828,7 +3837,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       agentProfile: options.agentProfile || (record && record.agentProfile),
       skillProfile: options.skillProfile || (record && record.skillProfile),
       assistantContext: options.assistantContext || (record && record.assistantContext),
-      assistantSurface: options.assistantSurface || (record && record.assistantSurface),
       projectName: primaryProject
     });
     return {
@@ -4131,7 +4139,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
     var providerFilter = providerSelector === "all" ? "" : providerSelector;
     var explicitProject = trim(projectFilter || options.targetProject || options.projectName || options.projectId);
-    var agentProfile = trim(options.agentProfile || options.skillProfile || options.assistantContext || options.assistantSurface);
+    var agentProfile = trim(options.agentProfile || options.skillProfile || options.assistantContext);
     var skillProfile = agentProfile.length ? normalizeSkillProfile(options) : "";
     var mcpEndpoint = trim(options.mcpEndpoint);
     if (!mcpEndpoint.length && skillProfile.length) {
@@ -4681,20 +4689,24 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       targetProject = trim(options.projectName);
     }
     var capabilityProfile = assistantProfileDescriptor(options);
-    var surfaceProfile = capabilityProfile.id;
-    var isFlowSurface = capabilityProfile.id === "flow";
-    var isNoCodeSurface = capabilityProfile.id === "nocode";
+    var userId = trim(options.userId);
+    var isStudioSurface = !userId.length || userId.toLowerCase() === "studio";
+    var isNoCodeSurface = !isStudioSurface;
+    var routingHint = capabilityProfile.id;
     var selectedThread = trim(options.threadid);
     var uploadedFiles = parseSequenceFiles(options.AIFiles);
     var promptParts = [];
-    promptParts.push(isNoCodeSurface ? "You are an AI agent integrated in Convertigo NoCode Studio (C8Oforms)." : (isFlowSurface ? "You are an AI coding agent integrated in Convertigo Studio for Convertigo Flow work." : "You are an AI coding agent integrated in Convertigo Studio."));
-    promptParts.push(isNoCodeSurface ? "Your job is to help the user inspect, explain, and improve forms, no-code applications, pages, fields, roles, publication, permissions, and data sources through Convertigo tools." : (isFlowSurface ? "Your job is to inspect, author, test and validate FlowScript backends and Flow Svelte frontends through the managed Flow capability pack." : "Your job is to help the user by inspecting, editing, and validating Convertigo projects when the request requires project work."));
+    promptParts.push(isNoCodeSurface ? "You are an AI agent integrated in Convertigo NoCode Studio (C8Oforms)." : "You are an AI coding agent integrated in Convertigo Studio.");
+    promptParts.push(isNoCodeSurface ? "Your job is to help the user inspect, explain, and improve forms, no-code applications, pages, fields, roles, publication, permissions, and data sources through Convertigo tools." : "Your job is to inspect, edit, test, and validate Convertigo projects with the Legacy or Flow capability pack that owns the target model.");
     promptParts.push("Reply to the user in the same language as their message. The system and operational instructions are in English, but the user-facing answer must follow the user's language.");
     promptParts.push("While working, provide short user-facing progress updates when the agent interface supports streamed updates. Keep them factual, one or two sentences, in the user's language, and do not reveal hidden chain-of-thought; summarize what you are doing, what you found, or what you will try next.");
     promptParts.push("");
-    promptParts.push(isNoCodeSurface ? "Convertigo NoCode context:" : (isFlowSurface ? "Convertigo Flow context:" : "Convertigo Studio context:"));
-    promptParts.push("- Surface profile: " + capabilityProfile.id);
-    promptParts.push("- Authoring policy: " + capabilityProfile.authoringPolicy);
+    promptParts.push(isNoCodeSurface ? "Convertigo NoCode context:" : "Convertigo Studio context:");
+    promptParts.push("- Surface profile: " + (isNoCodeSurface ? "nocode" : "studio"));
+    if (!isNoCodeSurface) {
+      promptParts.push("- Routing hint: " + routingHint + " (a hint only; explicit user intent and the selected project's model take precedence).");
+    }
+    promptParts.push("- Authoring policy: " + (isNoCodeSurface ? capabilityProfile.authoringPolicy : "route-by-target-model"));
     promptParts.push("- Selected project: " + (targetProject.length ? targetProject : "none"));
     if (isNoCodeSurface) {
       promptParts.push("- Project selection is optional in this surface. Do not require an Eclipse/Studio selected project before inspecting or explaining C8Oforms/no-code resources.");
@@ -4707,7 +4719,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (targetProject.length && viewerCdpEndpoint.length) {
       promptParts.push("- Latest Studio viewer CDP endpoint for this turn: " + viewerCdpEndpoint);
       promptParts.push("- Ignore older Studio viewer CDP endpoints from previous conversation history; they are stale after a builder/view restart.");
-      promptParts.push(isFlowSurface ? "- Browser proof must use the managed Playwright MCP/browser-control tools attached to that Studio JxBrowser endpoint. Use the Flow capability pack's asynchronous viewer preparation and readiness contract; never substitute the legacy mobile builder workflow. If Playwright still targets another URL after readiness, report the host configuration problem and do not open a separate browser, tab, page, Node script, or raw CDP workaround." : "- Browser proof must use the managed Playwright MCP/browser-control tools attached to that Studio JxBrowser endpoint. If the browser tools show `about:blank` while the builder is not ready, poll `convertigo.mobile-builder-open` with `stateOnly=true`, `wait=true`, and a short timeout before retrying Playwright. If a waited builder result reports `browserControlReady:true` but the browser tools still show another URL, `about:blank`, or no config for that endpoint, report the managed Playwright MCP configuration problem and do not open a separate browser, tab, page, Node script, or raw CDP workaround.");
+      promptParts.push("- Browser proof must use the managed Playwright MCP/browser-control tools attached to that Studio JxBrowser endpoint and the selected capability pack's viewer readiness contract. If the browser remains blank or attached elsewhere after readiness, report the managed configuration problem; do not open a separate browser, tab, page, Node script, or raw CDP workaround.");
     }
     var simpleViewerFollowup = shouldUseSimpleViewerFollowup(rawQuestion, options);
     if (simpleViewerFollowup) {
@@ -4717,7 +4729,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Do not use or reread managed skills, do not read `SKILL.md`, do not call `resources/list`, `prompts/list`, `convertigo.read_mcp_resource`, `project-list`, or broad tree inspection before acting.");
       promptParts.push("- Do not run shell, PowerShell, UIAutomation, Node scripts, raw CDP, external browsers, or new tabs.");
       promptParts.push("- First call the managed Playwright/browser MCP current-tab/list-tabs tool and confirm it is on the selected project viewer URL. If it is already on the viewer, perform the requested click/check directly with Playwright.");
-      promptParts.push(isFlowSurface ? "- If the current browser target is stale or blank, use the Flow capability pack's readiness operation and start the dev viewer asynchronously only when needed, then retry Playwright after readiness." : "- If the current browser target is stale or blank, poll `convertigo.mobile-builder-open` for the selected project with `stateOnly=true`, `wait=true`, and a short timeout such as 20-30 seconds, then retry Playwright when the result reports `browserControlReady:true`. Do not wait a full minute for this simple follow-up; report the blocker only if the waited result times out or Playwright is still attached elsewhere after readiness.");
+      promptParts.push("- If the current browser target is stale or blank, use the selected capability pack's readiness operation and start the viewer asynchronously only when needed, then retry Playwright after readiness.");
     } else if (establishedAgentFollowup) {
       promptParts.push("");
       promptParts.push("Continuation rules for this turn:");
@@ -4727,16 +4739,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("");
     promptParts.push("Operational rules:");
-    promptParts.push(isFlowSurface ? "- Use only the MCP surface and workflow installed by the managed Flow capability pack for project reads, mutations, generation and validation. Never use the legacy MCP, curl, handwritten JSON-RPC, or filesystem mutation as a fallback." : "- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
+    promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode MCP/tools for all form and no-code work." : "- Route the task through the managed `convertigo-studio` skill before authoring. Explicit Flow/FlowScript/Flow Svelte intent selects `convertigo-flow`; explicit Legacy/NGX intent selects `convertigo`; otherwise inspect the selected project's model and choose its owner.");
+    if (!isNoCodeSurface) {
+      promptParts.push("- After routing, use only the owning MCP for each target model. Never use curl, handwritten JSON-RPC, YAML edits, generated-file edits, or the other MCP as a fallback for a failed mutation.");
+    }
     promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- When a project is selected, work only on it unless the user explicitly asks for another project.");
     promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- A missing project selection does not block an explicit new-project or new-application request. Derive a concise valid technical name from the request when none was supplied, check for collisions with Convertigo MCP, create the starter project, and continue. Ask for a selection only when the user wants work on an existing project that cannot be identified.");
     if (!simpleViewerFollowup && !establishedAgentFollowup) {
-      promptParts.push("- Prefer the managed " + capabilityProfile.skillSlug + " skill when the provider exposes skills." + (isFlowSurface ? " Reuse its backend and frontend specialists instead of spawning a new agent for every lot." : ""));
+      promptParts.push(isNoCodeSurface
+        ? "- Read and follow the managed `" + capabilityProfile.skillSlug + "` skill before the first authoring operation."
+        : "- Read and follow the managed `convertigo-studio` routing skill before the first authoring operation, then read only the selected capability pack's specialist guidance.");
     }
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, _private/svelte, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
     promptParts.push("- If the user asks for advice only, answer without modifying the project.");
-    promptParts.push(isFlowSurface ? "- For UI clicks, button presses and visual checks, prepare or reuse the Flow Svelte dev viewer through the capability pack, then use the managed Playwright MCP attached to the Studio JxBrowser endpoint." : "- For UI clicks, button presses, visual checks, or browser interactions, target the Convertigo app/viewer, not the Studio shell or operating-system UI. First identify or create the target project and open or reuse its mobile builder through Convertigo MCP. Then use the managed Playwright MCP/browser-control tools attached to the returned Studio JxBrowser debug endpoint.");
-    promptParts.push(isFlowSurface ? "- If Playwright is unavailable, still blank after Flow readiness, or attached to another endpoint, report the managed viewer configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround." : "- If an existing project or button still cannot be identified, explain that blocker and ask for the missing context. If the managed Playwright/browser-control tools are unavailable or not attached to the returned Studio JxBrowser endpoint, first distinguish builder warm-up from configuration failure: `about:blank` before `browserControlReady:true` means poll `mobile-builder-open(stateOnly=true, wait=true)`, while mismatch after `browserControlReady:true` means report the managed Playwright MCP configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround unless the user explicitly asks to operate the Studio/OS chrome itself.");
+    promptParts.push(isNoCodeSurface ? "- Use the NoCode capability's own validation workflow." : "- For UI clicks, button presses, and visual checks, prepare or reuse the viewer through the selected capability pack, then use the managed Playwright MCP attached to the Studio JxBrowser endpoint.");
+    promptParts.push("- If the managed Playwright/browser-control tools are unavailable, blank after readiness, or attached elsewhere, report the configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround.");
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
     promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
     promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");

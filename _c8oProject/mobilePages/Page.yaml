@@ -992,13 +992,25 @@ scriptContent:
         		return ''user'';
         	}
         
-        	public getAgentSkillProfile() {
-        		var value = '''';
-        		try { value = '''' + (this.getAssistantQueryParam(''agentProfile'') || this.getAssistantQueryParam(''skillProfile'') || this.getAssistantQueryParam(''assistantContext'') || this.getAssistantQueryParam(''assistantSurface'') || ''''); } catch (e) {}
-        		value = value.replace(/^\s+|\s+$/g, '''').toLowerCase();
-        		if (value === ''nocode'' || value === ''c8oforms'' || value === ''forms'') { return ''nocode''; }
-        		return '''';
-        	}
+            public getExplicitAssistantQueryParam(name) {
+                try {
+                    var raw = this.getAssistantUrlSearch ? this.getAssistantUrlSearch() : '''';
+                    if (!raw.length) { return ''''; }
+                    return '''' + ((new URLSearchParams(raw)).get(name) || '''');
+                } catch (e) {}
+                return '''';
+            }
+            public getAgentSkillProfile() {
+                var value = '''';
+                try { value = '''' + (this.getExplicitAssistantQueryParam(''agentProfile'') || this.getExplicitAssistantQueryParam(''skillProfile'') || ''''); } catch (e) {}
+                if (!value.length) {
+                    try { value = '''' + (this.getAssistantQueryParam(''agentProfile'') || this.getAssistantQueryParam(''skillProfile'') || this.getAssistantQueryParam(''assistantContext'') || this.getAssistantQueryParam(''assistantSurface'') || ''''); } catch (e2) {}
+                }
+                value = value.replace(/^\s+|\s+$/g, '''').toLowerCase();
+                if (value === ''nocode'' || value === ''c8oforms'' || value === ''forms'') { return ''nocode''; }
+                if (value === ''flow'' || value === ''flowscript'' || value === ''flow-svelte'' || value === ''frontbuilder-svelte'') { return ''flow''; }
+                return '''';
+            }
         
         	public getAssistantSurfaceHint() {
         		var hint = '''';

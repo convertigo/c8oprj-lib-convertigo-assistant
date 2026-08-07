@@ -35,11 +35,11 @@ rediscovering the same context.
 - Agent provider selection is a global setting exposed in the agent management
   panel/drawer, not in the prompt footer and not asked again for every new
   conversation. Model and reasoning remain lightweight prompt/runtime controls.
-  Managed Convertigo skills remain invisible to the user: Studio uses
-  `convertigo-generalist`, while C8Oforms/NoCode uses `convertigo-nocode`.
-  Experimental Flow conversations use `convertigo-flow-mcp` only on the private
-  Flow integration branch; do not expose that profile from the 8.4.4 release
-  branch yet.
+  Managed Convertigo skills remain invisible to the user. On the private Flow
+  integration branch, the `studio` user has one history and one Codex home with
+  both `convertigo-generalist` and the Flow skill pack; the routing profile is
+  only a hint. C8Oforms/NoCode uses a different authenticated user and only
+  `convertigo-nocode`. Do not expose Flow from the 8.4.4 release branch yet.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
 - Keep start templates only on the new conversation screen.
@@ -123,10 +123,16 @@ rediscovering the same context.
   optional metadata (`projectNames`, `primaryProject`) and must not be inferred
   from an unrelated Studio or NoCode selection unless the caller explicitly asks
   for current/selected project context.
+- Never filter the `studio` conversation list by Legacy/Flow routing profile.
+  Keep that profile on each record for diagnostics and future badges. NoCode
+  history remains naturally isolated by its non-Studio user identity.
 - Keep `surface`, `authoringPolicy`, installed `capabilities`, and
   `projectContext` independent. Consume the capability descriptor returned by
   AgentBridge settings. Flow tool names and recipes belong to `lib_flow_mcp`;
   do not duplicate them in Assistant prompts.
+- `assistantSurface=studio` identifies the host UI only. It must not select the
+  Legacy profile; the managed `convertigo-studio` skill routes each task from
+  explicit intent and the target project's model.
 - When a conversation starts without a selected project, infer its first
   `primaryProject` only from successful structured project/viewer tool events,
   such as an imported project or a `mobile-builder-open` result. Never infer it
