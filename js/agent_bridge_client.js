@@ -1083,7 +1083,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function agentStartPayload(state, options, provider, installRequested) {
     options = options || {};
     provider = normalizeProvider(provider || (state && state.provider));
-    var env = provider === "vibe" ? credentialsEnv() : {};
+    var env = {};
     if (provider === "codex") {
       var codexScope = codexHomeScopeForRun(options);
       return {
@@ -1144,6 +1144,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
       env: JSON.stringify(env),
+      credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
       requestTimeoutMs: "60000"
     };
@@ -3960,15 +3961,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return true;
     }
     return state.setupRequired === true || !trim(state.setupReport && state.setupReport.status).length;
-  }
-
-  function credentialsEnv() {
-    var env = readEnvFile(new File(new File(String(System.getProperty("user.home")), ".vibe"), ".env"));
-    var selected = {};
-    if (env.MISTRAL_API_KEY) {
-      selected.MISTRAL_API_KEY = env.MISTRAL_API_KEY;
-    }
-    return selected;
   }
 
   function agentSetupPayload(state, options, installOverride) {
