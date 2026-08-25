@@ -416,6 +416,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                                 ''currentUrl'', ''nocodeCurrentUrl'', ''currentRoute'', ''nocodeCurrentRoute'',
                                 ''currentPath'', ''currentFormId'', ''nocodeCurrentFormId'', ''formId'',
                                 ''applicationId'', ''currentPage'', ''pageId'',
+                                ''agentOnboardingFeatureVersion'', ''studioVersion'', ''assistantUrl'', ''assistantRuntime'',
+                                ''localConvertigoUrl'', ''localAssistantUrl'', ''downloadUrl'', ''canActivateLocalAgent'',
+                                ''localAssistantInstalled'', ''localMcpInstalled'', ''localAgentBridgeInstalled'',
+                                ''localAgentStackAvailable'', ''localAgentStackState'', ''localAgentStackLoading'',
+                                ''localAgentBridgeAvailable'', ''agentBridgeAvailable'',
+                                ''convertigoAssistantImportUrl'', ''convertigoMcpImportUrl'', ''convertigoAgentBridgeImportUrl'',
                                 ''browserDebugUrl'', ''browserDevToolsJsonUrl'', ''browserDevToolsWebSocketUrl'',
                                 ''playwrightCdpEndpoint'', ''playwrightMcpEndpoint'', ''viewerCdpEndpoint''
                             ];
@@ -431,10 +437,19 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                                     dynamicPage.applyAgentHostContext(context);
                                 }
                             } catch (eApply) {}
-                            var hostContext = dynamicPage.agentHostContext || (page.local && page.local.AgentHostContext) || {};
+                            var hostContext = (page.global && page.global.AgentHostContext) || dynamicPage.agentHostContext || (page.local && page.local.AgentHostContext) || {};
                             for (var i = 0; i < keys.length; i++) {
                                 var key = keys[i];
-                                var value = cleanContextValue(context[key]);
+                                var rawValue = context[key];
+                                if (rawValue === undefined || rawValue === null) {
+                                    continue;
+                                }
+                                if (typeof rawValue === ''boolean'' || typeof rawValue === ''number'') {
+                                    hostContext[key] = rawValue;
+                                    page.global[key] = rawValue;
+                                    continue;
+                                }
+                                var value = cleanContextValue(rawValue);
                                 if (value.length) {
                                     hostContext[key] = value;
                                     page.global[key] = value;
@@ -452,6 +467,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                             }
                             dynamicPage.agentHostContext = hostContext;
                             page.local.AgentHostContext = hostContext;
+                            page.global.AgentHostContext = hostContext;
                         } catch (eMerge) {
                             try { page.c8o.log.warn(''[Assistant] unable to merge host context'', eMerge); } catch (eLog) {}
                         }

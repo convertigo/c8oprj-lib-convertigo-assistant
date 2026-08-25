@@ -6169,6 +6169,66 @@ title: Convertigo assistant
                             page.tick();
                         }
                         resolve();
+      ↓WaitForAgentHostContext [ngx.components.UICustomAction-1787666952822]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                '        if (!page.local) {
+                            page.local = {};
+                        }
+                        var studioSurface = false;
+                        try {
+                            studioSurface = !!(page.isAgentBridgeMode && page.isAgentBridgeMode()
+                                && page.isStudioAssistantSurface && page.isStudioAssistantSurface());
+                        } catch (e0) {}
+                        if (!studioSurface) {
+                            resolve();
+                            return;
+                        }
+                        var startedAt = Date.now();
+                        var maxWaitMs = 95000;
+                        var requested = false;
+                        var clean = function(value) {
+                            return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
+                        };
+                        var truthy = function(value) {
+                            if (value === true) { return true; }
+                            var text = clean(value).toLowerCase();
+                            return text === ''1'' || text === ''true'' || text === ''yes'';
+                        };
+                        var poll = function() {
+                            var context: any = {};
+                            try {
+                                context = (page.global && page.global.AgentHostContext)
+                                    || (page.getAgentHostContextObject && page.getAgentHostContextObject())
+                                    || {};
+                                if (page.applyAgentHostContext && context && Object.keys(context).length) {
+                                    page.applyAgentHostContext(context);
+                                }
+                            } catch (e1) {}
+                            var state = clean(context.localAgentStackState).toLowerCase();
+                            var ready = truthy(context.localAgentBridgeAvailable)
+                                || truthy(context.agentBridgeAvailable)
+                                || truthy(context.localAgentStackAvailable);
+                            var settled = state.length > 0 && state !== ''loading'';
+                            if (ready || settled || Date.now() - startedAt >= maxWaitMs) {
+                                page.tick();
+                                resolve();
+                                return;
+                            }
+                            if (!requested) {
+                                requested = true;
+                                try {
+                                    if (page.postAgentHostMessage) {
+                                        page.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
+                                    }
+                                } catch (e2) {}
+                            }
+                            setTimeout(poll, state === ''loading'' ? 500 : 100);
+                        };
+                        poll();'
       ↓CallSequence [ngx.components.UIDynamicAction-1744302843894]: 
         beanData: |
           '{
