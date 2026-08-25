@@ -1143,6 +1143,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       install: installRequested ? "true" : "false",
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
       env: JSON.stringify(env),
       credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
@@ -3074,6 +3075,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.answer = text;
       return;
     }
+    if (normalizeProvider(state && state.provider) === "vibe") {
+      // ACP agent_message_chunk content is a delta. Treating short, repeated
+      // fragments as cumulative snapshots drops valid text such as list rows.
+      state.answer += text;
+      return;
+    }
     var currentComparable = comparableAnswerText(current);
     var nextComparable = comparableAnswerText(text);
     if (nextComparable === currentComparable) {
@@ -3115,11 +3122,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (text.indexOf("<tool_error>") !== -1 || text.indexOf("\"JsonResponse\"") !== -1) {
       return true;
     }
-    if (!trim(state && state.progressLog).length) {
-      return false;
-    }
-    var words = text.split(/\s+/);
-    return text.length < 24 && words.length <= 3;
+    return false;
   }
 
   function incompleteFinalAnswer(state) {
@@ -3231,9 +3234,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state || !state.progressEvents || typeof state.progressEvents.length === "undefined") {
       return;
     }
-    var cleaned = [];
+    var cleanedReversed = [];
     var seen = {};
-    for (var i = 0; i < state.progressEvents.length; i++) {
+    var seenActivityText = {};
+    for (var i = state.progressEvents.length - 1; i >= 0; i--) {
       var item = state.progressEvents[i];
       if (!item) {
         continue;
@@ -3247,18 +3251,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       item.text = normalizedText || normalizedTitle;
       item.title = normalizedTitle || item.text;
-      if (progressLineLooksLikeAgentLifecycle(rawText) || progressLineLooksLikeAgentLifecycle(rawTitle)) {
-        item.key = eventKeyForText(trim(item.type || "narrative") || "narrative", item.title || item.text);
+      var itemType = trim(item.type || "narrative") || "narrative";
+      var activityTextKey = trim(String(item.text || item.title || "").replace(/\s+/g, " ")).toLowerCase();
+      if (itemType !== "tool" && activityTextKey.length) {
+        if (seenActivityText[activityTextKey]) {
+          continue;
+        }
+        seenActivityText[activityTextKey] = true;
       }
-      var key = trim(item.key || eventKeyForText(trim(item.type || "narrative") || "narrative", item.title || item.text));
+      if (progressLineLooksLikeAgentLifecycle(rawText) || progressLineLooksLikeAgentLifecycle(rawTitle)) {
+        item.key = eventKeyForText(itemType, item.title || item.text);
+      }
+      var key = trim(item.key || eventKeyForText(itemType, item.title || item.text));
       if (seen[key]) {
         continue;
       }
       item.key = key;
       seen[key] = true;
-      cleaned.push(item);
+      cleanedReversed.push(item);
     }
-    state.progressEvents = cleaned;
+    state.progressEvents = cleanedReversed.reverse();
   }
 
   function appendObservedSteps(state, text) {
@@ -3954,10 +3966,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (installRequested !== true) {
       return false;
     }
-    if (normalizeProvider(provider) === "codex" && trim(state.externalSessionId || state.codexThreadId || state.sessionId).length) {
+    if (trim(state.externalSessionId || state.codexThreadId || state.sessionId).length) {
       return false;
     }
-    if (boolValue(options.forceCodexInstall || options.forceInstall || options.forceAgentInstall, false)) {
+    if (boolValue(options.forceCodexInstall || options.forceVibeInstall || options.forceInstall || options.forceAgentInstall, false)) {
       return true;
     }
     return state.setupRequired === true || !trim(state.setupReport && state.setupReport.status).length;
@@ -4910,6 +4922,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         if (provider === "codex" && start.setup) {
           state.setupReport = publicSetupReport(start.setup);
+        }
+        if (provider === "vibe" && start.state) {
+          state.model = trim(start.state.model) || state.model;
+          state.reasoningEffort = normalizeReasoningEffort(start.state.reasoningEffort) || state.reasoningEffort;
         }
         rememberCodexSessionFromResult(state, start);
         var startedHome = start.home || (start.state && start.state.home) || (start.setup && start.setup.setup && start.setup.setup.home);
