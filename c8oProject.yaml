@@ -1,19 +1,13 @@
 ↑convertigo: 8.4.0.m006
 ↓ConvertigoAssistant [core.Project]: 
   comment: |
-    'This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
+    Tigo is Convertigo's local AI agent for Studio. It connects OpenAI Codex or Mistral Vibe to the current workspace through Convertigo MCP and Convertigo Agent Bridge, with managed local runtimes and Reveal mode.
     
-    ## Symbols
-    
-    
-    | Symbol    | Usage |
-    |-----------|-------------------|
-    |lib_C8Oforms_AI.GPT.apikey.secret  | the openAI Api Key |
-    '
+    Requires Convertigo Studio 8.4.4 or newer.
   contextTimeout: 510
   corsOrigin: =Origin
   httpSessionTimeout: 520
-  version: 1.2.27
+  version: 1.2.29
   ↓HostedAssistant [connectors.HttpConnector]: 🗏 connectors/HostedAssistant.yaml
   ↓HostedAssistantBuffer [connectors.HttpConnector]: 🗏 connectors/HostedAssistantBuffer.yaml
   ↓LightRAG [connectors.HttpConnector]: 🗏 connectors/LightRAG.yaml

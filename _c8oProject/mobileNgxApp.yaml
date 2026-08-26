@@ -534,6 +534,15 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                     });
                     resolve();
             '
+    build_assets: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{"glob":"tigo-head.png","input":"../../assets","output":"/assets/"}'
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
     beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.GetVersion"}'
     ↓SetLocal [ngx.components.UIDynamicAction-1750662135534]: 
@@ -3719,6 +3728,19 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             --progress-background: var(--tw-primary);
             border-radius: 999px;
             overflow: hidden;
+          }
+          
+          /* Tigo agent menu identity */
+          ion-menu .agent-menu-tigo-icon {
+            display: block;
+            flex: 0 0 24px;
+            height: 24px;
+            margin-inline-end: 0.58rem;
+            object-fit: contain;
+            width: 24px;
+          }
+          ion-menu ion-item.selected .agent-menu-tigo-icon {
+            filter: drop-shadow(0 0 4px rgba(var(--ion-color-primary-rgb, 8, 145, 178), 0.34));
           }
           '
 ↓Font [ngx.components.UIFont-1771929741657]: 
