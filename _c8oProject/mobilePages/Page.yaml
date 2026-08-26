@@ -78,6 +78,17 @@ scriptContent:
         				Agent_Settings_Copy: "Choose the agent, model, reasoning level, and manage the local CLI runtime.",
         				Agent_Settings_Continue: "Use these settings and continue",
         				Agent_Runtime_Local: "Local runtime",
+        				Agent_Stack_Local: "Local Agent stack",
+        				Agent_Stack_Checking: "Checking the published stack...",
+        				Agent_Stack_Update_Available: "A stack update is available.",
+        				Agent_Stack_Up_To_Date: "The local stack is up to date.",
+        				Agent_Stack_Missing_Versions: "Installed project versions are not available yet.",
+        				Agent_Stack_Source_Managed: "These projects come from local source checkouts and are not overwritten automatically.",
+        				Agent_Stack_Update: "Update stack",
+        				Agent_Stack_Reinstall: "Reinstall stack",
+        				Agent_Stack_Updating: "Stack update in progress...",
+        				Agent_Stack_Update_Disabled: "Automatic updates are disabled for local source checkouts.",
+        				Agent_Stack_Check_Failed: "Unable to check the published stack.",
         				Agent_Runtime_Checking: "Checking the environment...",
         				Agent_Runtime_Not_Checked: "Version not checked",
         				Agent_Runtime_Open_To_Check: "Open settings to check the runtime.",
@@ -111,6 +122,17 @@ scriptContent:
         				Agent_Settings_Copy: "Choisissez l’agent, le modèle, le niveau de raisonnement et gérez le runtime CLI local.",
         				Agent_Settings_Continue: "Utiliser ces réglages et continuer",
         				Agent_Runtime_Local: "Runtime local",
+        				Agent_Stack_Local: "Stack Agent locale",
+        				Agent_Stack_Checking: "Vérification de la stack publiée...",
+        				Agent_Stack_Update_Available: "Une mise à jour de la stack est disponible.",
+        				Agent_Stack_Up_To_Date: "La stack locale est à jour.",
+        				Agent_Stack_Missing_Versions: "Les versions des projets installés ne sont pas encore disponibles.",
+        				Agent_Stack_Source_Managed: "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement.",
+        				Agent_Stack_Update: "Mettre à jour la stack",
+        				Agent_Stack_Reinstall: "Réinstaller la stack",
+        				Agent_Stack_Updating: "Mise à jour de la stack...",
+        				Agent_Stack_Update_Disabled: "La mise à jour automatique est désactivée pour les sources locales.",
+        				Agent_Stack_Check_Failed: "Impossible de vérifier la stack publiée.",
         				Agent_Runtime_Checking: "Vérification de l’environnement...",
         				Agent_Runtime_Not_Checked: "Version non vérifiée",
         				Agent_Runtime_Open_To_Check: "Ouvrez la configuration pour vérifier le runtime.",
@@ -144,6 +166,17 @@ scriptContent:
         				Agent_Settings_Copy: "Scegli l’agente, il modello, il livello di ragionamento e gestisci il runtime CLI locale.",
         				Agent_Settings_Continue: "Usa queste impostazioni e continua",
         				Agent_Runtime_Local: "Runtime locale",
+        				Agent_Stack_Local: "Stack Agent locale",
+        				Agent_Stack_Checking: "Verifica dello stack pubblicato...",
+        				Agent_Stack_Update_Available: "È disponibile un aggiornamento dello stack.",
+        				Agent_Stack_Up_To_Date: "Lo stack locale è aggiornato.",
+        				Agent_Stack_Missing_Versions: "Le versioni dei progetti installati non sono ancora disponibili.",
+        				Agent_Stack_Source_Managed: "Questi progetti provengono da sorgenti locali e non vengono sostituiti automaticamente.",
+        				Agent_Stack_Update: "Aggiorna stack",
+        				Agent_Stack_Reinstall: "Reinstalla stack",
+        				Agent_Stack_Updating: "Aggiornamento dello stack...",
+        				Agent_Stack_Update_Disabled: "Gli aggiornamenti automatici sono disabilitati per i sorgenti locali.",
+        				Agent_Stack_Check_Failed: "Impossibile verificare lo stack pubblicato.",
         				Agent_Runtime_Checking: "Verifica dell’ambiente...",
         				Agent_Runtime_Not_Checked: "Versione non verificata",
         				Agent_Runtime_Open_To_Check: "Apri la configurazione per verificare il runtime.",
@@ -177,6 +210,17 @@ scriptContent:
         				Agent_Settings_Copy: "Elija el agente, el modelo, el nivel de razonamiento y gestione el runtime CLI local.",
         				Agent_Settings_Continue: "Usar esta configuración y continuar",
         				Agent_Runtime_Local: "Runtime local",
+        				Agent_Stack_Local: "Stack local del Agente",
+        				Agent_Stack_Checking: "Comprobando el stack publicado...",
+        				Agent_Stack_Update_Available: "Hay una actualización del stack disponible.",
+        				Agent_Stack_Up_To_Date: "El stack local está actualizado.",
+        				Agent_Stack_Missing_Versions: "Las versiones de los proyectos instalados aún no están disponibles.",
+        				Agent_Stack_Source_Managed: "Estos proyectos proceden de fuentes locales y no se reemplazan automáticamente.",
+        				Agent_Stack_Update: "Actualizar stack",
+        				Agent_Stack_Reinstall: "Reinstalar stack",
+        				Agent_Stack_Updating: "Actualizando el stack...",
+        				Agent_Stack_Update_Disabled: "Las actualizaciones automáticas están deshabilitadas para fuentes locales.",
+        				Agent_Stack_Check_Failed: "No se pudo comprobar el stack publicado.",
         				Agent_Runtime_Checking: "Comprobando el entorno...",
         				Agent_Runtime_Not_Checked: "Versión no comprobada",
         				Agent_Runtime_Open_To_Check: "Abra la configuración para comprobar el runtime.",
@@ -319,7 +363,7 @@ scriptContent:
         		try {
         			if (!context || typeof context !== ''object'') { return; }
         			var next: any = {};
-        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAgentStackAvailable'',''localAgentStackState'',''localAgentStackLoading'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl''];
+        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAssistantVersion'',''localMcpVersion'',''localAgentBridgeVersion'',''localAgentStackUpdateAllowed'',''localAgentStackAvailable'',''localAgentStackState'',''localAgentStackLoading'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl''];
         			for (var i = 0; i < keys.length; i++) {
         				var key = keys[i];
         				var raw = context[key];
@@ -568,6 +612,7 @@ scriptContent:
         		this.setAgentSettingsUrlState(true);
         		if (this.setEnableChat) { this.setEnableChat(); }
         		this.tick();
+        		this.refreshAgentStackRelease(true);
         		this.refreshAgentSettingsAfterHostContext(true);
         	}
         
@@ -786,6 +831,7 @@ scriptContent:
         			var message = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue(status && status.message) : '''';
         			this.local.AgentActivationStatus = text;
         			this.local.AgentActivationMessage = message;
+        			this.local.AgentActivationStartedAt = 0;
         			this.local.AgentActivationInProgress = text === ''running'' && !(status && status.done === true);
         			if (text === ''success'') {
         				var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
@@ -855,13 +901,178 @@ scriptContent:
         		return state === ''unsupported'' ? ''download-outline'' : ''cloud-download-outline'';
         	}
         
+        	public getEmbeddedAgentStackRelease() {
+        		return {
+        			schemaVersion: 1,
+        			channel: "beta",
+        			projects: [
+        				{ name: "ConvertigoMCP", version: "0.0.41", tag: "v0.0.41", importUrl: "ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.41/ConvertigoMCP.car" },
+        				{ name: "ConvertigoAgentBridge", version: "0.2.15", tag: "v0.2.15", importUrl: "ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.15/ConvertigoAgentBridge.car" },
+        				{ name: "ConvertigoAssistant", version: "1.2.30", tag: "v1.2.30-beta1", importUrl: "ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.30-beta1/ConvertigoAssistant.car" }
+        			]
+        		};
+        	}
+        
+        	public normalizeAgentStackRelease(value) {
+        		var candidates: any = [];
+        		var current: any = value;
+        		for (var depth = 0; current && typeof current === "object" && depth < 5; depth++) {
+        			candidates.push(current);
+        			current = current.response || current.document || current.data || current.object || current.result;
+        		}
+        		for (var i = 0; i < candidates.length; i++) {
+        			var candidate: any = candidates[i] || {};
+        			var raw: any = candidate.projects;
+        			if (!raw) { continue; }
+        			if (!(raw instanceof Array)) {
+        				raw = raw.project || raw.item || raw.projects || [raw];
+        			}
+        			if (!(raw instanceof Array)) { raw = [raw]; }
+        			var projects: any = [];
+        			for (var j = 0; j < raw.length; j++) {
+        				var item: any = raw[j] || {};
+        				var name = this.normalizeAgentHostContextValue(item.name);
+        				var version = this.normalizeAgentHostContextValue(item.version);
+        				var importUrl = this.normalizeAgentHostContextValue(item.importUrl || item.importURL || item.url);
+        				if (name.length && version.length && importUrl.length) {
+        					projects.push({ name: name, version: version, tag: this.normalizeAgentHostContextValue(item.tag), importUrl: importUrl });
+        				}
+        			}
+        			if (projects.length) {
+        				return { schemaVersion: Number(candidate.schemaVersion || 1), channel: this.normalizeAgentHostContextValue(candidate.channel || "stable"), projects: projects };
+        			}
+        		}
+        		return null;
+        	}
+        
+        	public refreshAgentStackRelease(force = false) {
+        		if (!this.local) { this.local = {}; }
+        		if (this.local.AgentStackReleaseLoading === true) { return; }
+        		if (force !== true && this.local.AgentStackRelease && this.local.AgentStackRelease.projects && this.local.AgentStackRelease.projects.length) { return; }
+        		this.local.AgentStackRelease = this.local.AgentStackRelease || this.getEmbeddedAgentStackRelease();
+        		if (!this.c8o || !this.c8o.callJsonObject) { return; }
+        		this.local.AgentStackReleaseLoading = true;
+        		this.local.AgentStackReleaseError = "";
+        		this.tick();
+        		this.c8o.callJsonObject("ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response) => {
+        			var result = response && response.result ? response.result : response;
+        			var release = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(result) : null;
+        			if (release && release.projects && release.projects.length) {
+        				this.local.AgentStackRelease = release;
+        			} else {
+        				this.local.AgentStackReleaseError = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
+        			}
+        			this.local.AgentStackReleaseLoading = false;
+        			this.tick();
+        		}).catch((error) => {
+        			this.local.AgentStackReleaseLoading = false;
+        			this.local.AgentStackReleaseError = "" + error;
+        			this.tick();
+        		});
+        	}
+        
         	public getAgentActivationProjects() {
-        		var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue.bind(this) : function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-        		return [
-                    { name: ''ConvertigoAssistant'', importUrl: clean(''ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.29-beta1/ConvertigoAssistant.car'') },
-                    { name: ''ConvertigoMCP'', importUrl: clean(''ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.41/ConvertigoMCP.car'') },
-                    { name: ''ConvertigoAgentBridge'', importUrl: clean(''ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.15/ConvertigoAgentBridge.car'') }
-        		];
+        		var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue.bind(this) : function(value) { return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, ""); };
+        		var release: any = this.local && this.local.AgentStackRelease ? this.local.AgentStackRelease : this.getEmbeddedAgentStackRelease();
+        		var source: any = release && release.projects ? release.projects : [];
+        		var projects: any = [];
+        		for (var i = 0; i < source.length; i++) {
+        			var item: any = source[i] || {};
+        			var name = clean(item.name);
+        			var importUrl = clean(item.importUrl);
+        			if (name.length && importUrl.length) {
+        				projects.push({ name: name, version: clean(item.version), tag: clean(item.tag), importUrl: importUrl });
+        			}
+        		}
+        		return projects;
+        	}
+        
+        	public compareAgentStackVersions(left, right) {
+        		var parse = function(value) {
+        			var text = ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "").replace(/^v/i, "").split("-")[0];
+        			var parts = text.split(".");
+        			var out = [];
+        			for (var i = 0; i < 4; i++) {
+        				var number = Number(parts[i] || 0);
+        				out.push(isNaN(number) ? 0 : number);
+        			}
+        			return out;
+        		};
+        		var a = parse(left);
+        		var b = parse(right);
+        		for (var i = 0; i < a.length; i++) {
+        			if (a[i] < b[i]) { return -1; }
+        			if (a[i] > b[i]) { return 1; }
+        		}
+        		return 0;
+        	}
+        
+        	public getInstalledAgentStackVersion(projectName) {
+        		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        		if (projectName === "ConvertigoAssistant") { return this.normalizeAgentHostContextValue(context.localAssistantVersion); }
+        		if (projectName === "ConvertigoMCP") { return this.normalizeAgentHostContextValue(context.localMcpVersion); }
+        		if (projectName === "ConvertigoAgentBridge") { return this.normalizeAgentHostContextValue(context.localAgentBridgeVersion); }
+        		return "";
+        	}
+        
+        	public isAgentStackUpdateAllowed() {
+        		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        		return context.localAgentStackUpdateAllowed === true || ("" + context.localAgentStackUpdateAllowed).toLowerCase() === "true";
+        	}
+        
+        	public isAgentStackUpdateAvailable() {
+        		var projects = this.getAgentActivationProjects ? this.getAgentActivationProjects() : [];
+        		for (var i = 0; i < projects.length; i++) {
+        			var installed = this.getInstalledAgentStackVersion(projects[i].name);
+        			if (installed.length && this.compareAgentStackVersions(installed, projects[i].version) < 0) { return true; }
+        		}
+        		return false;
+        	}
+        
+        	public getAgentStackVersionText() {
+        		var labels: any = { ConvertigoAssistant: "Assistant", ConvertigoMCP: "MCP", ConvertigoAgentBridge: "Bridge" };
+        		var projects = this.getAgentActivationProjects ? this.getAgentActivationProjects() : [];
+        		var parts: any = [];
+        		for (var i = 0; i < projects.length; i++) {
+        			var installed = this.getInstalledAgentStackVersion(projects[i].name);
+        			var target = this.normalizeAgentHostContextValue(projects[i].version);
+        			var value = installed.length ? installed : "?";
+        			if (installed.length && target.length && this.compareAgentStackVersions(installed, target) < 0) { value += " → " + target; }
+        			parts.push((labels[projects[i].name] || projects[i].name) + " " + value);
+        		}
+        		return parts.join(" · ");
+        	}
+        
+        	public getAgentStackStatusText() {
+        		if (this.local && this.local.AgentActivationInProgress === true) { return this.local.AgentActivationMessage || this.t("Agent_Stack_Updating", "Mise à jour de la stack..."); }
+        		if (this.local && this.local.AgentStackReleaseLoading === true) { return this.t("Agent_Stack_Checking", "Vérification de la stack publiée..."); }
+        		if (!this.isAgentStackUpdateAllowed()) { return this.t("Agent_Stack_Source_Managed", "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement."); }
+        		var projects = this.getAgentActivationProjects ? this.getAgentActivationProjects() : [];
+        		for (var i = 0; i < projects.length; i++) {
+        			if (!this.getInstalledAgentStackVersion(projects[i].name).length) { return this.t("Agent_Stack_Missing_Versions", "Les versions des projets installés ne sont pas encore disponibles."); }
+        		}
+        		if (this.isAgentStackUpdateAvailable()) { return this.t("Agent_Stack_Update_Available", "Une mise à jour de la stack est disponible."); }
+        		return this.t("Agent_Stack_Up_To_Date", "La stack locale est à jour.");
+        	}
+        
+        	public getAgentStackStatusClass() {
+        		if (this.local && (this.local.AgentActivationStatus === "error" || this.local.AgentStackReleaseError)) { return "agent-runtime-status error"; }
+        		return this.isAgentStackUpdateAvailable && this.isAgentStackUpdateAvailable() ? "agent-runtime-status update" : "agent-runtime-status";
+        	}
+        
+        	public getAgentStackActionText() {
+        		if (this.local && this.local.AgentActivationInProgress === true) { return this.t("Agent_Stack_Updating", "Mise à jour de la stack..."); }
+        		return this.isAgentStackUpdateAvailable && this.isAgentStackUpdateAvailable() ? this.t("Agent_Stack_Update", "Mettre à jour la stack") : this.t("Agent_Stack_Reinstall", "Réinstaller la stack");
+        	}
+        
+        	public triggerAgentStackUpdate() {
+        		if (!this.isAgentStackUpdateAllowed()) {
+        			if (!this.local) { this.local = {}; }
+        			this.local.AgentActivationMessage = this.t("Agent_Stack_Update_Disabled", "La mise à jour automatique est désactivée pour les sources locales.");
+        			this.tick();
+        			return;
+        		}
+        		this.triggerAgentOnboardingAction(true);
         	}
         
         	public openAgentExternalUrl(url) {
@@ -874,7 +1085,7 @@ scriptContent:
         		} catch (e) {}
         	}
         
-        	public triggerAgentOnboardingAction() {
+        	public triggerAgentOnboardingAction(forceUpdate = false) {
         		try {
         			var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
         			var context = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
@@ -885,7 +1096,7 @@ scriptContent:
         			}
         			if (!this.local) { this.local = {}; }
         			this.local.AgentActivationInProgress = true;
-        			this.local.AgentActivationMessage = this.t("Agent_Local_Activation_Start", "Activation de l''assistant local...");
+        			this.local.AgentActivationMessage = forceUpdate === true ? this.t("Agent_Stack_Updating", "Mise à jour de la stack...") : this.t("Agent_Local_Activation_Start", "Activation de l''assistant local...");
         			var message: any = {
         				type: ''ConvertigoAssistant.activateLocalAgent'',
         				payload: {
@@ -893,7 +1104,8 @@ scriptContent:
         					agentOnboardingFeatureVersion: context.agentOnboardingFeatureVersion || '''',
                             assistantPreferenceUrl: ''/projects/ConvertigoAssistant/DisplayObjects/mobile/'',
                             localAssistantPath: ''/projects/ConvertigoAssistant/DisplayObjects/mobile/'',
-        					projects: this.getAgentActivationProjects ? this.getAgentActivationProjects() : []
+        					projects: this.getAgentActivationProjects ? this.getAgentActivationProjects() : [],
+        					forceUpdate: forceUpdate === true
         				}
         			};
         			var stamp = (new Date()).getTime();
@@ -4392,6 +4604,94 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
+                ↓StackSettings [ngx.components.UIDynamicElement-1787742888340]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1787742888342]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-create-settings-block agent-runtime-settings agent-stack-settings agent-setting-section
+                  ↓StackLabel [ngx.components.UIDynamicElement-1787742888344]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1787742888346]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-create-label agent-runtime-label
+                    ↓Text [ngx.components.UIText-1787742888348]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.t('Agent_Stack_Local', 'Stack Agent locale')
+                  ↓StackVersion [ngx.components.UIDynamicElement-1787742888350]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1787742888352]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-runtime-version
+                    ↓Text [ngx.components.UIText-1787742888354]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackVersionText ? this.getAgentStackVersionText() : '''''
+                  ↓StackStatus [ngx.components.UIDynamicElement-1787742888356]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1787742888358]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackStatusClass ? this.getAgentStackStatusClass() : ''agent-runtime-status'''
+                    ↓Text [ngx.components.UIText-1787742888360]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackStatusText ? this.getAgentStackStatusText() : '''''
+                  ↓StackAction [ngx.components.UIDynamicElement-1787742888362]: 
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small"
+                      }'
+                    tagName: ion-button
+                    ↓Class [ngx.components.UIAttribute-1787742888364]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-runtime-action
+                    ↓Icon [ngx.components.UIDynamicElement-1787742888366]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Icon",
+                         "IconName": "plain:cloud-download-outline",
+                         "IconSlot": "plain:start"
+                        }'
+                      tagName: ion-icon
+                    ↓Text [ngx.components.UIText-1787742888368]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackActionText ? this.getAgentStackActionText() : this.t(''Agent_Stack_Update'', ''Mettre à jour la stack'')'
+                    ↓Event [ngx.components.UIControlEvent-1787742888370]: 
+                      ↓UpdateStack [ngx.components.UICustomAction-1787742889964]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                if (page.triggerAgentStackUpdate) { page.triggerAgentStackUpdate(); }
+                                resolve();
                 ↓RuntimeSettings [ngx.components.UIDynamicElement-1785253202525]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div

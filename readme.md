@@ -51,16 +51,21 @@ The companion projects are maintained separately:
 ## Updating
 
 Agent CLI versions are checked from the Tigo configuration page and cached for
-six hours. Updating the three Convertigo projects is a separate stack operation:
-the installed project versions must be compared with the selected release
-channel before importing newer `.car` packages.
+six hours. The same page compares the installed Assistant, MCP, and Agent Bridge
+versions with the published `stack-release.json` manifest. When an update is
+available, Tigo can import the three selected `.car` packages and reload the
+Assistant view. The manifest is fetched through a Convertigo HTTP connector, so
+the configured Convertigo proxy is used and the response is cached for six hours.
+
+Projects imported from local Git checkouts are detected as source-managed and
+are never overwritten by this operation.
 
 ## Development
 
 Import the active development branch with:
 
 ```text
-ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=codex/assistant-agent-bridge
+ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
 ```
 
 Convertigo project objects must be edited through Convertigo Studio or the

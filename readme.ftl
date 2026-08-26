@@ -34,6 +34,11 @@ Tigo offers to install `ConvertigoAssistant`, `ConvertigoMCP`, and
 `ConvertigoAgentBridge`, configure the local relative Assistant URL, and reload
 the view.
 
+The Tigo configuration page also compares installed project versions with the
+published stack manifest and can update CAR-managed installations. The manifest
+uses the configured Convertigo proxy and is cached for six hours. Local Git
+checkouts are detected and are never overwritten automatically.
+
 ## Companion projects
 
 - [Convertigo MCP](https://github.com/convertigo/c8oprj-c8o-mcp)
@@ -42,5 +47,5 @@ the view.
 ## Development import
 
 ```text
-ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=codex/assistant-agent-bridge
+ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
 ```
