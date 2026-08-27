@@ -110,15 +110,29 @@ tagName: ion-menu
          "LinkRouterDirection": "plain:root"
         }'
       tagName: ion-item
-      ↓Icon [ngx.components.UIDynamicElement-1782236319603]: 
+      ↓TigoIcon [ngx.components.UIDynamicElement-1787739214342]: 
         beanData: |
           '{
-           "ionBean": "Icon",
-           "IonColor": "plain:dark",
-           "IconName": "plain:sparkles-outline",
-           "IconSlot": "plain:start"
+           "ionBean": "Image",
+           "url": "source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\/tigo-head.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+           "width": "plain:24",
+           "height": "plain:24",
+           "alt": "plain:Tigo"
           }'
-        tagName: ion-icon
+        selfClose: true
+        tagName: img
+        ↓Class [ngx.components.UIAttribute-1787739214344]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-menu-tigo-icon
+        ↓Slot [ngx.components.UIAttribute-1787739214346]: 
+          attrName: slot
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:start
       ↓Label [ngx.components.UIDynamicElement-1782236319620]: 
         beanData: '{"ionBean":"Label"}'
         tagName: ion-label
@@ -126,7 +140,7 @@ tagName: ion-menu
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Agent IA
+              - MobileSmartSourceType: 'script:((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Tigo l’agent'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Tigo l’agente'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Tigo el agente'' : ''Tigo the agent'')))'
       ↓Attr [ngx.components.UIAttribute-1782236319727]: 
         attrName: '[class.selected]'
         attrValue: 

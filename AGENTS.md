@@ -18,7 +18,8 @@ rediscovering the same context.
 
 ## Current Purpose
 
-- The former "component assistant" UI is becoming a general "Agent IA" surface.
+- The former "component assistant" UI is becoming Tigo, the general Convertigo
+  agent surface.
 - The agent should act on the currently selected Convertigo project through the
   bridge and Convertigo MCP, not only generate component snippets.
 - Existing Figma and LightRAG areas still exist; keep agent-specific changes
@@ -28,7 +29,7 @@ rediscovering the same context.
 
 ## Current 1.2.0 Roadmap
 
-- Rework the agent page toward the Codex Desktop interaction model while keeping
+- Rework the Tigo agent page toward the Codex Desktop interaction model while keeping
   it usable in a narrow Studio/C8Oforms drawer.
 - Keep conversation management in a compact top cartouche or popover, not in a
   permanent left sidebar. Show provider, model, state, and creation time.

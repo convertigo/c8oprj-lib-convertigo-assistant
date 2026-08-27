@@ -1,272 +1,73 @@
+<p align="center">
+  <img src="assets/tigo-head.png" alt="Tigo" width="220">
+</p>
 
+# Tigo, the Convertigo agent
 
+Tigo brings a local AI agent into Convertigo Studio. It connects OpenAI Codex
+or Mistral Vibe to the current workspace through Convertigo MCP and the
+Convertigo Agent Bridge.
 
-# ConvertigoAssistant
+Tigo can inspect and modify Convertigo projects, run backend requests, open NGX
+viewers, validate visible behavior, and reveal changes in Studio while the agent
+works.
 
-This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
+## Highlights
 
-## Symbols
+- Works from the Convertigo Assistant view with project-aware conversations.
+- Supports OpenAI Codex and Mistral Vibe with workspace-managed CLI runtimes.
+- Uses Convertigo MCP for structured project discovery, editing, and validation.
+- Uses the Agent Bridge for local conversations, credentials, runtime setup, and
+  long-running agent processes.
+- Provides Reveal mode so supported MCP operations can select changed objects
+  and open the relevant Studio or viewer surface.
+- Keeps conversations and managed agent homes inside the Convertigo workspace.
 
+## Requirements
 
-| Symbol    | Usage |
-|-----------|-------------------|
-|lib_C8Oforms_AI.GPT.apikey.secret  | the openAI Api Key |
-
-
-
-For more technical informations : [documentation](./project.md)
-
-- [Installation](#installation)
-- [Mobile Application](#mobile-application)
-    - [Pages](#pages)
-        - [Figma](#figma)
-        - [LightRag](#lightrag)
-        - [Page](#page)
-    - [Shared Components](#shared-components)
-        - [AssistantMessageComponent](#assistantmessagecomponent)
-        - [FigmaFooterComponent](#figmafootercomponent)
-        - [LightRagFooterComponent](#lightragfootercomponent)
-        - [Markdown](#markdown)
-        - [MdReader](#mdreader)
-        - [UserMessageComponent](#usermessagecomponent)
-
+- Convertigo Studio 8.4.4 or newer for the local Agent onboarding flow.
+- Network access to the selected agent provider and package registries. Studio
+  proxy settings are propagated to managed runtime downloads and processes.
+- Provider credentials for OpenAI Codex or Mistral Vibe.
 
 ## Installation
 
-1. In your Convertigo Studio click on ![](https://github.com/convertigo/convertigo/blob/develop/eclipse-plugin-studio/icons/studio/project_import.gif?raw=true "Import a project in treeview") to import a project in the treeview
-2. In the import wizard
+Open the **Convertigo Assistant** view in Convertigo Studio. When the local Agent
+stack is missing, Tigo offers to install the three required projects:
 
-   ![](https://github.com/convertigo/convertigo/blob/develop/eclipse-plugin-studio/tomcat/webapps/convertigo/templates/ftl/project_import_wzd.png?raw=true "Import Project")
-   
-   paste the text below into the `Project remote URL` field:
-   <table>
-     <tr><td>Usage</td><td>Click the copy button at the end of the line</td></tr>
-     <tr><td>To contribute</td><td>
+1. `ConvertigoAssistant`
+2. `ConvertigoMCP`
+3. `ConvertigoAgentBridge`
 
-     ```
-     ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
-     ```
-     </td></tr>
-     <tr><td>To simply use</td><td>
+The one-click flow imports the release packages, switches the Assistant view to
+the local relative URL, and reloads it. Tigo then guides the user through agent
+selection and workspace-local CLI setup.
 
-     ```
-     ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/archive/master.zip
-     ```
-     </td></tr>
-    </table>
-3. Click the `Finish` button. This will automatically import the __ConvertigoAssistant__ project
+The companion projects are maintained separately:
 
+- [Convertigo MCP](https://github.com/convertigo/c8oprj-c8o-mcp)
+- [Convertigo Agent Bridge](https://github.com/convertigo/c8oprj-convertigo-agent-bridge)
 
-## Mobile Application
+## Updating
 
-Describes the mobile application global properties
+Agent CLI versions are checked from the Tigo configuration page and cached for
+six hours. The same page compares the installed Assistant, MCP, and Agent Bridge
+versions with the published `stack-release.json` manifest. When an update is
+available, Tigo can import the three selected `.car` packages and reload the
+Assistant view. The manifest is fetched through a Convertigo HTTP connector, so
+the configured Convertigo proxy is used and the response is cached for six hours.
 
-### Pages
+Projects imported from local Git checkouts are detected as source-managed and
+are never overwritten by this operation.
 
-#### Figma
+## Development
 
-Figma Assistant Page
+Import the active development branch with:
 
-#### LightRag
+```text
+ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
+```
 
-IT Support Page
-
-#### Page
-
-AI Component Assistant Page
-
-### Shared Components
-
-#### AssistantMessageComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>author</td><td></td>
-</tr>
-<tr>
-<td>file</td><td></td>
-</tr>
-<tr>
-<td>files</td><td></td>
-</tr>
-<tr>
-<td>message</td><td></td>
-</tr>
-<tr>
-<td>rawStreamTicker</td><td></td>
-</tr>
-<tr>
-<td>status</td><td></td>
-</tr>
-<tr>
-<td>tag1</td><td></td>
-</tr>
-<tr>
-<td>tag2</td><td></td>
-</tr>
-<tr>
-<td>tag3</td><td></td>
-</tr>
-<tr>
-<td>time</td><td></td>
-</tr>
-<tr>
-<td>writing</td><td></td>
-</tr>
-</table>
-
-#### FigmaFooterComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>EnableChat</td><td></td>
-</tr>
-<tr>
-<td>Files</td><td></td>
-</tr>
-<tr>
-<td>IsProcessing</td><td></td>
-</tr>
-<tr>
-<td>Question</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>RunQuestion</td><td></td>
-</tr>
-</table>
-
-#### LightRagFooterComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>EnableAssetInputs</td><td></td>
-</tr>
-<tr>
-<td>EnableAttachmentInputs</td><td></td>
-</tr>
-<tr>
-<td>EnableChat</td><td></td>
-</tr>
-<tr>
-<td>IsProcessing</td><td></td>
-</tr>
-<tr>
-<td>Placeholder</td><td></td>
-</tr>
-<tr>
-<td>Question</td><td></td>
-</tr>
-<tr>
-<td>SpeechRecognitionAvailable</td><td></td>
-</tr>
-<tr>
-<td>Suggestions</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>RunQuestion</td><td></td>
-</tr>
-<tr>
-<td>VoiceRequest</td><td></td>
-</tr>
-</table>
-
-#### Markdown
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>data</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>ready</td><td></td>
-</tr>
-</table>
-
-#### MdReader
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>data</td><td></td>
-</tr>
-</table>
-
-**events**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>ready</td><td></td>
-</tr>
-</table>
-
-#### UserMessageComponent
-
-**variables**
-
-<table>
-<tr>
-<th>name</th><th>comment</th>
-</tr>
-<tr>
-<td>author</td><td></td>
-</tr>
-<tr>
-<td>message</td><td></td>
-</tr>
-<tr>
-<td>time</td><td></td>
-</tr>
-</table>
-
-
-
+Convertigo project objects must be edited through Convertigo Studio or the
+Convertigo MCP tools. Generated mobile sources under `_private` and
+`DisplayObjects` are build outputs.
