@@ -34,6 +34,9 @@ responseTimeout: 900
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId,
       install: typeof install === "undefined" ? "" : install,
+      codexLogin: typeof codexLogin === "undefined" ? "" : codexLogin,
+      codexLoginStatus: typeof codexLoginStatus === "undefined" ? "" : codexLoginStatus,
+      forceLogin: typeof forceLogin === "undefined" ? "" : forceLogin,
       installCodex: typeof installCodex === "undefined" ? "" : installCodex,
       installVibe: typeof installVibe === "undefined" ? "" : installVibe,
       forceCodexInstall: typeof forceCodexInstall === "undefined" ? "" : forceCodexInstall,
@@ -254,3 +257,15 @@ responseTimeout: 900
   comment: Set true to tell the agent to pass reveal=true on supported Convertigo mutation/viewer tools.
   description: Set true to tell the agent to pass reveal=true on supported Convertigo mutation/viewer tools.
   value: false
+↓codexLogin [variables.RequestableVariable-1787761637156]: 
+  comment: Starts browser-based Codex authentication asynchronously.
+  description: Starts browser-based Codex authentication asynchronously.
+  schemaType: xsd:boolean
+↓codexLoginStatus [variables.RequestableVariable-1787761637159]: 
+  comment: Returns the current browser-based Codex authentication status.
+  description: Returns the current browser-based Codex authentication status.
+  schemaType: xsd:boolean
+↓forceLogin [variables.RequestableVariable-1787761637162]: 
+  comment: Starts a fresh Codex login even when scoped credentials are present.
+  description: Starts a fresh Codex login even when scoped credentials are present.
+  schemaType: xsd:boolean

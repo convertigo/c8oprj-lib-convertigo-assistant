@@ -100,6 +100,12 @@ scriptContent:
         				Agent_Runtime_Update_Available: "An update is available.",
         				Agent_Runtime_Up_To_Date: "The runtime is up to date.",
         				Agent_Runtime_Ready: "Runtime ready.",
+        				Agent_Auth_Codex_Required: "Codex authentication is required.",
+                                                Agent_Auth_Codex_Connect: "Sign in to Codex",
+                                                Agent_Auth_Codex_Waiting: "Complete sign-in in your browser...",
+                                                Agent_Auth_Codex_Connected: "Codex is connected.",
+                                                Agent_Auth_Codex_Login_Failed: "Codex sign-in failed: ",
+        				Agent_Auth_Vibe_Required: "Mistral API key required. Set MISTRAL_API_KEY in ~/.vibe/.env.",
         				Agent_Runtime_Must_Install: "The runtime must be installed.",
         				Agent_Runtime_Install: "Install runtime",
         				Agent_Runtime_Update: "Update",
@@ -144,6 +150,12 @@ scriptContent:
         				Agent_Runtime_Update_Available: "Une mise à jour est disponible.",
         				Agent_Runtime_Up_To_Date: "Le runtime est à jour.",
         				Agent_Runtime_Ready: "Runtime prêt.",
+        				Agent_Auth_Codex_Required: "Authentification Codex requise.",
+                                                Agent_Auth_Codex_Connect: "Se connecter à Codex",
+                                                Agent_Auth_Codex_Waiting: "Terminez la connexion dans votre navigateur...",
+                                                Agent_Auth_Codex_Connected: "Codex est connecté.",
+                                                Agent_Auth_Codex_Login_Failed: "Échec de la connexion Codex : ",
+        				Agent_Auth_Vibe_Required: "Clé API Mistral requise. Définissez MISTRAL_API_KEY dans ~/.vibe/.env.",
         				Agent_Runtime_Must_Install: "Le runtime doit être installé.",
         				Agent_Runtime_Install: "Installer le runtime",
         				Agent_Runtime_Update: "Mettre à jour",
@@ -188,6 +200,12 @@ scriptContent:
         				Agent_Runtime_Update_Available: "È disponibile un aggiornamento.",
         				Agent_Runtime_Up_To_Date: "Il runtime è aggiornato.",
         				Agent_Runtime_Ready: "Runtime pronto.",
+        				Agent_Auth_Codex_Required: "Autenticazione Codex richiesta.",
+                                                Agent_Auth_Codex_Connect: "Accedi a Codex",
+                                                Agent_Auth_Codex_Waiting: "Completa l’accesso nel browser...",
+                                                Agent_Auth_Codex_Connected: "Codex è connesso.",
+                                                Agent_Auth_Codex_Login_Failed: "Accesso a Codex non riuscito: ",
+        				Agent_Auth_Vibe_Required: "Chiave API Mistral richiesta. Imposta MISTRAL_API_KEY in ~/.vibe/.env.",
         				Agent_Runtime_Must_Install: "Il runtime deve essere installato.",
         				Agent_Runtime_Install: "Installa runtime",
         				Agent_Runtime_Update: "Aggiorna",
@@ -232,6 +250,12 @@ scriptContent:
         				Agent_Runtime_Update_Available: "Hay una actualización disponible.",
         				Agent_Runtime_Up_To_Date: "El runtime está actualizado.",
         				Agent_Runtime_Ready: "Runtime listo.",
+        				Agent_Auth_Codex_Required: "Se requiere autenticación de Codex.",
+                                                Agent_Auth_Codex_Connect: "Iniciar sesión en Codex",
+                                                Agent_Auth_Codex_Waiting: "Complete el inicio de sesión en el navegador...",
+                                                Agent_Auth_Codex_Connected: "Codex está conectado.",
+                                                Agent_Auth_Codex_Login_Failed: "Error al iniciar sesión en Codex: ",
+        				Agent_Auth_Vibe_Required: "Se requiere una clave API de Mistral. Configure MISTRAL_API_KEY en ~/.vibe/.env.",
         				Agent_Runtime_Must_Install: "Debe instalarse el runtime.",
         				Agent_Runtime_Install: "Instalar runtime",
         				Agent_Runtime_Update: "Actualizar",
@@ -512,9 +536,27 @@ scriptContent:
         					var settings: any = result.settings || {};
         					if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
         					var providers = settings.providers || [];
+        					var preferences: any = settings.preferences || result.preferences || {};
+        					var storedProvider = '''';
+        					var storedModel = '''';
+        					var storedReasoning = '''';
+        					var storedServiceTier = '''';
+        					var storedConfirmed = false;
+        					try {
+        						if (typeof window !== ''undefined'' && window.localStorage) {
+        							storedProvider = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProvider''));
+        							storedModel = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentModel''));
+        							storedReasoning = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentReasoningEffort''));
+        							storedServiceTier = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentServiceTier''));
+        							var storedFlag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
+        							storedConfirmed = storedFlag === ''true'' || storedFlag === ''1'' || storedFlag === ''yes'';
+        						}
+        					} catch (eStored) {}
+        					var preferencesConfirmed = preferences && preferences.confirmed === true;
+        					if (preferencesConfirmed || storedConfirmed) { this.local.AgentProviderChoiceConfirmed = true; }
         					if (providers.length) {
         						this.local.AgentSettings = settings;
-        						var provider = normalize(this.local.AgentProvider || result.provider);
+        						var provider = normalize(preferencesConfirmed ? preferences.provider : (this.local.AgentProvider || storedProvider || result.provider));
         						if (provider === ''all'' || !provider.length) { provider = normalize(settings.defaults && settings.defaults.provider); }
         						var selectedProvider = null;
         						for (var i = 0; i < providers.length; i++) {
@@ -529,33 +571,40 @@ scriptContent:
         						this.local.AgentProvider = provider;
         						this.local.AgentModels = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
         						this.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-        						var model = clean(this.local.AgentModel || result.model || selectedProvider && selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''));
+        						var model = clean(preferencesConfirmed ? preferences.model : (this.local.AgentModel || storedModel || result.model || selectedProvider && selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : '''')));
         						if (!model.length && this.local.AgentModels.length) { model = clean(this.local.AgentModels[0] && this.local.AgentModels[0].id); }
         						this.local.AgentModel = model;
         						var selectedModel = null;
         						for (var j = 0; j < this.local.AgentModels.length; j++) {
         							if (clean(this.local.AgentModels[j] && this.local.AgentModels[j].id) === model) { selectedModel = this.local.AgentModels[j]; break; }
         						}
+        						if (!selectedModel && this.local.AgentModels.length) {
+        							selectedModel = this.local.AgentModels[0];
+        							model = clean(selectedModel && selectedModel.id);
+        							this.local.AgentModel = model;
+        						}
         						this.local.AgentReasoningLevels = this.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-        						if (!clean(this.local.AgentReasoningEffort).length) { this.local.AgentReasoningEffort = clean(selectedModel && selectedModel.defaultReasoning); }
+        						var preferredReasoning = clean(preferencesConfirmed ? preferences.reasoning : (this.local.AgentReasoningEffort || storedReasoning));
+        						this.local.AgentReasoningEffort = this.local.AgentProviderSupportsReasoning === true ? (preferredReasoning || clean(selectedModel && selectedModel.defaultReasoning)) : '''';
+        						this.local.AgentServiceTier = clean(preferencesConfirmed ? preferences.serviceTier : (this.local.AgentServiceTier || storedServiceTier));
         						var runtime = selectedProvider && selectedProvider.runtime ? selectedProvider.runtime : {};
+        						var authentication = selectedProvider && selectedProvider.authentication ? selectedProvider.authentication : {};
+        						var authenticationRequired = runtime.installed === true && authentication.configured === false;
         						this.local.AgentRuntime = runtime;
+        						this.local.AgentAuthenticationRequired = authenticationRequired;
+        						this.local.AgentRuntimeError = runtime.error || (authenticationRequired ? ''authentication_required'' : '''');
         						var installed = clean(runtime.installedVersion);
         						var latest = clean(runtime.latestVersion);
+        						var authenticationKey = provider === ''codex'' ? ''Agent_Auth_Codex_Required'' : ''Agent_Auth_Vibe_Required'';
+        						var authenticationFallback = provider === ''codex'' ? ''Authentification requise. Ouvrez Codex Desktop ou lancez codex login.'' : ''Clé API Mistral requise. Définissez MISTRAL_API_KEY dans ~/.vibe/.env.'';
         						this.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
-        						this.local.AgentRuntimeStatusText = runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.''))));
-        						this.local.AgentRuntimeActionText = runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime''));
+        						this.local.AgentRuntimeStatusText = authenticationRequired ? tr(authenticationKey, authenticationFallback) : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
+        						this.local.AgentRuntimeActionText = authenticationRequired ? tr(authenticationKey, authenticationFallback) : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
         						var providerReady = this.isAgentProviderReady && this.isAgentProviderReady(selectedProvider);
-        						if (providerReady) {
-        							this.local.AgentProviderChoiceConfirmed = true;
-        							try {
-        								if (typeof window !== ''undefined'' && window.localStorage) {
-        									window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
-        								}
-        							} catch (eConfirm) {}
-        							if (this.local.AgentConfigExplicitOpen !== true) {
-        								this.local.ShowAgentConfigPanel = false;
-        							}
+        						if (providerReady && this.local.AgentProviderChoiceConfirmed === true && this.local.AgentConfigExplicitOpen !== true) {
+        							this.local.ShowAgentConfigPanel = false;
+        						} else if (this.local.AgentProviderChoiceConfirmed !== true) {
+        							this.local.ShowAgentConfigPanel = true;
         						}
         					}
         				} catch (eApply) {}
@@ -678,7 +727,8 @@ scriptContent:
         		} catch (e) {}
         		try {
         			var routeFlag = this.getAssistantQueryParam ? ('''' + this.getAssistantQueryParam(''agentConfig'')).toLowerCase() : '''';
-        			pending = pending || routeFlag === ''1'' || routeFlag === ''true'' || routeFlag === ''yes'';
+        			var staleRoute = routeFlag === ''1'' || routeFlag === ''true'' || routeFlag === ''yes'';
+        			if (staleRoute && !pending && this.setAgentSettingsUrlState) { this.setAgentSettingsUrlState(false); }
         		} catch (eRoute) {}
         		if (!pending) { return; }
         		setTimeout(() => {
@@ -906,9 +956,9 @@ scriptContent:
         			schemaVersion: 1,
         			channel: "beta",
         			projects: [
-        				{ name: "ConvertigoMCP", version: "0.0.41", tag: "v0.0.41", importUrl: "ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.41/ConvertigoMCP.car" },
-        				{ name: "ConvertigoAgentBridge", version: "0.2.15", tag: "v0.2.15", importUrl: "ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.15/ConvertigoAgentBridge.car" },
-        				{ name: "ConvertigoAssistant", version: "1.2.30", tag: "v1.2.30-beta1", importUrl: "ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.30-beta1/ConvertigoAssistant.car" }
+        				{ name: "ConvertigoMCP", version: "0.0.42", tag: "v0.0.42", importUrl: "ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.42/ConvertigoMCP.car" },
+        				{ name: "ConvertigoAgentBridge", version: "0.2.16", tag: "v0.2.16", importUrl: "ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.16/ConvertigoAgentBridge.car" },
+        				{ name: "ConvertigoAssistant", version: "1.2.31", tag: "v1.2.31-beta1", importUrl: "ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.31-beta1/ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -2701,7 +2751,13 @@ scriptContent:
 segment: path-to-xfirst/:threadid
 title: Tigo
 ↓Header [ngx.components.UIDynamicElement-1491634212350]: 
-  beanData: '{"ionBean":"Header"}'
+  beanData: |
+    '{
+     "ionBean": "Header",
+     "IonMode": "plain",
+     "Collapse": "plain",
+     "Translucent": "plain:false"
+    }'
   comment: Page header
   tagName: ion-header
   ↓Class [ngx.components.UIAttribute-1774701000008]: 
@@ -2711,13 +2767,34 @@ title: Tigo
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
         - MobileSmartSourceType: plain:modern-header
   ↓ToolBar [ngx.components.UIDynamicElement-1491634231108]: 
-    beanData: '{"ionBean":"ToolBar"}'
+    beanData: |
+      '{
+       "ionBean": "ToolBar",
+       "IonColor": "plain",
+       "BarMode": "plain",
+       "BarSlot": "plain"
+      }'
     tagName: ion-toolbar
     ↓ButtonSet1 [ngx.components.UIDynamicElement-1588171103814]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:start"}'
+      beanData: |
+        '{
+         "ionBean": "ButtonSet",
+         "SetPosition": "plain:start",
+         "Collapse": "plain:false"
+        }'
       tagName: ion-buttons
       ↓BackButton [ngx.components.UIDynamicElement-1643993281257]: 
-        beanData: '{"ionBean":"BackButton"}'
+        beanData: |
+          '{
+           "ionBean": "BackButton",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonIcon": "plain",
+           "IonMode": "plain",
+           "ButtonText": "plain",
+           "DefaultHref": "plain"
+          }'
         tagName: ion-back-button
         ↓Class [ngx.components.UIAttribute-1774701000002]: 
           attrName: class
@@ -2726,7 +2803,15 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
       ↓MenuButton [ngx.components.UIDynamicElement-1588172846908]: 
-        beanData: '{"ionBean":"MenuButton"}'
+        beanData: |
+          '{
+           "ionBean": "MenuButton",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "AutoHide": "plain:true",
+           "MenuId": "plain"
+          }'
         tagName: ion-menu-button
         ↓Class [ngx.components.UIAttribute-1774701000003]: 
           attrName: class
@@ -2739,6 +2824,8 @@ title: Tigo
           '{
            "ionBean": "Image",
            "url": "source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/tigo-head.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+           "width": "plain:",
+           "height": "plain:",
            "alt": "plain:Tigo"
           }'
         selfClose: true
@@ -2750,7 +2837,12 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-logo-btn
     ↓BarTitle [ngx.components.UIDynamicElement-1491634265317]: 
-      beanData: '{"ionBean":"BarTitle"}'
+      beanData: |
+        '{
+         "ionBean": "BarTitle",
+         "IonColor": "plain",
+         "IonSize": "plain"
+        }'
       tagName: ion-title
       ↓TitleWrap [ngx.components.UIDynamicElement-1774701000013]: 
         beanData: '{"ionBean":"DivTag"}'
@@ -2791,10 +2883,35 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:this.getProjectSubtitle()
     ↓ButtonSet2 [ngx.components.UIDynamicElement-1588170811054]: 
-      beanData: '{"ionBean":"ButtonSet","SetPosition":"plain:end"}'
+      beanData: |
+        '{
+         "ionBean": "ButtonSet",
+         "SetPosition": "plain:end",
+         "Collapse": "plain:false"
+        }'
       tagName: ion-buttons
       ↓Button [ngx.components.UIDynamicElement-1588170817806]: 
-        beanData: '{"ionBean":"Button"}'
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonExpand": "plain",
+           "IonShape": "plain",
+           "IonFill": "plain",
+           "IonSize": "plain",
+           "IconSlot": "plain",
+           "IonMode": "plain",
+           "IonStrong": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1774701000004]: 
           attrName: class
@@ -2803,7 +2920,17 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-header-btn'' : ''modern-header-btn agent-hidden'''
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: '{"ionBean":"Icon","IconName":"source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''home-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IonColor": "plain",
+             "IconName": "source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''home-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "IconMdName": "source",
+             "IconIosName": "source",
+             "IonSize": "plain",
+             "IconSlot": "plain",
+             "IconSource": "plain"
+            }'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
           ↓OpenConversationPanel [ngx.components.UICustomAction-1781700500001]: 
@@ -2868,7 +2995,13 @@ title: Tigo
               '{
                "ionBean": "CallSequenceAction",
                "requestable": "plain:ConvertigoAssistant.AgentListConversations",
-               "noLoading": "plain:true"
+               "marker": "plain:",
+               "cachePolicy": "plain",
+               "cacheTtl": "plain:3000",
+               "timeout": "plain",
+               "threshold": "plain",
+               "noLoading": "plain:true",
+               "noAutoLogin": "plain:false"
               }'
             ↓provider [ngx.components.UIControlVariable-1782831332239]: 
               varValue: 
@@ -2924,8 +3057,23 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "Button",
+           "ButtonFormType": "plain:button",
            "Disabled": "script:this.local && this.local.AgentRuntimeLoading === true",
-           "IonFill": "plain:clear"
+           "IonColor": "plain",
+           "IonExpand": "plain",
+           "IonShape": "plain",
+           "IonFill": "plain:clear",
+           "IonSize": "plain",
+           "IconSlot": "plain",
+           "IonMode": "plain",
+           "IonStrong": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterDirection": "plain"
           }'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1785253151153]: 
@@ -2950,8 +3098,13 @@ title: Tigo
           beanData: |
             '{
              "ionBean": "Icon",
+             "IonColor": "plain",
              "IconName": "plain:settings-outline",
-             "IconSlot": "plain:icon-only"
+             "IconMdName": "source",
+             "IconIosName": "source",
+             "IonSize": "plain",
+             "IconSlot": "plain:icon-only",
+             "IconSource": "plain"
             }'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1785253151161]: 
@@ -2966,7 +3119,27 @@ title: Tigo
                             }
                             resolve();
       ↓ThemeSwitchButton [ngx.components.UIDynamicElement-1774703000001]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonExpand": "plain",
+           "IonShape": "plain",
+           "IonFill": "plain:clear",
+           "IonSize": "plain",
+           "IconSlot": "plain",
+           "IonMode": "plain",
+           "IonStrong": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1774703000002]: 
           attrName: class
@@ -3007,7 +3180,17 @@ title: Tigo
                     		resolve();
                     '
         ↓ThemeIcon [ngx.components.UIDynamicElement-1774703000006]: 
-          beanData: '{"ionBean":"Icon","IconName":"plain:moon-outline"}'
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IonColor": "plain",
+             "IconName": "plain:moon-outline",
+             "IconMdName": "source",
+             "IconIosName": "source",
+             "IonSize": "plain",
+             "IconSlot": "plain",
+             "IconSource": "plain"
+            }'
           tagName: ion-icon
           ↓IconName [ngx.components.UIAttribute-1774703000007]: 
             attrName: '[name]'
@@ -3026,8 +3209,23 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "Button",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonExpand": "plain",
+           "IonShape": "plain",
            "IonFill": "plain:clear",
-           "IonSize": "plain:small"
+           "IonSize": "plain:small",
+           "IconSlot": "plain",
+           "IonMode": "plain",
+           "IonStrong": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterDirection": "plain"
           }'
         tagName: ion-button
         ↓Class [ngx.components.UIAttribute-1782917885591]: 
@@ -3070,7 +3268,17 @@ title: Tigo
                             }
                             resolve();'
         ↓Icon [ngx.components.UIDynamicElement-1782917887105]: 
-          beanData: '{"ionBean":"Icon","IconName":"plain:eye-outline"}'
+          beanData: |
+            '{
+             "ionBean": "Icon",
+             "IonColor": "plain",
+             "IconName": "plain:eye-outline",
+             "IconMdName": "source",
+             "IconIosName": "source",
+             "IonSize": "plain",
+             "IconSlot": "plain",
+             "IconSource": "plain"
+            }'
           tagName: ion-icon
           ↓IconName [ngx.components.UIAttribute-1782917887107]: 
             attrName: '[name]'
@@ -3088,7 +3296,26 @@ title: Tigo
           '{
            "ionBean": "Select",
            "ControlName": "plain:name1774703000010",
-           "Justify": "plain:start"
+           "IonMode": "plain",
+           "Disabled": "plain:false",
+           "DoubleBinding": "plain",
+           "CancelText": "plain:Cancel",
+           "OkText": "plain:Ok",
+           "CompareWith": "plain",
+           "ExpandedIcon": "plain",
+           "Fill": "plain",
+           "Interface": "plain",
+           "InterfaceOptions": "plain",
+           "Justify": "plain:start",
+           "Label": "plain",
+           "LabelPlacement": "plain:start",
+           "Legacy": "plain:false",
+           "Placeholder": "plain",
+           "Multiple": "plain:false",
+           "SelectedText": "plain",
+           "Shape": "plain",
+           "ToggleIcon": "plain",
+           "Value": "plain"
           }'
         tagName: ion-select
         ↓Class [ngx.components.UIAttribute-1774703000011]: 
@@ -3143,7 +3370,12 @@ title: Tigo
                     		resolve();
                     '
         ↓LangEN [ngx.components.UIDynamicElement-1774703000018]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:en"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000019]: 
             i18n: true
@@ -3152,7 +3384,12 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_English
         ↓LangFR [ngx.components.UIDynamicElement-1774703000020]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:fr"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:fr"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000021]: 
             i18n: true
@@ -3161,7 +3398,12 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_French
         ↓LangIT [ngx.components.UIDynamicElement-1774703000022]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:it"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:it"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000023]: 
             i18n: true
@@ -3170,7 +3412,12 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Italian
         ↓LangES [ngx.components.UIDynamicElement-1774703000024]: 
-          beanData: '{"ionBean":"SelectOption","Value":"plain:es"}'
+          beanData: |
+            '{
+             "ionBean": "SelectOption",
+             "Disabled": "plain:false",
+             "Value": "plain:es"
+            }'
           tagName: ion-select-option
           ↓Text [ngx.components.UIText-1774703000025]: 
             i18n: true
@@ -3179,7 +3426,18 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Spanish
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
-  beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
+  beanData: |
+    '{
+     "ionBean": "Content",
+     "IonColor": "plain",
+     "IonSlot": "plain",
+     "Padding": "plain:ion-no-padding",
+     "Fullscreen": "plain:false",
+     "ForceOverScroll": "plain:false",
+     "ScrollEvents": "plain:false",
+     "ScrollX": "plain:false",
+     "ScrollY": "plain:true"
+    }'
   identifier: content
   tagName: ion-content
   ↓Class [ngx.components.UIAttribute-1772100000031]: 
@@ -3280,7 +3538,23 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:agent-desktop-hero
       ↓HowCard [ngx.components.UIDynamicElement-1772100000045]: 
-        beanData: '{"ionBean":"Card"}'
+        beanData: |
+          '{
+           "ionBean": "Card",
+           "Button": "plain:false",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterAnimation": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-card
         ↓Class [ngx.components.UIAttribute-1772100000046]: 
           attrName: class
@@ -3289,7 +3563,7 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-card agent-desktop-how-card'' : ''modern-card'''
         ↓CardContent [ngx.components.UIDynamicElement-1772100000047]: 
-          beanData: '{"ionBean":"CardContent"}'
+          beanData: '{"ionBean":"CardContent","IonMode":"plain"}'
           tagName: ion-card-content
           ↓Title [ngx.components.UIDynamicElement-1772100000048]: 
             beanData: '{"ionBean":"Paragraph"}'
@@ -3434,7 +3708,23 @@ title: Tigo
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: 'plain: '
       ↓StartCard [ngx.components.UIDynamicElement-1772100000093]: 
-        beanData: '{"ionBean":"Card"}'
+        beanData: |
+          '{
+           "ionBean": "Card",
+           "Button": "plain:false",
+           "ButtonFormType": "plain:button",
+           "Disabled": "plain:false",
+           "IonColor": "plain",
+           "IonMode": "plain",
+           "LinkUrl": "plain",
+           "LinkDownload": "plain",
+           "LinkTarget": "plain",
+           "LinkRel": "plain",
+           "LinkRouterPath": "plain",
+           "LinkRouterData": "plain",
+           "LinkRouterAnimation": "plain",
+           "LinkRouterDirection": "plain"
+          }'
         tagName: ion-card
         ↓Class [ngx.components.UIAttribute-1772100000094]: 
           attrName: class
@@ -3443,7 +3733,7 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'''
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
-          beanData: '{"ionBean":"CardContent"}'
+          beanData: '{"ionBean":"CardContent","IonMode":"plain"}'
           tagName: ion-card-content
           ↓Title [ngx.components.UIDynamicElement-1772100000096]: 
             beanData: '{"ionBean":"Paragraph"}'
@@ -3483,7 +3773,17 @@ title: Tigo
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && !(this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'') && !(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent())) ? (''agent-session-strip agent-start-choice agent-project-choice'' + (((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? '''' : '' agent-choice-disabled'') + ((((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') && this.local.ConversationProjectMode !== ''none'' && (!this.local.ConversationProject || this.local.ConversationProject === ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName)))) ? '' agent-choice-selected'' : '''')) : ''agent-session-strip agent-start-choice agent-project-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746869516]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:folder-open-outline"}'
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "plain:folder-open-outline",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain",
+                 "IconSource": "plain"
+                }'
               tagName: ion-icon
             ↓SessionCopy [ngx.components.UIDynamicElement-1782746869518]: 
               beanData: '{"ionBean":"DivTag"}'
@@ -3606,7 +3906,17 @@ title: Tigo
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && (!(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()))) ? (''agent-session-strip agent-start-choice agent-free-choice'' + ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? '' agent-choice-selected'' : ((this.local.ConversationProjectMode === ''none'' || (!(this.getEffectiveProjectName && this.getEffectiveProjectName()) && !this.local.ConversationProject)) ? '' agent-choice-selected'' : ''''))) : ''agent-session-strip agent-start-choice agent-free-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746911794]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:cloud-download-outline"}'
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "plain:cloud-download-outline",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain",
+                 "IconSource": "plain"
+                }'
               tagName: ion-icon
               ↓IconName [ngx.components.UIAttribute-1783011654749]: 
                 attrName: '[name]'
@@ -3729,7 +4039,17 @@ title: Tigo
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.local.AgentConversationsLoading === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0)))) ? (''agent-session-strip agent-history-choice'' + ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? '' agent-menu-choice'' : (this.local.AgentConversationsLoading === true ? '' agent-choice-disabled agent-history-loading'' : ''''))) : ''agent-session-strip agent-history-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746946887]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:time-outline"}'
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "plain:time-outline",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain",
+                 "IconSource": "plain"
+                }'
               tagName: ion-icon
               ↓IconName [ngx.components.UIAttribute-1783011658965]: 
                 attrName: '[name]'
@@ -3775,7 +4095,17 @@ title: Tigo
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''Accédez à How-To, composants et Figma.'' : ((this.local && this.local.AgentConversationsLoading === true) ? ''Lecture de l’historique local en cours.'' : ''Cliquez pour choisir une conversation existante.'')'
             ↓Chevron [ngx.components.UIDynamicElement-1782746954600]: 
-              beanData: '{"ionBean":"Icon","IconName":"plain:chevron-down-outline"}'
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "plain:chevron-down-outline",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain",
+                 "IconSource": "plain"
+                }'
               tagName: ion-icon
               ↓Class [ngx.components.UIAttribute-1782747017406]: 
                 attrName: class
@@ -3853,8 +4183,23 @@ title: Tigo
                 beanData: |
                   '{
                    "ionBean": "Button",
+                   "ButtonFormType": "plain:button",
+                   "Disabled": "plain:false",
+                   "IonColor": "plain",
+                   "IonExpand": "plain",
+                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small"
+                   "IonSize": "plain:small",
+                   "IconSlot": "plain",
+                   "IonMode": "plain",
+                   "IonStrong": "plain",
+                   "LinkUrl": "plain",
+                   "LinkDownload": "plain",
+                   "LinkTarget": "plain",
+                   "LinkRel": "plain",
+                   "LinkRouterPath": "plain",
+                   "LinkRouterData": "plain",
+                   "LinkRouterDirection": "plain"
                   }'
                 tagName: ion-button
                 ↓Aria [ngx.components.UIAttribute-1781676493785]: 
@@ -3867,8 +4212,13 @@ title: Tigo
                   beanData: |
                     '{
                      "ionBean": "Icon",
+                     "IonColor": "plain",
                      "IconName": "plain:close-outline",
-                     "IconSlot": "plain:icon-only"
+                     "IconMdName": "source",
+                     "IconIosName": "source",
+                     "IonSize": "plain",
+                     "IconSlot": "plain:icon-only",
+                     "IconSource": "plain"
                     }'
                   tagName: ion-icon
                 ↓Class [ngx.components.UIAttribute-1785253485568]: 
@@ -3947,8 +4297,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
+                         "Disabled": "plain:false",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781700500018]: 
@@ -4035,13 +4400,16 @@ title: Tigo
                                               if (clean(providers[i] && providers[i].id).toLowerCase() === ''vibe'') { selected = providers[i]; break; }
                                           }
                                           var runtime = selected && selected.runtime ? selected.runtime : {};
+                                          var authentication = selected && selected.authentication ? selected.authentication : {};
+                                          var authenticationRequired = runtime.installed === true && authentication.configured === false;
                                           page.local.AgentRuntime = runtime;
-                                          page.local.AgentRuntimeError = runtime.error || '''';
+                                          page.local.AgentAuthenticationRequired = authenticationRequired;
+                                          page.local.AgentRuntimeError = runtime.error || (authenticationRequired ? ''authentication_required'' : '''');
                                           var installed = clean(runtime.installedVersion);
                                           var latest = clean(runtime.latestVersion);
                                           page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
-                                          page.local.AgentRuntimeStatusText = runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.''))));
-                                          page.local.AgentRuntimeActionText = runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime''));
+                                          page.local.AgentRuntimeStatusText = authenticationRequired ? tr(''Agent_Auth_Vibe_Required'', ''Clé API Mistral requise. Définissez MISTRAL_API_KEY dans ~/.vibe/.env.'') : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
+                                          page.local.AgentRuntimeActionText = authenticationRequired ? tr(''Agent_Auth_Vibe_Required'', ''Clé API Mistral requise. Définissez MISTRAL_API_KEY dans ~/.vibe/.env.'') : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
                                           page.tick();
                                           resolve();'
                         ↓UseDiscoveredModels [ngx.components.UICustomAction-1785253502995]: 
@@ -4064,8 +4432,13 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Icon",
+                           "IonColor": "plain",
                            "IconName": "plain:sparkles-outline",
-                           "IconSlot": "plain:start"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:start",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                         ↓Class [ngx.components.UIAttribute-1787737633944]: 
@@ -4115,8 +4488,13 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Icon",
+                           "IonColor": "plain",
                            "IconName": "plain:checkmark-circle",
-                           "IconSlot": "plain:end"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:end",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                         ↓Class [ngx.components.UIAttribute-1787737642876]: 
@@ -4129,8 +4507,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
+                         "Disabled": "plain:false",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781700500023]: 
@@ -4217,13 +4610,16 @@ title: Tigo
                                               if (clean(providers[i] && providers[i].id).toLowerCase() === ''codex'') { selected = providers[i]; break; }
                                           }
                                           var runtime = selected && selected.runtime ? selected.runtime : {};
+                                          var authentication = selected && selected.authentication ? selected.authentication : {};
+                                          var authenticationRequired = runtime.installed === true && authentication.configured === false;
                                           page.local.AgentRuntime = runtime;
-                                          page.local.AgentRuntimeError = runtime.error || '''';
+                                          page.local.AgentAuthenticationRequired = authenticationRequired;
+                                          page.local.AgentRuntimeError = runtime.error || (authenticationRequired ? ''authentication_required'' : '''');
                                           var installed = clean(runtime.installedVersion);
                                           var latest = clean(runtime.latestVersion);
                                           page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
-                                          page.local.AgentRuntimeStatusText = runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.''))));
-                                          page.local.AgentRuntimeActionText = runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime''));
+                                          page.local.AgentRuntimeStatusText = authenticationRequired ? tr(''Agent_Auth_Codex_Required'', ''Authentification requise. Ouvrez Codex Desktop ou lancez codex login.'') : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
+                                          page.local.AgentRuntimeActionText = authenticationRequired ? tr(''Agent_Auth_Codex_Connect'', ''Se connecter à Codex'') : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
                                           page.tick();
                                           resolve();'
                         ↓UseDiscoveredModels [ngx.components.UICustomAction-1785253510987]: 
@@ -4246,8 +4642,13 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Icon",
+                           "IonColor": "plain",
                            "IconName": "plain:code-slash-outline",
-                           "IconSlot": "plain:start"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:start",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                         ↓Class [ngx.components.UIAttribute-1787737647336]: 
@@ -4297,8 +4698,13 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Icon",
+                           "IonColor": "plain",
                            "IconName": "plain:checkmark-circle",
-                           "IconSlot": "plain:end"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:end",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                         ↓Class [ngx.components.UIAttribute-1787737656268]: 
@@ -4363,8 +4769,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
+                         "Disabled": "plain:false",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1782955202309]: 
@@ -4442,8 +4863,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
+                         "Disabled": "plain:false",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1785253252933]: 
@@ -4577,8 +5013,23 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Button",
+                           "ButtonFormType": "plain:button",
+                           "Disabled": "plain:false",
+                           "IonColor": "plain",
+                           "IonExpand": "plain",
+                           "IonShape": "plain",
                            "IonFill": "plain:clear",
-                           "IonSize": "plain:small"
+                           "IonSize": "plain:small",
+                           "IconSlot": "plain",
+                           "IonMode": "plain",
+                           "IonStrong": "plain",
+                           "LinkUrl": "plain",
+                           "LinkDownload": "plain",
+                           "LinkTarget": "plain",
+                           "LinkRel": "plain",
+                           "LinkRouterPath": "plain",
+                           "LinkRouterData": "plain",
+                           "LinkRouterDirection": "plain"
                           }'
                         tagName: ion-button
                         ↓Class [ngx.components.UIAttribute-1785253292596]: 
@@ -4659,9 +5110,23 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "Button",
+                       "ButtonFormType": "plain:button",
                        "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
+                       "IonColor": "plain",
+                       "IonExpand": "plain",
+                       "IonShape": "plain",
                        "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
+                       "IonSize": "plain:small",
+                       "IconSlot": "plain",
+                       "IonMode": "plain",
+                       "IonStrong": "plain",
+                       "LinkUrl": "plain",
+                       "LinkDownload": "plain",
+                       "LinkTarget": "plain",
+                       "LinkRel": "plain",
+                       "LinkRouterPath": "plain",
+                       "LinkRouterData": "plain",
+                       "LinkRouterDirection": "plain"
                       }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1787742888364]: 
@@ -4674,8 +5139,13 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Icon",
+                         "IonColor": "plain",
                          "IconName": "plain:cloud-download-outline",
-                         "IconSlot": "plain:start"
+                         "IconMdName": "source",
+                         "IconIosName": "source",
+                         "IonSize": "plain",
+                         "IconSlot": "plain:start",
+                         "IconSource": "plain"
                         }'
                       tagName: ion-icon
                     ↓Text [ngx.components.UIText-1787742888368]: 
@@ -4747,9 +5217,23 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "Button",
+                       "ButtonFormType": "plain:button",
                        "Disabled": "script:this.local && this.local.AgentRuntimeLoading === true",
+                       "IonColor": "plain",
+                       "IonExpand": "plain",
+                       "IonShape": "plain",
                        "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
+                       "IonSize": "plain:small",
+                       "IconSlot": "plain",
+                       "IonMode": "plain",
+                       "IonStrong": "plain",
+                       "LinkUrl": "plain",
+                       "LinkDownload": "plain",
+                       "LinkTarget": "plain",
+                       "LinkRel": "plain",
+                       "LinkRouterPath": "plain",
+                       "LinkRouterData": "plain",
+                       "LinkRouterDirection": "plain"
                       }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1785253202549]: 
@@ -4762,8 +5246,13 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Icon",
+                         "IonColor": "plain",
                          "IconName": "plain:download-outline",
-                         "IconSlot": "plain:start"
+                         "IconMdName": "source",
+                         "IconIosName": "source",
+                         "IonSize": "plain",
+                         "IconSlot": "plain:start",
+                         "IconSource": "plain"
                         }'
                       tagName: ion-icon
                     ↓Text [ngx.components.UIText-1785253202553]: 
@@ -4816,6 +5305,62 @@ title: Tigo
                                             refreshUpdateCheck: true,
                                             __context: ''byside''
                                         };
+                                        var loginRequested = provider === ''codex'' && page.local.AgentAuthenticationRequired === true;
+                                        if (loginRequested) {
+                                            payload.install = false;
+                                            payload.updateRuntime = false;
+                                            payload.checkUpdates = false;
+                                            payload.refreshUpdateCheck = false;
+                                            payload.codexLogin = true;
+                                            payload.forceLogin = true;
+                                            page.local.AgentRuntimeLoading = true;
+                                            page.local.AgentRuntimeError = '''';
+                                            page.local.AgentRuntimeStatusText = tr(''Agent_Auth_Codex_Waiting'', ''Terminez la connexion dans votre navigateur...'');
+                                            page.tick();
+                                            var loginStartedAt = Date.now();
+                                            var openedUrl = '''';
+                                            var pollLogin = function(start) {
+                                                page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(loginResponse) {
+                                                    var loginResult = loginResponse && loginResponse.result ? loginResponse.result : {};
+                                                    var login = loginResult.login || {};
+                                                    var verificationUrl = clean(login.verificationUrl);
+                                                    if (verificationUrl.length && verificationUrl !== openedUrl) {
+                                                        openedUrl = verificationUrl;
+                                                        if (page.openAgentExternalUrl) { page.openAgentExternalUrl(verificationUrl); }
+                                                    }
+                                                    if (login.authenticated === true || clean(loginResult.status).toLowerCase() === ''authenticated'') {
+                                                        page.local.AgentAuthenticationRequired = false;
+                                                        page.local.AgentRuntimeLoading = false;
+                                                        page.local.AgentRuntimeError = '''';
+                                                        page.local.AgentRuntimeStatusText = tr(''Agent_Auth_Codex_Connected'', ''Codex est connecté.'');
+                                                        page.local.AgentRuntimeActionText = tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'');
+                                                        page.local.AgentSettingsRefreshDone = false;
+                                                        page.tick();
+                                                        if (page.refreshAgentSettingsAfterHostContext) { page.refreshAgentSettingsAfterHostContext(true); }
+                                                        resolve();
+                                                        return;
+                                                    }
+                                                    if (loginResult.ok === false && clean(loginResult.status).toLowerCase() !== ''waiting_for_login'') {
+                                                        throw new Error(loginResult.message || login.error || tr(''Agent_Auth_Codex_Login_Failed'', ''Échec de la connexion Codex''));
+                                                    }
+                                                    if ((Date.now() - loginStartedAt) > 300000) {
+                                                        throw new Error(tr(''Agent_Auth_Codex_Login_Failed'', ''Échec de la connexion Codex'') + '' timeout'');
+                                                    }
+                                                    payload.codexLogin = false;
+                                                    payload.codexLoginStatus = true;
+                                                    payload.forceLogin = false;
+                                                    window.setTimeout(function() { pollLogin(false); }, 1000);
+                                                }).catch(function(error) {
+                                                    page.local.AgentRuntimeLoading = false;
+                                                    page.local.AgentRuntimeError = '''' + error;
+                                                    page.local.AgentRuntimeStatusText = tr(''Agent_Auth_Codex_Login_Failed'', ''Échec de la connexion Codex : '') + error;
+                                                    page.tick();
+                                                    resolve();
+                                                });
+                                            };
+                                            pollLogin(true);
+                                            return;
+                                        }
                                         if (provider === ''codex'') { payload.forceCodexInstall = true; }
                                         if (provider === ''vibe'') { payload.forceVibeInstall = true; }
                                         page.local.AgentRuntimeLoading = true;
@@ -4937,8 +5482,23 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "Button",
+                       "ButtonFormType": "plain:button",
+                       "Disabled": "plain:false",
+                       "IonColor": "plain",
+                       "IonExpand": "plain",
+                       "IonShape": "plain",
                        "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
+                       "IonSize": "plain:small",
+                       "IconSlot": "plain",
+                       "IonMode": "plain",
+                       "IonStrong": "plain",
+                       "LinkUrl": "plain",
+                       "LinkDownload": "plain",
+                       "LinkTarget": "plain",
+                       "LinkRel": "plain",
+                       "LinkRouterPath": "plain",
+                       "LinkRouterData": "plain",
+                       "LinkRouterDirection": "plain"
                       }'
                     tagName: ion-button
                     ↓Class [ngx.components.UIAttribute-1785315895968]: 
@@ -4956,8 +5516,13 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Icon",
+                         "IonColor": "plain",
                          "IconName": "plain:arrow-forward-outline",
-                         "IconSlot": "plain:end"
+                         "IconMdName": "source",
+                         "IconIosName": "source",
+                         "IonSize": "plain",
+                         "IconSlot": "plain:end",
+                         "IconSource": "plain"
                         }'
                       tagName: ion-icon
                     ↓Event [ngx.components.UIControlEvent-1785315895974]: 
@@ -4967,39 +5532,94 @@ title: Tigo
                             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
-                                '        if (!page.local) { page.local = {}; }
-                                        var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-                                        var provider = clean(page.local.AgentProvider).toLowerCase();
-                                        if (provider.length) {
-                                            page.local.AgentProviderChoiceConfirmed = true;
-                                            try {
-                                                if (typeof window !== ''undefined'' && window.localStorage) {
-                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
-                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
-                                                }
-                                            } catch (e) {}
+                                'if (!page.local) { page.local = {}; }
+                                var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                var provider = clean(page.local.AgentProvider).toLowerCase();
+                                var model = clean(page.local.AgentModel);
+                                var reasoningEffort = clean(page.local.AgentReasoningEffort);
+                                var serviceTier = clean(page.local.AgentServiceTier);
+                                if (provider.length) {
+                                    page.local.AgentProviderChoiceConfirmed = true;
+                                    try {
+                                        if (typeof window !== ''undefined'' && window.localStorage) {
+                                            window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
+                                            window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                            window.localStorage.setItem(''ConvertigoAssistant.AgentModel'', model);
+                                            window.localStorage.setItem(''ConvertigoAssistant.AgentReasoningEffort'', reasoningEffort);
+                                            window.localStorage.setItem(''ConvertigoAssistant.AgentServiceTier'', serviceTier);
                                         }
-                                        var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true;
-                                        if (!hasConversation) {
-                                            page.local.NewConversationMode = true;
-                                            page.local.ShowConversationPanel = false;
-                                        }
-                                        if (page.closeAgentSettingsPage) {
-                                            page.closeAgentSettingsPage();
-                                        } else {
-                                            page.local.AgentConfigExplicitOpen = false;
-                                            page.local.ShowAgentConfigPanel = false;
-                                            page.setEnableChat && page.setEnableChat();
-                                            page.tick();
-                                        }
-                                        if (!hasConversation && page.focusQuestionInput) { page.focusQuestionInput(40); }
-                                        resolve();'
+                                    } catch (e) {}
+                                }
+                                var finish = function() {
+                                    var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true;
+                                    if (!hasConversation) {
+                                        page.local.NewConversationMode = true;
+                                        page.local.ShowConversationPanel = false;
+                                    }
+                                    if (page.closeAgentSettingsPage) {
+                                        page.closeAgentSettingsPage();
+                                    } else {
+                                        page.local.AgentConfigExplicitOpen = false;
+                                        page.local.ShowAgentConfigPanel = false;
+                                        page.setEnableChat && page.setEnableChat();
+                                        page.tick();
+                                    }
+                                    if (!hasConversation && page.focusQuestionInput) { page.focusQuestionInput(40); }
+                                    resolve();
+                                };
+                                if (!provider.length || !page.c8o || !page.c8o.callJsonObject) {
+                                    finish();
+                                    return;
+                                }
+                                var project = '''';
+                                try { project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : ''''; } catch (eProject) {}
+                                var payload = {
+                                    targetProject: project,
+                                    projectName: project,
+                                    provider: provider,
+                                    model: model,
+                                    reasoningEffort: reasoningEffort,
+                                    serviceTier: serviceTier,
+                                    savePreferences: true,
+                                    userId: page.getAgentContextUserId ? page.getAgentContextUserId() : ''studio'',
+                                    codexHomeScope: page.getAgentHomeScope ? page.getAgentHomeScope(''codex'') : ''user'',
+                                    vibeHomeScope: page.getAgentHomeScope ? page.getAgentHomeScope(''vibe'') : ''user'',
+                                    homeScope: page.getAgentHomeScope ? page.getAgentHomeScope(provider) : ''user'',
+                                    agentProfile: page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
+                                    skillProfile: page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
+                                    runtimePresenceOnly: true,
+                                    checkUpdates: false,
+                                    __context: ''byside''
+                                };
+                                page.c8o.callJsonObject(''ConvertigoAssistant.AgentSettings'', payload).async().then(function(response) {
+                                    var result = response && response.result ? response.result : {};
+                                    if (result.settings) { page.local.AgentSettings = result.settings; }
+                                    finish();
+                                }).catch(function(error) {
+                                    try { page.c8o.log.warn(''[Assistant] Unable to persist agent preferences: '' + error); } catch (eWarn) {}
+                                    finish();
+                                });'
               ↓NewConversationButton [ngx.components.UIDynamicElement-1781676410893]: 
                 beanData: |
                   '{
                    "ionBean": "Button",
+                   "ButtonFormType": "plain:button",
+                   "Disabled": "plain:false",
+                   "IonColor": "plain",
+                   "IonExpand": "plain",
+                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small"
+                   "IonSize": "plain:small",
+                   "IconSlot": "plain",
+                   "IonMode": "plain",
+                   "IonStrong": "plain",
+                   "LinkUrl": "plain",
+                   "LinkDownload": "plain",
+                   "LinkTarget": "plain",
+                   "LinkRel": "plain",
+                   "LinkRouterPath": "plain",
+                   "LinkRouterData": "plain",
+                   "LinkRouterDirection": "plain"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781676410895]: 
@@ -5018,8 +5638,13 @@ title: Tigo
                   beanData: |
                     '{
                      "ionBean": "Icon",
+                     "IonColor": "plain",
                      "IconName": "plain:add-circle-outline",
-                     "IconSlot": "plain:start"
+                     "IconMdName": "source",
+                     "IconIosName": "source",
+                     "IonSize": "plain",
+                     "IconSlot": "plain:start",
+                     "IconSource": "plain"
                     }'
                   tagName: ion-icon
                   ↓IconName [ngx.components.UIAttribute-1783011667397]: 
@@ -5079,9 +5704,23 @@ title: Tigo
                 beanData: |
                   '{
                    "ionBean": "Button",
+                   "ButtonFormType": "plain:button",
                    "Disabled": "script:false",
+                   "IonColor": "plain",
+                   "IonExpand": "plain",
+                   "IonShape": "plain",
                    "IonFill": "plain:clear",
-                   "IonSize": "plain:small"
+                   "IonSize": "plain:small",
+                   "IconSlot": "plain",
+                   "IonMode": "plain",
+                   "IonStrong": "plain",
+                   "LinkUrl": "plain",
+                   "LinkDownload": "plain",
+                   "LinkTarget": "plain",
+                   "LinkRel": "plain",
+                   "LinkRouterPath": "plain",
+                   "LinkRouterData": "plain",
+                   "LinkRouterDirection": "plain"
                   }'
                 tagName: ion-button
                 ↓Class [ngx.components.UIAttribute-1781811000101]: 
@@ -5100,8 +5739,13 @@ title: Tigo
                   beanData: |
                     '{
                      "ionBean": "Icon",
+                     "IonColor": "plain",
                      "IconName": "plain:construct-outline",
-                     "IconSlot": "plain:start"
+                     "IconMdName": "source",
+                     "IconIosName": "source",
+                     "IonSize": "plain",
+                     "IconSlot": "plain:start",
+                     "IconSource": "plain"
                     }'
                   tagName: ion-icon
                 ↓Text [ngx.components.UIText-1781811000104]: 
@@ -5435,9 +6079,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
                          "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781608119129]: 
@@ -5456,8 +6114,13 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Icon",
+                           "IonColor": "plain",
                            "IconName": "plain:return-down-back-outline",
-                           "IconSlot": "plain:icon-only"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:icon-only",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                       ↓Text [ngx.components.UIText-1781676432698]: 
@@ -5492,28 +6155,34 @@ title: Tigo
                             '{
                              "ionBean": "CallSequenceAction",
                              "requestable": "plain:ConvertigoAssistant.AgentResumeConversation",
-                             "noLoading": "plain:true"
+                             "marker": "plain:",
+                             "cachePolicy": "plain",
+                             "cacheTtl": "plain:3000",
+                             "timeout": "plain",
+                             "threshold": "plain",
+                             "noLoading": "plain:true",
+                             "noAutoLogin": "plain:false"
                             }'
                           ↓threadid [ngx.components.UIControlVariable-1781608122133]: 
                             varValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:conversation.conversationId
+                                - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.conversationId ? scope.conversation.conversationId : '''''
                           ↓targetProject [ngx.components.UIControlVariable-1781608122135]: 
                             varValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(conversation, this)
+                                - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(scope.conversation, this)
                           ↓provider [ngx.components.UIControlVariable-1781700400002]: 
                             varValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(conversation && conversation.provider) ? conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')'
+                                - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')'
                           ↓model [ngx.components.UIControlVariable-1781700500036]: 
                             varValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(conversation && conversation.model != null) ? conversation.model : (this.getDefaultAgentModel ? this.getDefaultAgentModel((conversation && conversation.provider) ? conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')) : '''')'
+                                - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.model != null) ? scope.conversation.model : (this.getDefaultAgentModel ? this.getDefaultAgentModel((scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')) : '''')'
                           ↓SetConversation [ngx.components.UIDynamicAction-1781608122137]: 
                             beanData: |
                               '{
@@ -5687,13 +6356,24 @@ title: Tigo
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
                           ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
-                            beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+                            beanData: |
+                              '{
+                               "ionBean": "IfAction",
+                               "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}",
+                               "negate": "plain:false"
+                              }'
                             ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
                               beanData: |
                                 '{
                                  "ionBean": "CallSequenceAction",
                                  "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
-                                 "noLoading": "plain:true"
+                                 "marker": "plain:",
+                                 "cachePolicy": "plain",
+                                 "cacheTtl": "plain:3000",
+                                 "timeout": "plain",
+                                 "threshold": "plain",
+                                 "noLoading": "plain:true",
+                                 "noAutoLogin": "plain:false"
                                 }'
                               ↓threadid [ngx.components.UIControlVariable-1781621341118]: 
                                 varValue: 
@@ -5711,7 +6391,12 @@ title: Tigo
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
                               ↓PublishEvent [ngx.components.UIDynamicAction-1781621341122]: 
-                                beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+                                beanData: |
+                                  '{
+                                   "ionBean": "PublishEventAction",
+                                   "topic": "plain:AssistantResponse",
+                                   "data": "script:{}"
+                                  }'
                               ↓targetProject [ngx.components.UIControlVariable-1781689577838]: 
                                 varValue: 
                                   - xmlizable: 
@@ -5777,9 +6462,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
                          "Disabled": "script:conversation && conversation.conversationId === this.local.Conversation",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1781608122145]: 
@@ -5800,7 +6499,11 @@ title: Tigo
                            "ionBean": "Icon",
                            "IonColor": "plain:danger",
                            "IconName": "plain:close-outline",
-                           "IconSlot": "plain:icon-only"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:icon-only",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                       ↓Event [ngx.components.UIControlEvent-1781608122151]: 
@@ -5809,7 +6512,13 @@ title: Tigo
                             '{
                              "ionBean": "CallSequenceAction",
                              "requestable": "plain:ConvertigoAssistant.AgentDeleteConversation",
-                             "noLoading": "plain:true"
+                             "marker": "plain:",
+                             "cachePolicy": "plain",
+                             "cacheTtl": "plain:3000",
+                             "timeout": "plain",
+                             "threshold": "plain",
+                             "noLoading": "plain:true",
+                             "noAutoLogin": "plain:false"
                             }'
                           ↓threadid [ngx.components.UIControlVariable-1781608122155]: 
                             varValue: 
@@ -5852,8 +6561,23 @@ title: Tigo
                       beanData: |
                         '{
                          "ionBean": "Button",
+                         "ButtonFormType": "plain:button",
+                         "Disabled": "plain:false",
+                         "IonColor": "plain",
+                         "IonExpand": "plain",
+                         "IonShape": "plain",
                          "IonFill": "plain:clear",
-                         "IonSize": "plain:small"
+                         "IonSize": "plain:small",
+                         "IconSlot": "plain",
+                         "IonMode": "plain",
+                         "IonStrong": "plain",
+                         "LinkUrl": "plain",
+                         "LinkDownload": "plain",
+                         "LinkTarget": "plain",
+                         "LinkRel": "plain",
+                         "LinkRouterPath": "plain",
+                         "LinkRouterData": "plain",
+                         "LinkRouterDirection": "plain"
                         }'
                       tagName: ion-button
                       ↓Class [ngx.components.UIAttribute-1782745322280]: 
@@ -5872,8 +6596,13 @@ title: Tigo
                         beanData: |
                           '{
                            "ionBean": "Icon",
+                           "IonColor": "plain",
                            "IconName": "plain:create-outline",
-                           "IconSlot": "plain:icon-only"
+                           "IconMdName": "source",
+                           "IconIosName": "source",
+                           "IonSize": "plain",
+                           "IconSlot": "plain:icon-only",
+                           "IconSource": "plain"
                           }'
                         tagName: ion-icon
                       ↓Event [ngx.components.UIControlEvent-1782745322286]: 
@@ -6238,8 +6967,13 @@ title: Tigo
                             beanData: |
                               '{
                                "ionBean": "Icon",
+                               "IonColor": "plain",
                                "IconName": "plain:terminal-outline",
-                               "IonSize": "plain:small"
+                               "IconMdName": "source",
+                               "IconIosName": "source",
+                               "IonSize": "plain:small",
+                               "IconSlot": "plain",
+                               "IconSource": "plain"
                               }'
                             tagName: ion-icon
                           ↓Text [ngx.components.UIDynamicElement-1782245569906]: 
@@ -6384,8 +7118,13 @@ title: Tigo
                           beanData: |
                             '{
                              "ionBean": "Icon",
+                             "IonColor": "plain",
                              "IconName": "plain:terminal-outline",
-                             "IonSize": "plain:small"
+                             "IconMdName": "source",
+                             "IconIosName": "source",
+                             "IonSize": "plain:small",
+                             "IconSlot": "plain",
+                             "IconSource": "plain"
                             }'
                           tagName: ion-icon
                         ↓Text [ngx.components.UIDynamicElement-1782246692556]: 
@@ -6475,7 +7214,14 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓Spinner [ngx.components.UIDynamicElement-1773100000018]: 
-              beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
+              beanData: |
+                '{
+                 "ionBean": "Spinner",
+                 "IonColor": "plain",
+                 "Duration": "plain",
+                 "Name": "plain:lines",
+                 "Paused": "plain:false"
+                }'
               tagName: ion-spinner
           ↓Hidden [ngx.components.UIAttribute-1782124487981]: 
             attrName: '[hidden]'
@@ -6493,8 +7239,23 @@ title: Tigo
       beanData: |
         '{
          "ionBean": "Button",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
          "IonColor": "plain:light",
-         "IonShape": "plain:round"
+         "IonExpand": "plain",
+         "IonShape": "plain:round",
+         "IonFill": "plain",
+         "IonSize": "plain",
+         "IconSlot": "plain",
+         "IonMode": "plain",
+         "IonStrong": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
+         "LinkRouterPath": "plain",
+         "LinkRouterData": "plain",
+         "LinkRouterDirection": "plain"
         }'
       tagName: ion-button
       ↓Slot [ngx.components.UIAttribute-1781676533576]: 
@@ -6530,8 +7291,11 @@ title: Tigo
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-up-outline",
+           "IconMdName": "source",
+           "IconIosName": "source",
            "IonSize": "plain:small",
-           "IconSlot": "plain:icon-only"
+           "IconSlot": "plain:icon-only",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
   ↓IfScrollBottomButton [ngx.components.UIControlDirective-1773900000010]: 
@@ -6544,8 +7308,23 @@ title: Tigo
       beanData: |
         '{
          "ionBean": "Button",
+         "ButtonFormType": "plain:button",
+         "Disabled": "plain:false",
          "IonColor": "plain:light",
-         "IonShape": "plain:round"
+         "IonExpand": "plain",
+         "IonShape": "plain:round",
+         "IonFill": "plain",
+         "IonSize": "plain",
+         "IconSlot": "plain",
+         "IonMode": "plain",
+         "IonStrong": "plain",
+         "LinkUrl": "plain",
+         "LinkDownload": "plain",
+         "LinkTarget": "plain",
+         "LinkRel": "plain",
+         "LinkRouterPath": "plain",
+         "LinkRouterData": "plain",
+         "LinkRouterDirection": "plain"
         }'
       tagName: ion-button
       ↓Slot [ngx.components.UIAttribute-1774000000002]: 
@@ -6581,8 +7360,11 @@ title: Tigo
            "ionBean": "Icon",
            "IonColor": "plain:dark",
            "IconName": "plain:arrow-down-outline",
+           "IconMdName": "source",
+           "IconIosName": "source",
            "IonSize": "plain:small",
-           "IconSlot": "plain:icon-only"
+           "IconSlot": "plain:icon-only",
+           "IconSource": "plain"
           }'
         tagName: ion-icon
 ↓PageEvent [ngx.components.UIPageEvent-1744269061199]: 
@@ -6790,7 +7572,13 @@ title: Tigo
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentCreateConversationRouter",
-           "noLoading": "plain:true"
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:true",
+           "noAutoLogin": "plain:false"
           }'
         ↓SetLocal [ngx.components.UIDynamicAction-1744302907957]: 
           beanData: |
@@ -6823,7 +7611,12 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.getConfiguredAgentProvider && this.getConfiguredAgentProvider().length && this.getAgentModel) ? this.getAgentModel() : '''''
         ↓If [ngx.components.UIDynamicAction-1749567852407]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: |
+            '{
+             "ionBean": "IfAction",
+             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "negate": "plain:false"
+            }'
           ↓AddHistoryMessages [ngx.components.UICustomAction-1749567905830]: 
             actionValue: 
               - xmlizable: 
@@ -6976,13 +7769,24 @@ title: Tigo
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversationRouter","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓PollActiveRunOnEnter [ngx.components.UIDynamicAction-1781622093065]: 
-              beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.IsProcessing === true && !!this.local.RunID"}'
+              beanData: |
+                '{
+                 "ionBean": "IfAction",
+                 "condition": "script:this.local && this.local.IsProcessing === true && !!this.local.RunID",
+                 "negate": "plain:false"
+                }'
               ↓CallSequence [ngx.components.UIDynamicAction-1781622094571]: 
                 beanData: |
                   '{
                    "ionBean": "CallSequenceAction",
                    "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
-                   "noLoading": "plain:true"
+                   "marker": "plain:",
+                   "cachePolicy": "plain",
+                   "cacheTtl": "plain:3000",
+                   "timeout": "plain",
+                   "threshold": "plain",
+                   "noLoading": "plain:true",
+                   "noAutoLogin": "plain:false"
                   }'
                 ↓threadid [ngx.components.UIControlVariable-1781622094573]: 
                   varValue: 
@@ -7000,7 +7804,12 @@ title: Tigo
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
                 ↓PublishEvent [ngx.components.UIDynamicAction-1781622094577]: 
-                  beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+                  beanData: |
+                    '{
+                     "ionBean": "PublishEventAction",
+                     "topic": "plain:AssistantResponse",
+                     "data": "script:{}"
+                    }'
                 ↓targetProject [ngx.components.UIControlVariable-1781689586166]: 
                   varValue: 
                     - xmlizable: 
@@ -7075,99 +7884,111 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                 →: |
-                  '        var actionResponse = null;
-                          try {
-                              if (props && props.stack && props.stack[''1744302843894'']) {
-                                  actionResponse = props.stack[''1744302843894''].out;
-                              }
-                          } catch (e0) {}
-                          var result = actionResponse && actionResponse.result ? actionResponse.result : {};
-                          if (!page.local) { page.local = {}; }
-                          if (result.settings) {
-                              page.local.AgentSettings = result.settings;
-                          }
-                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-                          var normalize = function(value) {
-                              var provider = clean(value).toLowerCase();
-                              if (provider === ''codex-cli'' || provider === ''openai-codex'') { return ''codex''; }
-                              if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') { return ''vibe''; }
-                              return provider;
-                          };
-                          var state = result.state || {};
-                          var settings = page.local.AgentSettings || {};
-                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
-                          var providers = settings.providers || [];
-                          var provider = normalize(page.local.AgentProvider || state.provider || result.provider);
-                          if (!provider.length && page.getAgentProvider) { provider = normalize(page.getAgentProvider()); }
-                          if (!provider.length && settings.defaults) { provider = normalize(settings.defaults.provider); }
-                          if (!provider.length && providers.length) { provider = normalize(providers[0] && providers[0].id); }
-                          var selectedProvider = null;
-                          for (var i = 0; i < providers.length; i++) {
-                              if (normalize(providers[i] && providers[i].id) === provider) {
-                                  selectedProvider = providers[i];
-                                  break;
-                              }
-                          }
-                          if (!provider.length || selectedProvider === null) {
-                              page.local.AgentProvider = provider;
-                              page.local.AgentModels = [];
-                              page.local.AgentProviderSupportsReasoning = false;
-                              page.local.AgentReasoningLevels = [];
-                              page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : true;
-                              resolve();
-                              return;
-                          }
-                          var models = selectedProvider.models || [];
-                          
-                          page.local.AgentProvider = provider;
-                          page.local.AgentModels = models;
-                          page.local.AgentProviderSupportsReasoning = selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                          var model = clean(page.local.AgentModel || state.model || result.model);
-                          if (!model.length) {
-                              model = clean(selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''));
-                          }
-                          if (!model.length && models.length) {
-                              model = clean(models[0] && models[0].id);
-                          }
-                          var selectedModel = null;
-                          for (var j = 0; j < models.length; j++) {
-                              if (clean(models[j] && models[j].id) === model) {
-                                  selectedModel = models[j];
-                                  break;
-                              }
-                          }
-                          if (selectedModel === null && models.length) {
-                              selectedModel = models[0];
-                              model = clean(selectedModel && selectedModel.id);
-                          }
-                          page.local.AgentModel = model;
-                          page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                          var reasoning = clean(page.local.AgentReasoningEffort || state.reasoningEffort || result.reasoningEffort);
-                          if (!reasoning.length && page.local.AgentProviderSupportsReasoning === true) {
-                              reasoning = clean(selectedModel && selectedModel.defaultReasoning);
-                          }
-                          page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : '''';
-                          page.local.AgentServiceTier = clean(page.local.AgentServiceTier || state.serviceTier || result.serviceTier);
-                          var providerReady = false;
-                          try {
-                              providerReady = selectedProvider && page.isAgentProviderReady ? page.isAgentProviderReady(selectedProvider) : false;
-                          } catch (eReady) {}
-                          if (providerReady) {
-                              if (page.local.AgentConfigExplicitOpen !== true) {
-                                  page.local.ShowAgentConfigPanel = false;
-                                  page.local.AgentConfigExplicitOpen = false;
-                                  if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
-                              }
-                              page.local.AgentProviderChoiceConfirmed = true;
-                              try {
-                                  if (typeof window !== ''undefined'' && window.localStorage) {
-                                      window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
-                                  }
-                              } catch (eConfirm) {}
-                          } else {
-                              page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : false;
-                          }
-                          resolve();'
+                  'var actionResponse = null;
+                  try {
+                      if (props && props.stack && props.stack[''1744302843894'']) {
+                          actionResponse = props.stack[''1744302843894''].out;
+                      }
+                  } catch (e0) {}
+                  var result = actionResponse && actionResponse.result ? actionResponse.result : {};
+                  if (!page.local) { page.local = {}; }
+                  if (result.settings) {
+                      page.local.AgentSettings = result.settings;
+                  }
+                  var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                  var normalize = function(value) {
+                      var provider = clean(value).toLowerCase();
+                      if (provider === ''codex-cli'' || provider === ''openai-codex'') { return ''codex''; }
+                      if (provider === ''mistral-vibe'' || provider === ''vibe-acp'') { return ''vibe''; }
+                      return provider;
+                  };
+                  var state = result.state || {};
+                  var settings = page.local.AgentSettings || {};
+                  if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                  var preferences = settings.preferences || result.preferences || {};
+                  var preferencesConfirmed = preferences && preferences.confirmed === true;
+                  var storedProvider = '''';
+                  var storedModel = '''';
+                  var storedReasoning = '''';
+                  var storedServiceTier = '''';
+                  var storedConfirmed = false;
+                  try {
+                      if (typeof window !== ''undefined'' && window.localStorage) {
+                          storedProvider = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProvider''));
+                          storedModel = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentModel''));
+                          storedReasoning = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentReasoningEffort''));
+                          storedServiceTier = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentServiceTier''));
+                          var flag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
+                          storedConfirmed = flag === ''true'' || flag === ''1'' || flag === ''yes'';
+                      }
+                  } catch (eStored) {}
+                  var providers = settings.providers || [];
+                  var provider = normalize(preferencesConfirmed ? preferences.provider : (page.local.AgentProvider || state.provider || result.provider || storedProvider));
+                  if (!provider.length && page.getAgentProvider) { provider = normalize(page.getAgentProvider()); }
+                  if (!provider.length && settings.defaults) { provider = normalize(settings.defaults.provider); }
+                  if (!provider.length && providers.length) { provider = normalize(providers[0] && providers[0].id); }
+                  var selectedProvider = null;
+                  for (var i = 0; i < providers.length; i++) {
+                      if (normalize(providers[i] && providers[i].id) === provider) {
+                          selectedProvider = providers[i];
+                          break;
+                      }
+                  }
+                  var confirmed = preferencesConfirmed || page.local.AgentProviderChoiceConfirmed === true || storedConfirmed;
+                  page.local.AgentProviderChoiceConfirmed = confirmed;
+                  if (!provider.length || selectedProvider === null) {
+                      page.local.AgentProvider = provider;
+                      page.local.AgentModels = [];
+                      page.local.AgentProviderSupportsReasoning = false;
+                      page.local.AgentReasoningLevels = [];
+                      page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : true;
+                      resolve();
+                      return;
+                  }
+                  var models = selectedProvider.models || [];
+                  page.local.AgentProvider = provider;
+                  page.local.AgentModels = models;
+                  page.local.AgentProviderSupportsReasoning = selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                  var model = clean(preferencesConfirmed ? preferences.model : (state.model || result.model || page.local.AgentModel || storedModel));
+                  if (!model.length) {
+                      model = clean(selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''));
+                  }
+                  if (!model.length && models.length) {
+                      model = clean(models[0] && models[0].id);
+                  }
+                  var selectedModel = null;
+                  for (var j = 0; j < models.length; j++) {
+                      if (clean(models[j] && models[j].id) === model) {
+                          selectedModel = models[j];
+                          break;
+                      }
+                  }
+                  if (selectedModel === null && models.length) {
+                      selectedModel = models[0];
+                      model = clean(selectedModel && selectedModel.id);
+                  }
+                  page.local.AgentModel = model;
+                  page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                  var reasoning = clean(preferencesConfirmed ? preferences.reasoning : (state.reasoningEffort || result.reasoningEffort || page.local.AgentReasoningEffort || storedReasoning));
+                  if (!reasoning.length && page.local.AgentProviderSupportsReasoning === true) {
+                      reasoning = clean(selectedModel && selectedModel.defaultReasoning);
+                  }
+                  page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : '''';
+                  page.local.AgentServiceTier = clean(preferencesConfirmed ? preferences.serviceTier : (state.serviceTier || result.serviceTier || page.local.AgentServiceTier || storedServiceTier));
+                  var providerReady = false;
+                  try {
+                      providerReady = selectedProvider && page.isAgentProviderReady ? page.isAgentProviderReady(selectedProvider) : false;
+                  } catch (eReady) {}
+                  if (providerReady && confirmed) {
+                      if (page.local.AgentConfigExplicitOpen !== true) {
+                          page.local.ShowAgentConfigPanel = false;
+                          page.local.AgentConfigExplicitOpen = false;
+                          if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
+                      }
+                  } else {
+                      page.local.ShowAgentConfigPanel = true;
+                  }
+                  resolve();'
         ↓UseDiscoveredAgentModels [ngx.components.UICustomAction-1785253494412]: 
           actionValue: 
             - xmlizable: 
@@ -7197,47 +8018,42 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                 →: |
-                  '        try {
-                              if (!page.local) { page.local = {}; }
-                              var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-                              var confirmed = page.local.AgentProviderChoiceConfirmed === true;
-                              try {
-                                  if (!confirmed && typeof window !== ''undefined'' && window.localStorage) {
-                                      var flag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
-                                      confirmed = flag === ''true'' || flag === ''1'' || flag === ''yes'';
-                                  }
-                              } catch (e0) {}
-                              var configured = '''';
-                              try { configured = page.getConfiguredAgentProvider ? clean(page.getConfiguredAgentProvider()) : ''''; } catch (e1) {}
-                              var readyProvider = false;
-                              try {
-                                  var currentProvider = page.getAgentProvider ? page.getAgentProvider() : configured;
-                                  readyProvider = !!(page.hasReadyAgentProvider && page.hasReadyAgentProvider(currentProvider));
-                              } catch (e2) {}
-                              if (readyProvider) {
-                                  confirmed = true;
-                                  page.local.AgentProviderChoiceConfirmed = true;
-                                  try {
-                                      if (typeof window !== ''undefined'' && window.localStorage) {
-                                          window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
-                                      }
-                                  } catch (e3) {}
-                              }
-                              var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true || page.local.IsProcessing === true;
-                              if (page.isAgentBridgeMode && page.isAgentBridgeMode() && !configured.length && !confirmed && !readyProvider && !hasConversation) {
-                                  page.local.ShowConversationPanel = false;
-                                  page.local.AgentConfigExplicitOpen = false;
-                                  page.local.ShowAgentConfigPanel = true;
-                                  page.setEnableChat && page.setEnableChat();
-                                  page.tick();
-                              } else if (readyProvider && page.local.ShowAgentConfigPanel === true && page.local.AgentConfigExplicitOpen !== true && !hasConversation) {
-                                  page.local.ShowAgentConfigPanel = false;
-                                  if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
-                                  page.setEnableChat && page.setEnableChat();
-                                  page.tick();
-                              }
-                          } catch (e) {}
-                          resolve();'
+                  'try {
+                      if (!page.local) { page.local = {}; }
+                      var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                      var settings = page.local.AgentSettings || {};
+                      if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                      var preferences = settings.preferences || {};
+                      var confirmed = preferences && preferences.confirmed === true || page.local.AgentProviderChoiceConfirmed === true;
+                      try {
+                          if (!confirmed && typeof window !== ''undefined'' && window.localStorage) {
+                              var flag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
+                              confirmed = flag === ''true'' || flag === ''1'' || flag === ''yes'';
+                          }
+                      } catch (e0) {}
+                      page.local.AgentProviderChoiceConfirmed = confirmed;
+                      var configured = '''';
+                      try { configured = page.getConfiguredAgentProvider ? clean(page.getConfiguredAgentProvider()) : ''''; } catch (e1) {}
+                      var readyProvider = false;
+                      try {
+                          var currentProvider = page.getAgentProvider ? page.getAgentProvider() : configured;
+                          readyProvider = !!(page.hasReadyAgentProvider && page.hasReadyAgentProvider(currentProvider));
+                      } catch (e2) {}
+                      var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true || page.local.IsProcessing === true;
+                      if (page.isAgentBridgeMode && page.isAgentBridgeMode() && !confirmed && !hasConversation) {
+                          page.local.ShowConversationPanel = false;
+                          page.local.AgentConfigExplicitOpen = false;
+                          page.local.ShowAgentConfigPanel = true;
+                          page.setEnableChat && page.setEnableChat();
+                          page.tick();
+                      } else if (readyProvider && confirmed && page.local.ShowAgentConfigPanel === true && page.local.AgentConfigExplicitOpen !== true && !hasConversation) {
+                          page.local.ShowAgentConfigPanel = false;
+                          if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
+                          page.setEnableChat && page.setEnableChat();
+                          page.tick();
+                      }
+                  } catch (e) {}
+                  resolve();'
         ↓SetAgentReasoningEffort [ngx.components.UIDynamicAction-1782120503630]: 
           beanData: |
             '{
@@ -8163,13 +8979,24 @@ title: Tigo
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓IfElse [ngx.components.UIDynamicIf-1744357030892]: 
-      beanData: '{"ionBean":"IfElseAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+      beanData: |
+        '{
+         "ionBean": "IfElseAction",
+         "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}",
+         "negate": "plain:false"
+        }'
       ↓CallSequence [ngx.components.UIDynamicAction-1744367857710]: 
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
-           "noLoading": "plain:true"
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:true",
+           "noAutoLogin": "plain:false"
           }'
         ↓threadid [ngx.components.UIControlVariable-1744367857713]: 
           varValue: 
@@ -8177,7 +9004,12 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
         ↓PublishEvent [ngx.components.UIDynamicAction-1744367857716]: 
-          beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+          beanData: |
+            '{
+             "ionBean": "PublishEventAction",
+             "topic": "plain:AssistantResponse",
+             "data": "script:{}"
+            }'
         ↓runid [ngx.components.UIControlVariable-1744389800542]: 
           varValue: 
             - xmlizable: 
@@ -8244,7 +9076,12 @@ title: Tigo
              "level": "plain:warn"
             }'
         ↓If1 [ngx.components.UIDynamicAction-1747229858672]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: |
+            '{
+             "ionBean": "IfAction",
+             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "negate": "plain:false"
+            }'
           ↓AddAssistantMessage [ngx.components.UICustomAction-1747229858675]: 
             actionValue: 
               - xmlizable: 
@@ -8317,7 +9154,13 @@ title: Tigo
                     } catch (e) {}
                     resolve();
 ↓Footer [ngx.components.UIDynamicElement-1750415662453]: 
-  beanData: '{"ionBean":"Footer"}'
+  beanData: |
+    '{
+     "ionBean": "Footer",
+     "IonMode": "plain",
+     "Collapse": "plain",
+     "Translucent": "plain:false"
+    }'
   tagName: ion-footer
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]: 
     identifier: chatfooter
@@ -8326,7 +9169,18 @@ title: Tigo
       attrName: (RunQuestion)
       eventName: RunQuestion
       ↓CallSequence [ngx.components.UIDynamicAction-1751354620842]: 
-        beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.UploadFiles"}'
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:ConvertigoAssistant.UploadFiles",
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:false",
+           "noAutoLogin": "plain:false"
+          }'
         ↓files [ngx.components.UIControlVariable-1751354620845]: 
           varValue: 
             - xmlizable: 
@@ -8348,7 +9202,12 @@ title: Tigo
             beanData: '{"ionBean":"IterateAction","items":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.UploadFiles\",\"marker\":\"\"}],\"path\":\"?.file\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
             ↓Loop_Handler [ngx.components.UIActionLoopEvent-1751354620854]: 
               ↓If [ngx.components.UIDynamicAction-1751354620857]: 
-                beanData: '{"ionBean":"IfAction","condition":"script:item.filename"}'
+                beanData: |
+                  '{
+                   "ionBean": "IfAction",
+                   "condition": "script:item.filename",
+                   "negate": "plain:false"
+                  }'
                 ↓PushAIFile [ngx.components.UICustomAction-1751354620860]: 
                   actionValue: 
                     - xmlizable: 
@@ -8449,7 +9308,12 @@ title: Tigo
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
               ↓If1 [ngx.components.UIDynamicAction-1751634630354]: 
-                beanData: '{"ionBean":"IfAction","condition":"script:item.error"}'
+                beanData: |
+                  '{
+                   "ionBean": "IfAction",
+                   "condition": "script:item.error",
+                   "negate": "plain:false"
+                  }'
                 ↓AddAssistantMessage [ngx.components.UICustomAction-1751634630369]: 
                   actionValue: 
                     - xmlizable: 
@@ -8470,7 +9334,12 @@ title: Tigo
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item
             ↓If [ngx.components.UIDynamicAction-1751354620878]: 
-              beanData: '{"ionBean":"IfAction","condition":"script:parent.out == ''done''"}'
+              beanData: |
+                '{
+                 "ionBean": "IfAction",
+                 "condition": "script:parent.out == ''done''",
+                 "negate": "plain:false"
+                }'
               ↓ConsoleLog [ngx.components.UICustomAction-1751354620881]: 
                 actionValue: 
                   - xmlizable: 
@@ -8600,7 +9469,7 @@ title: Tigo
                   varValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:page.chatfooter && page.chatfooter.getQuestionText ? page.chatfooter.getQuestionText() : '''''
+                      - MobileSmartSourceType: 'script:(function(evt, page) { var text = evt && evt.question != null ? evt.question : ''''; if (!('''' + text).replace(/^\s+|\s+$/g, '''').length) { try { text = page.chatfooter && page.chatfooter.getQuestionText ? page.chatfooter.getQuestionText() : ''''; } catch (e) {} } if (!('''' + (text == null ? '''' : text)).replace(/^\s+|\s+$/g, '''').length && page.local) { text = page.local.Question || ''''; } return text == null ? '''' : text; })(event, this)'
                 ↓attachments [ngx.components.UIControlVariable-1777701000003]: 
                   varValue: 
                     - xmlizable: 
@@ -8611,7 +9480,13 @@ title: Tigo
                     '{
                      "ionBean": "CallSequenceAction",
                      "requestable": "plain:ConvertigoAssistant.AgentSendMessageRouter",
-                     "noLoading": "plain:true"
+                     "marker": "plain:",
+                     "cachePolicy": "plain",
+                     "cacheTtl": "plain:3000",
+                     "timeout": "plain",
+                     "threshold": "plain",
+                     "noLoading": "plain:true",
+                     "noAutoLogin": "plain:false"
                     }'
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
                     varValue: 
@@ -8646,7 +9521,12 @@ title: Tigo
                             		resolve();
                             '
                   ↓If [ngx.components.UIDynamicAction-1751354620911]: 
-                    beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+                    beanData: |
+                      '{
+                       "ionBean": "IfAction",
+                       "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+                       "negate": "plain:false"
+                      }'
                     ↓AddAssistantMessage [ngx.components.UICustomAction-1751354620914]: 
                       actionValue: 
                         - xmlizable: 
@@ -8715,7 +9595,13 @@ title: Tigo
                         '{
                          "ionBean": "CallSequenceAction",
                          "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
-                         "noLoading": "plain:true"
+                         "marker": "plain:",
+                         "cachePolicy": "plain",
+                         "cacheTtl": "plain:3000",
+                         "timeout": "plain",
+                         "threshold": "plain",
+                         "noLoading": "plain:true",
+                         "noAutoLogin": "plain:false"
                         }'
                       ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
                         varValue: 
@@ -8728,7 +9614,12 @@ title: Tigo
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''')'
                       ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
-                        beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+                        beanData: |
+                          '{
+                           "ionBean": "PublishEventAction",
+                           "topic": "plain:AssistantResponse",
+                           "data": "script:{}"
+                          }'
                       ↓runid [ngx.components.UIControlVariable-1751354620932]: 
                         varValue: 
                           - xmlizable: 
@@ -8923,7 +9814,13 @@ title: Tigo
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentCloseConversation",
-           "noLoading": "plain:true"
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:true",
+           "noAutoLogin": "plain:false"
           }'
         ↓threadid [ngx.components.UIControlVariable-1781872839640]: 
           varValue: 
@@ -9143,13 +10040,24 @@ title: Tigo
                     page.tick();
                     resolve();'
     ↓SwitchProjectIf [ngx.components.UIDynamicAction-1782139100462]: 
-      beanData: '{"ionBean":"IfAction","condition":"script:false"}'
+      beanData: |
+        '{
+         "ionBean": "IfAction",
+         "condition": "script:false",
+         "negate": "plain:false"
+        }'
       ↓ReloadProjectConversation [ngx.components.UIDynamicAction-1782139101968]: 
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
            "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
-           "noLoading": "plain:true"
+           "marker": "plain:",
+           "cachePolicy": "plain",
+           "cacheTtl": "plain:3000",
+           "timeout": "plain",
+           "threshold": "plain",
+           "noLoading": "plain:true",
+           "noAutoLogin": "plain:false"
           }'
         ↓threadid [ngx.components.UIControlVariable-1782139101970]: 
           varValue: 
@@ -9281,13 +10189,24 @@ title: Tigo
                           if (page.local.Messages.length && page.scrollChatBottom) { page.scrollChatBottom(0); }
                           resolve();'
           ↓PollActiveRunOnSwitch [ngx.components.UIDynamicAction-1782139533591]: 
-            beanData: '{"ionBean":"IfAction","condition":"script:this.local && this.local.ProjectConversationNeedsPolling === true && this.local.IsProcessing === true && !!this.local.RunID && !!this.local.Conversation"}'
+            beanData: |
+              '{
+               "ionBean": "IfAction",
+               "condition": "script:this.local && this.local.ProjectConversationNeedsPolling === true && this.local.IsProcessing === true && !!this.local.RunID && !!this.local.Conversation",
+               "negate": "plain:false"
+              }'
             ↓ReadActiveRun [ngx.components.UIDynamicAction-1782139535097]: 
               beanData: |
                 '{
                  "ionBean": "CallSequenceAction",
                  "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
-                 "noLoading": "plain:true"
+                 "marker": "plain:",
+                 "cachePolicy": "plain",
+                 "cacheTtl": "plain:3000",
+                 "timeout": "plain",
+                 "threshold": "plain",
+                 "noLoading": "plain:true",
+                 "noAutoLogin": "plain:false"
                 }'
               ↓threadid [ngx.components.UIControlVariable-1782139535099]: 
                 varValue: 
@@ -9310,7 +10229,12 @@ title: Tigo
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
               ↓PublishEvent [ngx.components.UIDynamicAction-1782139535107]: 
-                beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+                beanData: |
+                  '{
+                   "ionBean": "PublishEventAction",
+                   "topic": "plain:AssistantResponse",
+                   "data": "script:{}"
+                  }'
               ↓userId [ngx.components.UIControlVariable-1782407716067]: 
                 varValue: 
                   - xmlizable: 

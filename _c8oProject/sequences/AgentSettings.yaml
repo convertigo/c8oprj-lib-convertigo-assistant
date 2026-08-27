@@ -10,6 +10,10 @@ responseTimeout: 120
     result = C8O.assistantAgentBridge.settings({
       threadid: typeof threadid === "undefined" ? "" : threadid,
       provider: typeof provider === "undefined" ? "" : provider,
+      model: typeof model === "undefined" ? "" : model,
+      reasoningEffort: typeof reasoningEffort === "undefined" ? "" : reasoningEffort,
+      serviceTier: typeof serviceTier === "undefined" ? "" : serviceTier,
+      savePreferences: typeof savePreferences === "undefined" ? "" : savePreferences,
       bridgeBaseUrl: typeof bridgeBaseUrl === "undefined" ? "" : bridgeBaseUrl,
       mcpEndpoint: typeof mcpEndpoint === "undefined" ? "" : mcpEndpoint,
       workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
@@ -106,3 +110,15 @@ responseTimeout: 120
 ↓runtimePresenceOnly [variables.RequestableVariable-1785255718254]: 
   comment: Check only for runtime files without invoking the CLI.
   description: Check only for runtime files without invoking the CLI.
+↓model [variables.RequestableVariable-1787826898911]: 
+  comment: Optional model preference.
+  description: Optional model preference.
+↓reasoningEffort [variables.RequestableVariable-1787826898914]: 
+  comment: Optional reasoningEffort preference.
+  description: Optional reasoningEffort preference.
+↓serviceTier [variables.RequestableVariable-1787826898916]: 
+  comment: Optional serviceTier preference.
+  description: Optional serviceTier preference.
+↓savePreferences [variables.RequestableVariable-1787826898918]: 
+  comment: Optional savePreferences preference.
+  description: Optional savePreferences preference.

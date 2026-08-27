@@ -83,6 +83,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
       "settingsTimeoutMs", "checkUpdates", "refreshUpdateCheck", "updateCheckTimeoutMs",
       "updateCheckCacheMs", "runtimePresenceOnly", "updateRuntime", "forceRuntimeUpdate",
+      "model", "reasoningEffort", "reasoningLevel", "serviceTier", "savePreferences",
       "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
       "mcpBearerTokenHandle", "browserDebugUrl", "browserDevToolsJsonUrl",
       "browserDevToolsWebSocketUrl", "playwrightCdpEndpoint",
@@ -1550,7 +1551,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         try {
           var item = JSON.parse(line);
           if (trim(item.role).toLowerCase() === "user") {
-            var title = conversationTitleFromText(item.content);
+            var title = conversationTitleFromText(extractUserMessage(item.content));
             if (title.length) {
               return title;
             }
@@ -1955,6 +1956,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     var provider = normalizeProvider(state.provider);
+    var previous = readJsonFile(new File(state.conversationFile)) || {};
+    var lastUserMessage = trim(state.userQuestion || previous.lastUserMessage || "");
+    var title = conversationTitleFromText(state.title) || conversationTitleFromText(lastUserMessage) || trim(previous.title);
     var answer = state.answerIsFinal === true || state.status === "completed" || state.status === "closed" ? String(state.answer || "") : "";
     var record = {
       version: 1,
@@ -1970,8 +1974,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       language: state.language || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
-      title: conversationTitleFromText(state.title) || conversationTitleFromText(state.userQuestion),
-      lastUserMessage: trim(state.userQuestion || ""),
+      title: title,
+      lastUserMessage: lastUserMessage,
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
       serviceTier: state.serviceTier || "",
@@ -2311,10 +2315,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function extractUserMessage(prompt) {
     var text = String(prompt || "");
-    var marker = "\nUser message:\n";
+    var marker = "\nUser message:";
     var index = text.lastIndexOf(marker);
     if (index !== -1) {
-      return trim(text.substring(index + marker.length));
+      return trim(text.substring(index + marker.length).replace(/^\r?\n/, ""));
     }
     return trim(text);
   }
@@ -2362,7 +2366,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour du traitement.",
       bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
-      codexAuthExpired: "La session Codex locale n'est plus valide. Le bridge va resynchroniser les identifiants Codex depuis le profil local ; si l'erreur revient, ouvrez Codex Desktop ou lancez `codex login`, puis renvoyez la demande.",
+      codexAuthExpired: "L'authentification Codex du profil local a expiré. Le bridge a resynchronisé les identifiants disponibles, mais ils ne permettent pas d'ouvrir une session. Ouvrez Codex Desktop ou lancez `codex login`, puis renvoyez la demande.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -2395,7 +2399,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "I cannot read the current response.",
       bridgeStateRecover: "I am checking that the task is still running.",
       bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
-      codexAuthExpired: "The local Codex session is no longer valid. The bridge will resynchronize Codex credentials from the local profile; if this happens again, open Codex Desktop or run `codex login`, then send the request again.",
+      codexAuthExpired: "The local Codex profile authentication has expired. The bridge synchronized the available credentials, but they cannot open a session. Open Codex Desktop or run `codex login`, then send the request again.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -2455,6 +2459,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return raw;
     }
     return lang(state).bridgeReadError;
+  }
+
+  function isCodexAuthenticationError(data) {
+    var lower = extractAgentErrorText(data, 0).toLowerCase();
+    return lower.indexOf("refresh token") !== -1 ||
+      lower.indexOf("access token could not be refreshed") !== -1 ||
+      lower.indexOf("please log out and sign in again") !== -1 ||
+      lower.indexOf("authentication is required before start") !== -1;
   }
 
   function progressLineLooksLikeAgentLifecycle(value) {
@@ -3959,7 +3971,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (normalizeProvider(provider) === "vibe" && typeof options.installVibe !== "undefined") {
       return boolValue(options.installVibe, true);
     }
-    return true;
+    return false;
   }
 
   function shouldShowAgentPreparingProgress(state, options, provider, installRequested) {
@@ -3993,6 +4005,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         assistantSurface: state.assistantSurface || options.assistantSurface || "",
         codexPath: trim(options.codexPath || options.commandPath),
         install: install ? "true" : "false",
+        codexLogin: typeof options.codexLogin === "undefined" ? "" : options.codexLogin,
+        codexLoginStatus: typeof options.codexLoginStatus === "undefined" ? "" : options.codexLoginStatus,
+        forceLogin: typeof options.forceLogin === "undefined" ? "" : options.forceLogin,
         nodeVersion: trim(options.nodeVersion),
         nodeDir: trim(options.nodeDir || options.nodeInstallDir),
         npmPath: trim(options.npmPath),
@@ -4088,6 +4103,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       codexPath: trim(options.codexPath || options.commandPath),
       vibeHome: trim(options.vibeHome || options.agentHome),
       vibeHomeScope: trim(options.vibeHomeScope || options.homeScope),
+      model: trim(options.model),
+      reasoningEffort: trim(options.reasoningEffort || options.reasoningLevel),
+      serviceTier: trim(options.serviceTier),
+      savePreferences: typeof options.savePreferences === "undefined" ? "" : options.savePreferences,
       settingsTimeoutMs: trim(options.settingsTimeoutMs),
       checkUpdates: typeof options.checkUpdates === "undefined" ? "" : options.checkUpdates,
       refreshUpdateCheck: typeof options.refreshUpdateCheck === "undefined" ? "" : options.refreshUpdateCheck,
@@ -4119,6 +4138,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var t = lang(state);
     var provider = providerLabel(state.provider);
     var lines = [];
+    if (setup && setup.status === "authentication_required") {
+      if (normalizeProvider(state.provider) === "codex") {
+        lines.push(state.language === "fr" ? "Codex est installé, mais aucune authentification utilisable n'a été trouvée." : "Codex is installed, but no usable authentication was found.");
+        lines.push(state.language === "fr" ? "Connectez-vous avec Codex Desktop ou lancez `codex login`, puis revenez dans cette configuration." : "Sign in with Codex Desktop or run `codex login`, then return to this configuration.");
+      } else {
+        lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");
+        lines.push(state.language === "fr" ? "Ajoutez `MISTRAL_API_KEY` au profil Vibe (`~/.vibe/.env`), puis revenez dans cette configuration." : "Add `MISTRAL_API_KEY` to the Vibe profile (`~/.vibe/.env`), then return to this configuration.");
+      }
+      return lines.join("\n");
+    }
     lines.push(t.setupRequired);
     if (setup && setup.messages && setup.messages.length) {
       lines.push("");
@@ -4220,6 +4249,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       status: String(report.status || ""),
       phase: String(report.phase || ""),
       error: String(report.error || ""),
+      authentication: report.authentication ? {
+        configured: report.authentication.configured === true,
+        status: String(report.authentication.status || ""),
+        method: String(report.authentication.method || ""),
+        action: String(report.authentication.action || "")
+      } : null,
       messages: report.messages || [],
       installation: publicInstallationDiagnostic(report.installation),
       skills: report.skills || null,
@@ -4400,6 +4435,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userKey: userKey,
       workspaceRoot: workspaceRoot,
       settings: settings,
+      preferences: settings.preferences || null,
       defaults: settings.defaults || {
         provider: "",
         model: "",
@@ -4436,6 +4472,35 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    var codexLoginRequested = normalizeProvider(state.provider) === "codex" && boolValue(options.codexLogin || options.codexLoginStatus, false);
+    if (codexLoginRequested) {
+      var loginInfo = callAgentSetup(state, options, false);
+      var login = loginInfo.result || {};
+      state.setupRequired = login.authenticated !== true;
+      state.setupReport = {
+        ok: login.authenticated === true,
+        status: login.status || "login_required",
+        authentication: {
+          configured: login.authenticated === true,
+          status: login.authenticated === true ? "configured" : "missing",
+          action: login.authenticated === true ? "" : "codex_login"
+        }
+      };
+      state.updatedAt = now();
+      saveState(state);
+      setStateBuffer(state);
+      return {
+        ok: login.ok !== false,
+        id: state.threadid,
+        object: "agent.login",
+        status: login.status || (login.authenticated === true ? "authenticated" : "login_required"),
+        provider: "codex",
+        setupRequired: login.authenticated !== true,
+        login: login,
+        state: publicState(state),
+        message: login.message || login.error || ""
+      };
+    }
     var updateRequested = boolValue(options.updateRuntime || options.forceRuntimeUpdate || options.forceUpdate, false);
     if (updateRequested) {
       if (normalizeProvider(state.provider) === "codex") {
@@ -4638,6 +4703,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
     promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
+    if (trim(options.provider).toLowerCase() === "codex" && !isNoCodeSurface) {
+      promptParts.push("- Codex callable routes for the standard Convertigo path are already known: `tools.mcp__convertigo__project_list`, `tools.mcp__convertigo__marketplace_import`, `tools.mcp__convertigo__mobile_builder_open`, `tools.mcp__convertigo__upsert_crud`, `tools.mcp__convertigo__upsert_ngx_crud_kit`, `tools.mcp__convertigo__crud_proof`, `tools.mcp__convertigo__databaseobject_tree_get`, `tools.mcp__convertigo__databaseobject_tree_apply`, `tools.mcp__convertigo__palette_list`, `tools.mcp__convertigo__palette_describe`, and `tools.mcp__convertigo__batch_call`. Call these directly through `exec`; do not query `ALL_TOOLS` to locate or inspect them.");
+      promptParts.push("- Managed JxBrowser proof routes are `tools.mcp__playwright__browser_tabs`, `tools.mcp__playwright__browser_find`, and `tools.mcp__playwright__browser_evaluate`. Call them directly and do not enumerate Playwright metadata.");
+      promptParts.push("- Named Convertigo resources are read directly with `read_mcp_resource({server:\"convertigo\",uri:...})`; do not enumerate resource catalogs first.");
+    }
     var viewerControlReady = boolValue(options.browserControlReady, true);
     var viewerCdpEndpoint = viewerControlReady ? existingViewerCdpEndpoint(options) : "";
     var establishedAgentFollowup = boolValue(options.establishedAgentFollowup, false);
@@ -4661,6 +4731,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- This agent conversation already completed its Convertigo bootstrap for the current MCP endpoint. Reuse the skill and guidance already present in the conversation context.");
       promptParts.push("- Do not reread a managed `SKILL.md`, `convertigo://capabilities`, `convertigo://resources/convertigo-start`, or any guide already read in this conversation. Do not repeat catalog discovery.");
       promptParts.push("- Read only the smallest new specialized recipe if this request introduces a genuinely new route not covered by the conversation, or repeat bootstrap only if the MCP reports a guidance-version mismatch or the endpoint changed.");
+      promptParts.push("- Reuse object classes, property shapes, target QNames, and tool contracts that already succeeded in this conversation or are present in a targeted tree read. Do not reconfirm them through `palette-list`, `palette-describe`, or `ALL_TOOLS` metadata.");
+      promptParts.push("- For `databaseobject-tree-get`, use `childrenDepth` for recursive descendants; `depth` is only a compatibility alias. Request the needed subtree once instead of walking one QName level per call.");
+      promptParts.push("- For `databaseobject-tree-apply` with `at:\"inside\"`, the submitted `tree` is the one child to create and must include its own `className` and `name`; never send a children-only wrapper. Put sibling creations in separate optimized `batch-call` entries.");
+      promptParts.push("- For unfamiliar NGX objects, call `palette-list` with the exact intended parent QName as `target`, then pass the returned logical `className` unchanged to `palette-describe`. Do not list from the project root and guess a `#logicalId`.");
+      promptParts.push("- For common NGX primitives, treat `UIStyle#UIStyle.styleContent`, `UIAttribute#UIAttribute.attrName/attrValue`, `UIDynamicElement#TextItem`, and `UIText#UIText.textValue` as known contracts. Use one targeted palette lookup only when the requested object or property is genuinely unfamiliar.");
+      promptParts.push("- Group independent mutations for one intent in one `batch-call` using `{calls:[{tool:\"databaseobject-tree-apply\",arguments:{...}}],onError:\"stop\",optimizeMutations:true}`. It performs one final refresh, save, and mobile-builder notification; do not separately save after a successful optimized mutation batch.");
+      promptParts.push("- For a running frontend, use one readiness call `mobile-builder-open({project, stateOnly:true, wait:true, timeoutSec:30})`, then one combined Playwright proof. Do not inspect tool descriptions first and do not repeat readiness or browser proof unless that proof identifies a concrete defect.");
+      promptParts.push("- Recheck the user's explicit acceptance behaviors before the final answer. Do not infer that a requested filter, counter, domain action, or other interaction exists merely because the underlying field or generic CRUD shell exists; prove it in the viewer or state the task is still incomplete and continue implementing it.");
     }
     promptParts.push("");
     promptParts.push("Operational rules:");
@@ -4723,7 +4801,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
-    if (!trim(question).length) {
+    if (!rawUserQuestion.length) {
       return {
         ok: false,
         status: "failed",
@@ -5002,7 +5080,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         };
       }
       state.status = "failed";
-      state.error = String(e);
+      if (provider === "codex" && isCodexAuthenticationError(String(e))) {
+        state.error = lang(state).codexAuthExpired;
+        state.setupRequired = true;
+        state.setupReport = {
+          ok: false,
+          status: "authentication_required",
+          authentication: {
+            configured: false,
+            status: "expired",
+            action: "codex_login"
+          }
+        };
+      } else {
+        state.error = String(e);
+      }
+      state.answer = state.error;
+      state.answerIsFinal = true;
+      appendTranscript(state, "user", state.userQuestion || question);
+      appendTranscript(state, "assistant", state.answer);
+      state.answerTranscriptRunid = state.runid;
       appendProgress(state, lang(state).startFailed);
       state.updatedAt = now();
       saveState(state);
@@ -5013,8 +5110,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         object: "agent.run",
         status: "failed",
         threadid: state.threadid,
+        setupRequired: state.setupRequired === true,
+        setup: state.setupReport,
         error: {
-          message: String(e)
+          message: state.error
         },
         state: publicState(state)
       };
@@ -5150,6 +5249,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
           state.status = "failed";
           state.error = userFacingAgentError(state, data);
+          if (normalizeProvider(state.provider) === "codex" && isCodexAuthenticationError(data)) {
+            state.setupRequired = true;
+            state.setupReport = {
+              ok: false,
+              status: "authentication_required",
+              authentication: {
+                configured: false,
+                status: "expired",
+                action: "codex_login"
+              }
+            };
+          }
           state.answer = state.error;
           state.answerIsFinal = true;
           state.lastStatusText = state.error;
