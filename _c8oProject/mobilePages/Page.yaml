@@ -530,7 +530,7 @@ scriptContent:
         				''updateCheckCacheMs'': 21600000,
         				''__context'': ''byside''
         			};
-        			this.c8o.callJsonObject(''ConvertigoAssistant.AgentSettings'', payload).async().then((settingsResponse) => {
+        			this.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSettings'', payload).async().then((settingsResponse) => {
         				try {
         					var result = settingsResponse && settingsResponse.result ? settingsResponse.result : {};
         					var settings: any = result.settings || {};
@@ -544,11 +544,11 @@ scriptContent:
         					var storedConfirmed = false;
         					try {
         						if (typeof window !== ''undefined'' && window.localStorage) {
-        							storedProvider = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProvider''));
-        							storedModel = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentModel''));
-        							storedReasoning = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentReasoningEffort''));
-        							storedServiceTier = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentServiceTier''));
-        							var storedFlag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
+        							storedProvider = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentProvider''));
+        							storedModel = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentModel''));
+        							storedReasoning = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentReasoningEffort''));
+        							storedServiceTier = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentServiceTier''));
+        							var storedFlag = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
         							storedConfirmed = storedFlag === ''true'' || storedFlag === ''1'' || storedFlag === ''yes'';
         						}
         					} catch (eStored) {}
@@ -694,7 +694,7 @@ scriptContent:
         			this[''_agentSettingsNavigationHandler''] = (event) => {
         				try {
         					if (typeof window !== ''undefined'' && window.sessionStorage) {
-        						window.sessionStorage.removeItem(''ConvertigoAssistant.OpenAgentSettings'');
+        						window.sessionStorage.removeItem(''lib_ConvertigoAssistant.OpenAgentSettings'');
         					}
         				} catch (ePending) {}
         				var detail = event && event.detail ? event.detail : {};
@@ -704,14 +704,14 @@ scriptContent:
         					this.openAgentSettingsPage();
         				}
         			};
-        			window.addEventListener(''ConvertigoAssistant.agentSettings'', this[''_agentSettingsNavigationHandler'']);
+        			window.addEventListener(''lib_ConvertigoAssistant.agentSettings'', this[''_agentSettingsNavigationHandler'']);
         		} catch (e) {}
         	}
         
         	public unbindAgentSettingsNavigationListener() {
         		try {
         			if (typeof window !== ''undefined'' && this[''_agentSettingsNavigationHandler'']) {
-        				window.removeEventListener(''ConvertigoAssistant.agentSettings'', this[''_agentSettingsNavigationHandler'']);
+        				window.removeEventListener(''lib_ConvertigoAssistant.agentSettings'', this[''_agentSettingsNavigationHandler'']);
         			}
         		} catch (e) {}
         		this[''_agentSettingsNavigationHandler''] = null;
@@ -721,8 +721,8 @@ scriptContent:
         		var pending = false;
         		try {
         			if (typeof window !== ''undefined'' && window.sessionStorage) {
-        				pending = window.sessionStorage.getItem(''ConvertigoAssistant.OpenAgentSettings'') === ''true'';
-        				window.sessionStorage.removeItem(''ConvertigoAssistant.OpenAgentSettings'');
+        				pending = window.sessionStorage.getItem(''lib_ConvertigoAssistant.OpenAgentSettings'') === ''true'';
+        				window.sessionStorage.removeItem(''lib_ConvertigoAssistant.OpenAgentSettings'');
         			}
         		} catch (e) {}
         		try {
@@ -744,11 +744,11 @@ scriptContent:
                             var data = event && event.data ? event.data : event;
         					if (!data || typeof data !== ''object'') { return; }
         					var type = '''' + (data.type || data.kind || '''');
-        					if (type === ''ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
+        					if (type === ''lib_ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
         						this.applyAgentHostContext(data.payload || data.context || data);
         						return;
         					}
-        					if (type === ''ConvertigoAssistant.activateLocalAgent.status'') {
+        					if (type === ''lib_ConvertigoAssistant.activateLocalAgent.status'') {
         						this.applyAgentActivationStatus(data.payload || data.context || data);
         						return;
         					}
@@ -770,7 +770,7 @@ scriptContent:
                         this.agentHostReceiveFromJavaWrapped = true;
                     }
         			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
-        			this.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
+        			this.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
         		} catch (e3) {}
         	}
         
@@ -956,9 +956,9 @@ scriptContent:
         			schemaVersion: 1,
         			channel: "beta",
         			projects: [
-                        { name: "ConvertigoMCP", version: "0.0.43", tag: "v0.0.43", importUrl: "ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.43/ConvertigoMCP.car" },
-                        { name: "ConvertigoAgentBridge", version: "0.2.17", tag: "v0.2.17", importUrl: "ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.17/ConvertigoAgentBridge.car" },
-                        { name: "ConvertigoAssistant", version: "1.2.32", tag: "v1.2.32-beta1", importUrl: "ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.32-beta1/ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoMCP", version: "0.0.43", tag: "v0.0.43", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-c8o-mcp/releases/download/v0.0.43/lib_ConvertigoMCP.car" },
+                        { name: "lib_ConvertigoAgentBridge", version: "0.2.17", tag: "v0.2.17", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-convertigo-agent-bridge/releases/download/v0.2.17/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.2.32", tag: "v1.2.32-beta1", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/releases/download/v1.2.32-beta1/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -1004,7 +1004,7 @@ scriptContent:
         		this.local.AgentStackReleaseLoading = true;
         		this.local.AgentStackReleaseError = "";
         		this.tick();
-        		this.c8o.callJsonObject("ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response) => {
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response) => {
         			var result = response && response.result ? response.result : response;
         			var release = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(result) : null;
         			if (release && release.projects && release.projects.length) {
@@ -1059,9 +1059,9 @@ scriptContent:
         
         	public getInstalledAgentStackVersion(projectName) {
         		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
-        		if (projectName === "ConvertigoAssistant") { return this.normalizeAgentHostContextValue(context.localAssistantVersion); }
-        		if (projectName === "ConvertigoMCP") { return this.normalizeAgentHostContextValue(context.localMcpVersion); }
-        		if (projectName === "ConvertigoAgentBridge") { return this.normalizeAgentHostContextValue(context.localAgentBridgeVersion); }
+        		if (projectName === "lib_ConvertigoAssistant") { return this.normalizeAgentHostContextValue(context.localAssistantVersion); }
+        		if (projectName === "lib_ConvertigoMCP") { return this.normalizeAgentHostContextValue(context.localMcpVersion); }
+        		if (projectName === "lib_ConvertigoAgentBridge") { return this.normalizeAgentHostContextValue(context.localAgentBridgeVersion); }
         		return "";
         	}
         
@@ -1080,7 +1080,7 @@ scriptContent:
         	}
         
         	public getAgentStackVersionText() {
-        		var labels: any = { ConvertigoAssistant: "Assistant", ConvertigoMCP: "MCP", ConvertigoAgentBridge: "Bridge" };
+        		var labels: any = { lib_ConvertigoAssistant: "Assistant", lib_ConvertigoMCP: "MCP", lib_ConvertigoAgentBridge: "Bridge" };
         		var projects = this.getAgentActivationProjects ? this.getAgentActivationProjects() : [];
         		var parts: any = [];
         		for (var i = 0; i < projects.length; i++) {
@@ -1129,7 +1129,7 @@ scriptContent:
         		try {
         			var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue(url) : ('''' + (url == null ? '''' : url)).replace(/^s+|s+$/g, '''');
         			if (!clean.length) { return; }
-        			var message: any = { type: ''ConvertigoAssistant.openExternal'', url: clean, payload: { url: clean } };
+        			var message: any = { type: ''lib_ConvertigoAssistant.openExternal'', url: clean, payload: { url: clean } };
         			if (this.postAgentHostMessage && this.postAgentHostMessage(message)) { return; }
         			try { window.open(clean, ''_blank'', ''noopener''); } catch (e0) { window.location.href = clean; }
         		} catch (e) {}
@@ -1148,12 +1148,12 @@ scriptContent:
         			this.local.AgentActivationInProgress = true;
         			this.local.AgentActivationMessage = forceUpdate === true ? this.t("Agent_Stack_Updating", "Mise à jour de la stack...") : this.t("Agent_Local_Activation_Start", "Activation de l''assistant local...");
         			var message: any = {
-        				type: ''ConvertigoAssistant.activateLocalAgent'',
+        				type: ''lib_ConvertigoAssistant.activateLocalAgent'',
         				payload: {
         					projectName: this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''',
         					agentOnboardingFeatureVersion: context.agentOnboardingFeatureVersion || '''',
-                            assistantPreferenceUrl: ''/projects/ConvertigoAssistant/DisplayObjects/mobile/'',
-                            localAssistantPath: ''/projects/ConvertigoAssistant/DisplayObjects/mobile/'',
+                            assistantPreferenceUrl: ''/projects/lib_ConvertigoAssistant/DisplayObjects/mobile/'',
+                            localAssistantPath: ''/projects/lib_ConvertigoAssistant/DisplayObjects/mobile/'',
         					projects: this.getAgentActivationProjects ? this.getAgentActivationProjects() : [],
         					forceUpdate: forceUpdate === true
         				}
@@ -1517,7 +1517,7 @@ scriptContent:
             } catch (e) {}
             try {
                 if (!provider.length && typeof window !== "undefined" && window.localStorage) {
-                    provider = this.cleanProjectName(window.localStorage.getItem("ConvertigoAssistant.AgentProvider"));
+                    provider = this.cleanProjectName(window.localStorage.getItem("lib_ConvertigoAssistant.AgentProvider"));
                 }
             } catch (e4) {}
             return this.normalizeAgentProviderValue(provider);
@@ -1531,7 +1531,7 @@ scriptContent:
             var stored = "";
             try {
                 if (typeof window !== "undefined" && window.localStorage) {
-                    stored = this.normalizeAgentProviderValue(window.localStorage.getItem("ConvertigoAssistant.AgentProvider"));
+                    stored = this.normalizeAgentProviderValue(window.localStorage.getItem("lib_ConvertigoAssistant.AgentProvider"));
                 }
             } catch (e0) {}
             for (var i = 0; stored.length && i < providers.length; i++) {
@@ -1832,7 +1832,7 @@ scriptContent:
             this.local.ShowAgentConfigPanel = true;
             try {
                 if (typeof window !== "undefined" && window.localStorage) {
-                    window.localStorage.setItem("ConvertigoAssistant.AgentProvider", this.local.AgentProvider);
+                    window.localStorage.setItem("lib_ConvertigoAssistant.AgentProvider", this.local.AgentProvider);
                 }
             } catch (e) {}
             this.tick();
@@ -1881,7 +1881,7 @@ scriptContent:
             } catch (e2) {}
             try {
                 if (typeof window !== "undefined" && window.localStorage) {
-                    var storedValue = parse(window.localStorage.getItem("ConvertigoAssistant.AgentRevealMode"));
+                    var storedValue = parse(window.localStorage.getItem("lib_ConvertigoAssistant.AgentRevealMode"));
                     if (storedValue !== null) {
                         return storedValue;
                     }
@@ -1896,7 +1896,7 @@ scriptContent:
             this.local.AgentRevealMode = value === true;
             try {
                 if (typeof window !== "undefined" && window.localStorage) {
-                    window.localStorage.setItem("ConvertigoAssistant.AgentRevealMode", this.local.AgentRevealMode ? "true" : "false");
+                    window.localStorage.setItem("lib_ConvertigoAssistant.AgentRevealMode", this.local.AgentRevealMode ? "true" : "false");
                 }
             } catch (e) {}
             this.tick();
@@ -2823,7 +2823,7 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "Image",
-           "url": "source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/tigo-head.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+           "url": "source:{\"filter\":\"Asset\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/tigo-head.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
            "width": "plain:",
            "height": "plain:",
            "alt": "plain:Tigo"
@@ -2924,7 +2924,7 @@ title: Tigo
             '{
              "ionBean": "Icon",
              "IonColor": "plain",
-             "IconName": "source:{\"filter\":\"Icon\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''home-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "IconName": "source:{\"filter\":\"Icon\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"icon\":\"''home-outline''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
              "IconMdName": "source",
              "IconIosName": "source",
              "IonSize": "plain",
@@ -2994,7 +2994,7 @@ title: Tigo
             beanData: |
               '{
                "ionBean": "CallSequenceAction",
-               "requestable": "plain:ConvertigoAssistant.AgentListConversations",
+               "requestable": "plain:lib_ConvertigoAssistant.AgentListConversations",
                "marker": "plain:",
                "cachePolicy": "plain",
                "cacheTtl": "plain:3000",
@@ -3261,7 +3261,7 @@ title: Tigo
                                 page.local.AgentRevealMode = !enabled;
                                 try {
                                     if (typeof window !== ''undefined'' && window.localStorage) {
-                                        window.localStorage.setItem(''ConvertigoAssistant.AgentRevealMode'', page.local.AgentRevealMode ? ''true'' : ''false'');
+                                        window.localStorage.setItem(''lib_ConvertigoAssistant.AgentRevealMode'', page.local.AgentRevealMode ? ''true'' : ''false'');
                                     }
                                 } catch (e) {}
                                 page.tick();
@@ -4377,8 +4377,8 @@ title: Tigo
                                           page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                                           try {
                                               if (typeof window !== ''undefined'' && window.localStorage) {
-                                                  window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
-                                                  window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                                  window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
+                                                  window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
                                               }
                                           } catch (e) {}
                                           page.tick();
@@ -4587,8 +4587,8 @@ title: Tigo
                                           page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                                           try {
                                               if (typeof window !== ''undefined'' && window.localStorage) {
-                                                  window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
-                                                  window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                                  window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
+                                                  window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
                                               }
                                           } catch (e) {}
                                           page.tick();
@@ -4858,7 +4858,7 @@ title: Tigo
                     directiveSource: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                        - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
                     ↓ModelButton [ngx.components.UIDynamicElement-1785253248707]: 
                       beanData: |
                         '{
@@ -5008,7 +5008,7 @@ title: Tigo
                       directiveSource: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
                       ↓ReasoningButton [ngx.components.UIDynamicElement-1785253288370]: 
                         beanData: |
                           '{
@@ -5320,7 +5320,7 @@ title: Tigo
                                             var loginStartedAt = Date.now();
                                             var openedUrl = '''';
                                             var pollLogin = function(start) {
-                                                page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(loginResponse) {
+                                                page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(loginResponse) {
                                                     var loginResult = loginResponse && loginResponse.result ? loginResponse.result : {};
                                                     var login = loginResult.login || {};
                                                     var verificationUrl = clean(login.verificationUrl);
@@ -5367,7 +5367,7 @@ title: Tigo
                                         page.local.AgentRuntimeError = '''';
                                         page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Runtime_Updating_Codex'', ''Mise à jour de Codex en cours...'') : tr(''Agent_Runtime_Updating_Vibe'', ''Mise à jour de Vibe en cours...'');
                                         page.tick();
-                                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(response) {
+                                        page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(response) {
                                             var result = response && response.result ? response.result : {};
                                             if (result.ok !== true) { throw new Error(result.message || result.error || tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible'')); }
                                             var settings = result.settings || {};
@@ -5431,8 +5431,8 @@ title: Tigo
                                             page.local.AgentProviderChoiceConfirmed = true;
                                             try {
                                                 if (typeof window !== ''undefined'' && window.localStorage) {
-                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
-                                                    window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                                    window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProvider'', provider);
+                                                    window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
                                                 }
                                             } catch (e) {}
                                             if (page.local.AgentConfigExplicitOpen === true) {
@@ -5542,11 +5542,11 @@ title: Tigo
                                     page.local.AgentProviderChoiceConfirmed = true;
                                     try {
                                         if (typeof window !== ''undefined'' && window.localStorage) {
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentModel'', model);
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentReasoningEffort'', reasoningEffort);
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentServiceTier'', serviceTier);
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProvider'', provider);
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentModel'', model);
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentReasoningEffort'', reasoningEffort);
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentServiceTier'', serviceTier);
                                         }
                                     } catch (e) {}
                                 }
@@ -5591,7 +5591,7 @@ title: Tigo
                                     checkUpdates: false,
                                     __context: ''byside''
                                 };
-                                page.c8o.callJsonObject(''ConvertigoAssistant.AgentSettings'', payload).async().then(function(response) {
+                                page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSettings'', payload).async().then(function(response) {
                                     var result = response && response.result ? response.result : {};
                                     if (result.settings) { page.local.AgentSettings = result.settings; }
                                     finish();
@@ -5820,8 +5820,8 @@ title: Tigo
                                     page.local.AgentProviderChoiceConfirmed = true;
                                     try {
                                         if (typeof window !== ''undefined'' && window.localStorage) {
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentProvider'', provider);
-                                            window.localStorage.setItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProvider'', provider);
+                                            window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
                                         }
                                     } catch (eChoice) {}
                                     var model = page.local.AgentModel != null ? clean(page.local.AgentModel) : (page.getAgentModel ? page.getAgentModel() : '''');
@@ -5880,7 +5880,7 @@ title: Tigo
                                         page.tick();
                                         resolve();
                                     };
-                                    page.c8o.callJsonObject(''ConvertigoAssistant.AgentSetup'', payload).async().then(function(setupResponse) {
+                                    page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(setupResponse) {
                                         var setupResult = setupResponse && setupResponse.result ? setupResponse.result : {};
                                         page.local.AgentSetup = setupResult;
                                         page.local.Conversation = setupResult.id || page.local.Conversation;
@@ -5991,7 +5991,7 @@ title: Tigo
                                                 ''skillProfile'': page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
                                                 ''__context'': ''byside''
                                             };
-                                            page.c8o.callJsonObject(''ConvertigoAssistant.AgentSettings'', settingsPayload).async().then(function(settingsResponse) {
+                                            page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSettings'', settingsPayload).async().then(function(settingsResponse) {
                                                 var settingsResult = settingsResponse && settingsResponse.result ? settingsResponse.result : {};
                                                 if (settingsResult.settings) {
                                                     hydrateAgentSettings(settingsResult.settings);
@@ -6019,7 +6019,7 @@ title: Tigo
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentConversations","prefix":"","suffix":"","custom":"","useCustom":false}}
+                    - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentConversations","prefix":"","suffix":"","custom":"","useCustom":false}}
                 ↓Row [ngx.components.UIDynamicElement-1781608119103]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -6154,7 +6154,7 @@ title: Tigo
                           beanData: |
                             '{
                              "ionBean": "CallSequenceAction",
-                             "requestable": "plain:ConvertigoAssistant.AgentResumeConversation",
+                             "requestable": "plain:lib_ConvertigoAssistant.AgentResumeConversation",
                              "marker": "plain:",
                              "cachePolicy": "plain",
                              "cacheTtl": "plain:3000",
@@ -6188,14 +6188,14 @@ title: Tigo
                               '{
                                "ionBean": "SetLocalAction",
                                "Property": "plain:Conversation",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                               }'
                           ↓SetConversations [ngx.components.UIDynamicAction-1781608122139]: 
                             beanData: |
                               '{
                                "ionBean": "SetLocalAction",
                                "Property": "plain:AgentConversations",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                               }'
                           ↓SetConversationResumed [ngx.components.UIDynamicAction-1781608122141]: 
                             beanData: |
@@ -6349,24 +6349,24 @@ title: Tigo
                               varValue: 
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
                             ↓state [ngx.components.UIControlVariable-1781621339608]: 
                               varValue: 
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
+                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
                           ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
                             beanData: |
                               '{
                                "ionBean": "IfAction",
-                               "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}",
+                               "condition": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}",
                                "negate": "plain:false"
                               }'
                             ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
                               beanData: |
                                 '{
                                  "ionBean": "CallSequenceAction",
-                                 "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
+                                 "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
                                  "marker": "plain:",
                                  "cachePolicy": "plain",
                                  "cacheTtl": "plain:3000",
@@ -6379,12 +6379,12 @@ title: Tigo
                                 varValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                                    - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
                               ↓runid [ngx.components.UIControlVariable-1781621341120]: 
                                 varValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                                    - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
                               ↓provider [ngx.components.UIControlVariable-1781700400003]: 
                                 varValue: 
                                   - xmlizable: 
@@ -6417,7 +6417,7 @@ title: Tigo
                               '{
                                "ionBean": "SetLocalAction",
                                "Property": "plain:ConversationProject",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                               }'
                             ↓RefreshEnableChat [ngx.components.UICustomAction-1781676472462]: 
                               actionValue: 
@@ -6511,7 +6511,7 @@ title: Tigo
                           beanData: |
                             '{
                              "ionBean": "CallSequenceAction",
-                             "requestable": "plain:ConvertigoAssistant.AgentDeleteConversation",
+                             "requestable": "plain:lib_ConvertigoAssistant.AgentDeleteConversation",
                              "marker": "plain:",
                              "cachePolicy": "plain",
                              "cacheTtl": "plain:3000",
@@ -6695,7 +6695,7 @@ title: Tigo
                                                   userId: page.getAgentContextUserId ? page.getAgentContextUserId() : ''studio'',
                                                   __context: ''byside''
                                               };
-                                              page.c8o.callJsonObject(''ConvertigoAssistant.AgentRenameConversation'', payload).async().then(function(response) {
+                                              page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentRenameConversation'', payload).async().then(function(response) {
                                                   var result = response && response.result ? response.result : {};
                                                   if (result.conversations) {
                                                       page.local.AgentConversations = result.conversations;
@@ -6762,7 +6762,7 @@ title: Tigo
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
           ↓IsUser [ngx.components.UIControlDirective-1773100000002]: 
             directiveName: If
             directiveSource: 
@@ -6770,7 +6770,7 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:item.type == 'user'
             ↓UserMessage [ngx.components.UIUseShared-1773100000003]: 
-              sharedcomponent: ConvertigoAssistant.Application.NgxApp.UserMessageComponent
+              sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.UserMessageComponent
               ↓message [ngx.components.UIUseVariable-1773100000004]: 
                 varValue: 
                   - xmlizable: 
@@ -6835,7 +6835,7 @@ title: Tigo
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: plain:agent-worklog-narrative
                 ↓MdReader [ngx.components.UIUseShared-1782143276095]: 
-                  sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                  sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.MdReader
                   ↓data [ngx.components.UIUseVariable-1782143280331]: 
                     varValue: 
                       - xmlizable: 
@@ -6881,7 +6881,7 @@ title: Tigo
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: plain:agent-worklog-body
                   ↓MdReader [ngx.components.UIUseShared-1782137363073]: 
-                    sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                    sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.MdReader
                     ↓data [ngx.components.UIUseVariable-1782137367309]: 
                       varValue: 
                         - xmlizable: 
@@ -7057,7 +7057,7 @@ title: Tigo
                                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                           - MobileSmartSourceType: plain:agent-worklog-call-body
                                     ↓CallMd [ngx.components.UIUseShared-1782246849912]: 
-                                      sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                                      sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.MdReader
                                       ↓data [ngx.components.UIUseVariable-1782246854853]: 
                                         varValue: 
                                           - xmlizable: 
@@ -7093,7 +7093,7 @@ title: Tigo
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: script:!step || step.type != 'tool'
                       ↓StepMd [ngx.components.UIUseShared-1782245574154]: 
-                        sharedcomponent: ConvertigoAssistant.Application.NgxApp.MdReader
+                        sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.MdReader
                         ↓data [ngx.components.UIUseVariable-1782245574156]: 
                           varValue: 
                             - xmlizable: 
@@ -7142,7 +7142,7 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:item && ((item.type == 'assistant' || item.type == 'image') && item.writing !== true && !item.progressDetails)
             ↓AssistantMessage [ngx.components.UIUseShared-1773100000008]: 
-              sharedcomponent: ConvertigoAssistant.Application.NgxApp.AssistantMessageComponent
+              sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.AssistantMessageComponent
               ↓message [ngx.components.UIUseVariable-1773100000009]: 
                 varValue: 
                   - xmlizable: 
@@ -7212,7 +7212,7 @@ title: Tigo
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
+                - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓Spinner [ngx.components.UIDynamicElement-1773100000018]: 
               beanData: |
                 '{
@@ -7560,7 +7560,7 @@ title: Tigo
                                 requested = true;
                                 try {
                                     if (page.postAgentHostMessage) {
-                                        page.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
+                                        page.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
                                     }
                                 } catch (e2) {}
                             }
@@ -7571,7 +7571,7 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.AgentCreateConversationRouter",
+           "requestable": "plain:lib_ConvertigoAssistant.AgentCreateConversationRouter",
            "marker": "plain:",
            "cachePolicy": "plain",
            "cacheTtl": "plain:3000",
@@ -7585,7 +7585,7 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:Conversation",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
           ↓enableChat [ngx.components.UICustomAction-1750760591426]: 
             actionValue: 
@@ -7614,7 +7614,7 @@ title: Tigo
           beanData: |
             '{
              "ionBean": "IfAction",
-             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
              "negate": "plain:false"
             }'
           ↓AddHistoryMessages [ngx.components.UICustomAction-1749567905830]: 
@@ -7762,12 +7762,12 @@ title: Tigo
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversationRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentCreateConversationRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓state [ngx.components.UIControlVariable-1781622093063]: 
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentCreateConversationRouter","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentCreateConversationRouter","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓PollActiveRunOnEnter [ngx.components.UIDynamicAction-1781622093065]: 
               beanData: |
                 '{
@@ -7779,7 +7779,7 @@ title: Tigo
                 beanData: |
                   '{
                    "ionBean": "CallSequenceAction",
-                   "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
+                   "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
                    "marker": "plain:",
                    "cachePolicy": "plain",
                    "cacheTtl": "plain:3000",
@@ -7792,12 +7792,12 @@ title: Tigo
                   varValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                      - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
                 ↓runid [ngx.components.UIControlVariable-1781622094575]: 
                   varValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                      - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
                 ↓provider [ngx.components.UIControlVariable-1781700400006]: 
                   varValue: 
                     - xmlizable: 
@@ -7854,14 +7854,14 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentConversationResumed",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.resumed\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.resumed\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
         ↓SetConversationProject [ngx.components.UIDynamicAction-1781676293645]: 
           beanData: |
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:ConversationProject",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
           ↓RefreshEnableChat [ngx.components.UICustomAction-1781676448770]: 
             actionValue: 
@@ -7876,7 +7876,7 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentSettings",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.settings\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.settings\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
         ↓PrepareAgentSettingsLocal [ngx.components.UICustomAction-1782121043245]: 
           actionValue: 
@@ -7914,11 +7914,11 @@ title: Tigo
                   var storedConfirmed = false;
                   try {
                       if (typeof window !== ''undefined'' && window.localStorage) {
-                          storedProvider = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProvider''));
-                          storedModel = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentModel''));
-                          storedReasoning = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentReasoningEffort''));
-                          storedServiceTier = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentServiceTier''));
-                          var flag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
+                          storedProvider = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentProvider''));
+                          storedModel = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentModel''));
+                          storedReasoning = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentReasoningEffort''));
+                          storedServiceTier = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentServiceTier''));
+                          var flag = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
                           storedConfirmed = flag === ''true'' || flag === ''1'' || flag === ''yes'';
                       }
                   } catch (eStored) {}
@@ -8027,7 +8027,7 @@ title: Tigo
                       var confirmed = preferences && preferences.confirmed === true || page.local.AgentProviderChoiceConfirmed === true;
                       try {
                           if (!confirmed && typeof window !== ''undefined'' && window.localStorage) {
-                              var flag = clean(window.localStorage.getItem(''ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
+                              var flag = clean(window.localStorage.getItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'')).toLowerCase();
                               confirmed = flag === ''true'' || flag === ''1'' || flag === ''yes'';
                           }
                       } catch (e0) {}
@@ -8059,14 +8059,14 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentReasoningEffort",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.reasoningEffort\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.reasoningEffort\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
         ↓SetAgentServiceTier [ngx.components.UIDynamicAction-1782120505136]: 
           beanData: |
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentServiceTier",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.serviceTier\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.serviceTier\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
             }'
         ↓userId [ngx.components.UIControlVariable-1782407660593]: 
           varValue: 
@@ -8193,7 +8193,7 @@ title: Tigo
                             setTimeout(load, listAttempts < 3 ? 450 : 900);
                             return;
                         }
-                        page.c8o.callJsonObject(''ConvertigoAssistant.AgentListConversations'', {
+                        page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentListConversations'', {
                             provider: provider,
                             userId: userId,
                             agentProfile: profile,
@@ -8967,29 +8967,29 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓status [ngx.components.UIControlVariable-1777701000001]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.status","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.status","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓aiData [ngx.components.UIControlVariable-1777701000002]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓IfElse [ngx.components.UIDynamicIf-1744357030892]: 
       beanData: |
         '{
          "ionBean": "IfElseAction",
-         "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}",
+         "condition": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.status\",\"prefix\":\"[''completed'',''failed'',''cancelled'',''expired''].indexOf(\",\"suffix\":\") == -1\",\"custom\":\"\",\"useCustom\":false}}",
          "negate": "plain:false"
         }'
       ↓CallSequence [ngx.components.UIDynamicAction-1744367857710]: 
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
+           "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
            "marker": "plain:",
            "cachePolicy": "plain",
            "cacheTtl": "plain:3000",
@@ -9002,7 +9002,7 @@ title: Tigo
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
         ↓PublishEvent [ngx.components.UIDynamicAction-1744367857716]: 
           beanData: |
             '{
@@ -9014,7 +9014,7 @@ title: Tigo
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
         ↓provider [ngx.components.UIControlVariable-1781700400007]: 
           varValue: 
             - xmlizable: 
@@ -9072,14 +9072,14 @@ title: Tigo
           beanData: |
             '{
              "ionBean": "LogAction",
-             "message": "source:{\"filter\":\"Action\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"priority\":1744304995983,\"rootEvent\":false,\"pageLocals\":false},{\"priority\":1744356866759,\"rootEvent\":true,\"pageLocals\":false}],\"path\":\"?.out\",\"prefix\":\"JSON.stringify(\",\"suffix\":\")\",\"custom\":\"\",\"useCustom\":false}}",
+             "message": "source:{\"filter\":\"Action\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"priority\":1744304995983,\"rootEvent\":false,\"pageLocals\":false},{\"priority\":1744356866759,\"rootEvent\":true,\"pageLocals\":false}],\"path\":\"?.out\",\"prefix\":\"JSON.stringify(\",\"suffix\":\")\",\"custom\":\"\",\"useCustom\":false}}",
              "level": "plain:warn"
             }'
         ↓If1 [ngx.components.UIDynamicAction-1747229858672]: 
           beanData: |
             '{
              "ionBean": "IfAction",
-             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "condition": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentReadResponseRouter\",\"marker\":\"\"}],\"path\":\"?.result.AIData\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
              "negate": "plain:false"
             }'
           ↓AddAssistantMessage [ngx.components.UICustomAction-1747229858675]: 
@@ -9130,7 +9130,7 @@ title: Tigo
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentReadResponseRouter","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
   ↓StickyScrollAfterAssistantResponse [ngx.components.UICustomAction-1783431329063]: 
     actionValue: 
       - xmlizable: 
@@ -9164,7 +9164,7 @@ title: Tigo
   tagName: ion-footer
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]: 
     identifier: chatfooter
-    sharedcomponent: ConvertigoAssistant.Application.NgxApp.LightRagFooterComponent
+    sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.LightRagFooterComponent
     ↓Event [ngx.components.UIControlEvent-1751354586665]: 
       attrName: (RunQuestion)
       eventName: RunQuestion
@@ -9172,7 +9172,7 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.UploadFiles",
+           "requestable": "plain:lib_ConvertigoAssistant.UploadFiles",
            "marker": "plain:",
            "cachePolicy": "plain",
            "cacheTtl": "plain:3000",
@@ -9199,7 +9199,7 @@ title: Tigo
                   		resolve();
                   '
           ↓IterateAction [ngx.components.UIDynamicIterate-1751354620851]: 
-            beanData: '{"ionBean":"IterateAction","items":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.UploadFiles\",\"marker\":\"\"}],\"path\":\"?.file\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+            beanData: '{"ionBean":"IterateAction","items":"source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.UploadFiles\",\"marker\":\"\"}],\"path\":\"?.file\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
             ↓Loop_Handler [ngx.components.UIActionLoopEvent-1751354620854]: 
               ↓If [ngx.components.UIDynamicAction-1751354620857]: 
                 beanData: |
@@ -9479,7 +9479,7 @@ title: Tigo
                   beanData: |
                     '{
                      "ionBean": "CallSequenceAction",
-                     "requestable": "plain:ConvertigoAssistant.AgentSendMessageRouter",
+                     "requestable": "plain:lib_ConvertigoAssistant.AgentSendMessageRouter",
                      "marker": "plain:",
                      "cachePolicy": "plain",
                      "cacheTtl": "plain:3000",
@@ -9497,12 +9497,12 @@ title: Tigo
                     varValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                        - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
                   ↓AIFiles [ngx.components.UIControlVariable-1751354620905]: 
                     varValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AIFiles","prefix":"JSON.stringify(","suffix":")","custom":"","useCustom":false}}
+                        - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AIFiles","prefix":"JSON.stringify(","suffix":")","custom":"","useCustom":false}}
                   ↓provider [ngx.components.UIControlVariable-1781700400008]: 
                     varValue: 
                       - xmlizable: 
@@ -9524,7 +9524,7 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "IfAction",
-                       "condition": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+                       "condition": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
                        "negate": "plain:false"
                       }'
                     ↓AddAssistantMessage [ngx.components.UICustomAction-1751354620914]: 
@@ -9561,13 +9561,13 @@ title: Tigo
                         varValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.AgentSendMessageRouter","marker":""}],"path":"?.result.error","prefix":"","suffix":"","custom":"","useCustom":false}}
+                            - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentSendMessageRouter","marker":""}],"path":"?.result.error","prefix":"","suffix":"","custom":"","useCustom":false}}
                   ↓SetConversation [ngx.components.UIDynamicAction-1782134929106]: 
                     beanData: |
                       '{
                        "ionBean": "SetLocalAction",
                        "Property": "plain:Conversation",
-                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.threadid\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.threadid\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                       }'
                   ↓SetNewConversationMode [ngx.components.UIDynamicAction-1782134957158]: 
                     beanData: |
@@ -9588,13 +9588,13 @@ title: Tigo
                       '{
                        "ionBean": "SetLocalAction",
                        "Property": "plain:RunID",
-                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                       }'
                     ↓CallSequence [ngx.components.UIDynamicAction-1751354620923]: 
                       beanData: |
                         '{
                          "ionBean": "CallSequenceAction",
-                         "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
+                         "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
                          "marker": "plain:",
                          "cachePolicy": "plain",
                          "cacheTtl": "plain:3000",
@@ -9607,7 +9607,7 @@ title: Tigo
                         varValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                            - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
                       ↓provider [ngx.components.UIControlVariable-1781700400009]: 
                         varValue: 
                           - xmlizable: 
@@ -9624,7 +9624,7 @@ title: Tigo
                         varValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                            - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
                       ↓targetProject [ngx.components.UIControlVariable-1781689571107]: 
                         varValue: 
                           - xmlizable: 
@@ -9770,7 +9770,7 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"local.Question","useCustom":true}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"local.Question","useCustom":true}}
     ↓EnableChat [ngx.components.UIUseVariable-1775200000003]: 
       varValue: 
         - xmlizable: 
@@ -9780,12 +9780,12 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.IsProcessing","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.IsProcessing","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓SpeechRecognitionAvailable [ngx.components.UIUseVariable-1775200000005]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.SpeechRecognitionAvailable","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.SpeechRecognitionAvailable","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓Suggestions [ngx.components.UIUseVariable-1775800000115]: 
       varValue: 
         - xmlizable: 
@@ -9813,7 +9813,7 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.AgentCloseConversation",
+           "requestable": "plain:lib_ConvertigoAssistant.AgentCloseConversation",
            "marker": "plain:",
            "cachePolicy": "plain",
            "cacheTtl": "plain:3000",
@@ -9826,7 +9826,7 @@ title: Tigo
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}
         ↓provider [ngx.components.UIControlVariable-1782147693044]: 
           varValue: 
             - xmlizable: 
@@ -10050,7 +10050,7 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "CallSequenceAction",
-           "requestable": "plain:ConvertigoAssistant.AgentCreateConversation",
+           "requestable": "plain:lib_ConvertigoAssistant.AgentCreateConversation",
            "marker": "plain:",
            "cachePolicy": "plain",
            "cacheTtl": "plain:3000",
@@ -10199,7 +10199,7 @@ title: Tigo
               beanData: |
                 '{
                  "ionBean": "CallSequenceAction",
-                 "requestable": "plain:ConvertigoAssistant.AgentReadResponseRouter",
+                 "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
                  "marker": "plain:",
                  "cachePolicy": "plain",
                  "cacheTtl": "plain:3000",

@@ -53,7 +53,7 @@ responseTimeout: 120
     function callLocalSequence(sequenceName, variables) {
       var params = new HashMap();
       var projectArray = java.lang.reflect.Array.newInstance(java.lang.String, 1);
-      projectArray[0] = ''ConvertigoAssistant'';
+      projectArray[0] = ''lib_ConvertigoAssistant'';
       params.put(''__project'', projectArray);
       params.put(''__sequence'', sequenceName);
       params.put(''__context'', ''agent_router_'' + sequenceName + ''_'' + String(System.currentTimeMillis()));

@@ -30,8 +30,8 @@ works.
 ## Installation
 
 Open the **Convertigo Assistant** view. When the local Agent stack is missing,
-Tigo offers to install `ConvertigoAssistant`, `ConvertigoMCP`, and
-`ConvertigoAgentBridge`, configure the local relative Assistant URL, and reload
+Tigo offers to install `lib_ConvertigoAssistant`, `lib_ConvertigoMCP`, and
+`lib_ConvertigoAgentBridge`, configure the local relative Assistant URL, and reload
 the view.
 
 The Tigo configuration page also compares installed project versions with the
@@ -47,5 +47,5 @@ checkouts are detected and are never overwritten automatically.
 ## Development import
 
 ```text
-ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
+lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
 ```

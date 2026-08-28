@@ -475,9 +475,9 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                     var requestAssistantContext = function() {
                         try {
                             if (window[''sendToHost'']) {
-                                window[''sendToHost'']({ type: ''ConvertigoAssistant.context.request'' });
+                                window[''sendToHost'']({ type: ''lib_ConvertigoAssistant.context.request'' });
                             } else if (window.parent && window != window.parent) {
-                                window.parent.postMessage({ type: ''ConvertigoAssistant.context.request'' }, ''*'');
+                                window.parent.postMessage({ type: ''lib_ConvertigoAssistant.context.request'' }, ''*'');
                             }
                         } catch (e) {}
                     };
@@ -509,7 +509,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                             setTimeout(autoOpenAgentFromStudioView, 0);
                             setTimeout(requestAssistantContext, 0);
                         }
-                        if (''ConvertigoAssistant.context'' == msg.type || ''convertigo-assistant-context'' == msg.type) {
+                        if (''lib_ConvertigoAssistant.context'' == msg.type || ''convertigo-assistant-context'' == msg.type) {
                             mergeAgentHostContext(msg.payload || msg.context || msg);
                             page.tick();
                         }
@@ -544,13 +544,13 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               - java.lang.String: 
                 - ↑value: '{"glob":"tigo-head.png","input":"../../assets","output":"/assets/"}'
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
-    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:ConvertigoAssistant.GetVersion"}'
+    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:lib_ConvertigoAssistant.GetVersion"}'
     ↓SetLocal [ngx.components.UIDynamicAction-1750662135534]: 
       beanData: |
         '{
          "ionBean": "SetLocalAction",
          "Property": "plain:version",
-         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.GetVersion\",\"marker\":\"\"}],\"path\":\"?.version\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.GetVersion\",\"marker\":\"\"}],\"path\":\"?.version\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
         }'
   ↓GetTheme [ngx.components.UICustomAction-1781783631043]: 
     actionValue: 
@@ -695,7 +695,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             			return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English"));
             		};
             		var notifyLanguageChanged = function() {
-            			try { window.dispatchEvent(new CustomEvent("ConvertigoAssistant.languageChanged", { detail: { language: selected } })); } catch (e8) {}
+            			try { window.dispatchEvent(new CustomEvent("lib_ConvertigoAssistant.languageChanged", { detail: { language: selected } })); } catch (e8) {}
             			try { page.tick(); } catch (e9) {}
             		};
             		try { document.documentElement.setAttribute("lang", selected); } catch (e6a) {}

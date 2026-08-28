@@ -682,7 +682,7 @@ title: Title for LightRag
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: plain:modern-header-btn
       ↓Image [ngx.components.UIDynamicElement-1771939728084]: 
-        beanData: '{"ionBean":"Image","url":"source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+        beanData: '{"ionBean":"Image","url":"source:{\"filter\":\"Asset\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\\\/conv.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
         selfClose: true
         tagName: img
         ↓Class [ngx.components.UIAttribute-1772100000008]: 
@@ -1249,7 +1249,7 @@ title: Title for LightRag
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Messages","prefix":"","suffix":"","custom":"","useCustom":false}}
           ↓IsUser [ngx.components.UIControlDirective-1782600000278]: 
             directiveName: If
             directiveSource: 
@@ -1257,7 +1257,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:item.type == 'user'
             ↓UserMessage [ngx.components.UIUseShared-1782600000279]: 
-              sharedcomponent: ConvertigoAssistant.Application.NgxApp.UserMessageComponent
+              sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.UserMessageComponent
               ↓message [ngx.components.UIUseVariable-1782600000280]: 
                 varValue: 
                   - xmlizable: 
@@ -1280,7 +1280,7 @@ title: Title for LightRag
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:item.type == 'assistant'
             ↓AssistantMessage [ngx.components.UIUseShared-1782600000284]: 
-              sharedcomponent: ConvertigoAssistant.Application.NgxApp.AssistantMessageComponent
+              sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.AssistantMessageComponent
               ↓message [ngx.components.UIUseVariable-1782600000285]: 
                 varValue: 
                   - xmlizable: 
@@ -1340,7 +1340,7 @@ title: Title for LightRag
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
+                - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.spinner","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓Spinner [ngx.components.UIDynamicElement-1782600000294]: 
               beanData: '{"ionBean":"Spinner","Name":"plain:lines"}'
               tagName: ion-spinner
@@ -1407,28 +1407,28 @@ title: Title for LightRag
         - MobileSmartSourceType: plain:modern-footer agent-footer-codex legacy-prompt-footer
   ↓UseSharedFooter [ngx.components.UIUseShared-1775200000001]: 
     identifier: chatfooter
-    sharedcomponent: ConvertigoAssistant.Application.NgxApp.LightRagFooterComponent
+    sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.LightRagFooterComponent
     ↓Question [ngx.components.UIUseVariable-1775200000002]: 
       binding: twoWayBinding
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"local.Question","useCustom":true}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Question","prefix":"","suffix":"","custom":"local.Question","useCustom":true}}
     ↓EnableChat [ngx.components.UIUseVariable-1782600000310]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.EnableChat","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.EnableChat","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓IsProcessing [ngx.components.UIUseVariable-1782600000311]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.IsProcessing","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.IsProcessing","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓SpeechRecognitionAvailable [ngx.components.UIUseVariable-1782600000312]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.SpeechRecognitionAvailable","prefix":"","suffix":"","custom":"","useCustom":false}}
+          - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"localObject":"local"}],"path":"?.SpeechRecognitionAvailable","prefix":"","suffix":"","custom":"","useCustom":false}}
     ↓Suggestions [ngx.components.UIUseVariable-1782600000313]: 
       varValue: 
         - xmlizable: 
@@ -1592,7 +1592,7 @@ title: Title for LightRag
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:out && out.question != null ? out.question : '''''
         ↓IfHasMessage [ngx.components.UIDynamicAction-1773100000104]: 
-          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Action\",\"project\":\"ConvertigoAssistantV2\",\"input\":\"\",\"model\":{\"data\":[{\"priority\":1773100000102,\"rootEvent\":false,\"pageLocals\":false},{\"priority\":1772100000137,\"rootEvent\":true,\"pageLocals\":false}],\"path\":\"?.out?.message\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+          beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Action\",\"project\":\"lib_ConvertigoAssistantV2\",\"input\":\"\",\"model\":{\"data\":[{\"priority\":1773100000102,\"rootEvent\":false,\"pageLocals\":false},{\"priority\":1772100000137,\"rootEvent\":true,\"pageLocals\":false}],\"path\":\"?.out?.message\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
           ↓StartMonitorProgress [ngx.components.UICustomAsyncAction-1773100000101]: 
             actionValue: 
               - xmlizable: 
@@ -1990,7 +1990,7 @@ title: Title for LightRag
                                             return;
                                         }
                                         page.local.LightRagBufferBusy = true;
-                                        page.c8o.callJsonObject(''ConvertigoAssistant.GetTokenBuffer'', {__nolog: ''true'', __context: ''lightrag_buffer''}).async().then(function(response) {
+                                        page.c8o.callJsonObject(''lib_ConvertigoAssistant.GetTokenBuffer'', {__nolog: ''true'', __context: ''lightrag_buffer''}).async().then(function(response) {
                                             var chunk = extractChunk(response);
                                             if (!showStreamChunk(chunk)) {
                                                 showFallbackProgress();
@@ -2019,7 +2019,7 @@ title: Title for LightRag
             beanData: |
               '{
                "ionBean": "CallSequenceAction",
-               "requestable": "plain:ConvertigoAssistant.LRagQuery",
+               "requestable": "plain:lib_ConvertigoAssistant.LRagQuery",
                "noLoading": "plain:true"
               }'
             ↓Failure_Handler [ngx.components.UIActionFailureEvent-1782295229930]: 
@@ -2100,12 +2100,12 @@ title: Title for LightRag
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Action","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"priority":1773100000102,"rootEvent":false,"pageLocals":false},{"priority":1772100000137,"rootEvent":true,"pageLocals":false}],"path":"?.out?.message","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Action","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"priority":1773100000102,"rootEvent":false,"pageLocals":false},{"priority":1772100000137,"rootEvent":true,"pageLocals":false}],"path":"?.out?.message","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓History [ngx.components.UIControlVariable-1773100000107]: 
               varValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Action","project":"ConvertigoAssistantV2","input":"","model":{"data":[{"priority":1773100000102,"rootEvent":false,"pageLocals":false},{"priority":1772100000137,"rootEvent":true,"pageLocals":false}],"path":"?.out?.history","prefix":"","suffix":"","custom":"","useCustom":false}}
+                  - MobileSmartSourceType: source:{"filter":"Action","project":"lib_ConvertigoAssistantV2","input":"","model":{"data":[{"priority":1773100000102,"rootEvent":false,"pageLocals":false},{"priority":1772100000137,"rootEvent":true,"pageLocals":false}],"path":"?.out?.history","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓stream [ngx.components.UIControlVariable-1773100000108]: 
               varValue: 
                 - xmlizable: 
@@ -2189,7 +2189,7 @@ title: Title for LightRag
                               resolve();
                       '
             ↓IfError [ngx.components.UIDynamicAction-1773100000110]: 
-              beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"ConvertigoAssistant.LRagQuery\",\"marker\":\"\"}],\"path\":\"?.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
+              beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.LRagQuery\",\"marker\":\"\"}],\"path\":\"?.error\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"}'
               ↓AddAssistantError [ngx.components.UICustomAction-1773100000111]: 
                 actionValue: 
                   - xmlizable: 
@@ -2263,7 +2263,7 @@ title: Title for LightRag
                   varValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.LRagQuery","marker":""}],"path":"?.error","prefix":"","suffix":"","custom":"","useCustom":false}}
+                      - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.LRagQuery","marker":""}],"path":"?.error","prefix":"","suffix":"","custom":"","useCustom":false}}
             ↓IfResponse [ngx.components.UIDynamicAction-1773100000113]: 
               beanData: '{"ionBean":"IfAction","condition":"script:true"}'
               ↓AddAssistantMessage [ngx.components.UICustomAction-1773100000114]: 
@@ -2421,4 +2421,4 @@ title: Title for LightRag
                   varValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: source:{"filter":"Sequence","project":"ConvertigoAssistant","input":"","model":{"data":[{"sequence":"ConvertigoAssistant.LRagQuery","marker":""}],"path":"","prefix":"","suffix":"","custom":"","useCustom":false}}
+                      - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.LRagQuery","marker":""}],"path":"","prefix":"","suffix":"","custom":"","useCustom":false}}

@@ -3,7 +3,7 @@ responseTimeout: 80
   condition: threadid == null
   ↓jThen [steps.ThenStep-1748450887723]: 
     ↓Call_Transaction [steps.TransactionStep-1744201674481]: 
-      sourceTransaction: ConvertigoAssistant.OpenAI.Threads
+      sourceTransaction: lib_ConvertigoAssistant.OpenAI.Threads
       ↓__body [variables.StepVariable-1744201674484]: 
         value: '{}'
     ↓Copy [steps.XMLCopyStep-1744201698334]: 
@@ -54,7 +54,7 @@ responseTimeout: 80
               - →→: null
   ↓jElse [steps.ElseStep-1748450887725]: 
     ↓Call_Transaction [steps.TransactionStep-1748451097185]: 
-      sourceTransaction: ConvertigoAssistant.OpenAI.GetThread
+      sourceTransaction: lib_ConvertigoAssistant.OpenAI.GetThread
       ↓threadid [variables.StepVariable-1748451097187]: 
     ↓Copy [steps.XMLCopyStep-1748451134792]: 
       sourceDefinition: 
@@ -66,7 +66,7 @@ responseTimeout: 80
             - java.lang.String: 
               - ↑value: .//document/object/*
     ↓Call_Sequence [steps.SequenceStep-1750355487393]: 
-      sourceSequence: ConvertigoAssistant.GetMessages
+      sourceSequence: lib_ConvertigoAssistant.GetMessages
       ↓threadid [variables.StepVariable-1750355487399]: 
     ↓message [steps.JsonArrayStep-1749567488921]: 
       key: 
