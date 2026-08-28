@@ -41,11 +41,11 @@ checkouts are detected and are never overwritten automatically.
 
 ## Companion projects
 
-- [Convertigo MCP](https://github.com/convertigo/c8oprj-c8o-mcp)
-- [Convertigo Agent Bridge](https://github.com/convertigo/c8oprj-convertigo-agent-bridge)
+- [Convertigo MCP](https://github.com/convertigo/c8oprj-lib-c8o-mcp)
+- [Convertigo Agent Bridge](https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge)
 
 ## Development import
 
 ```text
-lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
+lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant.git:branch=master
 ```
