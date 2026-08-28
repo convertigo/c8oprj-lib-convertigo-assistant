@@ -5,7 +5,7 @@ if (typeof C8O === "undefined") {
 C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
 (function () {
-  var DEFAULT_BRIDGE_PROJECT = "ConvertigoAgentBridge";
+  var DEFAULT_BRIDGE_PROJECT = "lib_ConvertigoAgentBridge";
   var FALLBACK_MCP_PATH = "/api/mcp";
   var FALLBACK_FLOW_MCP_PATH = "/api/flow-mcp";
   // Bootstrap-only compatibility map. AgentBridge owns the authoritative profile contract.
@@ -35,7 +35,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillSlug: "convertigo-flow-mcp"
     }
   };
-  var STATE_PREFIX = "ConvertigoAssistant.agentConversation.";
+  var STATE_PREFIX = "lib_ConvertigoAssistant.agentConversation.";
   var BUFFER_KEY = "C8OAiAssistantBuffer";
   var DEFAULT_EVENT_WAIT_MS = 10000;
   var MAX_TRANSIENT_READ_ERRORS = 6;
@@ -58,8 +58,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var Files = Packages.java.nio.file.Files;
   var StandardOpenOption = Packages.java.nio.file.StandardOpenOption;
   var StandardCharsets = Packages.java.nio.charset.StandardCharsets;
-  var NOCODE_MCP_TOKEN_HANDLE_PREFIX = "ConvertigoAssistant.nocodeMcpToken.";
-  var NOCODE_MCP_TOKEN_SESSION_PREFIX = "ConvertigoAssistant.nocodeMcpTokenHandle.";
+  var NOCODE_MCP_TOKEN_HANDLE_PREFIX = "lib_ConvertigoAssistant.nocodeMcpToken.";
+  var NOCODE_MCP_TOKEN_SESSION_PREFIX = "lib_ConvertigoAssistant.nocodeMcpTokenHandle.";
 
   function now() {
     return System.currentTimeMillis();
@@ -537,7 +537,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return options;
     }
     try {
-      var builder = unwrapBuilderStateResponse(callLocalSequence("ConvertigoMCP", "tools_mobile_builder_open", {
+      var builder = unwrapBuilderStateResponse(callLocalSequence("lib_ConvertigoMCP", "tools_mobile_builder_open", {
         project: project,
         stateOnly: "true",
         wait: "false",
@@ -546,7 +546,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         __nolog: "true"
       }));
       if (!applyViewerDebugOptionsFromBuilder(options, builder, true).length && shouldOpenViewerBeforeAgentStart(options, state)) {
-        builder = unwrapBuilderStateResponse(callLocalSequence("ConvertigoMCP", "tools_mobile_builder_open", {
+        builder = unwrapBuilderStateResponse(callLocalSequence("lib_ConvertigoMCP", "tools_mobile_builder_open", {
           project: project,
           stateOnly: "false",
           wait: "false",
@@ -557,7 +557,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }));
         if (!applyViewerDebugOptionsFromBuilder(options, builder, true).length) {
           try { Thread.sleep(350); } catch (_ignoreViewerDebugSleep) {}
-          builder = unwrapBuilderStateResponse(callLocalSequence("ConvertigoMCP", "tools_mobile_builder_open", {
+          builder = unwrapBuilderStateResponse(callLocalSequence("lib_ConvertigoMCP", "tools_mobile_builder_open", {
             project: project,
             stateOnly: "true",
             wait: "false",
@@ -1233,7 +1233,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           bridgeCall(bridgeOptions, "agent_codex_start", payload, 90000);
         } catch (_ignorePrewarmCodexStart) {}
       }
-    }), "ConvertigoAssistant-codex-prewarm-" + state.threadid);
+    }), "lib_ConvertigoAssistant-codex-prewarm-" + state.threadid);
     thread.setDaemon(true);
     thread.start();
     return true;
@@ -3499,7 +3499,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var embeddedProject = searchableText.match(/["'](?:importedProjectName|targetProject|projectName|project)["']\s*:\s*["']([^"']+)["']/);
       if (embeddedProject) {
         var embeddedProjectName = validProjectName(embeddedProject[1]);
-        if (embeddedProjectName.length && embeddedProjectName !== "ConvertigoMCP") {
+        if (embeddedProjectName.length && embeddedProjectName !== "lib_ConvertigoMCP") {
           return embeddedProjectName;
         }
       }
@@ -3532,14 +3532,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     ];
     for (var nameIndex = 0; nameIndex < directNames.length; nameIndex++) {
       var directProject = validProjectName(directNames[nameIndex]);
-      if (directProject.length && directProject !== "ConvertigoMCP") {
+      if (directProject.length && directProject !== "lib_ConvertigoMCP") {
         return directProject;
       }
     }
     var qname = trim(value.targetQName || value.rootQName || value.qname || value.target);
     if (qname.length) {
       var qnameProject = validProjectName(qname.split(".")[0]);
-      if (qnameProject.length && qnameProject !== "ConvertigoMCP") {
+      if (qnameProject.length && qnameProject !== "lib_ConvertigoMCP") {
         return qnameProject;
       }
     }

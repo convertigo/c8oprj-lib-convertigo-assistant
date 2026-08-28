@@ -1,17 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?><xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:ConvertigoAssistant_ns="http://www.convertigo.com/convertigo/projects/ConvertigoAssistant" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://www.convertigo.com/convertigo/projects/ConvertigoAssistant">
-    <xsd:element name="OpenAI__Threads" type="ConvertigoAssistant_ns:OpenAI__ThreadsRequestData">
+<?xml version="1.0" encoding="UTF-8"?><xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:lib_ConvertigoAssistant_ns="http://www.convertigo.com/convertigo/projects/lib_ConvertigoAssistant" attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://www.convertigo.com/convertigo/projects/lib_ConvertigoAssistant">
+    <xsd:element name="OpenAI__Threads" type="lib_ConvertigoAssistant_ns:OpenAI__ThreadsRequestData">
         <xsd:annotation/>
     </xsd:element>
     <xsd:element name="OpenAI__ThreadsResponse">
         <xsd:complexType>
             <xsd:sequence>
-                <xsd:element name="response" type="ConvertigoAssistant_ns:OpenAI__ThreadsResponseData"/>
+                <xsd:element name="response" type="lib_ConvertigoAssistant_ns:OpenAI__ThreadsResponseData"/>
             </xsd:sequence>
         </xsd:complexType>
     </xsd:element>
     <xsd:complexType name="OpenAI__ThreadsResponseType">
         <xsd:sequence>
-            <xsd:element name="document" type="ConvertigoAssistant_ns:OpenAI__ThreadsResponseData"/>
+            <xsd:element name="document" type="lib_ConvertigoAssistant_ns:OpenAI__ThreadsResponseData"/>
         </xsd:sequence>
     </xsd:complexType>
     <xsd:complexType name="OpenAI__ThreadsRequestData">
@@ -58,18 +58,18 @@
     </xsd:complexType>
     <xsd:complexType name="OpenAI_Threads_document_objectType">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="id" type="ConvertigoAssistant_ns:OpenAI_Threads_document_object_idType"/>
-            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_Threads_document_object_objectType"/>
-            <xsd:element minOccurs="0" name="created_at" type="ConvertigoAssistant_ns:OpenAI_Threads_document_object_created_atType"/>
-            <xsd:element minOccurs="0" name="metadata" type="ConvertigoAssistant_ns:OpenAI_Threads_document_object_metadataType"/>
-            <xsd:element minOccurs="0" name="tool_resources" type="ConvertigoAssistant_ns:OpenAI_Threads_document_object_tool_resourcesType"/>
+            <xsd:element minOccurs="0" name="id" type="lib_ConvertigoAssistant_ns:OpenAI_Threads_document_object_idType"/>
+            <xsd:element minOccurs="0" name="object" type="lib_ConvertigoAssistant_ns:OpenAI_Threads_document_object_objectType"/>
+            <xsd:element minOccurs="0" name="created_at" type="lib_ConvertigoAssistant_ns:OpenAI_Threads_document_object_created_atType"/>
+            <xsd:element minOccurs="0" name="metadata" type="lib_ConvertigoAssistant_ns:OpenAI_Threads_document_object_metadataType"/>
+            <xsd:element minOccurs="0" name="tool_resources" type="lib_ConvertigoAssistant_ns:OpenAI_Threads_document_object_tool_resourcesType"/>
         </xsd:sequence>
         <xsd:attribute default="object" name="type" type="xsd:string"/>
     </xsd:complexType>
     <xsd:complexType name="OpenAI__ThreadsResponseData">
         <xsd:sequence>
-            <xsd:element minOccurs="0" name="object" type="ConvertigoAssistant_ns:OpenAI_Threads_document_objectType"/>
-            <xsd:element minOccurs="0" name="error" type="ConvertigoAssistant_ns:ConvertigoError"/>
+            <xsd:element minOccurs="0" name="object" type="lib_ConvertigoAssistant_ns:OpenAI_Threads_document_objectType"/>
+            <xsd:element minOccurs="0" name="error" type="lib_ConvertigoAssistant_ns:ConvertigoError"/>
         </xsd:sequence>
         <xsd:attribute name="connector" type="xsd:string"/>
         <xsd:attribute name="context" type="xsd:string"/>
@@ -91,7 +91,7 @@
     </xsd:complexType>
     <xsd:complexType name="ConvertigoErrorContext">
         <xsd:sequence>
-            <xsd:element maxOccurs="unbounded" minOccurs="0" name="variable" type="ConvertigoAssistant_ns:ConvertigoErrorContextVariable"/>
+            <xsd:element maxOccurs="unbounded" minOccurs="0" name="variable" type="lib_ConvertigoAssistant_ns:ConvertigoErrorContextVariable"/>
         </xsd:sequence>
     </xsd:complexType>
     <xsd:complexType name="ConvertigoError">
@@ -99,7 +99,7 @@
             <xsd:element name="code" type="xsd:integer"/>
             <xsd:element name="message" type="xsd:string"/>
             <xsd:element name="details" type="xsd:string"/>
-            <xsd:element name="context" type="ConvertigoAssistant_ns:ConvertigoErrorContext"/>
+            <xsd:element name="context" type="lib_ConvertigoAssistant_ns:ConvertigoErrorContext"/>
             <xsd:element name="exception" type="xsd:string"/>
             <xsd:element name="stacktrace" type="xsd:string"/>
         </xsd:sequence>

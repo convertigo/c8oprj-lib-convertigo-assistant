@@ -244,7 +244,7 @@ responseTimeout: 300
               - →→: conversation_history
         output: false
     ↓Prime_Hosted_Buffer [steps.TransactionStep-1782306814622]: 
-      sourceTransaction: ConvertigoAssistant.HostedAssistantBuffer.GetTokenBuffer
+      sourceTransaction: lib_ConvertigoAssistant.HostedAssistantBuffer.GetTokenBuffer
     ↓hostedCookie [steps.SimpleSourceStep-1782306850840]: 
       sourceDefinition: 
         - xmlizable: 
@@ -263,7 +263,7 @@ responseTimeout: 300
         	context.httpSession.removeAttribute(''HostedAssistantCookie'');
         }'
     ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
-      sourceTransaction: ConvertigoAssistant.HostedAssistant.LRagQuery
+      sourceTransaction: lib_ConvertigoAssistant.HostedAssistant.LRagQuery
       ↓Question [variables.StepVariable-1782296021206]: 
         sourceDefinition: 
           - xmlizable: 

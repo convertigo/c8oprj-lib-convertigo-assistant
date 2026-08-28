@@ -35,9 +35,9 @@ works.
 Open the **Convertigo Assistant** view in Convertigo Studio. When the local Agent
 stack is missing, Tigo offers to install the three required projects:
 
-1. `ConvertigoAssistant`
-2. `ConvertigoMCP`
-3. `ConvertigoAgentBridge`
+1. `lib_ConvertigoAssistant`
+2. `lib_ConvertigoMCP`
+3. `lib_ConvertigoAgentBridge`
 
 The one-click flow imports the release packages, switches the Assistant view to
 the local relative URL, and reloads it. Tigo then guides the user through agent
@@ -45,8 +45,8 @@ selection and workspace-local CLI setup.
 
 The companion projects are maintained separately:
 
-- [Convertigo MCP](https://github.com/convertigo/c8oprj-c8o-mcp)
-- [Convertigo Agent Bridge](https://github.com/convertigo/c8oprj-convertigo-agent-bridge)
+- [Convertigo MCP](https://github.com/convertigo/c8oprj-lib-c8o-mcp)
+- [Convertigo Agent Bridge](https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge)
 
 ## Updating
 
@@ -65,7 +65,7 @@ are never overwritten by this operation.
 Import the active development branch with:
 
 ```text
-ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
+lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant.git:branch=master
 ```
 
 Convertigo project objects must be edited through Convertigo Studio or the

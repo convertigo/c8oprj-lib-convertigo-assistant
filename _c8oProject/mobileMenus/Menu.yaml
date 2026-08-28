@@ -114,7 +114,7 @@ tagName: ion-menu
         beanData: |
           '{
            "ionBean": "Image",
-           "url": "source:{\"filter\":\"Asset\",\"project\":\"ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\/tigo-head.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+           "url": "source:{\"filter\":\"Asset\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"asset\":\"''assets\/tigo-head.png''\"}],\"path\":\"\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
            "width": "plain:24",
            "height": "plain:24",
            "alt": "plain:Tigo"
@@ -163,9 +163,9 @@ tagName: ion-menu
                   '        try {
                               if (typeof window !== ''undefined'') {
                                   if (window.sessionStorage) {
-                                      window.sessionStorage.removeItem(''ConvertigoAssistant.OpenAgentSettings'');
+                                      window.sessionStorage.removeItem(''lib_ConvertigoAssistant.OpenAgentSettings'');
                                   }
-                                  window.dispatchEvent(new CustomEvent(''ConvertigoAssistant.agentSettings'', { detail: { open: false } }));
+                                  window.dispatchEvent(new CustomEvent(''lib_ConvertigoAssistant.agentSettings'', { detail: { open: false } }));
                               }
                           } catch (e) {}
                           resolve();'
@@ -219,11 +219,11 @@ tagName: ion-menu
                   '        try {
                               if (typeof window !== ''undefined'') {
                                   if (window.sessionStorage) {
-                                      window.sessionStorage.setItem(''ConvertigoAssistant.OpenAgentSettings'', ''true'');
+                                      window.sessionStorage.setItem(''lib_ConvertigoAssistant.OpenAgentSettings'', ''true'');
                                   }
                                   window.setTimeout(function() {
                                       try {
-                                          window.dispatchEvent(new CustomEvent(''ConvertigoAssistant.agentSettings'', { detail: { open: true } }));
+                                          window.dispatchEvent(new CustomEvent(''lib_ConvertigoAssistant.agentSettings'', { detail: { open: true } }));
                                       } catch (eDispatch) {}
                                   }, 120);
                               }
@@ -291,4 +291,4 @@ tagName: ion-menu
         textValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: source:{"filter":"Local","project":"ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.version","prefix":"","suffix":"","custom":"","useCustom":false}}
+            - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.version","prefix":"","suffix":"","custom":"","useCustom":false}}

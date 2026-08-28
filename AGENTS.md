@@ -52,7 +52,7 @@ rediscovering the same context.
 ## Bridge Contract
 
 - Main client file: `js/agent_bridge_client.js`.
-- Bridge project: `c8oprj-convertigo-agent-bridge`.
+- Bridge project: `c8oprj-lib-convertigo-agent-bridge`.
 - Codex is the priority provider; Vibe remains supported.
 - The agent configuration panel shows the managed CLI installed/latest version
   and exposes explicit install, update, and reinstall actions. Opening the panel

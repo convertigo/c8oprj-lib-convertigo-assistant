@@ -1,5 +1,5 @@
 
-# ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/core/images/project_color_16x16.png?raw=true "Project") ConvertigoAssistant
+# ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/core/images/project_color_16x16.png?raw=true "Project") lib_ConvertigoAssistant
 
 This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
 
@@ -553,7 +553,7 @@ comment
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge endpoint.
+Optional lib_ConvertigoAgentBridge endpoint.
 </td>
 </tr>
 <tr>
@@ -608,12 +608,12 @@ Optional Convertigo workspace root.
 
 </p></blockquote></details>
 
-<details><summary><b>AgentCreateConversation</b> : Create or reuse a local agent conversation through ConvertigoAgentBridge</summary><blockquote><p>
+<details><summary><b>AgentCreateConversation</b> : Create or reuse a local agent conversation through lib_ConvertigoAgentBridge</summary><blockquote><p>
 
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") AgentCreateConversation
 
-Create or reuse a local agent conversation through ConvertigoAgentBridge.
+Create or reuse a local agent conversation through lib_ConvertigoAgentBridge.
 
 <span style="color:DarkGoldenRod">Variables</span>
 
@@ -663,7 +663,7 @@ Assistant UI surface, for example nocode, studio, or admin.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -853,7 +853,7 @@ Optional agent profile, for example nocode.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -1017,7 +1017,7 @@ comment
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -1245,7 +1245,7 @@ Assistant UI surface, for example nocode, studio, or admin.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -1388,12 +1388,12 @@ Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
 
 </p></blockquote></details>
 
-<details><summary><b>AgentSendMessage</b> : Submit a user prompt to a local agent conversation through ConvertigoAgentBridge</summary><blockquote><p>
+<details><summary><b>AgentSendMessage</b> : Submit a user prompt to a local agent conversation through lib_ConvertigoAgentBridge</summary><blockquote><p>
 
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") AgentSendMessage
 
-Submit a user prompt to a local agent conversation through ConvertigoAgentBridge.
+Submit a user prompt to a local agent conversation through lib_ConvertigoAgentBridge.
 
 <span style="color:DarkGoldenRod">Variables</span>
 
@@ -1475,7 +1475,7 @@ Assistant UI surface, for example nocode, studio, or admin.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -1643,7 +1643,7 @@ Optional Convertigo MCP endpoint. Defaults to the current Convertigo endpoint pl
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;mcpSkillsSourceDir
 </td>
 <td>
-Optional ConvertigoMCP project directory used to synchronize base agent skills.
+Optional lib_ConvertigoMCP project directory used to synchronize base agent skills.
 </td>
 </tr>
 <tr>
@@ -1739,7 +1739,7 @@ Preferred managed skill profile, for example nocode or generalist.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;skipSkillsInstall
 </td>
 <td>
-When true, skips synchronization of the ConvertigoMCP skill pack into the agent home.
+When true, skips synchronization of the lib_ConvertigoMCP skill pack into the agent home.
 </td>
 </tr>
 <tr>
@@ -1833,7 +1833,7 @@ Optional explicit provider home directory.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -2031,7 +2031,7 @@ Assistant UI surface, for example nocode, studio, or admin.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;bridgeBaseUrl
 </td>
 <td>
-Optional ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
+Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Convertigo endpoint.
 </td>
 </tr>
 <tr>
@@ -2191,7 +2191,7 @@ Optional Convertigo MCP endpoint. Defaults to the current Convertigo endpoint pl
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;mcpSkillsSourceDir
 </td>
 <td>
-Optional ConvertigoMCP project directory used to synchronize base agent skills.
+Optional lib_ConvertigoMCP project directory used to synchronize base agent skills.
 </td>
 </tr>
 <tr>
@@ -2367,7 +2367,7 @@ Preferred managed skill profile, for example nocode or generalist.
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;skipSkillsInstall
 </td>
 <td>
-When true, skips synchronization of the ConvertigoMCP skill pack into the agent home.
+When true, skips synchronization of the lib_ConvertigoMCP skill pack into the agent home.
 </td>
 </tr>
 <tr>

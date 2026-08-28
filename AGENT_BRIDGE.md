@@ -2,7 +2,7 @@
 
 This branch keeps the existing OpenAI Assistant flow unchanged and adds a
 parallel backend path for a local CLI agent managed by the
-`ConvertigoAgentBridge` project.
+`lib_ConvertigoAgentBridge` project.
 
 ## Added sequences
 
@@ -10,7 +10,7 @@ parallel backend path for a local CLI agent managed by the
   returns a `threadid`. Without `threadid` and without `forceNew=true`, it
   resumes the latest durable conversation for the user/project when one exists.
 - `AgentSendMessage`: starts/configures the local Vibe ACP process through
-  `ConvertigoAgentBridge`, wraps the user prompt with Studio/project
+  `lib_ConvertigoAgentBridge`, wraps the user prompt with Studio/project
   instructions, sends it to the agent, and stores the run cursor.
 - `AgentReadResponse`: polls bridge events, converts streamed `answer/chunk`
   events to the existing assistant-like `AIData` response, and converts
@@ -25,7 +25,7 @@ parallel backend path for a local CLI agent managed by the
 
 ## Current defaults
 
-- Bridge endpoint: `http://localhost:18082/convertigo/projects/ConvertigoAgentBridge/.json`
+- Bridge endpoint: `http://localhost:18082/convertigo/projects/lib_ConvertigoAgentBridge/.json`
 - MCP endpoint: `http://localhost:18082/convertigo/api/mcp`
 - Provider: `vibe`
 - Per-conversation home: `<workspaceRoot>/agents/vibe/users/<userKey>/conversations/<conversationId>/vibe-home`
@@ -104,7 +104,7 @@ parallel backend call.
 
 For Codex conversations, `AgentResumeConversation` and resumed
 `AgentCreateConversation` calls also prewarm the resident `codex app-server` by
-calling `ConvertigoAgentBridge.agent_codex_start` in a daemon thread. This is
+calling `lib_ConvertigoAgentBridge.agent_codex_start` in a daemon thread. This is
 best-effort and does not block the UI response: the returned payload includes
 `prewarming=true` when a warmup was started or an already-running handle was
 confirmed. The first prompt still has the normal start fallback if the warmup has
