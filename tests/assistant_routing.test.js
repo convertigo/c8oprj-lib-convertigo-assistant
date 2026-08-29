@@ -60,13 +60,13 @@ global.context = {
 };
 assert.equal(testApi.bridgeSessionSlot({ __sequence: "agent_events" }), "events");
 assert.equal(testApi.bridgeSessionSlot({ __sequence: "agent_settings" }), "commands");
-assert.equal(testApi.bridgeSessionCookie("commands"), "");
+assert.equal(testApi.bridgeSessionCookie({}, "commands"), "");
 assert.equal(testApi.responseSessionCookie("JSESSIONID=bridge-1; Path=/convertigo; HttpOnly"), "JSESSIONID=bridge-1");
-assert.equal(testApi.rememberBridgeSessionCookie("commands", "JSESSIONID=bridge-1; Path=/convertigo; HttpOnly"), "JSESSIONID=bridge-1");
-assert.equal(testApi.bridgeSessionCookie("commands"), "JSESSIONID=bridge-1");
-assert.equal(testApi.bridgeSessionCookie("events"), "");
-assert.equal(testApi.rememberBridgeSessionCookie("events", "ignored=value; Path=/"), "");
+assert.equal(testApi.rememberBridgeSessionCookie({}, "commands", "JSESSIONID=bridge-1; Path=/convertigo; HttpOnly"), "JSESSIONID=bridge-1");
+assert.equal(testApi.bridgeSessionCookie({}, "commands"), "JSESSIONID=bridge-1");
+assert.equal(testApi.bridgeSessionCookie({}, "events"), "");
+assert.equal(testApi.rememberBridgeSessionCookie({}, "events", "ignored=value; Path=/"), "");
 global.context = {};
-assert.equal(testApi.bridgeSessionCookie("commands"), "");
+assert.equal(testApi.bridgeSessionCookie({}, "commands"), "");
 
 console.log("Assistant routing contract OK");

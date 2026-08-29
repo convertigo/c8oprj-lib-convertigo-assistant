@@ -984,12 +984,40 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return params && trim(params.__sequence) === "agent_events" ? "events" : "commands";
   }
 
-  function bridgeSessionCookie(slot) {
+  function bridgeSessionCacheFile(params, slot) {
+    try {
+      params = params || {};
+      var workspaceRoot = trim(params.workspaceRoot);
+      if (!workspaceRoot.length) {
+        workspaceRoot = normalizeWorkspaceRootPath(Engine.USER_WORKSPACE_PATH);
+      }
+      var identity = trim(params.handle || params.conversationId);
+      if (!identity.length) {
+        identity = trim(params.userId) + "|" + trim(params.projectId) + "|settings";
+      }
+      var dir = new File(new File(new File(workspaceRoot), "agents"), "assistant-bridge-sessions");
+      return new File(dir, hashShort(identity) + "-" + slot + ".cookie");
+    } catch (_ignoreBridgeCachePath) {
+      return null;
+    }
+  }
+
+  function bridgeSessionCookie(params, slot) {
     try {
       var session = context && context.httpSession;
       var value = session && session.getAttribute ? session.getAttribute(BRIDGE_SESSION_COOKIE_ATTR + slot) : null;
-      return value === null || typeof value === "undefined" ? "" : trim(value);
+      var cookie = value === null || typeof value === "undefined" ? "" : trim(value);
+      if (cookie.length) {
+        return cookie;
+      }
     } catch (_ignoreBridgeSession) {
+      // Nested routed sequences can use a detached session wrapper; use the workspace fallback below.
+    }
+    try {
+      var file = bridgeSessionCacheFile(params, slot);
+      var stored = file === null || !file.exists() ? "" : responseSessionCookie(readTextFile(file));
+      return stored;
+    } catch (_ignoreBridgeSessionCache) {
       return "";
     }
   }
@@ -1000,7 +1028,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return match ? match[1] : "";
   }
 
-  function rememberBridgeSessionCookie(slot, header) {
+  function rememberBridgeSessionCookie(params, slot, header) {
     var cookie = responseSessionCookie(header);
     if (!cookie.length) {
       return "";
@@ -1011,7 +1039,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         session.setAttribute(BRIDGE_SESSION_COOKIE_ATTR + slot, cookie);
       }
     } catch (_ignoreBridgeSession) {
-      // A request without an outer session keeps the historical stateless behavior.
+      // The workspace cache below also covers routed sequences with detached session wrappers.
+    }
+    try {
+      var file = bridgeSessionCacheFile(params, slot);
+      if (file !== null) {
+        writeTextFile(file, cookie + "\n");
+        file.setReadable(false, false);
+        file.setWritable(false, false);
+        file.setReadable(true, true);
+        file.setWritable(true, true);
+      }
+    } catch (_ignoreBridgeSessionCache) {
+      // Falling back to the outer session preserves authoring if the workspace is read-only.
     }
     return cookie;
   }
@@ -1024,7 +1064,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
     conn.setRequestProperty("Accept", "application/json");
     var sessionSlot = bridgeSessionSlot(params);
-    var sessionCookie = bridgeSessionCookie(sessionSlot);
+    var sessionCookie = bridgeSessionCookie(params, sessionSlot);
     if (sessionCookie.length) {
       conn.setRequestProperty("Cookie", sessionCookie);
     }
@@ -1037,7 +1077,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     out.close();
 
     var code = conn.getResponseCode();
-    rememberBridgeSessionCookie(sessionSlot, conn.getHeaderField("Set-Cookie"));
+    rememberBridgeSessionCookie(params, sessionSlot, conn.getHeaderField("Set-Cookie"));
     var text = readStream(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
     if (code >= 400) {
       throw new Error("HTTP " + code + " from agent bridge: " + text);
