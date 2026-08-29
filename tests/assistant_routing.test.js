@@ -26,7 +26,7 @@ global.C8O = {};
 let source = fs.readFileSync("js/agent_bridge_client.js", "utf8");
 source = source.replace(
   /\}\(\)\);\s*$/,
-  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, currentHttpSessionCookie };}());"
+  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie };}());"
 );
 vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
 
@@ -47,15 +47,26 @@ assert.match(prompt, /managed `convertigo-studio` routing skill/);
 assert.match(prompt, /Explicit Flow\/FlowScript\/Flow Svelte intent selects `convertigo-flow`/);
 assert.doesNotMatch(prompt, /Authoring policy: legacy-only/);
 
+const sessionAttributes = new Map();
 global.context = {
   httpSession: {
-    getId() {
-      return "studio-session";
+    getAttribute(name) {
+      return sessionAttributes.get(name) ?? null;
+    },
+    setAttribute(name, value) {
+      sessionAttributes.set(name, value);
     }
   }
 };
-assert.equal(testApi.currentHttpSessionCookie(), "JSESSIONID=studio-session");
+assert.equal(testApi.bridgeSessionSlot({ __sequence: "agent_events" }), "events");
+assert.equal(testApi.bridgeSessionSlot({ __sequence: "agent_settings" }), "commands");
+assert.equal(testApi.bridgeSessionCookie("commands"), "");
+assert.equal(testApi.responseSessionCookie("JSESSIONID=bridge-1; Path=/convertigo; HttpOnly"), "JSESSIONID=bridge-1");
+assert.equal(testApi.rememberBridgeSessionCookie("commands", "JSESSIONID=bridge-1; Path=/convertigo; HttpOnly"), "JSESSIONID=bridge-1");
+assert.equal(testApi.bridgeSessionCookie("commands"), "JSESSIONID=bridge-1");
+assert.equal(testApi.bridgeSessionCookie("events"), "");
+assert.equal(testApi.rememberBridgeSessionCookie("events", "ignored=value; Path=/"), "");
 global.context = {};
-assert.equal(testApi.currentHttpSessionCookie(), "");
+assert.equal(testApi.bridgeSessionCookie("commands"), "");
 
 console.log("Assistant routing contract OK");

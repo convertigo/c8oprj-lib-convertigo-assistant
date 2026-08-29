@@ -978,14 +978,42 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return String(sb.toString());
   }
 
-  function currentHttpSessionCookie() {
+  var BRIDGE_SESSION_COOKIE_ATTR = "convertigo.assistant.bridge.session.";
+
+  function bridgeSessionSlot(params) {
+    return params && trim(params.__sequence) === "agent_events" ? "events" : "commands";
+  }
+
+  function bridgeSessionCookie(slot) {
     try {
       var session = context && context.httpSession;
-      var sessionId = session && session.getId ? trim(session.getId()) : "";
-      return sessionId.length ? "JSESSIONID=" + sessionId : "";
-    } catch (_ignoreHttpSession) {
+      var value = session && session.getAttribute ? session.getAttribute(BRIDGE_SESSION_COOKIE_ATTR + slot) : null;
+      return value === null || typeof value === "undefined" ? "" : trim(value);
+    } catch (_ignoreBridgeSession) {
       return "";
     }
+  }
+
+  function responseSessionCookie(header) {
+    var value = trim(header);
+    var match = /(?:^|[,;]\s*)(JSESSIONID=[^;,\s]+)/i.exec(value);
+    return match ? match[1] : "";
+  }
+
+  function rememberBridgeSessionCookie(slot, header) {
+    var cookie = responseSessionCookie(header);
+    if (!cookie.length) {
+      return "";
+    }
+    try {
+      var session = context && context.httpSession;
+      if (session && session.setAttribute) {
+        session.setAttribute(BRIDGE_SESSION_COOKIE_ATTR + slot, cookie);
+      }
+    } catch (_ignoreBridgeSession) {
+      // A request without an outer session keeps the historical stateless behavior.
+    }
+    return cookie;
   }
 
   function postForm(urlText, params, timeoutMs) {
@@ -995,7 +1023,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     conn.setReadTimeout(timeoutMs);
     conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
     conn.setRequestProperty("Accept", "application/json");
-    var sessionCookie = currentHttpSessionCookie();
+    var sessionSlot = bridgeSessionSlot(params);
+    var sessionCookie = bridgeSessionCookie(sessionSlot);
     if (sessionCookie.length) {
       conn.setRequestProperty("Cookie", sessionCookie);
     }
@@ -1008,6 +1037,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     out.close();
 
     var code = conn.getResponseCode();
+    rememberBridgeSessionCookie(sessionSlot, conn.getHeaderField("Set-Cookie"));
     var text = readStream(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
     if (code >= 400) {
       throw new Error("HTTP " + code + " from agent bridge: " + text);
