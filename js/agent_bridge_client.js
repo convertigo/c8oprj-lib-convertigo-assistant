@@ -978,6 +978,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return String(sb.toString());
   }
 
+  function currentHttpSessionCookie() {
+    try {
+      var session = context && context.httpSession;
+      var sessionId = session && session.getId ? trim(session.getId()) : "";
+      return sessionId.length ? "JSESSIONID=" + sessionId : "";
+    } catch (_ignoreHttpSession) {
+      return "";
+    }
+  }
+
   function postForm(urlText, params, timeoutMs) {
     var conn = new URL(urlText).openConnection();
     conn.setRequestMethod("POST");
@@ -985,6 +995,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     conn.setReadTimeout(timeoutMs);
     conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
     conn.setRequestProperty("Accept", "application/json");
+    var sessionCookie = currentHttpSessionCookie();
+    if (sessionCookie.length) {
+      conn.setRequestProperty("Cookie", sessionCookie);
+    }
     conn.setDoOutput(true);
 
     var body = encodeForm(params);

@@ -26,7 +26,7 @@ global.C8O = {};
 let source = fs.readFileSync("js/agent_bridge_client.js", "utf8");
 source = source.replace(
   /\}\(\)\);\s*$/,
-  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt };}());"
+  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, currentHttpSessionCookie };}());"
 );
 vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
 
@@ -46,5 +46,16 @@ assert.match(prompt, /Authoring policy: route-by-target-model/);
 assert.match(prompt, /managed `convertigo-studio` routing skill/);
 assert.match(prompt, /Explicit Flow\/FlowScript\/Flow Svelte intent selects `convertigo-flow`/);
 assert.doesNotMatch(prompt, /Authoring policy: legacy-only/);
+
+global.context = {
+  httpSession: {
+    getId() {
+      return "studio-session";
+    }
+  }
+};
+assert.equal(testApi.currentHttpSessionCookie(), "JSESSIONID=studio-session");
+global.context = {};
+assert.equal(testApi.currentHttpSessionCookie(), "");
 
 console.log("Assistant routing contract OK");
