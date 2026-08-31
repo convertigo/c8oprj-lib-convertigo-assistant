@@ -353,9 +353,33 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                         } catch (e) {}
                         return new URLSearchParams('''');
                     };
+                    var isAgentStudioSupported = () => {
+                        try {
+                            var dynamicPage = page as any;
+                            var context = (page.global && page.global.AgentHostContext) || dynamicPage.agentHostContext || (page.local && page.local.AgentHostContext) || {};
+                            var featureVersion = context.agentOnboardingFeatureVersion || context.studioAgentFeatureVersion ||
+                                (page.global && (page.global.agentOnboardingFeatureVersion || page.global.studioAgentFeatureVersion));
+                            if (featureVersion !== undefined && featureVersion !== null && ('''' + featureVersion).replace(/^\\s+|\\s+$/g, '''').length) {
+                                return true;
+                            }
+                            var studioVersion = '''' + (context.studioVersion || (page.global && page.global.studioVersion) || '''');
+                            var match = studioVersion.match(/^(\\d+)\\.(\\d+)\\.(\\d+)/);
+                            if (!match) {
+                                return false;
+                            }
+                            var major = Number(match[1]);
+                            var minor = Number(match[2]);
+                            var patch = Number(match[3]);
+                            return major > 8 || (major === 8 && (minor > 4 || (minor === 4 && patch >= 4)));
+                        } catch (e) {}
+                        return false;
+                    };
                     var autoOpenAgentFromStudioView = () => {
                         try {
                             if (!page.global || page.global.studio !== true) {
+                                return false;
+                            }
+                            if (!isAgentStudioSupported()) {
                                 return false;
                             }
                             var params = getAssistantRouteQuery();
@@ -416,7 +440,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                                 ''currentUrl'', ''nocodeCurrentUrl'', ''currentRoute'', ''nocodeCurrentRoute'',
                                 ''currentPath'', ''currentFormId'', ''nocodeCurrentFormId'', ''formId'',
                                 ''applicationId'', ''currentPage'', ''pageId'',
-                                ''agentOnboardingFeatureVersion'', ''studioVersion'', ''assistantUrl'', ''assistantRuntime'',
+                                ''agentOnboardingFeatureVersion'', ''studioAgentFeatureVersion'', ''studioVersion'', ''assistantUrl'', ''assistantRuntime'',
                                 ''localConvertigoUrl'', ''localAssistantUrl'', ''downloadUrl'', ''canActivateLocalAgent'',
                                 ''localAssistantInstalled'', ''localMcpInstalled'', ''localAgentBridgeInstalled'',
                                 ''localAgentStackAvailable'', ''localAgentStackState'', ''localAgentStackLoading'',
@@ -512,6 +536,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                         if (''lib_ConvertigoAssistant.context'' == msg.type || ''convertigo-assistant-context'' == msg.type) {
                             mergeAgentHostContext(msg.payload || msg.context || msg);
                             page.tick();
+                            setTimeout(autoOpenAgentFromStudioView, 0);
                         }
                         if (page.global.studio) {
                             if (''select'' == msg.type) {

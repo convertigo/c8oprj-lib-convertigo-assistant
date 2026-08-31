@@ -869,7 +869,19 @@ scriptContent:
         	public hasAgentOnboardingFeature() {
         		try {
         			var context = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
-        			return !!(context && (context.agentOnboardingFeatureVersion || context.studioAgentFeatureVersion));
+                    var featureVersion = context && (context.agentOnboardingFeatureVersion || context.studioAgentFeatureVersion);
+                    if (featureVersion !== undefined && featureVersion !== null && ('''' + featureVersion).replace(/^\\s+|\\s+$/g, '''').length) {
+                        return true;
+                    }
+                    var studioVersion = '''' + ((context && context.studioVersion) || (this.global && this.global.studioVersion) || '''');
+                    var match = studioVersion.match(/^(\\d+)\\.(\\d+)\\.(\\d+)/);
+                    if (!match) {
+                        return false;
+                    }
+                    var major = Number(match[1]);
+                    var minor = Number(match[2]);
+                    var patch = Number(match[3]);
+                    return major > 8 || (major === 8 && (minor > 4 || (minor === 4 && patch >= 4)));
         		} catch (e) {}
         		return false;
         	}
@@ -912,9 +924,8 @@ scriptContent:
         				var w: any = window;
         				hasHostBridge = !!(w && ((w[''sendToHost''] && typeof w[''sendToHost''] === ''function'') || (w[''java''] && typeof w[''java''].receiveFromJS === ''function'')));
         			} catch (eBridge) {}
-        			if (this.getAgentHostFlag && (this.getAgentHostFlag(''localAgentBridgeAvailable'') || this.getAgentHostFlag(''agentBridgeAvailable''))) { return ''ready''; }
-        			if (!hasFeature && hasHostBridge) { return ''remote-activation''; }
         			if (!hasFeature) { return ''unsupported''; }
+                    if (this.getAgentHostFlag && (this.getAgentHostFlag(''localAgentBridgeAvailable'') || this.getAgentHostFlag(''agentBridgeAvailable''))) { return ''ready''; }
         			if (runtime === ''remote'' || remoteHost) {
         				return (canActivate || hasHostBridge) ? ''remote-activation'' : ''unsupported'';
         			}
@@ -958,7 +969,7 @@ scriptContent:
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.1.0", tag: "v0.1.0", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.1.0/lib_ConvertigoMCP.car" },
                         { name: "lib_ConvertigoAgentBridge", version: "0.3.0", tag: "v0.3.0", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.3.0/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.3.0", tag: "v1.3.0-beta1", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.3.0-beta1/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAssistant", version: "1.3.1", tag: "v1.3.1-beta1", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.3.1-beta1/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
