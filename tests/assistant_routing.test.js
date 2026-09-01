@@ -47,6 +47,16 @@ assert.match(prompt, /managed `convertigo-studio` routing skill/);
 assert.match(prompt, /Explicit Flow\/FlowScript\/Flow Svelte intent selects `convertigo-flow`/);
 assert.doesNotMatch(prompt, /Authoring policy: legacy-only/);
 
+const resumedPrompt = testApi.buildSequencePrompt("Update the existing Flow page", {
+  userId: "studio",
+  assistantSurface: "studio",
+  agentProfile: "flow",
+  establishedAgentFollowup: true,
+  mcpEndpoint: "http://localhost/convertigo/api/mcp"
+});
+assert.match(resumedPrompt, /Agent Bridge preflight reports a changed skill bundle/);
+assert.match(resumedPrompt, /exact re-read list takes precedence/);
+
 const sessionAttributes = new Map();
 global.context = {
   httpSession: {
