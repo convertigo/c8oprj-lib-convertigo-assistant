@@ -19,6 +19,8 @@ works.
 - Uses Convertigo MCP for structured project discovery, editing, and validation.
 - Uses the Agent Bridge for local conversations, credentials, runtime setup, and
   long-running agent processes.
+- Uses short-lived managed MCP credentials that remain server-side behind
+  opaque handles instead of entering browser state or conversation history.
 - Provides Reveal mode so supported MCP operations can select changed objects
   and open the relevant Studio or viewer surface.
 - Keeps conversations and managed agent homes inside the Convertigo workspace.
@@ -29,6 +31,7 @@ works.
 - Network access to the selected agent provider and package registries. Studio
   proxy settings are propagated to managed runtime downloads and processes.
 - Provider credentials for OpenAI Codex or Mistral Vibe.
+- A `WEB_ADMIN` Studio session for the automatic local MCP credential flow.
 
 ## Installation
 

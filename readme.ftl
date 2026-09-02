@@ -19,6 +19,8 @@ works.
 - Workspace-managed OpenAI Codex and Mistral Vibe runtimes.
 - Structured project discovery, editing, and validation through Convertigo MCP.
 - Local conversation and process management through Convertigo Agent Bridge.
+- Short-lived managed MCP credentials that never enter browser state or
+  conversation history.
 - Reveal mode for supported Studio, viewer, and No Code Studio operations.
 
 ## Requirements
@@ -26,6 +28,7 @@ works.
 - Convertigo Studio 8.4.4 or newer.
 - Network access to the selected provider and package registries.
 - Provider credentials for OpenAI Codex or Mistral Vibe.
+- A `WEB_ADMIN` Studio session for automatic local MCP credentials.
 
 ## Installation
 

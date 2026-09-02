@@ -60,6 +60,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var StandardCharsets = Packages.java.nio.charset.StandardCharsets;
   var NOCODE_MCP_TOKEN_HANDLE_PREFIX = "lib_ConvertigoAssistant.nocodeMcpToken.";
   var NOCODE_MCP_TOKEN_SESSION_PREFIX = "lib_ConvertigoAssistant.nocodeMcpTokenHandle.";
+  var MANAGED_MCP_TOKEN_HANDLE_PREFIX = "lib_ConvertigoAssistant.managedMcpToken.";
+  var MANAGED_MCP_TOKEN_SESSION_HANDLE = "lib_ConvertigoAssistant.managedMcpTokenHandle";
+  var MANAGED_MCP_TOKEN_SESSION_EXPIRY = "lib_ConvertigoAssistant.managedMcpTokenExpiry";
+  var MANAGED_MCP_TOKEN_TTL_SECONDS = 7200;
+  var MANAGED_MCP_TOKEN_RENEW_SKEW_MS = 300000;
 
   function now() {
     return System.currentTimeMillis();
@@ -697,6 +702,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return false;
   }
 
+  function sharedSecretRemove(handle) {
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.remove) {
+        storage.remove(handle);
+      } else if (storage !== null && storage.set) {
+        storage.set(handle, "");
+      }
+    } catch (_ignoreSecretRemove) {}
+  }
+
   function noCodeMcpTokenHandle(options) {
     options = options || {};
     if (normalizeSkillProfile(options) !== "nocode") {
@@ -735,8 +751,92 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return handle;
   }
 
-  function shouldAttachNoCodeMcpTokenHandle(sequence) {
-    return sequence === "agent_codex_setup" || sequence === "agent_codex_start";
+  function jwtExpiryMillis(token) {
+    try {
+      var parts = String(token || "").split(".");
+      if (parts.length !== 3) {
+        return 0;
+      }
+      var payload = JSON.parse(decodeJwtPart(parts[1]));
+      return Number(payload.exp || 0) * 1000;
+    } catch (_ignoreJwtExpiry) {
+      return 0;
+    }
+  }
+
+  function usesProtectedConvertigoMcp(options) {
+    options = options || {};
+    if (normalizeSkillProfile(options) === "nocode" || normalizeSkillProfile(options) === "flow") {
+      return false;
+    }
+    var endpoint = trim(options.mcpEndpoint) || defaultMcpEndpoint(options);
+    return /\/api\/mcp\/?(?:[?#].*)?$/i.test(endpoint);
+  }
+
+  function managedMcpTokenHandle(options) {
+    options = options || {};
+    if (!usesProtectedConvertigoMcp(options)) {
+      return "";
+    }
+    var explicitHandle = trim(options.mcpBearerTokenHandle);
+    if (explicitHandle.length && sharedSecretGet(explicitHandle).length) {
+      return explicitHandle;
+    }
+    var existingHandle = "";
+    var existingExpiry = 0;
+    try {
+      existingHandle = trim(context.httpSession.getAttribute(MANAGED_MCP_TOKEN_SESSION_HANDLE));
+      existingExpiry = Number(context.httpSession.getAttribute(MANAGED_MCP_TOKEN_SESSION_EXPIRY) || 0);
+    } catch (_ignoreManagedSessionRead) {}
+    if (existingHandle.length
+        && existingExpiry > now() + MANAGED_MCP_TOKEN_RENEW_SKEW_MS
+        && sharedSecretGet(existingHandle).length) {
+      return existingHandle;
+    }
+    var response = unwrapSequenceResult(callLocalSequence("lib_ConvertigoMCP", "McpManagedTokenCreate", {
+      label: "Convertigo Assistant - " + (trim(options.userId) || "Studio"),
+      ttlSeconds: String(MANAGED_MCP_TOKEN_TTL_SECONDS)
+    })) || {};
+    var token = trim(response.token);
+    if (trim(response.status).toLowerCase() !== "ok" || !token.length) {
+      var detail = response.error && response.error.message ? response.error.message : "WEB_ADMIN authentication is required";
+      throw new Error("Unable to create the managed Convertigo MCP token: " + detail);
+    }
+    var handle = MANAGED_MCP_TOKEN_HANDLE_PREFIX + String(UUID.randomUUID());
+    if (!sharedSecretSet(handle, token)) {
+      throw new Error("Unable to store the managed Convertigo MCP token in server memory.");
+    }
+    if (existingHandle.length && existingHandle !== handle) {
+      sharedSecretRemove(existingHandle);
+    }
+    var expiry = jwtExpiryMillis(token);
+    try {
+      context.httpSession.setAttribute(MANAGED_MCP_TOKEN_SESSION_HANDLE, handle);
+      context.httpSession.setAttribute(MANAGED_MCP_TOKEN_SESSION_EXPIRY, java.lang.Long.valueOf(expiry));
+    } catch (_ignoreManagedSessionWrite) {}
+    return handle;
+  }
+
+  function shouldAttachMcpTokenHandle(sequence) {
+    return sequence === "agent_codex_setup" || sequence === "agent_codex_start"
+      || sequence === "agent_vibe_setup" || sequence === "agent_vibe_start";
+  }
+
+  function attachMcpTokenHandle(payload, options) {
+    if (trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
+      return;
+    }
+    if (normalizeSkillProfile(options) === "nocode") {
+      var noCodeHandle = noCodeMcpTokenHandle(options);
+      if (noCodeHandle.length) {
+        payload.nocodeMcpTokenHandle = noCodeHandle;
+      }
+      return;
+    }
+    var managedHandle = managedMcpTokenHandle(options);
+    if (managedHandle.length) {
+      payload.mcpBearerTokenHandle = managedHandle;
+    }
   }
 
   function normalizeWorkspaceRootPath(value) {
@@ -1110,11 +1210,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!payload.conversationId && (options.conversationId || options.threadid)) {
       payload.conversationId = options.conversationId || options.threadid;
     }
-    if (shouldAttachNoCodeMcpTokenHandle(sequence) && !trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
-      var tokenHandle = noCodeMcpTokenHandle(options);
-      if (tokenHandle.length) {
-        payload.nocodeMcpTokenHandle = tokenHandle;
-      }
+    if (shouldAttachMcpTokenHandle(sequence)) {
+      attachMcpTokenHandle(payload, options);
     }
     var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(), payload, timeoutMs || 70000);
     return response && typeof response.result !== "undefined" ? response.result : response;
@@ -1303,14 +1400,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignorePrewarmSave) {}
 
     var payload = agentStartPayload(state, options || {}, "codex", false);
-    if (!trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
-      try {
-        var tokenHandle = noCodeMcpTokenHandle(options || {});
-        if (tokenHandle.length) {
-          payload.nocodeMcpTokenHandle = tokenHandle;
-        }
-      } catch (_ignorePrewarmTokenHandle) {}
-    }
+    attachMcpTokenHandle(payload, options || {});
     var thread = new Thread(new Runnable({
       run: function () {
         try {
@@ -5148,6 +5238,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       };
       var prompt = null;
       if (provider === "codex" && trim(state.externalSessionId).length) {
+        var ensureStarted = bridgeCall(state, startSequence, startPayload, 90000);
+        if (ensureStarted.ok === false) {
+          throw new Error(ensureStarted.error || startSequence + " failed");
+        }
+        rememberCodexSessionFromResult(state, ensureStarted);
+        promptPayload.codexThreadId = state.externalSessionId || promptPayload.codexThreadId;
         prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
         if (prompt.ok === false && codexPromptRequiresStart(prompt)) {
           if (existingViewerCdpEndpoint(options).length) {

@@ -114,6 +114,11 @@ rediscovering the same context.
   handle to the bridge, but must never expose the raw token in URLs, UI state,
   prompts, logs, or conversation records. Token labels must include the readable
   authenticated user, for example `Convertigo Agent Bridge - user@example.com`.
+- In Studio/generalist mode, the Assistant creates a short-lived managed token
+  through `lib_ConvertigoMCP.McpManagedTokenCreate` using the current
+  `WEB_ADMIN` session. Only an opaque server-memory handle crosses into the
+  Bridge; renew the token before expiry and never expose it to browser state,
+  prompts, logs, or conversation files.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
   remotely inside Studio and no local bridge capability/local URL is provided,
   show an integrated local-agent activation message and do not call the remote
