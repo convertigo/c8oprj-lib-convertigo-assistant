@@ -24,18 +24,18 @@ global.log = javaProxy;
 global.C8O = {};
 
 let source = fs.readFileSync("js/agent_bridge_client.js", "utf8");
-assert.match(source, /name: "flow-token-managed-create"/);
-assert.match(source, /callLocalSequence\("lib_flow_mcp", "McpServer"/);
-assert.match(source, /managedMcpTokenBundle/);
+assert.match(source, /callLocalSequence\("lib_ConvertigoMCP", "McpManagedTokenCreate"/);
+assert.doesNotMatch(source, /managedFlowMcpToken|managedMcpTokenBundle/);
 source = source.replace(
   /\}\(\)\);\s*$/,
-  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie };}());"
+  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie, usesProtectedConvertigoMcp };}());"
 );
 vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
 
 const testApi = C8O.assistantAgentBridge._test;
 assert.equal(testApi.assistantProfileDescriptor({ userId: "studio", assistantSurface: "studio" }).id, "generalist");
 assert.equal(testApi.assistantProfileDescriptor({ userId: "studio", assistantSurface: "studio", agentProfile: "flow" }).id, "flow");
+assert.equal(testApi.usesProtectedConvertigoMcp({ userId: "studio", agentProfile: "flow" }), true);
 assert.equal(testApi.assistantProfileDescriptor({ userId: "alice", assistantSurface: "studio", agentProfile: "flow" }).id, "nocode");
 
 const prompt = testApi.buildSequencePrompt("Create a Flow Svelte project", {

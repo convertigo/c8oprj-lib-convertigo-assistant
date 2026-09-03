@@ -63,11 +63,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var MANAGED_MCP_TOKEN_HANDLE_PREFIX = "lib_ConvertigoAssistant.managedMcpToken.";
   var MANAGED_MCP_TOKEN_SESSION_HANDLE = "lib_ConvertigoAssistant.managedMcpTokenHandle";
   var MANAGED_MCP_TOKEN_SESSION_EXPIRY = "lib_ConvertigoAssistant.managedMcpTokenExpiry";
-  var MANAGED_FLOW_MCP_TOKEN_HANDLE_PREFIX = "lib_ConvertigoAssistant.managedFlowMcpToken.";
-  var MANAGED_FLOW_MCP_TOKEN_SESSION_HANDLE = "lib_ConvertigoAssistant.managedFlowMcpTokenHandle";
-  var MANAGED_FLOW_MCP_TOKEN_SESSION_EXPIRY = "lib_ConvertigoAssistant.managedFlowMcpTokenExpiry";
-  var MANAGED_MCP_TOKEN_BUNDLE_HANDLE_PREFIX = "lib_ConvertigoAssistant.managedMcpTokenBundle.";
-  var MANAGED_MCP_TOKEN_BUNDLE_SESSION_HANDLE = "lib_ConvertigoAssistant.managedMcpTokenBundleHandle";
   var MANAGED_MCP_TOKEN_TTL_SECONDS = 7200;
   var MANAGED_MCP_TOKEN_RENEW_SKEW_MS = 300000;
 
@@ -821,148 +816,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return handle;
   }
 
-  function findStructuredContent(value, depth) {
-    if (value === null || typeof value === "undefined" || typeof value !== "object" || depth > 10) {
-      return null;
-    }
-    if (value.structuredContent && typeof value.structuredContent === "object") {
-      return value.structuredContent;
-    }
-    var preferred = ["result", "document", "doc", "response", "payload"];
-    for (var i = 0; i < preferred.length; i++) {
-      if (Object.prototype.hasOwnProperty.call(value, preferred[i])) {
-        var found = findStructuredContent(value[preferred[i]], depth + 1);
-        if (found !== null) {
-          return found;
-        }
-      }
-    }
-    for (var key in value) {
-      if (Object.prototype.hasOwnProperty.call(value, key) && value[key] !== null && typeof value[key] === "object") {
-        var nested = findStructuredContent(value[key], depth + 1);
-        if (nested !== null) {
-          return nested;
-        }
-      }
-    }
-    return null;
-  }
-
-  function createManagedFlowMcpToken(options) {
-    var request = {
-      jsonrpc: "2.0",
-      id: "assistant-managed-flow-token",
-      method: "tools/call",
-      params: {
-        name: "flow-token-managed-create",
-        arguments: {
-          label: "Convertigo Assistant - " + (trim(options.userId) || "Studio"),
-          ttlSeconds: String(MANAGED_MCP_TOKEN_TTL_SECONDS)
-        }
-      }
-    };
-    var response = callLocalSequence("lib_flow_mcp", "McpServer", {
-      request: JSON.stringify(request)
-    });
-    return findStructuredContent(response, 0) || {};
-  }
-
-  function managedFlowMcpTokenHandle(options) {
-    options = options || {};
-    if (normalizeSkillProfile(options) === "nocode") {
-      return "";
-    }
-    var explicitHandle = trim(options.flowMcpBearerTokenHandle);
-    if (explicitHandle.length && sharedSecretGet(explicitHandle).length) {
-      return explicitHandle;
-    }
-    var existingHandle = "";
-    var existingExpiry = 0;
-    try {
-      existingHandle = trim(context.httpSession.getAttribute(MANAGED_FLOW_MCP_TOKEN_SESSION_HANDLE));
-      existingExpiry = Number(context.httpSession.getAttribute(MANAGED_FLOW_MCP_TOKEN_SESSION_EXPIRY) || 0);
-    } catch (_ignoreManagedFlowSessionRead) {}
-    if (existingHandle.length
-        && existingExpiry > now() + MANAGED_MCP_TOKEN_RENEW_SKEW_MS
-        && sharedSecretGet(existingHandle).length) {
-      return existingHandle;
-    }
-    var response;
-    try {
-      response = createManagedFlowMcpToken(options);
-    } catch (error) {
-      if (normalizeSkillProfile(options) !== "flow") {
-        return "";
-      }
-      throw error;
-    }
-    var token = trim(response.token);
-    if (trim(response.status).toLowerCase() !== "ok" || !token.length) {
-      if (normalizeSkillProfile(options) !== "flow") {
-        return "";
-      }
-      var detail = response.error && response.error.message ? response.error.message : "WEB_ADMIN authentication is required";
-      throw new Error("Unable to create the managed Flow MCP token: " + detail);
-    }
-    var handle = MANAGED_FLOW_MCP_TOKEN_HANDLE_PREFIX + String(UUID.randomUUID());
-    if (!sharedSecretSet(handle, token)) {
-      throw new Error("Unable to store the managed Flow MCP token in server memory.");
-    }
-    if (existingHandle.length && existingHandle !== handle) {
-      sharedSecretRemove(existingHandle);
-    }
-    var expiry = jwtExpiryMillis(token);
-    try {
-      context.httpSession.setAttribute(MANAGED_FLOW_MCP_TOKEN_SESSION_HANDLE, handle);
-      context.httpSession.setAttribute(MANAGED_FLOW_MCP_TOKEN_SESSION_EXPIRY, java.lang.Long.valueOf(expiry));
-    } catch (_ignoreManagedFlowSessionWrite) {}
-    return handle;
-  }
-
   function shouldAttachMcpTokenHandle(sequence) {
     return sequence === "agent_codex_setup" || sequence === "agent_codex_start"
       || sequence === "agent_vibe_setup" || sequence === "agent_vibe_start";
   }
 
   function attachMcpTokenHandle(payload, options) {
+    if (trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
+      return;
+    }
     if (normalizeSkillProfile(options) === "nocode") {
-      if (!trim(payload.nocodeMcpTokenHandle || payload.noCodeMcpTokenHandle || payload.mcpBearerTokenHandle).length) {
-        var noCodeHandle = noCodeMcpTokenHandle(options);
-        if (noCodeHandle.length) {
-          payload.nocodeMcpTokenHandle = noCodeHandle;
-        }
+      var noCodeHandle = noCodeMcpTokenHandle(options);
+      if (noCodeHandle.length) {
+        payload.nocodeMcpTokenHandle = noCodeHandle;
       }
       return;
     }
-    if (trim(payload.mcpBearerTokenHandle).length) {
-      return;
-    }
     var managedHandle = managedMcpTokenHandle(options);
-    var managedFlowHandle = managedFlowMcpTokenHandle(options);
-    var legacyToken = sharedSecretGet(managedHandle);
-    var flowToken = sharedSecretGet(managedFlowHandle);
-    if (!legacyToken.length && !flowToken.length) {
-      return;
-    }
-    var bundleHandle = "";
-    try {
-      bundleHandle = trim(context.httpSession.getAttribute(MANAGED_MCP_TOKEN_BUNDLE_SESSION_HANDLE));
-    } catch (_ignoreBundleSessionRead) {}
-    if (!bundleHandle.length) {
-      bundleHandle = MANAGED_MCP_TOKEN_BUNDLE_HANDLE_PREFIX + String(UUID.randomUUID());
-    }
-    if (!sharedSecretSet(bundleHandle, JSON.stringify({
-      legacy: legacyToken,
-      flow: flowToken
-    }))) {
-      throw new Error("Unable to store the managed MCP token bundle in server memory.");
-    }
-    try {
-      context.httpSession.setAttribute(MANAGED_MCP_TOKEN_BUNDLE_SESSION_HANDLE, bundleHandle);
-    } catch (_ignoreBundleSessionWrite) {}
-    payload.mcpBearerTokenHandle = bundleHandle;
-    if (payload.flowMcpBearerTokenHandle) {
-      delete payload.flowMcpBearerTokenHandle;
+    if (managedHandle.length) {
+      payload.mcpBearerTokenHandle = managedHandle;
     }
   }
 

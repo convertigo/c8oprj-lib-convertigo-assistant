@@ -114,16 +114,13 @@ rediscovering the same context.
   handle to the bridge, but must never expose the raw token in URLs, UI state,
   prompts, logs, or conversation records. Token labels must include the readable
   authenticated user, for example `Convertigo Agent Bridge - user@example.com`.
-- In Studio/generalist mode, the Assistant creates a short-lived managed token
+- In Studio generalist or Flow mode, the Assistant creates one short-lived
+  managed token
   through `lib_ConvertigoMCP.McpManagedTokenCreate` using the current
   `WEB_ADMIN` session. Only an opaque server-memory handle crosses into the
   Bridge; renew the token before expiry and never expose it to browser state,
-  prompts, logs, or conversation files.
-- The same Studio session also creates a separate short-lived Flow token by
-  internally calling `lib_flow_mcp.McpServer` with the private
-  `flow-token-managed-create` operation. Store the Legacy and Flow secrets in
-  one opaque in-memory bundle handle so existing Bridge request variables stay
-  stable; never serialize the bundle into browser or conversation state.
+  prompts, logs, or conversation files. The same token authenticates both the
+  Legacy and Flow MCP endpoints.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
   remotely inside Studio and no local bridge capability/local URL is provided,
   show an integrated local-agent activation message and do not call the remote
