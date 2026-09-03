@@ -24,6 +24,9 @@ global.log = javaProxy;
 global.C8O = {};
 
 let source = fs.readFileSync("js/agent_bridge_client.js", "utf8");
+assert.match(source, /name: "flow-token-managed-create"/);
+assert.match(source, /callLocalSequence\("lib_flow_mcp", "McpServer"/);
+assert.match(source, /managedMcpTokenBundle/);
 source = source.replace(
   /\}\(\)\);\s*$/,
   "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie };}());"
