@@ -8,6 +8,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var DEFAULT_BRIDGE_PROJECT = "lib_ConvertigoAgentBridge";
   var FALLBACK_MCP_PATH = "/api/mcp";
   var FALLBACK_FLOW_MCP_PATH = "/api/flow-mcp";
+  var FLOW_MINIMUM_CONVERTIGO_VERSION = "8.4.0";
+  var FLOW_REQUIRED_PROJECTS = ["lib_flow_engine", "lib_flow_mcp"];
   // Bootstrap-only compatibility map. AgentBridge owns the authoritative profile contract.
   var ASSISTANT_PROFILE_BOOTSTRAP = {
     generalist: {
@@ -1489,6 +1491,58 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return normalizeProvider(raw);
   }
 
+  function numericVersionParts(value) {
+    var match = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?/.exec(trim(value));
+    if (match === null) {
+      return null;
+    }
+    return [Number(match[1] || 0), Number(match[2] || 0), Number(match[3] || 0)];
+  }
+
+  function versionAtLeast(value, minimum) {
+    var actual = numericVersionParts(value);
+    var required = numericVersionParts(minimum);
+    if (actual === null || required === null) {
+      return false;
+    }
+    for (var i = 0; i < 3; i++) {
+      if (actual[i] !== required[i]) {
+        return actual[i] > required[i];
+      }
+    }
+    return true;
+  }
+
+  function loadedProjectDirectory(projectName) {
+    try {
+      var manager = Engine.theApp.databaseObjectsManager;
+      var project = manager.getOriginalProjectByName(String(projectName));
+      if (project === null || typeof project === "undefined") {
+        project = manager.getProjectByName(String(projectName));
+      }
+      var dir = project && project.getDirFile ? project.getDirFile() : null;
+      return dir !== null && typeof dir !== "undefined" && dir.isDirectory() === true;
+    } catch (_ignoreLoadedProjectDirectory) {
+      return false;
+    }
+  }
+
+  function flowCapabilityAvailable() {
+    var engineVersion = "";
+    try {
+      engineVersion = trim(Packages.com.twinsoft.convertigo.engine.Version.version);
+    } catch (_ignoreEngineProductVersion) {}
+    if (!versionAtLeast(engineVersion, FLOW_MINIMUM_CONVERTIGO_VERSION)) {
+      return false;
+    }
+    for (var i = 0; i < FLOW_REQUIRED_PROJECTS.length; i++) {
+      if (!loadedProjectDirectory(FLOW_REQUIRED_PROJECTS[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   function normalizeSkillProfile(options) {
     return assistantProfileDescriptor(options).id;
   }
@@ -1503,6 +1557,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var authoritative = options.agentCapabilityProfile;
     var authoritativeId = authoritative && typeof authoritative === "object" ? trim(authoritative.id).toLowerCase() : "";
     if (authoritativeId === "nocode") {
+      authoritativeId = "";
+    }
+    if (authoritativeId === "flow" && !flowCapabilityAvailable()) {
       authoritativeId = "";
     }
     if (authoritativeId.length && ASSISTANT_PROFILE_BOOTSTRAP[authoritativeId]) {
@@ -1523,7 +1580,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       var descriptor = ASSISTANT_PROFILE_BOOTSTRAP[id];
       for (var i = 0; i < descriptor.aliases.length; i++) {
-        if (value === descriptor.aliases[i] && id !== "nocode") {
+        if (value === descriptor.aliases[i] && id !== "nocode" && (id !== "flow" || flowCapabilityAvailable())) {
           return descriptor;
         }
       }
@@ -2060,13 +2117,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function publicConversation(record) {
     record = record || {};
     var provider = normalizeProvider(record.provider);
+    var normalizedProfile = conversationSkillProfile(record);
     return {
       conversationId: String(record.conversationId || record.threadid || ""),
       title: conversationTitleForRecord(record || {}),
       provider: String(record.provider || "vibe"),
       userKey: String(record.userKey || "studio"),
-      agentProfile: String(record.agentProfile || record.skillProfile || ""),
-      skillProfile: conversationSkillProfile(record),
+      agentProfile: normalizedProfile,
+      skillProfile: normalizedProfile,
       assistantContext: String(record.assistantContext || ""),
       assistantSurface: String(record.assistantSurface || ""),
       status: String(record.status || ""),
@@ -3961,12 +4019,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.serviceTier === "undefined" || state.serviceTier === null) {
       state.serviceTier = "";
     }
-    if (!state.skillProfile) {
-      state.skillProfile = normalizeSkillProfile(state);
-    }
-    if (!state.agentProfile) {
-      state.agentProfile = state.skillProfile;
-    }
+    state.skillProfile = normalizeSkillProfile(state);
+    state.agentProfile = state.skillProfile;
     if (typeof state.assistantContext === "undefined" || state.assistantContext === null) {
       state.assistantContext = "";
     }
@@ -4042,7 +4096,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: threadid,
       handle: record && trim(record.handle).length ? trim(record.handle) : threadid,
       provider: provider,
-      agentProfile: trim(options.agentProfile || (record && record.agentProfile)) || skillProfile,
+      agentProfile: skillProfile,
       skillProfile: skillProfile,
       assistantContext: trim(options.assistantContext || (record && record.assistantContext)),
       assistantSurface: trim(options.assistantSurface || (record && record.assistantSurface)),
@@ -4093,7 +4147,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       handle: state.handle,
       provider: state.provider,
-      agentProfile: state.agentProfile || state.skillProfile || "",
+      agentProfile: normalizeSkillProfile(state),
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
@@ -4343,7 +4397,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectId: explicitProject,
       userId: trim(options.userId) || userKey || "studio",
       conversationId: normalizeConversationId(options.threadid || options.conversationId),
-      agentProfile: agentProfile,
+      agentProfile: skillProfile || agentProfile,
       skillProfile: skillProfile,
       assistantContext: trim(options.assistantContext),
       assistantSurface: trim(options.assistantSurface),
@@ -4934,12 +4988,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var userId = trim(options.userId);
     var isStudioSurface = !userId.length || userId.toLowerCase() === "studio";
     var isNoCodeSurface = !isStudioSurface;
+    var hasFlowCapability = isStudioSurface && flowCapabilityAvailable();
     var routingHint = capabilityProfile.id;
     var selectedThread = trim(options.threadid);
     var uploadedFiles = parseSequenceFiles(options.AIFiles);
     var promptParts = [];
     promptParts.push(isNoCodeSurface ? "You are an AI agent integrated in Convertigo NoCode Studio (C8Oforms)." : "You are an AI coding agent integrated in Convertigo Studio.");
-    promptParts.push(isNoCodeSurface ? "Your job is to help the user inspect, explain, and improve forms, no-code applications, pages, fields, roles, publication, permissions, and data sources through Convertigo tools." : "Your job is to inspect, edit, test, and validate Convertigo projects with the Legacy or Flow capability pack that owns the target model.");
+    promptParts.push(isNoCodeSurface
+      ? "Your job is to help the user inspect, explain, and improve forms, no-code applications, pages, fields, roles, publication, permissions, and data sources through Convertigo tools."
+      : (hasFlowCapability
+        ? "Your job is to inspect, edit, test, and validate Convertigo projects with the Legacy or Flow capability pack that owns the target model."
+        : "Your job is to inspect, edit, test, and validate Convertigo projects with the standard Convertigo capability pack."));
     promptParts.push("Reply to the user in the same language as their message. The system and operational instructions are in English, but the user-facing answer must follow the user's language.");
     promptParts.push("While working, provide short user-facing progress updates when the agent interface supports streamed updates. Keep them factual, one or two sentences, in the user's language, and do not reveal hidden chain-of-thought; summarize what you are doing, what you found, or what you will try next.");
     promptParts.push("");
@@ -4948,7 +5007,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!isNoCodeSurface) {
       promptParts.push("- Routing hint: " + routingHint + " (a hint only; explicit user intent and the selected project's model take precedence).");
     }
-    promptParts.push("- Authoring policy: " + (isNoCodeSurface ? capabilityProfile.authoringPolicy : "route-by-target-model"));
+    promptParts.push("- Authoring policy: " + (isNoCodeSurface ? capabilityProfile.authoringPolicy : (hasFlowCapability ? "route-by-target-model" : "legacy-only")));
     promptParts.push("- Selected project: " + (targetProject.length ? targetProject : "none"));
     if (isNoCodeSurface) {
       promptParts.push("- Project selection is optional in this surface. Do not require an Eclipse/Studio selected project before inspecting or explaining C8Oforms/no-code resources.");
@@ -4994,7 +5053,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("");
     promptParts.push("Operational rules:");
-    promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode MCP/tools for all form and no-code work." : "- Route the task through the managed `convertigo-studio` skill before authoring. Explicit Flow/FlowScript/Flow Svelte intent selects `convertigo-flow`; explicit Legacy/NGX intent selects `convertigo`; otherwise inspect the selected project's model and choose its owner.");
+    promptParts.push(isNoCodeSurface
+      ? "- Use the Convertigo NoCode MCP/tools for all form and no-code work."
+      : (hasFlowCapability
+        ? "- Route the task through the managed `convertigo-studio` skill before authoring. Explicit Flow/FlowScript/Flow Svelte intent selects `convertigo-flow`; explicit Legacy/NGX intent selects `convertigo`; otherwise inspect the selected project's model and choose its owner."
+        : "- Route the task through the managed `convertigo-studio` skill before authoring, then use the `convertigo` MCP server."));
     if (!isNoCodeSurface) {
       promptParts.push("- After routing, use only the owning MCP for each target model. Never use curl, handwritten JSON-RPC, YAML edits, generated-file edits, or the other MCP as a fallback for a failed mutation.");
     }

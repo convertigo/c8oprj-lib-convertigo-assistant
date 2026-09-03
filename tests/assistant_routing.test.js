@@ -34,21 +34,20 @@ vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
 
 const testApi = C8O.assistantAgentBridge._test;
 assert.equal(testApi.assistantProfileDescriptor({ userId: "studio", assistantSurface: "studio" }).id, "generalist");
-assert.equal(testApi.assistantProfileDescriptor({ userId: "studio", assistantSurface: "studio", agentProfile: "flow" }).id, "flow");
+assert.equal(testApi.assistantProfileDescriptor({ userId: "studio", assistantSurface: "studio", agentProfile: "flow" }).id, "generalist");
 assert.equal(testApi.usesProtectedConvertigoMcp({ userId: "studio", agentProfile: "flow" }), true);
 assert.equal(testApi.assistantProfileDescriptor({ userId: "alice", assistantSurface: "studio", agentProfile: "flow" }).id, "nocode");
 
-const prompt = testApi.buildSequencePrompt("Create a Flow Svelte project", {
+const prompt = testApi.buildSequencePrompt("Create an application", {
   userId: "studio",
   assistantSurface: "studio",
   agentProfile: "generalist",
   mcpEndpoint: "http://localhost/convertigo/api/mcp"
 });
 assert.match(prompt, /Surface profile: studio/);
-assert.match(prompt, /Authoring policy: route-by-target-model/);
+assert.match(prompt, /Authoring policy: legacy-only/);
 assert.match(prompt, /managed `convertigo-studio` routing skill/);
-assert.match(prompt, /Explicit Flow\/FlowScript\/Flow Svelte intent selects `convertigo-flow`/);
-assert.doesNotMatch(prompt, /Authoring policy: legacy-only/);
+assert.doesNotMatch(prompt, /\bFlow\b|convertigo-flow/i);
 
 const resumedPrompt = testApi.buildSequencePrompt("Update the existing Flow page", {
   userId: "studio",

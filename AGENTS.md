@@ -41,6 +41,10 @@ rediscovering the same context.
   both `convertigo-generalist` and the Flow skill pack; the routing profile is
   only a hint. C8Oforms/NoCode uses a different authenticated user and only
   `convertigo-nocode`. Do not expose Flow from the 8.4.4 release branch yet.
+- Treat Flow as an alpha capability. The Assistant may expose or mention it only
+  when the running Convertigo version is at least 8.4.0 and both
+  `lib_flow_engine` and `lib_flow_mcp` are loaded. Normalize stale conversation
+  profiles back to the standard Studio profile when that gate is closed.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
 - Keep start templates only on the new conversation screen.
