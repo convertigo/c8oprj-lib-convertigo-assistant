@@ -986,9 +986,9 @@ scriptContent:
         			schemaVersion: 1,
         			channel: "beta",
         			projects: [
-                        { name: "lib_ConvertigoMCP", version: "0.2.0", tag: "v0.2.0", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.0/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.0", tag: "v0.4.0", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.0/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.0", tag: "v1.4.0", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.0/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoMCP", version: "0.2.1-beta1", tag: "v0.2.1-beta1", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.1-beta1/lib_ConvertigoMCP.car" },
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.1-beta1", tag: "v0.4.1-beta1", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.1-beta1/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.2-beta1", tag: "v1.4.2-beta1", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.2-beta1/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -1126,6 +1126,7 @@ scriptContent:
         	public getAgentStackStatusText() {
         		if (this.local && this.local.AgentActivationInProgress === true) { return this.local.AgentActivationMessage || this.t("Agent_Stack_Updating", "Mise à jour de la stack..."); }
         		if (this.local && this.local.AgentStackReleaseLoading === true) { return this.t("Agent_Stack_Checking", "Vérification de la stack publiée..."); }
+        		if (this.local && this.local.AgentStackReleaseError) { return this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée."); }
         		if (!this.isAgentStackUpdateAllowed()) { return this.t("Agent_Stack_Source_Managed", "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement."); }
         		var projects = this.getAgentActivationProjects ? this.getAgentActivationProjects() : [];
         		for (var i = 0; i < projects.length; i++) {
@@ -1146,6 +1147,11 @@ scriptContent:
         	}
         
         	public triggerAgentStackUpdate() {
+        		if (this.local && (this.local.AgentStackReleaseLoading === true || this.local.AgentStackReleaseError)) {
+        			this.local.AgentActivationMessage = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
+        			this.tick();
+        			return;
+        		}
         		if (!this.isAgentStackUpdateAllowed()) {
         			if (!this.local) { this.local = {}; }
         			this.local.AgentActivationMessage = this.t("Agent_Stack_Update_Disabled", "La mise à jour automatique est désactivée pour les sources locales.");
@@ -4757,7 +4763,7 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "Button",
-                       "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
+                       "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true || !!this.local.AgentStackReleaseError)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
                        "IonFill": "plain:clear",
                        "IonSize": "plain:small"
                       }'
