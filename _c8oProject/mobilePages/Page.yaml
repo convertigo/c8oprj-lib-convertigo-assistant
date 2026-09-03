@@ -403,6 +403,7 @@ scriptContent:
         			if (!this.local) { this.local = {}; }
         			this.local.AgentHostContext = next;
         			this.scheduleAgentSettingsRefreshAfterHostContext();
+        			if (this.tick) { this.tick(); }
         		} catch (e) {}
         	}
         
@@ -661,6 +662,7 @@ scriptContent:
         		this.setAgentSettingsUrlState(true);
         		if (this.setEnableChat) { this.setEnableChat(); }
         		this.tick();
+        		this.requestAgentHostContext(0);
         		this.refreshAgentStackRelease(true);
         		this.refreshAgentSettingsAfterHostContext(true);
         	}
@@ -736,6 +738,21 @@ scriptContent:
         		}, 120);
         	}
         
+        	public requestAgentHostContext(attempt = 0) {
+        		try {
+        			this.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
+        			if (attempt >= 5) {
+        				if (this[''_agentHostContextRequestTimer'']) { clearTimeout(this[''_agentHostContextRequestTimer'']); }
+        				this[''_agentHostContextRequestTimer''] = null;
+        				return;
+        			}
+        			if (this[''_agentHostContextRequestTimer'']) { clearTimeout(this[''_agentHostContextRequestTimer'']); }
+        			this[''_agentHostContextRequestTimer''] = setTimeout(() => {
+        				try { this.requestAgentHostContext(attempt + 1); } catch (eRetry) {}
+        			}, attempt < 2 ? 250 : 750);
+        		} catch (e) {}
+        	}
+        
         	public bindAgentHostContextListener() {
         		try {
         			if (this.agentHostContextMessageHandler) { return; }
@@ -770,12 +787,14 @@ scriptContent:
                         this.agentHostReceiveFromJavaWrapped = true;
                     }
         			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
-        			this.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
+        			this.requestAgentHostContext(0);
         		} catch (e3) {}
         	}
         
         	public unbindAgentHostContextListener() {
         		try {
+        			if (this[''_agentHostContextRequestTimer'']) { clearTimeout(this[''_agentHostContextRequestTimer'']); }
+        			this[''_agentHostContextRequestTimer''] = null;
         			if (this.agentHostContextMessageHandler) {
         				window.removeEventListener(''message'', this.agentHostContextMessageHandler, false);
         				this.agentHostContextMessageHandler = null;
@@ -6820,7 +6839,8 @@ title: Tigo
                     }).catch(function(error) {
                         reject(error);
                     });'
-    comment: Exchange the one-use Eclipse Studio token before any Assistant sequence runs.
+    comment: Legacy page-level copy; authentication now runs during onAppInit before page sequences.
+    isEnabled: false
   ↓ApplyAssistantModeFromUrl [ngx.components.UICustomAction-1782236253363]: 
     actionValue: 
       - xmlizable: 

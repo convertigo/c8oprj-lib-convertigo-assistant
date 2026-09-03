@@ -742,6 +742,66 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
             		resolve();
             '
     comment: Applies host-provided language before falling back to the local assistant preference
+  ↓AuthenticateStudioSession [ngx.components.UICustomAction-1788427068063]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            '        var hash = "";
+                    try {
+                        hash = "" + (window.location.hash || "");
+                    } catch (e0) {}
+                    var match = /(?:^#|[&#])authToken=([^&]+)/.exec(hash);
+                    if (match === null) {
+                        resolve();
+                        return;
+                    }
+                    var authToken = "";
+                    try {
+                        authToken = decodeURIComponent(match[1]);
+                    } catch (e1) {
+                        authToken = match[1];
+                    }
+                    try {
+                        var cleanHash = hash
+                            .replace(/(?:^#|[&#])authToken=[^&]*/g, "")
+                            .replace(/^&/, "#");
+                        window.history.replaceState(null, document.title,
+                            window.location.pathname + window.location.search + cleanHash);
+                    } catch (e2) {}
+                    var pathname = "";
+                    try {
+                        pathname = "" + window.location.pathname;
+                    } catch (e3) {}
+                    var projectsIndex = pathname.indexOf("/projects/");
+                    var convertigoRoot = projectsIndex >= 0 ? pathname.substring(0, projectsIndex) : "";
+                    var authenticateUrl = convertigoRoot + "/admin/services/engine.Authenticate";
+                    fetch(authenticateUrl, {
+                        method: "POST",
+                        credentials: "same-origin",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                            "Accept": "application/json, text/xml, */*"
+                        },
+                        body: "authType=login&authToken=" + encodeURIComponent(authToken)
+                    }).then(function(response) {
+                        if (!response.ok) {
+                            throw new Error("Studio authentication failed with HTTP " + response.status);
+                        }
+                        return response.text();
+                    }).then(function(responseText) {
+                        var text = ("" + responseText).toLowerCase();
+                        if (text.indexOf("<authenticated>false</authenticated>") !== -1
+                            || text.indexOf(''"authenticated":false'') !== -1
+                            || text.indexOf("authtoken not valid") !== -1) {
+                            throw new Error("The Studio authentication token was rejected.");
+                        }
+                        resolve();
+                    }).catch(function(error) {
+                        reject(error);
+                    });'
+    comment: Exchange the one-use Eclipse Studio token before any Assistant sequence runs.
 ↓Style [ngx.components.UIStyle-1771929741648]: 
   comment: You can add some global application styles here
   styleContent: 
