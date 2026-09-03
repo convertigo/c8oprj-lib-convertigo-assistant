@@ -2252,6 +2252,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return null;
   }
 
+  function selectConversationRecordForRunId(records, runid) {
+    var wantedRunId = trim(runid);
+    if (!wantedRunId.length) {
+      return null;
+    }
+    records = records || [];
+    for (var i = 0; i < records.length; i++) {
+      if (String(records[i] && records[i].lastRunId || "") === wantedRunId) {
+        return records[i];
+      }
+    }
+    return null;
+  }
+
+  function conversationRecordForRunId(workspaceRoot, userKey, runid, provider, skillProfile) {
+    return selectConversationRecordForRunId(
+      conversationRecords(workspaceRoot, userKey, "", false, provider, skillProfile),
+      runid
+    );
+  }
+
   function writeConversationRecord(state) {
     if (!state || !state.conversationFile) {
       return;
@@ -4262,14 +4283,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function shouldInstallForRun(options, provider) {
-    if (typeof options.install !== "undefined") {
-      return boolValue(options.install, true);
+    if (trim(options.install).length) {
+      return boolValue(options.install, false);
     }
-    if (normalizeProvider(provider) === "codex" && typeof options.installCodex !== "undefined") {
-      return boolValue(options.installCodex, true);
+    if (normalizeProvider(provider) === "codex" && trim(options.installCodex).length) {
+      return boolValue(options.installCodex, false);
     }
-    if (normalizeProvider(provider) === "vibe" && typeof options.installVibe !== "undefined") {
-      return boolValue(options.installVibe, true);
+    if (normalizeProvider(provider) === "vibe" && trim(options.installVibe).length) {
+      return boolValue(options.installVibe, false);
     }
     return false;
   }
@@ -5016,6 +5037,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
     if (trim(options.provider).toLowerCase() === "codex" && !isNoCodeSurface) {
       promptParts.push("- Codex callable routes for the standard Convertigo path are already known: `tools.mcp__convertigo__project_list`, `tools.mcp__convertigo__marketplace_import`, `tools.mcp__convertigo__mobile_builder_open`, `tools.mcp__convertigo__upsert_crud`, `tools.mcp__convertigo__upsert_ngx_crud_kit`, `tools.mcp__convertigo__crud_proof`, `tools.mcp__convertigo__databaseobject_tree_get`, `tools.mcp__convertigo__databaseobject_tree_apply`, `tools.mcp__convertigo__palette_list`, `tools.mcp__convertigo__palette_describe`, and `tools.mcp__convertigo__batch_call`. Call these directly through `exec`; do not query `ALL_TOOLS` to locate or inspect them.");
+      promptParts.push("- For a new standard NGX application, the canonical bootstrap call is `tools.mcp__convertigo__marketplace_import({project:\"template_ngxBuilderIonic\", importedProjectName:\"<targetProject>\"})`. Use the derived target name exactly once, then continue against that imported project.");
+      promptParts.push("- Treat the callable MCP schemas and named recipes as authoritative. Do not run shell, PowerShell, `rg`, or workspace searches to rediscover MCP tool names, signatures, or examples; after an argument error, correct the call from its schema or the named recipe.");
+      promptParts.push("- Never recursively search a drive root, user profile, workspace root, or generated frontend tree for builder/browser diagnostics. Use `mobile_builder_open`, `log_view`, and the managed Playwright target.");
+      promptParts.push("- For a new UI project, launch `mobile_builder_open({project:\"<targetProject>\",wait:false})` once immediately after import; do not call it with `stateOnly:true` before launch. If the launch reports Node download, npm install, or a cold Angular build, finish useful mutations and use one `stateOnly:true,wait:true,timeoutSec:180` readiness call instead of repeated 30-second polls.");
       promptParts.push("- Managed JxBrowser proof routes are `tools.mcp__playwright__browser_tabs`, `tools.mcp__playwright__browser_find`, and `tools.mcp__playwright__browser_evaluate`. Call them directly and do not enumerate Playwright metadata.");
       promptParts.push("- Named Convertigo resources are read directly with `read_mcp_resource({server:\"convertigo\",uri:...})`; do not enumerate resource catalogs first.");
     }
@@ -5034,7 +5059,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- This is a simple follow-up action on an already selected project and an already attached Studio viewer. Do not bootstrap the full Convertigo guidance again.");
       promptParts.push("- Do not use or reread unchanged managed skills, do not call `resources/list`, `prompts/list`, `convertigo.read_mcp_resource`, `project-list`, or broad tree inspection before acting. Exception: if the Agent Bridge preflight reports a changed skill bundle, fully read the exact listed `SKILL.md` files before acting.");
       promptParts.push("- Do not run shell, PowerShell, UIAutomation, Node scripts, raw CDP, external browsers, or new tabs.");
-      promptParts.push("- First call the managed Playwright/browser MCP current-tab/list-tabs tool and confirm it is on the selected project viewer URL. If it is already on the viewer, perform the requested click/check directly with Playwright.");
+      promptParts.push("- First call `playwright.browser_tabs({action:\"list\"})` and confirm the single page is on the selected project viewer URL. If it is already on the viewer, perform the requested click/check directly with Playwright.");
       promptParts.push("- If the current browser target is stale or blank, use the selected capability pack's readiness operation and start the viewer asynchronously only when needed, then retry Playwright after readiness.");
     } else if (establishedAgentFollowup) {
       promptParts.push("");
@@ -5044,11 +5069,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Read only the smallest new specialized recipe if this request introduces a genuinely new route not covered by the conversation, or repeat bootstrap only if the MCP reports a guidance-version mismatch, the endpoint changed, or the Agent Bridge reports a changed skill bundle.");
       promptParts.push("- Reuse object classes, property shapes, target QNames, and tool contracts that already succeeded in this conversation or are present in a targeted tree read. Do not reconfirm them through `palette-list`, `palette-describe`, or `ALL_TOOLS` metadata.");
       promptParts.push("- For `databaseobject-tree-get`, use `childrenDepth` for recursive descendants; `depth` is only a compatibility alias. Request the needed subtree once instead of walking one QName level per call.");
-      promptParts.push("- For `databaseobject-tree-apply` with `at:\"inside\"`, the submitted `tree` is the one child to create and must include its own `className` and `name`; never send a children-only wrapper. Put sibling creations in separate optimized `batch-call` entries.");
+      promptParts.push("- `databaseobject-tree-apply` always takes the target QName in `target`, never in `qname`. With `at:\"inside\"`, the submitted `tree` is the one child to create and must include its own `className` and `name`; never send a children-only wrapper. Put sibling creations in separate optimized `batch-call` entries.");
       promptParts.push("- For unfamiliar NGX objects, call `palette-list` with the exact intended parent QName as `target`, then pass the returned logical `className` unchanged to `palette-describe`. Do not list from the project root and guess a `#logicalId`.");
-      promptParts.push("- For common NGX primitives, treat `UIStyle#UIStyle.styleContent`, `UIAttribute#UIAttribute.attrName/attrValue`, `UIDynamicElement#TextItem`, and `UIText#UIText.textValue` as known contracts. Use one targeted palette lookup only when the requested object or property is genuinely unfamiliar.");
+      promptParts.push("- For common NGX primitives, treat `UIStyle#UIStyle.styleContent`, `UIAttribute#UIAttribute.attrName/attrValue`, `UIDynamicElement#TextItem`, `UIText#UIText.textValue`, `UIPageEvent#UIPageEvent.viewEvent`, and `UICustomAction#UICustomAction.actionValue` as known contracts. Use one targeted palette lookup only when the requested object or property is genuinely unfamiliar.");
       promptParts.push("- Group independent mutations for one intent in one `batch-call` using `{calls:[{tool:\"databaseobject-tree-apply\",arguments:{...}}],onError:\"stop\",optimizeMutations:true}`. It performs one final refresh, save, and mobile-builder notification; do not separately save after a successful optimized mutation batch.");
       promptParts.push("- For a running frontend, use one readiness call `mobile-builder-open({project, stateOnly:true, wait:true, timeoutSec:30})`, then one combined Playwright proof. Do not inspect tool descriptions first and do not repeat readiness or browser proof unless that proof identifies a concrete defect.");
+      promptParts.push("- Exact JxBrowser proof calls are `playwright.browser_tabs({action:\"list\"})`, `playwright.browser_find({text:\"<visible text>\"})`, and, only when needed, `playwright.browser_evaluate({function:\"...\"})`. If builder diagnostics are insufficient, use one `log-view({project,level:\"error\",limit:40,timeoutMs:0})`; do not inspect `ALL_TOOLS` or run separate warning scans.");
       promptParts.push("- Recheck the user's explicit acceptance behaviors before the final answer. Do not infer that a requested filter, counter, domain action, or other interaction exists merely because the underlying field or generic CRUD shell exists; prove it in the viewer or state the task is still incomplete and continue implementing it.");
     }
     promptParts.push("");
@@ -5449,6 +5475,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   C8O.assistantAgentBridge.readResponse = function (options) {
     options = options || {};
     var threadid = normalizeThreadId(options.threadid);
+    if (!threadid.length && trim(options.runid).length) {
+      var runRecord = conversationRecordForRunId(
+        resolveWorkspaceRoot(options),
+        normalizeUserKey(options.userId),
+        options.runid,
+        trim(options.provider).length ? normalizeProvider(options.provider) : "all",
+        normalizeSkillProfile(options)
+      );
+      if (runRecord !== null) {
+        threadid = normalizeConversationId(runRecord.conversationId || runRecord.threadid);
+        options.threadid = threadid;
+      }
+    }
     var state = threadid.length ? readState(threadid) : null;
     if (state === null) {
       if (!threadid.length) {
@@ -5559,18 +5598,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "turn/end") {
           markProgressEventsIdle(state);
-          state.status = "completed";
-          state.error = "";
-          if (!trim(state.answer).length) {
-            state.answer = completedFallbackAnswer(state);
-            state.answerIsFinal = true;
-          } else if (answerLooksIncomplete(state, state.answer)) {
-            state.answer = finalAnswerFromProgress(state) || incompleteFinalAnswer(state);
-            state.answerIsFinal = true;
-          }
-          if (state.answerTranscriptRunid !== state.runid) {
-            appendTranscript(state, "assistant", state.answer);
-            state.answerTranscriptRunid = state.runid;
+          if (state.status !== "failed" && state.status !== "cancelled") {
+            state.status = "completed";
+            state.error = "";
+            if (!trim(state.answer).length) {
+              state.answer = completedFallbackAnswer(state);
+              state.answerIsFinal = true;
+            } else if (answerLooksIncomplete(state, state.answer)) {
+              state.answer = finalAnswerFromProgress(state) || incompleteFinalAnswer(state);
+              state.answerIsFinal = true;
+            }
+            if (state.answerTranscriptRunid !== state.runid) {
+              appendTranscript(state, "assistant", state.answer);
+              state.answerTranscriptRunid = state.runid;
+            }
           }
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
           state.status = "failed";
@@ -5594,7 +5635,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             appendTranscript(state, "assistant", state.answer);
             state.answerTranscriptRunid = state.runid;
           }
-        } else if (type === "system/closed" && state.status !== "completed") {
+        } else if (type === "system/closed" && !isTerminalStatus(state.status)) {
           if (trim(state.answer).length) {
             state.status = "completed";
             state.answerIsFinal = true;

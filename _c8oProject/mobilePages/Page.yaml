@@ -8957,6 +8957,52 @@ title: Tigo
                        "Property": "plain:Conversation",
                        "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.threadid\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
                       }'
+                    ↓SetLocal [ngx.components.UIDynamicAction-1751354620920]: 
+                      beanData: |
+                        '{
+                         "ionBean": "SetLocalAction",
+                         "Property": "plain:RunID",
+                         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+                        }'
+                      ↓CallSequence [ngx.components.UIDynamicAction-1751354620923]: 
+                        beanData: |
+                          '{
+                           "ionBean": "CallSequenceAction",
+                           "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
+                           "noLoading": "plain:true"
+                          }'
+                        ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+                        ↓provider [ngx.components.UIControlVariable-1781700400009]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''')'
+                        ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
+                          beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+                        ↓runid [ngx.components.UIControlVariable-1751354620932]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+                        ↓targetProject [ngx.components.UIControlVariable-1781689571107]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+                        ↓userId [ngx.components.UIControlVariable-1782407714293]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+                        ↓agentBridgeOperational [ngx.components.UIControlVariable-1783011193980]: 
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
                   ↓SetNewConversationMode [ngx.components.UIDynamicAction-1782134957158]: 
                     beanData: |
                       '{
@@ -8971,52 +9017,6 @@ title: Tigo
                        "Property": "plain:ShowConversationPanel",
                        "Value": "script:false"
                       }'
-                  ↓SetLocal [ngx.components.UIDynamicAction-1751354620920]: 
-                    beanData: |
-                      '{
-                       "ionBean": "SetLocalAction",
-                       "Property": "plain:RunID",
-                       "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentSendMessageRouter\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
-                      }'
-                    ↓CallSequence [ngx.components.UIDynamicAction-1751354620923]: 
-                      beanData: |
-                        '{
-                         "ionBean": "CallSequenceAction",
-                         "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
-                         "noLoading": "plain:true"
-                        }'
-                      ↓threadid [ngx.components.UIControlVariable-1751354620926]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
-                      ↓provider [ngx.components.UIControlVariable-1781700400009]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : '''')'
-                      ↓PublishEvent [ngx.components.UIDynamicAction-1751354620929]: 
-                        beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
-                      ↓runid [ngx.components.UIControlVariable-1751354620932]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
-                      ↓targetProject [ngx.components.UIControlVariable-1781689571107]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
-                      ↓userId [ngx.components.UIControlVariable-1782407714293]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
-                      ↓agentBridgeOperational [ngx.components.UIControlVariable-1783011193980]: 
-                        varValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
                   ↓targetProject [ngx.components.UIControlVariable-1781590190599]: 
                     varValue: 
                       - xmlizable: 
