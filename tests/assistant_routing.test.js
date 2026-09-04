@@ -29,9 +29,25 @@ assert.doesNotMatch(source, /managedFlowMcpToken|managedMcpTokenBundle/);
 assert.match(source, /conversationRecordForRunId\([\s\S]*?options\.runid[\s\S]*?options\.threadid = threadid;/);
 source = source.replace(
   /\}\(\)\);\s*$/,
-  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie, usesProtectedConvertigoMcp, isTerminalStatus, shouldInstallForRun, selectConversationRecordForRunId };}());"
+  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie, usesProtectedConvertigoMcp, isTerminalStatus, shouldInstallForRun, selectConversationRecordForRunId, stateForExplicitProviderSetup, appendAnswerChunk, flushVibeInterimAnswerToProgress, projectNameFromToolValue, rememberProjectFromToolEvent };}());"
 );
 vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
+
+const pageSource = fs.readFileSync("_c8oProject/mobilePages/Page.yaml", "utf8");
+const deleteConversationBlock = pageSource.match(/↓DeleteConversation \[ngx\.components\.UIDynamicAction-1781608122153\]:[\s\S]*?↓RenameButton /);
+assert.ok(deleteConversationBlock, "delete conversation action must remain present");
+assert.match(deleteConversationBlock[0], /script:scope\.conversation && scope\.conversation\.conversationId/);
+assert.match(deleteConversationBlock[0], /\}\)\(this, scope && scope\.conversation, out\)/);
+assert.doesNotMatch(deleteConversationBlock[0], /var \w+:\s*(?:any|any\[\])/);
+assert.doesNotMatch(deleteConversationBlock[0], /script:conversation\.conversationId/);
+const runtimeUpdateBlock = pageSource.match(/↓InstallOrUpdateRuntime \[ngx\.components\.UICustomAction-1785253204061\]:[\s\S]*?↓ContinueActions /);
+assert.ok(runtimeUpdateBlock, "runtime update action must remain present");
+assert.match(runtimeUpdateBlock[0], /AgentRuntimeProvider \|\| \(page\.local\.AgentRuntime && page\.local\.AgentRuntime\.provider\)/);
+assert.match(runtimeUpdateBlock[0], /page\.local\.AgentProvider = provider/);
+assert.match(runtimeUpdateBlock[0], /model: requestedModel/);
+assert.match(runtimeUpdateBlock[0], /reasoningEffort: requestedReasoning/);
+assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''vibe''/);
+assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''codex''/);
 
 const testApi = C8O.assistantAgentBridge._test;
 assert.equal(testApi.assistantProfileDescriptor({ userId: "studio", assistantSurface: "studio" }).id, "generalist");
@@ -47,6 +63,39 @@ assert.equal(testApi.shouldInstallForRun({ install: "true" }, "codex"), true);
 assert.equal(testApi.shouldInstallForRun({ installCodex: "true" }, "codex"), true);
 assert.equal(testApi.shouldInstallForRun({ installVibe: "true" }, "codex"), false);
 assert.equal(testApi.shouldInstallForRun({ installVibe: "true" }, "vibe"), true);
+const codexConversation = {
+  provider: "codex",
+  threadid: "agent-codex",
+  conversationId: "agent-codex",
+  model: "gpt-5.6-sol",
+  reasoningEffort: "medium",
+  serviceTier: "fast",
+  workspaceRoot: "/workspace"
+};
+const vibeSetup = testApi.stateForExplicitProviderSetup(codexConversation, {
+  provider: "vibe",
+  model: "zai-glm-5-2",
+  reasoningEffort: "high"
+});
+assert.equal(vibeSetup.isolated, true);
+assert.equal(vibeSetup.state.provider, "vibe");
+assert.equal(vibeSetup.state.model, "zai-glm-5-2");
+assert.equal(vibeSetup.state.threadid, "");
+assert.equal(codexConversation.provider, "codex");
+assert.equal(codexConversation.threadid, "agent-codex");
+assert.equal(testApi.stateForExplicitProviderSetup(codexConversation, { provider: "codex" }).isolated, false);
+const vibeProjectState = { provider: "vibe", projectNames: [], primaryProject: "", projectId: "" };
+assert.equal(testApi.rememberProjectFromToolEvent(vibeProjectState, {
+  toolName: "Convertigo_marketplace-import",
+  update: {
+    rawInput: {
+      project: "template_ngxBuilderIonic",
+      importedProjectName: "Clock"
+    }
+  }
+}), "Clock");
+assert.equal(vibeProjectState.primaryProject, "Clock");
+assert.deepEqual(vibeProjectState.projectNames, ["Clock"]);
 assert.equal(testApi.selectConversationRecordForRunId([], "run-1"), null);
 assert.equal(testApi.selectConversationRecordForRunId([{ lastRunId: "run-1", conversationId: "agent-1" }], ""), null);
 assert.equal(
@@ -73,6 +122,36 @@ assert.match(prompt, /Do not run shell, PowerShell, `rg`, or workspace searches 
 assert.match(prompt, /Never recursively search a drive root, user profile, workspace root/);
 assert.match(prompt, /stateOnly:true,wait:true,timeoutSec:180/);
 assert.doesNotMatch(prompt, /\bFlow\b|convertigo-flow/i);
+
+const vibePrompt = testApi.buildSequencePrompt("Create an application", {
+  userId: "studio",
+  assistantSurface: "studio",
+  agentProfile: "generalist",
+  provider: "vibe"
+});
+assert.match(vibePrompt, /MCP endpoint: managed by Agent Bridge/);
+assert.match(vibePrompt, /skills\/convertigo-vibe-generalist\/SKILL\.md/);
+assert.match(vibePrompt, /Do not read the repository-level `AGENT\.md` or `TOOLS\.md`/);
+assert.match(vibePrompt, /path is already known: do not search the workspace/);
+assert.doesNotMatch(vibePrompt, /managed `convertigo-studio` routing skill/);
+assert.doesNotMatch(vibePrompt, /skills\/convertigo-mcp\/AGENT\.md/);
+
+const vibeAnswerState = {
+  provider: "vibe",
+  language: "fr",
+  answer: "",
+  answerIsFinal: false,
+  progressLog: "",
+  progressEvents: []
+};
+testApi.appendAnswerChunk(vibeAnswerState, "Je vais inspecter le projet.");
+assert.equal(vibeAnswerState.answer, "Je vais inspecter le projet.");
+assert.equal(testApi.flushVibeInterimAnswerToProgress(vibeAnswerState), true);
+assert.equal(vibeAnswerState.answer, "");
+assert.equal(vibeAnswerState.answerIsFinal, false);
+assert.match(vibeAnswerState.progressLog, /Je vais inspecter le projet\./);
+testApi.appendAnswerChunk(vibeAnswerState, "La modification est terminée.");
+assert.equal(vibeAnswerState.answer, "La modification est terminée.");
 
 const resumedPrompt = testApi.buildSequencePrompt("Update the existing Flow page", {
   userId: "studio",

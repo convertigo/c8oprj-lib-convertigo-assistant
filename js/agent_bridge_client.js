@@ -3437,6 +3437,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.answer += text;
   }
 
+  function flushVibeInterimAnswerToProgress(state) {
+    if (!state || normalizeProvider(state.provider) !== "vibe") {
+      return false;
+    }
+    var interim = String(state.answer || "");
+    if (!trim(interim).length) {
+      return false;
+    }
+    state.answer = "";
+    state.answerIsFinal = false;
+    appendProgressChunk(state, interim + (/\n$/.test(interim) ? "" : "\n"));
+    state.progressChunkActive = false;
+    return true;
+  }
+
   function displayContent(state) {
     var progress = String(state.progressLog || "");
     var answer = String(state.answer || "");
@@ -3797,6 +3812,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
 
     var nestedValues = [
+      value.update,
+      value.rawInput,
+      value.rawOutput,
+      value.input,
+      value.params,
       value.structuredContent,
       value.result,
       value.output,
@@ -4401,6 +4421,36 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
+  function stateForExplicitProviderSetup(state, options) {
+    var requested = trim(options && (options.provider || options.agentProvider));
+    if (!requested.length || normalizeProvider(requested) === normalizeProvider(state.provider)) {
+      return {
+        state: state,
+        isolated: false
+      };
+    }
+    var setupState = {};
+    for (var key in state) {
+      if (Object.prototype.hasOwnProperty.call(state, key)) {
+        setupState[key] = state[key];
+      }
+    }
+    setupState.provider = normalizeProvider(requested);
+    setupState.model = normalizeModel(setupState.provider, options.model || options.agentModel || "");
+    setupState.reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || "");
+    setupState.serviceTier = trim(options.serviceTier || options.speedTier);
+    setupState.threadid = "";
+    setupState.conversationId = "";
+    setupState.handle = "";
+    setupState.externalSessionId = "";
+    setupState.codexThreadId = "";
+    setupState.sessionId = "";
+    return {
+      state: setupState,
+      isolated: true
+    };
+  }
+
   function agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) {
     options = optionsWithRequestFallbacks(options);
     var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
@@ -4797,6 +4847,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    var providerSetup = stateForExplicitProviderSetup(state, options);
+    state = providerSetup.state;
     var codexLoginRequested = normalizeProvider(state.provider) === "codex" && boolValue(options.codexLogin || options.codexLoginStatus, false);
     if (codexLoginRequested) {
       var loginInfo = callAgentSetup(state, options, false);
@@ -4812,8 +4864,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       };
       state.updatedAt = now();
-      saveState(state);
-      setStateBuffer(state);
+      if (!providerSetup.isolated) {
+        saveState(state);
+        setStateBuffer(state);
+      }
       return {
         ok: login.ok !== false,
         id: state.threadid,
@@ -4834,7 +4888,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         options.forceVibeInstall = true;
       }
     }
-    clearCancellationRequested(state.threadid);
+    if (trim(state.threadid).length) {
+      clearCancellationRequested(state.threadid);
+    }
     if (trim(options.model || options.agentModel).length) {
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
     } else if (!trim(state.model).length) {
@@ -4856,8 +4912,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.setupRequired = setup.ok !== true;
     state.lastStatusText = setup.ok === true ? lang(state).setupReady : lang(state).setupRequired;
     state.updatedAt = now();
-    saveState(state);
-    setStateBuffer(state);
+    if (!providerSetup.isolated) {
+      saveState(state);
+      setStateBuffer(state);
+    }
     var setupConversationId = setup.ok === true ? "" : state.threadid;
     var refreshedSettings = null;
     if (setup.ok === true) {
@@ -5034,8 +5092,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Project selection is optional in this surface. Do not require an Eclipse/Studio selected project before inspecting or explaining C8Oforms/no-code resources.");
     }
     promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
-    promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
-    if (trim(options.provider).toLowerCase() === "codex" && !isNoCodeSurface) {
+    var normalizedProvider = trim(options.provider).toLowerCase();
+    var isVibeProvider = normalizedProvider === "vibe" || normalizedProvider === "mistral-vibe" || normalizedProvider === "vibe-acp";
+    var promptMcpEndpoint = trim(options.mcpEndpoint);
+    promptParts.push("- MCP endpoint: " + (promptMcpEndpoint.length ? promptMcpEndpoint : "managed by Agent Bridge"));
+    if (normalizedProvider === "codex" && !isNoCodeSurface) {
       promptParts.push("- Codex callable routes for the standard Convertigo path are already known: `tools.mcp__convertigo__project_list`, `tools.mcp__convertigo__marketplace_import`, `tools.mcp__convertigo__mobile_builder_open`, `tools.mcp__convertigo__upsert_crud`, `tools.mcp__convertigo__upsert_ngx_crud_kit`, `tools.mcp__convertigo__crud_proof`, `tools.mcp__convertigo__databaseobject_tree_get`, `tools.mcp__convertigo__databaseobject_tree_apply`, `tools.mcp__convertigo__palette_list`, `tools.mcp__convertigo__palette_describe`, and `tools.mcp__convertigo__batch_call`. Call these directly through `exec`; do not query `ALL_TOOLS` to locate or inspect them.");
       promptParts.push("- For a new standard NGX application, the canonical bootstrap call is `tools.mcp__convertigo__marketplace_import({project:\"template_ngxBuilderIonic\", importedProjectName:\"<targetProject>\"})`. Use the derived target name exactly once, then continue against that imported project.");
       promptParts.push("- Treat the callable MCP schemas and named recipes as authoritative. Do not run shell, PowerShell, `rg`, or workspace searches to rediscover MCP tool names, signatures, or examples; after an argument error, correct the call from its schema or the named recipe.");
@@ -5083,7 +5144,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       ? "- Use the Convertigo NoCode MCP/tools for all form and no-code work."
       : (hasFlowCapability
         ? "- Route the task through the managed `convertigo-studio` skill before authoring. Explicit Flow/FlowScript/Flow Svelte intent selects `convertigo-flow`; explicit Legacy/NGX intent selects `convertigo`; otherwise inspect the selected project's model and choose its owner."
-        : "- Route the task through the managed `convertigo-studio` skill before authoring, then use the `convertigo` MCP server."));
+        : (isVibeProvider
+          ? "- Use the managed `skills/convertigo-vibe-generalist/SKILL.md` skill, then use the `Convertigo` MCP server exposed in this Vibe session. Do not read the repository-level `AGENT.md` or `TOOLS.md`; those files document MCP maintenance rather than application authoring."
+          : "- Route the task through the managed `convertigo-studio` skill before authoring, then use the `convertigo` MCP server.")));
     if (!isNoCodeSurface) {
       promptParts.push("- After routing, use only the owning MCP for each target model. Never use curl, handwritten JSON-RPC, YAML edits, generated-file edits, or the other MCP as a fallback for a failed mutation.");
     }
@@ -5092,7 +5155,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!simpleViewerFollowup && !establishedAgentFollowup) {
       promptParts.push(isNoCodeSurface
         ? "- Read and follow the managed `" + capabilityProfile.skillSlug + "` skill before the first authoring operation."
-        : "- Read and follow the managed `convertigo-studio` routing skill before the first authoring operation, then read only the selected capability pack's specialist guidance.");
+        : (isVibeProvider
+          ? "- Read `skills/convertigo-vibe-generalist/SKILL.md` directly before the first authoring operation. Its path is already known: do not search the workspace, inspect Vibe configuration, read repository maintainer files, or probe the MCP with shell commands."
+          : "- Read and follow the managed `convertigo-studio` routing skill before the first authoring operation, then read only the selected capability pack's specialist guidance."));
     }
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, _private/svelte, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
     promptParts.push("- If the user asks for advice only, answer without modifying the project.");
@@ -5581,6 +5646,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             appendProgressLine(state, lang(state).thinking);
           }
         } else if (type === "tool/start" || type === "tool/update") {
+          flushVibeInterimAnswerToProgress(state);
           var toolStatus = eventToolStatus(data);
           rememberProjectFromToolEvent(state, data);
           appendToolEvent(state, event, data, type);

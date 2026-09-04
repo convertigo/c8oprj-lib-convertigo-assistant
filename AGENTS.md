@@ -86,6 +86,9 @@ rediscovering the same context.
 - Progress should accumulate like Codex Desktop: meaningful steps remain visible,
   then collapse when the final answer arrives. Do not replace progress with the
   final answer or duplicate the final answer.
+- Vibe emits each agent narration through the same ACP message event. When a
+  narration is followed by a tool call, move it into progress and clear the
+  answer buffer; only the narration remaining at turn end is the final answer.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.
