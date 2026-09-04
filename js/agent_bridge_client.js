@@ -8,7 +8,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var DEFAULT_BRIDGE_PROJECT = "lib_ConvertigoAgentBridge";
   var FALLBACK_MCP_PATH = "/api/mcp";
   var FALLBACK_FLOW_MCP_PATH = "/api/flow-mcp";
-  var FLOW_MINIMUM_CONVERTIGO_VERSION = "8.4.0";
+  var FLOW_MINIMUM_CONVERTIGO_VERSION = "8.5.0";
   var FLOW_REQUIRED_PROJECTS = ["lib_flow_engine", "lib_flow_mcp"];
   // Bootstrap-only compatibility map. AgentBridge owns the authoritative profile contract.
   var ASSISTANT_PROFILE_BOOTSTRAP = {
