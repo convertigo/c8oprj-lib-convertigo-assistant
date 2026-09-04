@@ -507,7 +507,7 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                     };
                     if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
                         page.global.studio = true;
-                        setTimeout(autoOpenAgentFromStudioView, 0);
+                        // Agent navigation starts after Studio sends its context or selection.
                     }
                     window[''sendToHost''] = (message) => {
                         if (page.global.studio) {
@@ -530,7 +530,6 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
                     window[''setupMessageListener'']((msg) => {
                         if (''init'' == msg.type) {
                             page.global.studio = true;
-                            setTimeout(autoOpenAgentFromStudioView, 0);
                             setTimeout(requestAssistantContext, 0);
                         }
                         if (''lib_ConvertigoAssistant.context'' == msg.type || ''convertigo-assistant-context'' == msg.type) {
@@ -569,7 +568,12 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx
               - java.lang.String: 
                 - ↑value: '{"glob":"tigo-head.png","input":"../../assets","output":"/assets/"}'
   ↓CallSequence [ngx.components.UIDynamicAction-1750662166496]: 
-    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:lib_ConvertigoAssistant.GetVersion"}'
+    beanData: |
+      '{
+       "ionBean": "CallSequenceAction",
+       "requestable": "plain:lib_ConvertigoAssistant.GetVersion",
+       "noLoading": "plain:true"
+      }'
     ↓SetLocal [ngx.components.UIDynamicAction-1750662135534]: 
       beanData: |
         '{

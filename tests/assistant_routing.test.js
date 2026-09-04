@@ -34,6 +34,7 @@ source = source.replace(
 vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
 
 const pageSource = fs.readFileSync("_c8oProject/mobilePages/Page.yaml", "utf8");
+const appSource = fs.readFileSync("_c8oProject/mobileNgxApp.yaml", "utf8");
 const setupSequenceSource = fs.readFileSync("_c8oProject/sequences/AgentSetup.yaml", "utf8");
 const footerSource = fs.readFileSync("_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml", "utf8");
 const deleteConversationBlock = pageSource.match(/↓DeleteConversation \[ngx\.components\.UIDynamicAction-1781608122153\]:[\s\S]*?↓RenameButton /);
@@ -56,9 +57,14 @@ assert.doesNotMatch(runtimeUpdateBlock[0], /getEffectiveProjectName/);
 assert.match(setupSequenceSource, /updateRuntime: typeof updateRuntime === "undefined" \? "" : updateRuntime/);
 assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/);
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
-assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.2", tag: "v0\.2\.2"/);
-assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.2", tag: "v0\.4\.2"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.3", tag: "v1\.4\.3"/);
+assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.4", tag: "v0\.2\.4"/);
+assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.4", tag: "v0\.4\.4"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.5", tag: "v1\.4\.5"/);
+assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
+assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
+assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
+assert.match(pageSource, /return state\.reasoningEffort \|\| ''''/);
+assert.match(pageSource, /return state\.serviceTier \|\| ''''/);
 assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''vibe''/);
 assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''codex''/);
 

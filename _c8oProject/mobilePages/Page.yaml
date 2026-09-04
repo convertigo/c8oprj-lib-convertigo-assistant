@@ -991,11 +991,11 @@ scriptContent:
         	public getEmbeddedAgentStackRelease() {
         		return {
         			schemaVersion: 1,
-        			channel: "beta",
+                                channel: "stable",
         			projects: [
-                        { name: "lib_ConvertigoMCP", version: "0.2.3", tag: "v0.2.3", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.3/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.3", tag: "v0.4.3", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.3/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.4", tag: "v1.4.4", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.4/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoMCP", version: "0.2.4", tag: "v0.2.4", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.4/lib_ConvertigoMCP.car" },
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.4", tag: "v0.4.4", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.4/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.5", tag: "v1.4.5", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.5/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -7379,7 +7379,7 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:ConversationProject",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return state.primaryProject || ''''; })(out)"
             }'
           ↓RefreshEnableChat [ngx.components.UICustomAction-1781676448770]: 
             actionValue: 
@@ -7578,14 +7578,14 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentReasoningEffort",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.reasoningEffort\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return state.reasoningEffort || ''''; })(out)"
             }'
         ↓SetAgentServiceTier [ngx.components.UIDynamicAction-1782120505136]: 
           beanData: |
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentServiceTier",
-             "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentCreateConversationRouter\",\"marker\":\"\"}],\"path\":\"?.result.state.serviceTier\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return state.serviceTier || ''''; })(out)"
             }'
         ↓userId [ngx.components.UIControlVariable-1782407660593]: 
           varValue: 
