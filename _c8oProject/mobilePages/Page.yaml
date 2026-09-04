@@ -993,9 +993,9 @@ scriptContent:
         			schemaVersion: 1,
         			channel: "beta",
         			projects: [
-                        { name: "lib_ConvertigoMCP", version: "0.2.1", tag: "v0.2.1", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.1/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.1", tag: "v0.4.1", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.1/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.2", tag: "v1.4.2", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.2/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoMCP", version: "0.2.2", tag: "v0.2.2", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.2/lib_ConvertigoMCP.car" },
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.2", tag: "v0.4.2", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.2/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.3", tag: "v1.4.3", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.3/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -4959,11 +4959,10 @@ title: Tigo
                                         page.local.AgentModel = requestedModel;
                                         page.local.AgentReasoningEffort = requestedReasoning;
                                         page.local.AgentModels = currentModels;
-                                        var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
                                         var payload: any = {
-                                            threadid: page.local.Conversation || '''',
-                                            targetProject: project,
-                                            projectName: project,
+                                            threadid: '''',
+                                            targetProject: '''',
+                                            projectName: '''',
                                             provider: provider,
                                             model: requestedModel,
                                             reasoningEffort: requestedReasoning,

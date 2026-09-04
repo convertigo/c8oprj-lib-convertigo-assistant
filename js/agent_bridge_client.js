@@ -4451,6 +4451,41 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
+  function runtimeSetupRequested(options) {
+    options = options || {};
+    return boolValue(options.updateRuntime, false) ||
+      boolValue(options.forceRuntimeUpdate, false) ||
+      boolValue(options.forceUpdate, false) ||
+      boolValue(options.forceCodexInstall, false) ||
+      boolValue(options.forceVibeInstall, false);
+  }
+
+  function stateForRuntimeSetup(providerSetup, options) {
+    if (!runtimeSetupRequested(options)) {
+      return providerSetup;
+    }
+    var source = providerSetup.state || {};
+    var setupState = {};
+    for (var key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        setupState[key] = source[key];
+      }
+    }
+    setupState.threadid = "";
+    setupState.conversationId = "";
+    setupState.handle = "";
+    setupState.externalSessionId = "";
+    setupState.codexThreadId = "";
+    setupState.sessionId = "";
+    setupState.primaryProject = "";
+    setupState.projectId = "";
+    setupState.projectNames = [];
+    return {
+      state: setupState,
+      isolated: true
+    };
+  }
+
   function agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) {
     options = optionsWithRequestFallbacks(options);
     var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
@@ -4847,7 +4882,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
-    var providerSetup = stateForExplicitProviderSetup(state, options);
+    var updateRequested = runtimeSetupRequested(options);
+    var providerSetup = stateForRuntimeSetup(stateForExplicitProviderSetup(state, options), options);
     state = providerSetup.state;
     var codexLoginRequested = normalizeProvider(state.provider) === "codex" && boolValue(options.codexLogin || options.codexLoginStatus, false);
     if (codexLoginRequested) {
@@ -4880,7 +4916,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         message: login.message || login.error || ""
       };
     }
-    var updateRequested = boolValue(options.updateRuntime || options.forceRuntimeUpdate || options.forceUpdate, false);
     if (updateRequested) {
       if (normalizeProvider(state.provider) === "codex") {
         options.forceCodexInstall = true;
@@ -4903,7 +4938,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.serviceTier = trim(options.serviceTier || options.speedTier);
     }
     state.language = detectLanguage(options.userQuestion || options.Question || "");
-    enrichViewerDebugOptions(options, state);
+    if (!updateRequested) {
+      enrichViewerDebugOptions(options, state);
+    }
     var install = boolValue(options.diagnosticOnly, false) ? false : true;
     var setupInfo = callAgentSetup(state, options, install);
     var setup = setupInfo.result || {};

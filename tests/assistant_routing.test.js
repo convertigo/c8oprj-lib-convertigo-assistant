@@ -29,11 +29,13 @@ assert.doesNotMatch(source, /managedFlowMcpToken|managedMcpTokenBundle/);
 assert.match(source, /conversationRecordForRunId\([\s\S]*?options\.runid[\s\S]*?options\.threadid = threadid;/);
 source = source.replace(
   /\}\(\)\);\s*$/,
-  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie, usesProtectedConvertigoMcp, isTerminalStatus, shouldInstallForRun, selectConversationRecordForRunId, stateForExplicitProviderSetup, appendAnswerChunk, flushVibeInterimAnswerToProgress, projectNameFromToolValue, rememberProjectFromToolEvent };}());"
+  "C8O.assistantAgentBridge._test = { assistantProfileDescriptor, buildSequencePrompt, bridgeSessionSlot, bridgeSessionCookie, responseSessionCookie, rememberBridgeSessionCookie, usesProtectedConvertigoMcp, isTerminalStatus, shouldInstallForRun, selectConversationRecordForRunId, stateForExplicitProviderSetup, runtimeSetupRequested, stateForRuntimeSetup, appendAnswerChunk, flushVibeInterimAnswerToProgress, projectNameFromToolValue, rememberProjectFromToolEvent };}());"
 );
 vm.runInThisContext(source, { filename: "agent_bridge_client.js" });
 
 const pageSource = fs.readFileSync("_c8oProject/mobilePages/Page.yaml", "utf8");
+const setupSequenceSource = fs.readFileSync("_c8oProject/sequences/AgentSetup.yaml", "utf8");
+const footerSource = fs.readFileSync("_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml", "utf8");
 const deleteConversationBlock = pageSource.match(/↓DeleteConversation \[ngx\.components\.UIDynamicAction-1781608122153\]:[\s\S]*?↓RenameButton /);
 assert.ok(deleteConversationBlock, "delete conversation action must remain present");
 assert.match(deleteConversationBlock[0], /script:scope\.conversation && scope\.conversation\.conversationId/);
@@ -47,6 +49,16 @@ assert.match(runtimeUpdateBlock[0], /AgentRuntimeProvider \|\| \(page\.local\.Ag
 assert.match(runtimeUpdateBlock[0], /page\.local\.AgentProvider = provider/);
 assert.match(runtimeUpdateBlock[0], /model: requestedModel/);
 assert.match(runtimeUpdateBlock[0], /reasoningEffort: requestedReasoning/);
+assert.match(runtimeUpdateBlock[0], /threadid: ''''/);
+assert.match(runtimeUpdateBlock[0], /targetProject: ''''/);
+assert.match(runtimeUpdateBlock[0], /projectName: ''''/);
+assert.doesNotMatch(runtimeUpdateBlock[0], /getEffectiveProjectName/);
+assert.match(setupSequenceSource, /updateRuntime: typeof updateRuntime === "undefined" \? "" : updateRuntime/);
+assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/);
+assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
+assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.2", tag: "v0\.2\.2"/);
+assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.2", tag: "v0\.4\.2"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.3", tag: "v1\.4\.3"/);
 assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''vibe''/);
 assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''codex''/);
 
@@ -85,6 +97,29 @@ assert.equal(vibeSetup.state.threadid, "");
 assert.equal(codexConversation.provider, "codex");
 assert.equal(codexConversation.threadid, "agent-codex");
 assert.equal(testApi.stateForExplicitProviderSetup(codexConversation, { provider: "codex" }).isolated, false);
+assert.equal(testApi.runtimeSetupRequested({ updateRuntime: "true" }), true);
+assert.equal(testApi.runtimeSetupRequested({ forceCodexInstall: true }), true);
+assert.equal(testApi.runtimeSetupRequested({ install: true }), false);
+const runtimeSetup = testApi.stateForRuntimeSetup({
+  state: {
+    provider: "codex",
+    threadid: "agent-codex",
+    conversationId: "agent-codex",
+    primaryProject: "lib_ProductTour",
+    projectId: "lib_ProductTour",
+    projectNames: ["lib_ProductTour"],
+    workspaceRoot: "/workspace",
+    userKey: "studio"
+  },
+  isolated: false
+}, { updateRuntime: true });
+assert.equal(runtimeSetup.isolated, true);
+assert.equal(runtimeSetup.state.threadid, "");
+assert.equal(runtimeSetup.state.conversationId, "");
+assert.equal(runtimeSetup.state.primaryProject, "");
+assert.equal(runtimeSetup.state.projectId, "");
+assert.deepEqual(runtimeSetup.state.projectNames, []);
+assert.equal(runtimeSetup.state.workspaceRoot, "/workspace");
 const vibeProjectState = { provider: "vibe", projectNames: [], primaryProject: "", projectId: "" };
 assert.equal(testApi.rememberProjectFromToolEvent(vibeProjectState, {
   toolName: "Convertigo_marketplace-import",

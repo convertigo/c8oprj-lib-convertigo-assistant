@@ -34,6 +34,7 @@ responseTimeout: 900
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId,
       install: typeof install === "undefined" ? "" : install,
+      updateRuntime: typeof updateRuntime === "undefined" ? "" : updateRuntime,
       codexLogin: typeof codexLogin === "undefined" ? "" : codexLogin,
       codexLoginStatus: typeof codexLoginStatus === "undefined" ? "" : codexLoginStatus,
       forceLogin: typeof forceLogin === "undefined" ? "" : forceLogin,
@@ -268,4 +269,8 @@ responseTimeout: 900
 ↓forceLogin [variables.RequestableVariable-1787761637162]: 
   comment: Starts a fresh Codex login even when scoped credentials are present.
   description: Starts a fresh Codex login even when scoped credentials are present.
+  schemaType: xsd:boolean
+↓updateRuntime [variables.RequestableVariable-1788513000001]: 
+  comment: Marks a provider runtime installation or update that must not reuse conversation, project, or viewer context.
+  description: Marks a provider runtime installation or update that must not reuse conversation, project, or viewer context.
   schemaType: xsd:boolean
