@@ -38,6 +38,7 @@ const deleteConversationBlock = pageSource.match(/↓DeleteConversation \[ngx\.c
 assert.ok(deleteConversationBlock, "delete conversation action must remain present");
 assert.match(deleteConversationBlock[0], /script:scope\.conversation && scope\.conversation\.conversationId/);
 assert.match(deleteConversationBlock[0], /\}\)\(this, scope && scope\.conversation, out\)/);
+assert.match(deleteConversationBlock[0], /var result = JSON\.parse\(''\{\}''\);/);
 assert.doesNotMatch(deleteConversationBlock[0], /var \w+:\s*(?:any|any\[\])/);
 assert.doesNotMatch(deleteConversationBlock[0], /script:conversation\.conversationId/);
 const runtimeUpdateBlock = pageSource.match(/↓InstallOrUpdateRuntime \[ngx\.components\.UICustomAction-1785253204061\]:[\s\S]*?↓ContinueActions /);
