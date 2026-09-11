@@ -84,7 +84,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "contextTargetKind", "baserowWorkspaceId", "baserowWorkspaceName",
       "baserowDatabaseId", "baserowDatabaseName", "baserowTableId", "baserowTableName",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
-      "settingsTimeoutMs", "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
+      "settingsTimeoutMs", "checkUpdates", "refreshUpdateCheck", "updateCheckTimeoutMs",
+      "updateCheckCacheMs", "runtimePresenceOnly", "updateRuntime", "forceRuntimeUpdate",
+      "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
       "mcpBearerTokenHandle", "browserDebugUrl", "browserDevToolsJsonUrl",
       "browserDevToolsWebSocketUrl", "playwrightCdpEndpoint",
       "playwrightMcpEndpoint", "viewerCdpEndpoint", "browserControlReady"
@@ -1450,7 +1452,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function agentStartPayload(state, options, provider, installRequested) {
     options = options || {};
     provider = normalizeProvider(provider || (state && state.provider));
-    var env = provider === "vibe" ? credentialsEnv() : {};
+    var env = {};
     if (provider === "codex") {
       var codexScope = codexHomeScopeForRun(options);
       return {
@@ -1510,7 +1512,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       install: installRequested ? "true" : "false",
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
+      reasoningEffort: state.reasoningEffort || "",
       env: JSON.stringify(env),
+      credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
       requestTimeoutMs: "60000"
     };
@@ -1709,7 +1713,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function defaultModelForProvider(provider) {
-    return normalizeProvider(provider) === "vibe" ? "vibe-thinking" : "gpt-5.5";
+    return "";
   }
 
   function normalizeModel(provider, value) {
@@ -3500,6 +3504,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.answer = text;
       return;
     }
+    if (normalizeProvider(state && state.provider) === "vibe") {
+      // ACP agent_message_chunk content is a delta. Treating short, repeated
+      // fragments as cumulative snapshots drops valid text such as list rows.
+      state.answer += text;
+      return;
+    }
     var currentComparable = comparableAnswerText(current);
     var nextComparable = comparableAnswerText(text);
     if (nextComparable === currentComparable) {
@@ -3541,11 +3551,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (text.indexOf("<tool_error>") !== -1 || text.indexOf("\"JsonResponse\"") !== -1) {
       return true;
     }
-    if (!trim(state && state.progressLog).length) {
-      return false;
-    }
-    var words = text.split(/\s+/);
-    return text.length < 24 && words.length <= 3;
+    return false;
   }
 
   function incompleteFinalAnswer(state) {
@@ -3657,9 +3663,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state || !state.progressEvents || typeof state.progressEvents.length === "undefined") {
       return;
     }
-    var cleaned = [];
+    var cleanedReversed = [];
     var seen = {};
-    for (var i = 0; i < state.progressEvents.length; i++) {
+    var seenActivityText = {};
+    for (var i = state.progressEvents.length - 1; i >= 0; i--) {
       var item = state.progressEvents[i];
       if (!item) {
         continue;
@@ -3673,18 +3680,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       item.text = normalizedText || normalizedTitle;
       item.title = normalizedTitle || item.text;
-      if (progressLineLooksLikeAgentLifecycle(rawText) || progressLineLooksLikeAgentLifecycle(rawTitle)) {
-        item.key = eventKeyForText(trim(item.type || "narrative") || "narrative", item.title || item.text);
+      var itemType = trim(item.type || "narrative") || "narrative";
+      var activityTextKey = trim(String(item.text || item.title || "").replace(/\s+/g, " ")).toLowerCase();
+      if (itemType !== "tool" && activityTextKey.length) {
+        if (seenActivityText[activityTextKey]) {
+          continue;
+        }
+        seenActivityText[activityTextKey] = true;
       }
-      var key = trim(item.key || eventKeyForText(trim(item.type || "narrative") || "narrative", item.title || item.text));
+      if (progressLineLooksLikeAgentLifecycle(rawText) || progressLineLooksLikeAgentLifecycle(rawTitle)) {
+        item.key = eventKeyForText(itemType, item.title || item.text);
+      }
+      var key = trim(item.key || eventKeyForText(itemType, item.title || item.text));
       if (seen[key]) {
         continue;
       }
       item.key = key;
       seen[key] = true;
-      cleaned.push(item);
+      cleanedReversed.push(item);
     }
-    state.progressEvents = cleaned;
+    state.progressEvents = cleanedReversed.reverse();
   }
 
   function appendObservedSteps(state, text) {
@@ -3804,6 +3819,111 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return text;
     }
     return "";
+  }
+
+  function validProjectName(value) {
+    var name = trim(value);
+    if (!name.length || name.length > 160 || name.indexOf("://") !== -1 || /[\/\\\s]/.test(name)) {
+      return "";
+    }
+    return /^[A-Za-z_][A-Za-z0-9_.-]*$/.test(name) ? name : "";
+  }
+
+  function projectNameFromToolValue(value, depth) {
+    if (value == null || depth > 6) {
+      return "";
+    }
+    if (typeof value === "string") {
+      var text = trim(value);
+      var searchableText = text;
+      for (var unescapeIndex = 0; unescapeIndex < 3; unescapeIndex++) {
+        searchableText = searchableText.replace(/\\(["'])/g, "$1");
+      }
+      var embeddedProject = searchableText.match(/["'](?:importedProjectName|targetProject|projectName|project)["']\s*:\s*["']([^"']+)["']/);
+      if (embeddedProject) {
+        var embeddedProjectName = validProjectName(embeddedProject[1]);
+        if (embeddedProjectName.length && embeddedProjectName !== "ConvertigoMCP") {
+          return embeddedProjectName;
+        }
+      }
+      if ((text.charAt(0) === "{" && text.charAt(text.length - 1) === "}") ||
+          (text.charAt(0) === "[" && text.charAt(text.length - 1) === "]")) {
+        try {
+          return projectNameFromToolValue(JSON.parse(text), depth + 1);
+        } catch (_ignoreProjectJson) {}
+      }
+      return "";
+    }
+    if (typeof value.length !== "undefined" && typeof value !== "function" && !value.nodeType) {
+      for (var arrayIndex = 0; arrayIndex < value.length; arrayIndex++) {
+        var arrayProject = projectNameFromToolValue(value[arrayIndex], depth + 1);
+        if (arrayProject.length) {
+          return arrayProject;
+        }
+      }
+      return "";
+    }
+    if (typeof value !== "object") {
+      return "";
+    }
+
+    var directNames = [
+      value.importedProjectName,
+      value.targetProject,
+      value.projectName,
+      value.project
+    ];
+    for (var nameIndex = 0; nameIndex < directNames.length; nameIndex++) {
+      var directProject = validProjectName(directNames[nameIndex]);
+      if (directProject.length && directProject !== "ConvertigoMCP") {
+        return directProject;
+      }
+    }
+    var qname = trim(value.targetQName || value.rootQName || value.qname || value.target);
+    if (qname.length) {
+      var qnameProject = validProjectName(qname.split(".")[0]);
+      if (qnameProject.length && qnameProject !== "ConvertigoMCP") {
+        return qnameProject;
+      }
+    }
+
+    var nestedValues = [
+      value.structuredContent,
+      value.result,
+      value.output,
+      value.content,
+      value.item,
+      value.arguments,
+      value.detail,
+      value.text
+    ];
+    for (var nestedIndex = 0; nestedIndex < nestedValues.length; nestedIndex++) {
+      var nestedProject = projectNameFromToolValue(nestedValues[nestedIndex], depth + 1);
+      if (nestedProject.length) {
+        return nestedProject;
+      }
+    }
+    return "";
+  }
+
+  function rememberProjectFromToolEvent(state, data) {
+    if (!state || !data) {
+      return "";
+    }
+    var toolName = toolNameFromData(data).toLowerCase();
+    if (!/(marketplace-import|mobile-builder-open|databaseobject-tree-apply|project-save|upsert-|crud-)/.test(toolName)) {
+      return "";
+    }
+    var project = projectNameFromToolValue(data, 0);
+    if (!project.length) {
+      return "";
+    }
+    state.projectNames = addArrayValue(state.projectNames || [], project);
+    if (!trim(state.primaryProject || state.projectId).length) {
+      state.primaryProject = project;
+      state.projectId = project;
+    }
+    return project;
   }
 
   function eventText(data) {
@@ -3961,6 +4081,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!state.projectNames || typeof state.projectNames.length === "undefined") {
       state.projectNames = [];
+    }
+    if (!trim(state.primaryProject || state.projectId).length && state.progressEvents && state.progressEvents.length) {
+      for (var projectEventIndex = 0; projectEventIndex < state.progressEvents.length; projectEventIndex++) {
+        var projectEvent = state.progressEvents[projectEventIndex] || {};
+        rememberProjectFromToolEvent(state, {
+          toolName: projectEvent.toolName || projectEvent.title || "",
+          detail: projectEvent.detail || ""
+        });
+        if (trim(state.primaryProject || state.projectId).length) {
+          break;
+        }
+      }
     }
     state.projectNames = addArrayValue(state.projectNames, state.primaryProject || state.projectId);
     if (typeof state.answer === "undefined" || state.answer === null) {
@@ -4271,22 +4403,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (installRequested !== true) {
       return false;
     }
-    if (normalizeProvider(provider) === "codex" && trim(state.externalSessionId || state.codexThreadId || state.sessionId).length) {
+    if (trim(state.externalSessionId || state.codexThreadId || state.sessionId).length) {
       return false;
     }
-    if (boolValue(options.forceCodexInstall || options.forceInstall || options.forceAgentInstall, false)) {
+    if (boolValue(options.forceCodexInstall || options.forceVibeInstall || options.forceInstall || options.forceAgentInstall, false)) {
       return true;
     }
     return state.setupRequired === true || !trim(state.setupReport && state.setupReport.status).length;
-  }
-
-  function credentialsEnv() {
-    var env = readEnvFile(new File(new File(String(System.getProperty("user.home")), ".vibe"), ".env"));
-    var selected = {};
-    if (env.MISTRAL_API_KEY) {
-      selected.MISTRAL_API_KEY = env.MISTRAL_API_KEY;
-    }
-    return selected;
   }
 
   function agentSetupPayload(state, options, installOverride) {
@@ -4402,7 +4525,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       codexPath: trim(options.codexPath || options.commandPath),
       vibeHome: trim(options.vibeHome || options.agentHome),
       vibeHomeScope: trim(options.vibeHomeScope || options.homeScope),
-      settingsTimeoutMs: trim(options.settingsTimeoutMs)
+      settingsTimeoutMs: trim(options.settingsTimeoutMs),
+      checkUpdates: typeof options.checkUpdates === "undefined" ? "" : options.checkUpdates,
+      refreshUpdateCheck: typeof options.refreshUpdateCheck === "undefined" ? "" : options.refreshUpdateCheck,
+      updateCheckTimeoutMs: trim(options.updateCheckTimeoutMs),
+      updateCheckCacheMs: trim(options.updateCheckCacheMs),
+      runtimePresenceOnly: typeof options.runtimePresenceOnly === "undefined" ? "" : options.runtimePresenceOnly
     };
     try {
       var settings = bridgeCall(options, "agent_settings", payload, 120000);
@@ -4745,6 +4873,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    var updateRequested = boolValue(options.updateRuntime || options.forceRuntimeUpdate || options.forceUpdate, false);
+    if (updateRequested) {
+      if (normalizeProvider(state.provider) === "codex") {
+        options.forceCodexInstall = true;
+      } else {
+        options.forceVibeInstall = true;
+      }
+    }
     clearCancellationRequested(state.threadid);
     if (trim(options.model || options.agentModel).length) {
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
@@ -4770,6 +4906,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     saveState(state);
     setStateBuffer(state);
     var setupConversationId = setup.ok === true ? "" : state.threadid;
+    var refreshedSettings = null;
+    if (setup.ok === true) {
+      options.checkUpdates = true;
+      options.refreshUpdateCheck = true;
+      refreshedSettings = agentSettingsForOptions(
+        options,
+        state.workspaceRoot,
+        state.userKey,
+        state.primaryProject || state.projectId,
+        state.provider
+      );
+    }
     return {
       ok: setup.ok === true,
       id: setupConversationId,
@@ -4783,6 +4931,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       setupRequired: setup.ok !== true,
       canInstall: true,
       setup: publicSetup,
+      settings: refreshedSettings,
       state: publicState(state),
       message: setup.ok === true ? setupReadyAnswer(state, setup) : setupRequiredAnswer(state, setup)
     };
@@ -4928,7 +5077,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("- MCP endpoint: " + trim(options.mcpEndpoint));
     var viewerControlReady = boolValue(options.browserControlReady, true);
     var viewerCdpEndpoint = viewerControlReady ? existingViewerCdpEndpoint(options) : "";
-    if (viewerCdpEndpoint.length) {
+    var establishedAgentFollowup = boolValue(options.establishedAgentFollowup, false);
+    if (targetProject.length && viewerCdpEndpoint.length) {
       promptParts.push("- Latest Studio viewer CDP endpoint for this turn: " + viewerCdpEndpoint);
       promptParts.push("- Ignore older Studio viewer CDP endpoints from previous conversation history; they are stale after a builder/view restart.");
       promptParts.push("- Browser proof must use the managed Playwright MCP/browser-control tools attached to that Studio JxBrowser endpoint. If the browser tools show `about:blank` while the builder is not ready, poll `convertigo.mobile-builder-open` with `stateOnly=true`, `wait=true`, and a short timeout before retrying Playwright. If a waited builder result reports `browserControlReady:true` but the browser tools still show another URL, `about:blank`, or no config for that endpoint, report the managed Playwright MCP configuration problem and do not open a separate browser, tab, page, Node script, or raw CDP workaround.");
@@ -4942,19 +5092,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Do not run shell, PowerShell, UIAutomation, Node scripts, raw CDP, external browsers, or new tabs.");
       promptParts.push("- First call the managed Playwright/browser MCP current-tab/list-tabs tool and confirm it is on the selected project viewer URL. If it is already on the viewer, perform the requested click/check directly with Playwright.");
       promptParts.push("- If the current browser target is stale or blank, poll `convertigo.mobile-builder-open` for the selected project with `stateOnly=true`, `wait=true`, and a short timeout such as 20-30 seconds, then retry Playwright when the result reports `browserControlReady:true`. Do not wait a full minute for this simple follow-up; report the blocker only if the waited result times out or Playwright is still attached elsewhere after readiness.");
+    } else if (establishedAgentFollowup) {
+      promptParts.push("");
+      promptParts.push("Continuation rules for this turn:");
+      promptParts.push("- This agent conversation already completed its Convertigo bootstrap for the current MCP endpoint. Reuse the skill and guidance already present in the conversation context.");
+      promptParts.push("- Do not reread a managed `SKILL.md`, `convertigo://capabilities`, `convertigo://resources/convertigo-start`, or any guide already read in this conversation. Do not repeat catalog discovery.");
+      promptParts.push("- Read only the smallest new specialized recipe if this request introduces a genuinely new route not covered by the conversation, or repeat bootstrap only if the MCP reports a guidance-version mismatch or the endpoint changed.");
     }
     promptParts.push("");
     promptParts.push("Operational rules:");
     promptParts.push("- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
-    promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- Work only on the selected Convertigo project unless the user explicitly asks for another project.");
-    promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- If no project is selected and the user asks for project changes, ask them to select a project first.");
-    if (!simpleViewerFollowup) {
+    promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- When a project is selected, work only on it unless the user explicitly asks for another project.");
+    promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- A missing project selection does not block an explicit new-project or new-application request. Derive a concise valid technical name from the request when none was supplied, check for collisions with Convertigo MCP, create the starter project, and continue. Ask for a selection only when the user wants work on an existing project that cannot be identified.");
+    if (!simpleViewerFollowup && !establishedAgentFollowup) {
       promptParts.push(isNoCodeSurface ? "- Prefer the managed convertigo-nocode skill when the provider exposes skills." : "- Prefer the managed convertigo-generalist skill when the provider exposes skills.");
     }
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
     promptParts.push("- If the user asks for advice only, answer without modifying the project.");
-    promptParts.push("- For UI clicks, button presses, visual checks, or browser interactions, target the Convertigo app/viewer, not the Studio shell or operating-system UI. First identify the selected project and open or reuse the mobile builder through Convertigo MCP when needed. Then use the managed Playwright MCP/browser-control tools attached to the returned Studio JxBrowser debug endpoint.");
-    promptParts.push("- If no project/viewer is identified, explain that blocker and ask for the missing project/button context. If the managed Playwright/browser-control tools are unavailable or not attached to the returned Studio JxBrowser endpoint, first distinguish builder warm-up from configuration failure: `about:blank` before `browserControlReady:true` means poll `mobile-builder-open(stateOnly=true, wait=true)`, while mismatch after `browserControlReady:true` means report the managed Playwright MCP configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround unless the user explicitly asks to operate the Studio/OS chrome itself.");
+    promptParts.push("- For UI clicks, button presses, visual checks, or browser interactions, target the Convertigo app/viewer, not the Studio shell or operating-system UI. First identify or create the target project and open or reuse its mobile builder through Convertigo MCP. Then use the managed Playwright MCP/browser-control tools attached to the returned Studio JxBrowser debug endpoint.");
+    promptParts.push("- If an existing project or button still cannot be identified, explain that blocker and ask for the missing context. If the managed Playwright/browser-control tools are unavailable or not attached to the returned Studio JxBrowser endpoint, first distinguish builder warm-up from configuration failure: `about:blank` before `browserControlReady:true` means poll `mobile-builder-open(stateOnly=true, wait=true)`, while mismatch after `browserControlReady:true` means report the managed Playwright MCP configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround unless the user explicitly asks to operate the Studio/OS chrome itself.");
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
     promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
     promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
@@ -5055,6 +5211,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    var previousMcpEndpoint = trim(state.mcpEndpoint);
+    var requestedMcpEndpoint = trim(options.mcpEndpoint);
+    var mcpEndpointChanged = previousMcpEndpoint.length > 0 &&
+      requestedMcpEndpoint.length > 0 &&
+      previousMcpEndpoint !== requestedMcpEndpoint;
+    options.establishedAgentFollowup = trim(state.externalSessionId).length > 0 && !mcpEndpointChanged;
+    if (requestedMcpEndpoint.length) {
+      state.mcpEndpoint = requestedMcpEndpoint;
+    }
     clearCancellationRequested(state.threadid);
     if (trim(options.model || options.agentModel).length) {
       state.model = normalizeModel(state.provider, options.model || options.agentModel);
@@ -5226,6 +5391,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         if (provider === "codex" && start.setup) {
           state.setupReport = publicSetupReport(start.setup);
+        }
+        if (provider === "vibe" && start.state) {
+          state.model = trim(start.state.model) || state.model;
+          state.reasoningEffort = normalizeReasoningEffort(start.state.reasoningEffort) || state.reasoningEffort;
         }
         rememberCodexSessionFromResult(state, start);
         var startedHome = start.home || (start.state && start.state.home) || (start.setup && start.setup.setup && start.setup.setup.home);
@@ -5418,6 +5587,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "tool/start" || type === "tool/update") {
           var toolStatus = eventToolStatus(data);
+          rememberProjectFromToolEvent(state, data);
           appendToolEvent(state, event, data, type);
           if (toolStatus === "failed" || toolStatus === "error") {
             appendProgressLine(state, lang(state).toolRetry);
@@ -5603,6 +5773,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var conversationsBeforeDelete = publicConversations(state.workspaceRoot, state.userKey, "", false, "all", normalizeSkillProfile(state));
     markCancellationRequested(threadid);
     var bridge = {};
+    var cleanup = {};
     try {
       bridge = bridgeCall(state, normalizeProvider(state.provider) === "codex" ? "agent_codex_close" : "agent_vibe_close", {
         handle: state.handle
@@ -5645,6 +5816,24 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           saveState(state);
         } catch (_ignoreDeleteFailureRestore) {}
       } else {
+        try {
+          cleanup = bridgeCall(state, "agent_cleanup_storage", {
+            workspaceRoot: state.workspaceRoot,
+            userId: state.userId || "",
+            userKey: state.userKey || "",
+            conversationId: state.conversationId || state.threadid || threadid,
+            threadid: state.threadid || threadid,
+            handle: state.handle || threadid,
+            externalSessionId: state.externalSessionId || "",
+            force: "true"
+          }, 30000);
+        } catch (cleanupError) {
+          cleanup = {
+            ok: false,
+            status: "cleanup_failed",
+            error: String(cleanupError)
+          };
+        }
         setBuffer("", "");
       }
     } else {
@@ -5664,6 +5853,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       conversationDir: filePath(dir),
       conversations: remainingConversations,
       bridge: bridge,
+      cleanup: cleanup,
       error: deleted ? undefined : {
         message: "Conversation directory could not be deleted"
       }

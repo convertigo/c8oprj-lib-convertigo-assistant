@@ -18,7 +18,8 @@ rediscovering the same context.
 
 ## Current Purpose
 
-- The former "component assistant" UI is becoming a general "Agent IA" surface.
+- The former "component assistant" UI is becoming Tigo, the general Convertigo
+  agent surface.
 - The agent should act on the currently selected Convertigo project through the
   bridge and Convertigo MCP, not only generate component snippets.
 - Existing Figma and LightRAG areas still exist; keep agent-specific changes
@@ -28,7 +29,7 @@ rediscovering the same context.
 
 ## Current 1.2.0 Roadmap
 
-- Rework the agent page toward the Codex Desktop interaction model while keeping
+- Rework the Tigo agent page toward the Codex Desktop interaction model while keeping
   it usable in a narrow Studio/C8Oforms drawer.
 - Keep conversation management in a compact top cartouche or popover, not in a
   permanent left sidebar. Show provider, model, state, and creation time.
@@ -55,7 +56,19 @@ rediscovering the same context.
   `hostOrigin`; C8Oforms is responsible for re-fetching the authoritative form
   and preserving the active page/selection when they still exist.
 - Codex is the priority provider; Vibe remains supported.
-- The default Codex home scope sent by the Assistant is `user`.
+- The agent configuration panel shows the managed CLI installed/latest version
+  and exposes explicit install, update, and reinstall actions. Opening the panel
+  may request a latest-version check cached for six hours under
+  `<workspaceRoot>/agents`; normal prompts must not query the package registry
+  or silently update the runtime. Startup uses the Bridge presence-only check
+  and must not invoke either CLI.
+- Refresh provider settings after a successful runtime update so model and
+  reasoning choices come from the newly installed CLI. Existing agent processes
+  may require a restart or a new conversation before using the new runtime.
+- Settings and runtime discovery may use the visible user-scoped Codex home.
+  Studio/generalist conversations that expose the managed JxBrowser viewer use
+  a conversation-scoped Codex home so each resident Playwright MCP keeps its own
+  stable CDP endpoint.
 - Managed Codex homes are visible directories under the Convertigo workspace,
   ending with `codex-home`, not `.codex-home`.
 - Do not auto-start Vibe when no conversation exists; the user should be able to
@@ -120,11 +133,11 @@ rediscovering the same context.
   optional metadata (`projectNames`, `primaryProject`) and must not be inferred
   from an unrelated Studio or NoCode selection unless the caller explicitly asks
   for current/selected project context.
-- Codex conversations must never use a conversation-local `codex-home`. If a
-  legacy conversation record has `codexHome`, `agentHome`, or `vibeHome` under
-  `/conversations/<id>/codex-home`, drop those values and clear
-  `externalSessionId` so the next run starts from the user-scoped `CODEX_HOME`
-  configured with MCP tools and the correct skill profile.
+- When a conversation starts without a selected project, infer its first
+  `primaryProject` only from successful structured project/viewer tool events,
+  such as an imported project or a `mobile-builder-open` result. Never infer it
+  from narrative answer text. Persist the inferred project so resumed prompts
+  use the created project as their structured context.
 - Image attachment from files exists; clipboard image paste is a desired feature.
 
 ## Validation
