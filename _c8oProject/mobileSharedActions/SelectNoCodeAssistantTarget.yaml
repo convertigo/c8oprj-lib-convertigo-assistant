@@ -1,0 +1,105 @@
+comment: Select a form, exact form element, Baserow base, or Baserow table for the next Assistant conversation.
+exposed: false
+↓SelectTarget [ngx.components.UICustomAction-1784905166592]: 
+  actionValue: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '		var clean = function(value) { return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, ""); };
+          		var asArray = function(value) { return Array.isArray(value) ? value : (value && Array.isArray(value.item) ? value.item : []); };
+          		var findById = function(list, id, aliases) {
+          			id = clean(id);
+          			for (var i = 0; i < list.length; i++) {
+          				var item = list[i] || {};
+          				for (var j = 0; j < aliases.length; j++) {
+          					if (clean(item[aliases[j]]) === id) { return item; }
+          				}
+          			}
+          			return null;
+          		};
+          		var pageAny: any = page;
+          		if (!page.local) { page.local = {}; }
+          		var catalog = page.local.NoCodeContextCatalog || {};
+          		var baserow = catalog.baserow || {};
+          		var forms = asArray(catalog.forms);
+          		var elements = asArray(catalog.elements);
+          		var bases = asArray(baserow.bases);
+          		var tables = asArray(baserow.tables);
+          		var kind = clean(vars.kind);
+          		var value = clean(vars.value);
+          		page.local.NoCodeContextSelectionTouched = true;
+          		if (kind === "form") {
+          			var form = findById(forms, value, ["id", "_id"]);
+          			page.local.NoCodeSelectedKind = form ? "form" : "";
+          			page.local.NoCodeSelectedFormId = form ? clean(form.id || form._id) : "";
+          			page.local.NoCodeSelectedFormName = form ? clean(form.name || form.title) : "";
+          			page.local.NoCodeSelectedFormRevision = form ? clean(form.revision || form._rev) : "";
+          			page.local.NoCodeSelectedPageId = "";
+          			page.local.NoCodeSelectedPageName = "";
+          			page.local.NoCodeSelectedElementId = "";
+          			page.local.NoCodeSelectedElementName = "";
+          			page.local.NoCodeSelectedElementType = "";
+          			page.local.NoCodeSelectedParentElementId = "";
+          			page.local.NoCodeSelectedBaserowWorkspaceId = "";
+          			page.local.NoCodeSelectedBaserowWorkspaceName = "";
+          			page.local.NoCodeSelectedBaserowDatabaseId = "";
+          			page.local.NoCodeSelectedBaserowDatabaseName = "";
+          			page.local.NoCodeSelectedBaserowTableId = "";
+          			page.local.NoCodeSelectedBaserowTableName = "";
+          			page.local.NoCodeContextLoading = !!form;
+          			if (form && pageAny.events && pageAny.events.publish) {
+          				pageAny.events.publish("AgentNoCodeContextReload", { formId: page.local.NoCodeSelectedFormId, hostContext: page.local.AgentHostContext || {} }, true);
+          			}
+          		} else if (kind === "element") {
+          			var element = findById(elements, value, ["id", "_id"]);
+          			page.local.NoCodeSelectedKind = element ? "element" : (page.local.NoCodeSelectedFormId ? "form" : "");
+          			page.local.NoCodeSelectedElementId = element ? clean(element.id || element._id) : "";
+          			page.local.NoCodeSelectedElementName = element ? clean(element.name || element.label) : "";
+          			page.local.NoCodeSelectedElementType = element ? clean(element.type) : "";
+          			page.local.NoCodeSelectedParentElementId = element ? clean(element.parentElementId || element.parentRef) : "";
+          			page.local.NoCodeSelectedPageId = element ? clean(element.pageId) : "";
+          			page.local.NoCodeSelectedPageName = element ? clean(element.pageName) : "";
+          		} else if (kind === "baserow-base") {
+          			var base = findById(bases, value, ["id", "databaseId", "applicationId"]);
+          			page.local.NoCodeSelectedKind = base ? "baserow-base" : "";
+          			page.local.NoCodeSelectedBaserowWorkspaceId = base ? clean(base.workspaceId || base.workspace_id || (base.workspace && base.workspace.id)) : "";
+          			page.local.NoCodeSelectedBaserowWorkspaceName = base ? clean(base.workspaceName || base.workspace_name || (base.workspace && base.workspace.name)) : "";
+          			page.local.NoCodeSelectedBaserowDatabaseId = base ? clean(base.id || base.databaseId || base.applicationId) : "";
+          			page.local.NoCodeSelectedBaserowDatabaseName = base ? clean(base.name || base.databaseName || base.applicationName) : "";
+          			page.local.NoCodeSelectedBaserowTableId = "";
+          			page.local.NoCodeSelectedBaserowTableName = "";
+          			page.local.NoCodeSelectedFormId = "";
+          			page.local.NoCodeSelectedFormName = "";
+          			page.local.NoCodeSelectedFormRevision = "";
+          			page.local.NoCodeSelectedElementId = "";
+          			page.local.NoCodeSelectedElementName = "";
+          			page.local.NoCodeSelectedElementType = "";
+          			page.local.NoCodeSelectedParentElementId = "";
+          			page.local.NoCodeSelectedPageId = "";
+          			page.local.NoCodeSelectedPageName = "";
+          		} else if (kind === "baserow-table") {
+          			var table = findById(tables, value, ["id", "tableId"]);
+          			page.local.NoCodeSelectedKind = table ? "baserow-table" : (page.local.NoCodeSelectedBaserowDatabaseId ? "baserow-base" : "");
+          			page.local.NoCodeSelectedBaserowTableId = table ? clean(table.id || table.tableId) : "";
+          			page.local.NoCodeSelectedBaserowTableName = table ? clean(table.name || table.tableName) : "";
+          			if (table) {
+          				var databaseId = clean(table.databaseId || table.database_id || table.applicationId || page.local.NoCodeSelectedBaserowDatabaseId);
+          				var relatedBase = findById(bases, databaseId, ["id", "databaseId", "applicationId"]);
+          				page.local.NoCodeSelectedBaserowDatabaseId = databaseId;
+          				if (relatedBase) {
+          					page.local.NoCodeSelectedBaserowDatabaseName = clean(relatedBase.name || relatedBase.databaseName || relatedBase.applicationName);
+          					page.local.NoCodeSelectedBaserowWorkspaceId = clean(relatedBase.workspaceId || relatedBase.workspace_id || (relatedBase.workspace && relatedBase.workspace.id));
+          					page.local.NoCodeSelectedBaserowWorkspaceName = clean(relatedBase.workspaceName || relatedBase.workspace_name || (relatedBase.workspace && relatedBase.workspace.name));
+          				}
+          			}
+          		}
+          		try { if (pageAny.syncFooterPlaceholder) { pageAny.syncFooterPlaceholder(); } } catch (eFooter) {}
+          		try { page.tick(); } catch (eTick) {}
+          		resolve({ kind: page.local.NoCodeSelectedKind || "", value: value });
+          '
+  comment: Cross-catalog identity reconciliation and conditional catalog refresh have no equivalent built-in action.
+↓kind [ngx.components.UIStackVariable-1784905166594]: 
+  comment: form, element, baserow-base, or baserow-table.
+↓value [ngx.components.UIStackVariable-1784905166596]: 
+  comment: Selected resource id.

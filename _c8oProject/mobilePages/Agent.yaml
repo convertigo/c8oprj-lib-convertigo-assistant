@@ -24,7 +24,13 @@ scriptContent:
         				}
         			} catch (e2) {}
         			if (this.angularRouter && this.angularRouter.navigate) {
-        				this.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: { agentBridge: ''1'' }, replaceUrl: true });
+        				var queryParams: any = {};
+        				try {
+        					var searchParams = new URLSearchParams(window.location.search || '''');
+        					searchParams.forEach(function(value, key) { queryParams[key] = value; });
+        				} catch (eQuery) {}
+        				queryParams.agentBridge = ''1'';
+        				this.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: queryParams, replaceUrl: true });
         			}
         		} catch (e) {}
         		/*End_c8o_PageInitialization*/

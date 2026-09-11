@@ -19,6 +19,7 @@ For more technical informations : [documentation](./project.md)
 - [Installation](#installation)
 - [Mobile Application](#mobile-application)
     - [Pages](#pages)
+        - [Agent](#agent)
         - [Figma](#figma)
         - [LightRag](#lightrag)
         - [Page](#page)
@@ -44,13 +45,13 @@ For more technical informations : [documentation](./project.md)
      <tr><td>To contribute</td><td>
 
      ```
-     ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant.git:branch=master
+     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assistant.git:branch=codex/assistant-agent-bridge
      ```
      </td></tr>
      <tr><td>To simply use</td><td>
 
      ```
-     ConvertigoAssistant=https://github.com/convertigo/c8oprj-convertigo-assistant/archive/master.zip
+     ConvertigoAssistant=git@github.com:convertigo/c8oprj-convertigo-assistant/archive/codex/assistant-agent-bridge.zip
      ```
      </td></tr>
     </table>
@@ -63,6 +64,10 @@ Describes the mobile application global properties
 
 ### Pages
 
+#### Agent
+
+Agent AI entry page
+
 #### Figma
 
 Figma Assistant Page
@@ -73,7 +78,7 @@ IT Support Page
 
 #### Page
 
-AI Component Assistant Page
+Convertigo Assistant Page
 
 ### Shared Components
 
@@ -162,6 +167,24 @@ AI Component Assistant Page
 <th>name</th><th>comment</th>
 </tr>
 <tr>
+<td>AgentModel</td><td></td>
+</tr>
+<tr>
+<td>AgentModelLabel</td><td></td>
+</tr>
+<tr>
+<td>AgentModels</td><td></td>
+</tr>
+<tr>
+<td>AgentReasoningEffort</td><td></td>
+</tr>
+<tr>
+<td>AgentReasoningLabel</td><td></td>
+</tr>
+<tr>
+<td>AgentReasoningLevels</td><td></td>
+</tr>
+<tr>
 <td>EnableAssetInputs</td><td></td>
 </tr>
 <tr>
@@ -194,7 +217,16 @@ AI Component Assistant Page
 <th>name</th><th>comment</th>
 </tr>
 <tr>
+<td>ModelChange</td><td></td>
+</tr>
+<tr>
+<td>ReasoningChange</td><td></td>
+</tr>
+<tr>
 <td>RunQuestion</td><td></td>
+</tr>
+<tr>
+<td>StopRequest</td><td></td>
 </tr>
 <tr>
 <td>VoiceRequest</td><td></td>

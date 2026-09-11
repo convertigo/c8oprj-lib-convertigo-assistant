@@ -77,9 +77,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "userId", "agentProfile", "skillProfile", "assistantContext",
       "assistantSurface", "codexHomeScope", "vibeHomeScope", "homeScope",
       "agentRevealMode", "convertigoRevealMode", "uiRevealMode", "revealMode",
-      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormUrl",
+      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormName", "currentFormRevision", "currentFormUrl",
       "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
-      "formId", "pageId", "applicationId", "currentPage", "currentApplicationId",
+      "formId", "formName", "formRevision", "pageId", "pageName", "applicationId", "currentPage", "currentApplicationId",
+      "elementId", "elementName", "elementType", "parentElementId", "selectionKind",
+      "contextTargetKind", "baserowWorkspaceId", "baserowWorkspaceName",
+      "baserowDatabaseId", "baserowDatabaseName", "baserowTableId", "baserowTableName",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
       "settingsTimeoutMs", "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
       "mcpBearerTokenHandle", "browserDebugUrl", "browserDevToolsJsonUrl",
@@ -156,7 +159,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var currentUrl = firstOptionValue(options, ["currentUrl", "nocodeCurrentUrl", "currentFormUrl", "nocodeCurrentFormUrl"]);
     var currentRoute = firstOptionValue(options, ["currentRoute", "nocodeCurrentRoute", "currentPath"]);
     var currentFormId = firstOptionValue(options, ["currentFormId", "nocodeCurrentFormId", "formId", "applicationId", "currentApplicationId"]);
+    var currentFormName = firstOptionValue(options, ["currentFormName", "formName"]);
+    var currentFormRevision = firstOptionValue(options, ["currentFormRevision", "formRevision"]);
     var currentPage = firstOptionValue(options, ["pageId", "currentPage"]);
+    var currentPageName = firstOptionValue(options, ["pageName"]);
+    var elementId = firstOptionValue(options, ["elementId"]);
+    var elementName = firstOptionValue(options, ["elementName"]);
+    var elementType = firstOptionValue(options, ["elementType"]);
+    var parentElementId = firstOptionValue(options, ["parentElementId"]);
+    var selectionKind = firstOptionValue(options, ["selectionKind"]);
+    var contextTargetKind = firstOptionValue(options, ["contextTargetKind", "selectionKind"]);
+    var baserowWorkspaceId = firstOptionValue(options, ["baserowWorkspaceId"]);
+    var baserowWorkspaceName = firstOptionValue(options, ["baserowWorkspaceName"]);
+    var baserowDatabaseId = firstOptionValue(options, ["baserowDatabaseId", "baserowBaseId"]);
+    var baserowDatabaseName = firstOptionValue(options, ["baserowDatabaseName", "baserowBaseName"]);
+    var baserowTableId = firstOptionValue(options, ["baserowTableId"]);
+    var baserowTableName = firstOptionValue(options, ["baserowTableName"]);
     var language = assistantLanguageName(firstOptionValue(options, ["language", "locale", "assistantLanguage"]));
     var lines = [];
     lines.push("Runtime NoCode context supplied by the host application:");
@@ -165,11 +183,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     lines.push("- Current URL: " + (currentUrl.length ? currentUrl : "none"));
     lines.push("- Current route: " + (currentRoute.length ? currentRoute : "none"));
     lines.push("- Current form/application id: " + (currentFormId.length ? currentFormId : "none"));
+    lines.push("- Current form name: " + (currentFormName.length ? currentFormName : "none"));
+    lines.push("- Current form revision: " + (currentFormRevision.length ? currentFormRevision : "none"));
     lines.push("- Current page id/name: " + (currentPage.length ? currentPage : "none"));
+    lines.push("- Current page display name: " + (currentPageName.length ? currentPageName : "none"));
+    lines.push("- Selected element id: " + (elementId.length ? elementId : "none"));
+    lines.push("- Selected element name: " + (elementName.length ? elementName : "none"));
+    lines.push("- Selected element type: " + (elementType.length ? elementType : "none"));
+    lines.push("- Selected element parent id: " + (parentElementId.length ? parentElementId : "none"));
+    lines.push("- Selection kind: " + (selectionKind.length ? selectionKind : "none"));
+    lines.push("- Explicit context target kind: " + (contextTargetKind.length ? contextTargetKind : "none"));
+    lines.push("- Selected Baserow workspace id/name: " + (baserowWorkspaceId.length ? baserowWorkspaceId : "none") + " / " + (baserowWorkspaceName.length ? baserowWorkspaceName : "none"));
+    lines.push("- Selected Baserow database id/name: " + (baserowDatabaseId.length ? baserowDatabaseId : "none") + " / " + (baserowDatabaseName.length ? baserowDatabaseName : "none"));
+    lines.push("- Selected Baserow table id/name: " + (baserowTableId.length ? baserowTableId : "none") + " / " + (baserowTableName.length ? baserowTableName : "none"));
     if (language.length) {
       lines.push("- Reply to the user and write progress/details in " + language + ".");
     }
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
+    lines.push("- If a selected element id is provided, treat that element as the exact default target. Fetch the current form contract first, locate the element by id, and apply the smallest possible `nocode-form-edit` operation to that element.");
+    lines.push("- If a Baserow database or table is selected, treat it as the exact default data target. Use `nocode-baserow-catalog-list` to re-read its current schema before applying a minimal `nocode-baserow-schema-apply` change.");
+    lines.push("- The form revision and selected element context are a snapshot taken when this message was sent. Re-read the form contract and refuse or re-plan on a revision/identity mismatch instead of silently editing another element.");
     lines.push("- If a first tool discovery attempt does not show NoCode tools, retry with exact searches for `Convertigo NoCode form contract get edit update validate compile C8Oforms`, `nocode-form-contract-get nocode-form-edit nocode-form-update`, and `mcp__convertigo nocode_form_contract_get nocode_form_edit nocode_form_update` before reporting a blocker.");
     return lines.join("\n");
   }
@@ -699,6 +732,342 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       context.httpSession.setAttribute(sessionKey, handle);
     } catch (_ignoreTokenHandleSession) {}
     return handle;
+  }
+
+  function sequencePayload(response) {
+    var value = unwrapSequenceResult(response);
+    if (value === null || typeof value === "undefined") {
+      value = response && response.document ? response.document : response;
+    }
+    var guard = 0;
+    while (value && typeof value === "object" && value.result && typeof value.result === "object" && guard < 4) {
+      value = value.result;
+      guard++;
+    }
+    return value || {};
+  }
+
+  function catalogArray(value) {
+    if (Object.prototype.toString.call(value) === "[object Array]") {
+      return value;
+    }
+    if (value && Object.prototype.toString.call(value.item) === "[object Array]") {
+      return value.item;
+    }
+    if (value && value.item !== null && typeof value.item !== "undefined") {
+      return [value.item];
+    }
+    return [];
+  }
+
+  function findCatalogValue(root, names, depth) {
+    if (!root || typeof root !== "object" || depth > 8) {
+      return null;
+    }
+    for (var i = 0; i < names.length; i++) {
+      var direct = root[names[i]];
+      if (direct !== null && typeof direct !== "undefined") {
+        return direct;
+      }
+    }
+    for (var key in root) {
+      if (!Object.prototype.hasOwnProperty.call(root, key)) {
+        continue;
+      }
+      var child = root[key];
+      if (!child || typeof child !== "object") {
+        continue;
+      }
+      var found = findCatalogValue(child, names, depth + 1);
+      if (found !== null && typeof found !== "undefined") {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  function normalizeNoCodeFormSummary(row) {
+    row = row || {};
+    var value = row.value && typeof row.value === "object" ? row.value : {};
+    var doc = row.doc && typeof row.doc === "object" ? row.doc : {};
+    var source = Object.keys(doc).length ? doc : (Object.keys(value).length ? value : row);
+    var id = trim(source._id || source.id || row.id || row.key);
+    var name = trim(source.name || source.title || source.label || value.name || value.title || id);
+    var type = trim(source.type || value.type || row.type).toLowerCase();
+    if (!id.length || type === "folder" || type === "c8oforms_folder" || id.indexOf("folder_") === 0) {
+      return null;
+    }
+    return {
+      id: id,
+      name: name.length ? name : id,
+      revision: trim(source._rev || source.rev || value._rev || value.rev),
+      description: trim(source.description || value.description),
+      folder: trim(source.folder || value.folder),
+      updatedAt: source.updatedAt || source.lastUpdate || value.updatedAt || value.lastUpdate || null
+    };
+  }
+
+  function listNoCodeForms(options) {
+    var response = callLocalSequence("C8Oforms", "APIV2_ExecuteView", {
+      target: "formsV2/out_folder",
+      acl: "true",
+      dynamicParams: JSON.stringify({
+        folder: "",
+        filters: {},
+        pagination: {
+          pageSize: "infinite",
+          pageToken: null
+        }
+      })
+    });
+    var payload = sequencePayload(response);
+    var docsValue = findCatalogValue(payload, ["docs"], 0);
+    var docs = catalogArray(docsValue);
+    var forms = [];
+    var ids = {};
+    for (var i = 0; i < docs.length; i++) {
+      var form = normalizeNoCodeFormSummary(docs[i]);
+      if (!form || ids[form.id]) {
+        continue;
+      }
+      ids[form.id] = true;
+      forms.push(form);
+    }
+    forms.sort(function (left, right) {
+      return String(left.name || left.id).toLowerCase().localeCompare(String(right.name || right.id).toLowerCase());
+    });
+    return forms;
+  }
+
+  function findNoCodeFormDocument(value, formId, depth) {
+    if (!value || typeof value !== "object" || depth > 10) {
+      return null;
+    }
+    var id = trim(value._id || value.id);
+    if ((id.length && (!formId.length || id === formId)) &&
+        (Object.prototype.toString.call(value.formulaire) === "[object Array]" ||
+         Object.prototype.toString.call(value.flows) === "[object Array]" ||
+         Object.prototype.toString.call(value.pages) === "[object Array]")) {
+      return value;
+    }
+    for (var key in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) {
+        continue;
+      }
+      var child = value[key];
+      if (!child || typeof child !== "object") {
+        continue;
+      }
+      if (Object.prototype.toString.call(child) === "[object Array]") {
+        for (var i = 0; i < child.length; i++) {
+          var foundInArray = findNoCodeFormDocument(child[i], formId, depth + 1);
+          if (foundInArray) {
+            return foundInArray;
+          }
+        }
+      } else {
+        var found = findNoCodeFormDocument(child, formId, depth + 1);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  function noCodePageMap(form) {
+    var pages = catalogArray(form && form.pages);
+    var map = {};
+    for (var i = 0; i < pages.length; i++) {
+      var page = pages[i] || {};
+      var id = trim(page.pageTechName || page.id || page.name);
+      if (!id.length) {
+        continue;
+      }
+      map[id] = {
+        id: id,
+        name: trim(page.name || page.title || id)
+      };
+    }
+    return map;
+  }
+
+  function flattenNoCodeFormElements(form) {
+    var elements = [];
+    var ids = {};
+    var pageMap = noCodePageMap(form);
+    var walk = function (value, parentId, depth) {
+      if (!value || typeof value !== "object" || depth > 16) {
+        return;
+      }
+      if (Object.prototype.toString.call(value) === "[object Array]") {
+        for (var ai = 0; ai < value.length; ai++) {
+          walk(value[ai], parentId, depth + 1);
+        }
+        return;
+      }
+      var id = trim(value.id || value._id);
+      var type = trim(value.type || value.ctype);
+      var config = value.config && typeof value.config === "object" ? value.config : {};
+      var effectiveParent = trim(value.parentRef || value.parentId || parentId);
+      if (id.length && !ids[id] && (type.length || Object.keys(config).length || effectiveParent.length)) {
+        var pageId = trim(config.page || value.pageId || value.page);
+        var page = pageMap[pageId] || { id: pageId, name: pageId };
+        elements.push({
+          id: id,
+          name: trim(value.name || config.label || config.title || type || id),
+          type: type,
+          parentElementId: effectiveParent,
+          pageId: page.id || "",
+          pageName: page.name || ""
+        });
+        ids[id] = true;
+        effectiveParent = id;
+      }
+      var childKeys = ["children", "items", "columns", "questions", "blocks", "formulaire", "flows"];
+      for (var ci = 0; ci < childKeys.length; ci++) {
+        var child = value[childKeys[ci]];
+        if (child && typeof child === "object") {
+          walk(child, effectiveParent, depth + 1);
+        }
+      }
+    };
+    walk(form && form.formulaire, "", 0);
+    walk(form && form.flows, "", 0);
+    return elements;
+  }
+
+  function loadNoCodeFormDetails(formId) {
+    formId = trim(formId);
+    if (!formId.length) {
+      return {
+        form: null,
+        pages: [],
+        elements: []
+      };
+    }
+    var response = callLocalSequence("C8Oforms", "APIV2_getDocument", {
+      id: formId
+    });
+    var payload = sequencePayload(response);
+    var doc = findNoCodeFormDocument(payload, formId, 0);
+    if (!doc) {
+      return {
+        form: null,
+        pages: [],
+        elements: []
+      };
+    }
+    var pages = [];
+    var map = noCodePageMap(doc);
+    for (var key in map) {
+      if (Object.prototype.hasOwnProperty.call(map, key)) {
+        pages.push(map[key]);
+      }
+    }
+    return {
+      form: {
+        id: trim(doc._id || doc.id || formId),
+        name: trim(doc.name || doc.title || formId),
+        revision: trim(doc._rev || doc.rev),
+        description: trim(doc.description)
+      },
+      pages: pages,
+      elements: flattenNoCodeFormElements(doc)
+    };
+  }
+
+  function loadNoCodeBaserowCatalog(options) {
+    var handle = noCodeMcpTokenHandle(options);
+    var token = handle.length ? sharedSecretGet(handle) : "";
+    if (!token.length) {
+      return {
+        status: "auth_required",
+        workspaces: [],
+        bases: [],
+        tables: []
+      };
+    }
+    var response = callLocalSequence("ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
+      token: token,
+      includeColumns: "false",
+      __nolog: "true"
+    });
+    var payload = sequencePayload(response);
+    return {
+      status: trim(payload.status || "ok") || "ok",
+      workspaces: catalogArray(findCatalogValue(payload, ["workspaces"], 0)),
+      bases: catalogArray(findCatalogValue(payload, ["bases", "applications", "databases"], 0)),
+      tables: catalogArray(findCatalogValue(payload, ["tables"], 0)),
+      error: payload.error || null
+    };
+  }
+
+  function noCodeContextCatalogFromScope(scope) {
+    var names = ["userId", "workspaceRoot", "agentProfile", "skillProfile", "formId"];
+    var options = {};
+    for (var i = 0; i < names.length; i++) {
+      options[names[i]] = sequenceScopeValue(scope, names[i]);
+    }
+    if (!trim(options.agentProfile).length) {
+      options.agentProfile = "nocode";
+    }
+    if (!trim(options.skillProfile).length) {
+      options.skillProfile = "nocode";
+    }
+    var forms = [];
+    var details = {
+      form: null,
+      pages: [],
+      elements: []
+    };
+    var baserow = {
+      status: "unavailable",
+      workspaces: [],
+      bases: [],
+      tables: []
+    };
+    var errors = [];
+    try {
+      forms = listNoCodeForms(options);
+    } catch (formListError) {
+      errors.push({
+        scope: "forms",
+        message: String(formListError)
+      });
+    }
+    try {
+      details = loadNoCodeFormDetails(options.formId);
+    } catch (formDetailsError) {
+      errors.push({
+        scope: "form",
+        message: String(formDetailsError)
+      });
+    }
+    try {
+      baserow = loadNoCodeBaserowCatalog(options);
+    } catch (baserowError) {
+      baserow = {
+        status: "failed",
+        workspaces: [],
+        bases: [],
+        tables: []
+      };
+      errors.push({
+        scope: "baserow",
+        message: String(baserowError)
+      });
+    }
+    return {
+      ok: errors.length === 0 || forms.length > 0 || baserow.tables.length > 0,
+      status: errors.length ? "partial" : "ready",
+      forms: forms,
+      selectedForm: details.form,
+      pages: details.pages,
+      elements: details.elements,
+      baserow: baserow,
+      errors: errors
+    };
   }
 
   function shouldAttachNoCodeMcpTokenHandle(sequence) {
@@ -2761,6 +3130,65 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  function isSuccessfulToolStatus(status) {
+    status = trim(status).toLowerCase();
+    return status === "completed" || status === "complete" || status === "success" || status === "succeeded";
+  }
+
+  function isNoCodeFormMutationTool(value) {
+    var normalized = trim(value).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    return normalized.indexOf("nocode_form_edit") !== -1 ||
+      normalized.indexOf("nocode_form_update") !== -1;
+  }
+
+  function markSuccessfulNoCodeFormMutation(state, event, data, type) {
+    if (!state || type !== "tool/update" || !isSuccessfulToolStatus(eventToolStatus(data))) {
+      return;
+    }
+    var rawTitle = eventToolTitle(event, data);
+    var title = normalizedToolTitle(state, data, rawTitle);
+    var toolName = toolNameFromData(data);
+    var callId = toolCallId(data);
+    var remembered = callId.length && state.toolCalls && state.toolCalls[callId] ? state.toolCalls[callId] : {};
+    var candidates = [
+      toolName,
+      title,
+      remembered.toolName,
+      remembered.title
+    ];
+    var matchedTool = "";
+    for (var i = 0; i < candidates.length; i++) {
+      if (isNoCodeFormMutationTool(candidates[i])) {
+        matchedTool = trim(candidates[i]);
+        break;
+      }
+    }
+    if (!matchedTool.length) {
+      return;
+    }
+    var hostContext = state.hostFormContext || {};
+    var formId = trim(hostContext.formId);
+    if (!formId.length) {
+      return;
+    }
+    state.formMutation = {
+      success: true,
+      formId: formId,
+      formName: trim(hostContext.formName),
+      formRevision: trim(hostContext.formRevision),
+      pageId: trim(hostContext.pageId),
+      pageName: trim(hostContext.pageName),
+      elementId: trim(hostContext.elementId),
+      elementName: trim(hostContext.elementName),
+      elementType: trim(hostContext.elementType),
+      parentElementId: trim(hostContext.parentElementId),
+      selectionKind: trim(hostContext.selectionKind),
+      toolName: matchedTool,
+      callId: callId,
+      completedAt: now()
+    };
+  }
+
   function pushProgressEvent(state, item) {
     if (!state) {
       return null;
@@ -2935,6 +3363,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       groupKey: shellCommand.length ? "exec_command" : title.toLowerCase(),
       current: !(status === "completed" || status === "complete" || status === "success" || status === "succeeded" || status === "failed" || status === "error")
     });
+    markSuccessfulNoCodeFormMutation(state, event, data, type);
     state.lastStatusText = label;
   }
 
@@ -3582,6 +4011,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.assistantSurface === "undefined" || state.assistantSurface === null) {
       state.assistantSurface = "";
     }
+    if (!state.hostFormContext || typeof state.hostFormContext !== "object") {
+      state.hostFormContext = {};
+    }
+    if (typeof state.formMutation === "undefined") {
+      state.formMutation = null;
+    }
     return sanitizeProgressLog(refreshTerminalStateFromRecord(state));
   }
 
@@ -3729,6 +4164,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progressEvents: state.progressEvents || [],
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
+      formMutation: state.formMutation || null,
       setupRequired: state.setupRequired === true,
       setup: state.setupReport || null,
       codexPrewarmStartedAt: state.codexPrewarmStartedAt || 0,
@@ -3779,6 +4215,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         explanation: state.answer || state.error || "",
         progress: state.progressLog || "",
         progressEvents: state.progressEvents || [],
+        formMutation: state.formMutation || null,
         setupRequired: state.setupRequired === true,
         setup: state.setupReport || null,
         warnings: state.warnings || [],
@@ -4549,7 +4986,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "codexInstallTimeoutMs", "forceCodexInstall", "forceVibeInstall", "forcePythonInstall",
       "allowPythonDownload", "mcpSkillsSourceDir", "skipSkillsInstall", "agentRevealMode",
       "browserDebugUrl", "browserDevToolsJsonUrl", "browserDevToolsWebSocketUrl",
-      "playwrightCdpEndpoint", "viewerCdpEndpoint", "playwrightMcpEndpoint", "AIFiles"
+      "playwrightCdpEndpoint", "viewerCdpEndpoint", "playwrightMcpEndpoint", "AIFiles",
+      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath",
+      "currentFormId", "currentFormName", "currentFormRevision", "currentFormUrl",
+      "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
+      "formId", "formName", "formRevision", "pageId", "pageName", "applicationId",
+      "currentPage", "currentApplicationId", "elementId", "elementName", "elementType",
+      "parentElementId", "selectionKind", "contextTargetKind",
+      "baserowWorkspaceId", "baserowWorkspaceName", "baserowDatabaseId",
+      "baserowDatabaseName", "baserowTableId", "baserowTableName"
     ];
     var options = {};
     for (var i = 0; i < names.length; i++) {
@@ -4560,6 +5005,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options.userQuestion = rawQuestion;
     options.Question = buildSequencePrompt(rawQuestion, options);
     return C8O.assistantAgentBridge.sendMessage(options);
+  };
+
+  C8O.assistantAgentBridge.noCodeContextCatalogFromSequenceScope = function (scope) {
+    return noCodeContextCatalogFromScope(scope);
   };
 
   C8O.assistantAgentBridge.sendMessage = function (options) {
@@ -4627,6 +5076,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.progressLog = "";
     state.progressEvents = [];
     state.lastProgressLine = "";
+    state.hostFormContext = {
+      formId: firstOptionValue(options, ["formId", "currentFormId", "nocodeCurrentFormId", "applicationId", "currentApplicationId"]),
+      formName: firstOptionValue(options, ["formName", "currentFormName"]),
+      formRevision: firstOptionValue(options, ["formRevision", "currentFormRevision"]),
+      pageId: firstOptionValue(options, ["pageId", "currentPage"]),
+      pageName: firstOptionValue(options, ["pageName"]),
+      elementId: firstOptionValue(options, ["elementId"]),
+      elementName: firstOptionValue(options, ["elementName"]),
+      elementType: firstOptionValue(options, ["elementType"]),
+      parentElementId: firstOptionValue(options, ["parentElementId"]),
+      selectionKind: firstOptionValue(options, ["selectionKind"]),
+      contextTargetKind: firstOptionValue(options, ["contextTargetKind", "selectionKind"]),
+      baserowWorkspaceId: firstOptionValue(options, ["baserowWorkspaceId"]),
+      baserowWorkspaceName: firstOptionValue(options, ["baserowWorkspaceName"]),
+      baserowDatabaseId: firstOptionValue(options, ["baserowDatabaseId", "baserowBaseId"]),
+      baserowDatabaseName: firstOptionValue(options, ["baserowDatabaseName", "baserowBaseName"]),
+      baserowTableId: firstOptionValue(options, ["baserowTableId"]),
+      baserowTableName: firstOptionValue(options, ["baserowTableName"])
+    };
+    state.formMutation = null;
     state.setupRequired = false;
     state.setupReport = null;
     state.userQuestion = rawUserQuestion;

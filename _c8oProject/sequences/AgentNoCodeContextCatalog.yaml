@@ -1,0 +1,38 @@
+accessibility: Hidden
+authenticatedContextRequired: true
+comment: Return the forms, selected form elements, and Baserow bases/tables available to the authenticated No Code Assistant user.
+responseTimeout: 120
+↓Run [steps.SimpleStep-1784905051604]: 
+  expression: |
+    include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.noCodeContextCatalogFromSequenceScope(this);
+↓result [steps.JsonToXmlStep-1784905051606]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓userId [variables.RequestableVariable-1784905051609]: 
+  comment: Authenticated C8Oforms user identifier used for the scoped No Code token.
+  description: Authenticated C8Oforms user identifier used for the scoped No Code token.
+↓workspaceRoot [variables.RequestableVariable-1784905051611]: 
+  comment: Optional Convertigo user workspace root.
+  description: Optional Convertigo user workspace root.
+↓agentProfile [variables.RequestableVariable-1784905051613]: 
+  comment: Assistant profile. Must remain nocode for catalog access.
+  description: Assistant profile. Must remain nocode for catalog access.
+  value: nocode
+↓skillProfile [variables.RequestableVariable-1784905051615]: 
+  comment: Managed skill profile used to provision the No Code MCP token.
+  description: Managed skill profile used to provision the No Code MCP token.
+  value: nocode
+↓formId [variables.RequestableVariable-1784905051617]: 
+  comment: Optional form id whose pages and elements must be returned.
+  description: Optional form id whose pages and elements must be returned.

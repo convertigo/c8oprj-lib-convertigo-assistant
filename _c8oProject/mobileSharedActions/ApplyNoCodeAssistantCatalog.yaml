@@ -1,0 +1,126 @@
+comment: Apply the authenticated No Code catalog and choose the current host form/element by default without overriding a manual context choice.
+exposed: false
+↓ApplyCatalog [ngx.components.UICustomAction-1784905114714]: 
+  actionValue: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '		var clean = function(value) { return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, ""); };
+          		var asArray = function(value) {
+          			if (Array.isArray(value)) { return value; }
+          			if (value && Array.isArray(value.item)) { return value.item; }
+          			if (value && value.item != null) { return [value.item]; }
+          			return [];
+          		};
+          		var unwrap = function(value) {
+          			var current = value || {};
+          			var guard = 0;
+          			while (guard < 5) {
+          				if (current.result && typeof current.result === "object") { current = current.result; guard++; continue; }
+          				if (current.document && typeof current.document === "object") { current = current.document; guard++; continue; }
+          				break;
+          			}
+          			return current || {};
+          		};
+          		var pageAny: any = page;
+          		if (!page.local) { page.local = {}; }
+          		var catalog = unwrap(vars.response);
+          		var baserow = catalog.baserow && typeof catalog.baserow === "object" ? catalog.baserow : {};
+          		page.local.NoCodeContextCatalog = {
+          			status: clean(catalog.status || "ready"),
+          			forms: asArray(catalog.forms),
+          			selectedForm: catalog.selectedForm || null,
+          			pages: asArray(catalog.pages),
+          			elements: asArray(catalog.elements),
+          			baserow: {
+          				status: clean(baserow.status || "unavailable"),
+          				workspaces: asArray(baserow.workspaces),
+          				bases: asArray(baserow.bases || baserow.applications || baserow.databases),
+          				tables: asArray(baserow.tables),
+          				error: baserow.error || null
+          			},
+          			errors: asArray(catalog.errors)
+          		};
+          		page.local.NoCodeContextLoading = false;
+          		page.local.NoCodeContextError = catalog.ok === false ? "catalog-unavailable" : "";
+          		var host = vars.hostContext && typeof vars.hostContext === "object" ? vars.hostContext : (page.local.AgentHostContext || {});
+          		var hostFormId = clean(host.formId || host.currentFormId || host.nocodeCurrentFormId || vars.formId);
+          		var hostElementId = clean(host.elementId);
+          		var hostSignature = clean(host.currentRoute || host.nocodeCurrentRoute || host.currentUrl) + "::" + hostFormId + "::" + hostElementId;
+          		if (page.local.NoCodeSelectionHostSignature && page.local.NoCodeSelectionHostSignature !== hostSignature) {
+          			page.local.NoCodeContextSelectionTouched = false;
+          		}
+          		page.local.NoCodeSelectionHostSignature = hostSignature;
+          		var findById = function(list, id, aliases) {
+          			id = clean(id);
+          			if (!id.length) { return null; }
+          			for (var i = 0; i < list.length; i++) {
+          				var item = list[i] || {};
+          				for (var j = 0; j < aliases.length; j++) {
+          					if (clean(item[aliases[j]]) === id) { return item; }
+          				}
+          			}
+          			return null;
+          		};
+          		var forms = page.local.NoCodeContextCatalog.forms;
+          		var elements = page.local.NoCodeContextCatalog.elements;
+          		var bases = page.local.NoCodeContextCatalog.baserow.bases;
+          		var tables = page.local.NoCodeContextCatalog.baserow.tables;
+          		var selectedKind = clean(page.local.NoCodeSelectedKind);
+          		var preserve = page.local.NoCodeContextSelectionTouched === true;
+          		if (preserve && (selectedKind === "form" || selectedKind === "element")) {
+          			preserve = !!findById(forms, page.local.NoCodeSelectedFormId, ["id", "_id"]);
+          			if (preserve && selectedKind === "element") { preserve = !!findById(elements, page.local.NoCodeSelectedElementId, ["id", "_id"]); }
+          		}
+          		if (preserve && selectedKind === "baserow-base") { preserve = !!findById(bases, page.local.NoCodeSelectedBaserowDatabaseId, ["id", "databaseId", "applicationId"]); }
+          		if (preserve && selectedKind === "baserow-table") { preserve = !!findById(tables, page.local.NoCodeSelectedBaserowTableId, ["id", "tableId"]); }
+          		if (!preserve) {
+          			page.local.NoCodeContextSelectionTouched = false;
+          			page.local.NoCodeSelectedKind = "";
+          			page.local.NoCodeSelectedFormId = "";
+          			page.local.NoCodeSelectedFormName = "";
+          			page.local.NoCodeSelectedFormRevision = "";
+          			page.local.NoCodeSelectedPageId = "";
+          			page.local.NoCodeSelectedPageName = "";
+          			page.local.NoCodeSelectedElementId = "";
+          			page.local.NoCodeSelectedElementName = "";
+          			page.local.NoCodeSelectedElementType = "";
+          			page.local.NoCodeSelectedParentElementId = "";
+          			page.local.NoCodeSelectedBaserowWorkspaceId = "";
+          			page.local.NoCodeSelectedBaserowWorkspaceName = "";
+          			page.local.NoCodeSelectedBaserowDatabaseId = "";
+          			page.local.NoCodeSelectedBaserowDatabaseName = "";
+          			page.local.NoCodeSelectedBaserowTableId = "";
+          			page.local.NoCodeSelectedBaserowTableName = "";
+          			var defaultForm = findById(forms, hostFormId, ["id", "_id"]);
+          			if (defaultForm) {
+          				page.local.NoCodeSelectedKind = "form";
+          				page.local.NoCodeSelectedFormId = clean(defaultForm.id || defaultForm._id);
+          				page.local.NoCodeSelectedFormName = clean(defaultForm.name || defaultForm.title || host.formName || host.currentFormName);
+          				page.local.NoCodeSelectedFormRevision = clean(defaultForm.revision || defaultForm._rev || host.formRevision || host.currentFormRevision);
+          				var defaultElement = findById(elements, hostElementId, ["id", "_id"]);
+          				if (defaultElement) {
+          					page.local.NoCodeSelectedKind = "element";
+          					page.local.NoCodeSelectedElementId = clean(defaultElement.id || defaultElement._id);
+          					page.local.NoCodeSelectedElementName = clean(defaultElement.name || defaultElement.label || host.elementName);
+          					page.local.NoCodeSelectedElementType = clean(defaultElement.type || host.elementType);
+          					page.local.NoCodeSelectedParentElementId = clean(defaultElement.parentElementId || defaultElement.parentRef || host.parentElementId);
+          					page.local.NoCodeSelectedPageId = clean(defaultElement.pageId || host.pageId || host.currentPage);
+          					page.local.NoCodeSelectedPageName = clean(defaultElement.pageName || host.pageName);
+          				}
+          			}
+          		}
+          		try { if (pageAny.syncFooterPlaceholder) { pageAny.syncFooterPlaceholder(); } } catch (eFooter) {}
+          		try { page.tick(); } catch (eTick) {}
+          		resolve(page.local.NoCodeContextCatalog);
+          '
+  comment: 'Catalog reconciliation has no equivalent single bean: it validates nested form, element, base, and table identities atomically.'
+↓response [ngx.components.UIStackVariable-1784905114716]: 
+  comment: AgentNoCodeContextCatalog response.
+  value: '{}'
+↓hostContext [ngx.components.UIStackVariable-1784905114718]: 
+  comment: Current C8Oforms iframe context.
+  value: '{}'
+↓formId [ngx.components.UIStackVariable-1784905114720]: 
+  comment: Form id used to hydrate the catalog.

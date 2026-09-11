@@ -69,7 +69,79 @@ scriptContent:
         		return "" + (fallback == null ? key : fallback);
         	}
         
+        	public getC8OformsLanguageCode() {
+        		var language = '''';
+        		try { language = this.getAssistantQueryParam ? (this.getAssistantQueryParam(''language'') || this.getAssistantQueryParam(''locale'') || this.getAssistantQueryParam(''assistantLanguage'')) : ''''; } catch (eQuery) {}
+        		try { if (!language && this.translate) { language = this.translate.currentLang || ''''; } } catch (eTranslate) {}
+        		language = ('''' + language).toLowerCase().replace(''_'', ''-'');
+        		if (language.indexOf(''en'') === 0) { return ''en''; }
+        		if (language.indexOf(''es'') === 0) { return ''es''; }
+        		if (language.indexOf(''it'') === 0) { return ''it''; }
+        		return ''fr'';
+        	}
+        
+        	public getC8OformsText(key, target?) {
+        		var texts: any = {
+        			fr: {
+        				currentForm: "Formulaire courant", startTitle: "Contexte :", formMeta: "Formulaire sélectionné : {target}", elementMeta: "Élément ciblé : {target}", contextTitle: "Contexte de la conversation", formLabel: "Application / formulaire", formPlaceholder: "Choisir un formulaire", elementLabel: "Élément précis", wholeForm: "Tout le formulaire", baserowLabel: "Base Baserow", basePlaceholder: "Choisir une base", tableLabel: "Table Baserow", tablePlaceholder: "Toute la base ou choisir une table", chooseContext: "Choisissez un formulaire, un élément ou une source Baserow.", baseMeta: "Base Baserow sélectionnée : {target}", tableMeta: "Table Baserow sélectionnée : {target}", questionPlaceholder: "Décrivez ce que l’agent doit modifier dans ce contexte…",
+        				editLabel: "Modifier la sélection", editQuestion: "Modifie précisément {target} selon ma demande, sans toucher aux autres éléments.",
+        				addLabel: "Ajouter un élément", addQuestion: "Ajoute un nouvel élément adapté dans le formulaire courant.",
+        				improveLabel: "Améliorer le formulaire", improveQuestion: "Analyse le formulaire courant et propose des améliorations concrètes.",
+        				dataLabel: "Configurer les données", dataQuestion: "Configure la source de données de la sélection ou du formulaire courant.",
+        				validateLabel: "Vérifier le formulaire", validateQuestion: "Vérifie le formulaire courant, ses règles et ses erreurs, puis corrige ce qui est nécessaire.",
+        				explainLabel: "Expliquer la sélection", explainQuestion: "Explique le rôle et la configuration de {target}."
+        			},
+        			en: {
+        				currentForm: "Current form", startTitle: "Context:", formMeta: "Selected form: {target}", elementMeta: "Target element: {target}", contextTitle: "Conversation context", formLabel: "Application / form", formPlaceholder: "Choose a form", elementLabel: "Exact element", wholeForm: "Whole form", baserowLabel: "Baserow database", basePlaceholder: "Choose a database", tableLabel: "Baserow table", tablePlaceholder: "Whole database or choose a table", chooseContext: "Choose a form, an element, or a Baserow data source.", baseMeta: "Selected Baserow database: {target}", tableMeta: "Selected Baserow table: {target}", questionPlaceholder: "Describe what the agent should change in this context…",
+        				editLabel: "Edit selection", editQuestion: "Edit {target} precisely as requested without changing other elements.",
+        				addLabel: "Add an element", addQuestion: "Add a suitable new element to the current form.",
+        				improveLabel: "Improve the form", improveQuestion: "Review the current form and suggest concrete improvements.",
+        				dataLabel: "Configure data", dataQuestion: "Configure the data source for the selection or current form.",
+        				validateLabel: "Check the form", validateQuestion: "Check the current form, its rules and errors, then fix what is needed.",
+        				explainLabel: "Explain selection", explainQuestion: "Explain the role and configuration of {target}."
+        			},
+        			es: {
+        				currentForm: "Formulario actual", startTitle: "Contexto:", formMeta: "Formulario seleccionado: {target}", elementMeta: "Elemento seleccionado: {target}", contextTitle: "Contexto de la conversación", formLabel: "Aplicación / formulario", formPlaceholder: "Elegir un formulario", elementLabel: "Elemento exacto", wholeForm: "Todo el formulario", baserowLabel: "Base Baserow", basePlaceholder: "Elegir una base", tableLabel: "Tabla Baserow", tablePlaceholder: "Toda la base o elegir una tabla", chooseContext: "Elige un formulario, un elemento o una fuente Baserow.", baseMeta: "Base Baserow seleccionada: {target}", tableMeta: "Tabla Baserow seleccionada: {target}", questionPlaceholder: "Describe lo que el agente debe modificar en este contexto…",
+        				editLabel: "Editar selección", editQuestion: "Edita {target} con precisión según mi solicitud, sin cambiar otros elementos.",
+        				addLabel: "Añadir un elemento", addQuestion: "Añade un nuevo elemento adecuado al formulario actual.",
+        				improveLabel: "Mejorar el formulario", improveQuestion: "Analiza el formulario actual y propone mejoras concretas.",
+        				dataLabel: "Configurar datos", dataQuestion: "Configura la fuente de datos de la selección o del formulario actual.",
+        				validateLabel: "Verificar el formulario", validateQuestion: "Verifica el formulario actual, sus reglas y errores, y corrige lo necesario.",
+        				explainLabel: "Explicar la selección", explainQuestion: "Explica la función y la configuración de {target}."
+        			},
+        			it: {
+        				currentForm: "Modulo corrente", startTitle: "Contesto:", formMeta: "Modulo selezionato: {target}", elementMeta: "Elemento selezionato: {target}", contextTitle: "Contesto della conversazione", formLabel: "Applicazione / modulo", formPlaceholder: "Scegli un modulo", elementLabel: "Elemento preciso", wholeForm: "Tutto il modulo", baserowLabel: "Base Baserow", basePlaceholder: "Scegli una base", tableLabel: "Tabella Baserow", tablePlaceholder: "Tutta la base o scegli una tabella", chooseContext: "Scegli un modulo, un elemento o una sorgente Baserow.", baseMeta: "Base Baserow selezionata: {target}", tableMeta: "Tabella Baserow selezionata: {target}", questionPlaceholder: "Descrivi cosa deve modificare l’agente in questo contesto…",
+        				editLabel: "Modifica selezione", editQuestion: "Modifica precisamente {target} come richiesto, senza cambiare gli altri elementi.",
+        				addLabel: "Aggiungi un elemento", addQuestion: "Aggiungi un nuovo elemento adatto al modulo corrente.",
+        				improveLabel: "Migliora il modulo", improveQuestion: "Analizza il modulo corrente e proponi miglioramenti concreti.",
+        				dataLabel: "Configura i dati", dataQuestion: "Configura l''origine dati della selezione o del modulo corrente.",
+        				validateLabel: "Verifica il modulo", validateQuestion: "Verifica il modulo corrente, le sue regole e gli errori, poi correggi ciò che serve.",
+        				explainLabel: "Spiega la selezione", explainQuestion: "Spiega il ruolo e la configurazione di {target}."
+        			}
+        		};
+        		var language = this.getC8OformsLanguageCode ? this.getC8OformsLanguageCode() : ''fr'';
+        		var value = (texts[language] && texts[language][key]) || texts.fr[key] || key;
+        		var replacement = target || '''';
+        		return ('''' + value).replace(''{target}'', '''' + replacement);
+        	}
+        
         	getDefaultFooterSuggestions() {
+        		if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) {
+        			var target = this.getNoCodeContextTargetLabel ? this.getNoCodeContextTargetLabel() : '''';
+        			if (!target.length) {
+        				var elementName = this.getAssistantQueryParam ? this.getAssistantQueryParam(''elementName'') : '''';
+        				var formName = this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentFormName'') || this.getAssistantQueryParam(''formName'')) : '''';
+        				target = elementName || formName || this.getC8OformsText(''currentForm'');
+        			}
+        			return [
+        				{ label: this.getC8OformsText(''editLabel''), question: this.getC8OformsText(''editQuestion'', target), icon: ''create-outline'' },
+        				{ label: this.getC8OformsText(''addLabel''), question: this.getC8OformsText(''addQuestion'', target), icon: ''add-circle-outline'' },
+        				{ label: this.getC8OformsText(''improveLabel''), question: this.getC8OformsText(''improveQuestion'', target), icon: ''color-wand-outline'' },
+        				{ label: this.getC8OformsText(''dataLabel''), question: this.getC8OformsText(''dataQuestion'', target), icon: ''git-network-outline'' },
+        				{ label: this.getC8OformsText(''validateLabel''), question: this.getC8OformsText(''validateQuestion'', target), icon: ''checkmark-circle-outline'' },
+        				{ label: this.getC8OformsText(''explainLabel''), question: this.getC8OformsText(''explainQuestion'', target), icon: ''search-outline'' }
+        			];
+        		}
         		if (this.isAgentBridgeMode && this.isAgentBridgeMode()) {
         			return [
         				{ label: this.t("Agent_Suggestion_1_Label", "Corriger l''écran"), question: this.t("Agent_Suggestion_1_Question", "Repère le problème visible et corrige le projet."), icon: "bug-outline" },
@@ -173,11 +245,174 @@ scriptContent:
         		return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, '''');
         	}
         
+        	public isEmbeddedInC8Oforms() {
+        		try {
+        			var context: any = (this.local && this.local.AgentHostContext) || this.agentHostContext || {};
+        			if (('''' + (context.embedMode || '''')).toLowerCase() === ''c8oforms'') { return true; }
+        			var raw = this.getAssistantUrlSearch ? this.getAssistantUrlSearch() : '''';
+        			return ('''' + ((new URLSearchParams(raw)).get(''embedMode'') || '''')).toLowerCase() === ''c8oforms'';
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	public getConfiguredAgentHostOrigin() {
+        		try {
+        			var context: any = (this.local && this.local.AgentHostContext) || this.agentHostContext || {};
+        			var origin = this.normalizeAgentHostContextValue(context.hostOrigin);
+        			if (!origin.length) {
+        				var raw = this.getAssistantUrlSearch ? this.getAssistantUrlSearch() : '''';
+        				origin = this.normalizeAgentHostContextValue((new URLSearchParams(raw)).get(''hostOrigin''));
+        			}
+        			if (!origin.length) { return ''''; }
+        			var parsed = new URL(origin);
+        			return (parsed.protocol === ''http:'' || parsed.protocol === ''https:'') ? parsed.origin : '''';
+        		} catch (e) {}
+        		return '''';
+        	}
+        
+        	public ensureC8OformsEmbeddedStyles() {
+        		try {
+        			if (!this.isEmbeddedInC8Oforms || !this.isEmbeddedInC8Oforms()) { return; }
+        			if (document.documentElement && document.documentElement.classList) { document.documentElement.classList.add(''c8oforms-assistant-embedded''); }
+        			if (document.body && document.body.classList) { document.body.classList.add(''c8oforms-assistant-embedded''); }
+        			var embeddedStyle: any = document.getElementById(''c8oforms-assistant-embedded-style'');
+        			if (!embeddedStyle) {
+        				embeddedStyle = document.createElement(''style'');
+        				embeddedStyle.id = ''c8oforms-assistant-embedded-style'';
+        				document.head.appendChild(embeddedStyle);
+        			}
+        			embeddedStyle.textContent = ''.c8oforms-assistant-embedded .modern-header{display:block!important;background:var(--ion-background-color,#fff);border-bottom:1px solid var(--ion-color-step-200,#d7dde8);box-shadow:0 5px 16px rgba(15,23,42,.08)}.c8oforms-assistant-embedded .modern-header>ion-toolbar{display:none!important}.c8oforms-assistant-embedded .toolbar-lang-select,.c8oforms-assistant-embedded .toolbar-theme-button{display:none!important}.c8oforms-assistant-embedded .agent-nocode-context-picker{display:flex;flex-wrap:wrap;align-items:flex-end;gap:7px 10px;margin:0;padding:9px 12px 8px;background:var(--ion-background-color,#fff)}.c8oforms-assistant-embedded .agent-nocode-context-title{flex:0 1 150px;min-width:0;padding-bottom:10px;font-size:13px;font-weight:700;color:var(--ion-text-color,#172033)}.c8oforms-assistant-embedded .agent-nocode-context-field{display:grid;flex:1 1 170px;gap:3px;min-width:0}.c8oforms-assistant-embedded .agent-nocode-context-label{overflow:hidden;font-size:10px;font-weight:700;line-height:1.2;letter-spacing:.02em;text-overflow:ellipsis;white-space:nowrap;color:var(--ion-color-step-650,#5f6b7a)}.c8oforms-assistant-embedded .agent-nocode-context-select{width:100%;min-width:0;min-height:34px;padding:0 8px;border:1px solid var(--ion-color-step-250,#cbd3df);border-radius:8px;background:var(--ion-color-step-50,#f8fafc);font-size:13px}.c8oforms-assistant-embedded .agent-nocode-context-meta{flex:1 0 100%;min-width:0;overflow:hidden;font-size:11px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap;color:var(--ion-color-step-600,#667085)}.c8oforms-assistant-embedded .agent-hidden{display:none!important}@media(max-width:760px){.c8oforms-assistant-embedded .agent-nocode-context-picker{gap:6px 8px;padding:8px 10px 7px}.c8oforms-assistant-embedded .agent-nocode-context-title{flex:1 0 100%;padding-bottom:0}.c8oforms-assistant-embedded .agent-nocode-context-field{flex:1 1 135px}}@media(max-width:360px){.c8oforms-assistant-embedded .agent-nocode-context-picker{gap:5px 6px;padding:7px 8px 6px}.c8oforms-assistant-embedded .agent-nocode-context-title{font-size:12px}.c8oforms-assistant-embedded .agent-nocode-context-field{flex-basis:125px}.c8oforms-assistant-embedded .agent-nocode-context-label{font-size:9px}.c8oforms-assistant-embedded .agent-nocode-context-select{min-height:32px;padding:0 6px;font-size:12px}.c8oforms-assistant-embedded .agent-nocode-context-meta{font-size:10px}}'';
+        		} catch (e) {}
+        	}
+        
+        	public applyC8OformsHostLanguage(context) {
+        		try {
+        			if (!this.isEmbeddedInC8Oforms || !this.isEmbeddedInC8Oforms()) { return; }
+        			var language = this.normalizeAgentHostContextValue(context.language || context.locale || context.assistantLanguage).toLowerCase().replace(''_'', ''-'');
+        			if (language.indexOf(''fr'') === 0) { language = ''fr''; }
+        			else if (language.indexOf(''es'') === 0) { language = ''es''; }
+        			else if (language.indexOf(''it'') === 0) { language = ''it''; }
+        			else if (language.indexOf(''en'') === 0) { language = ''en''; }
+        			else { return; }
+        			if (!this.global) { this.global = {}; }
+        			this.global.language = language;
+        			try { document.documentElement.lang = language; } catch (eDom) {}
+        			if (this.translate && this.translate.use && this.translate.currentLang !== language) {
+        				this.translate.use(language);
+        			}
+        		} catch (e) {}
+        	}
+        
+        	public applyC8OformsHostTheme(context) {
+        		try {
+        			if (!this.isEmbeddedInC8Oforms || !this.isEmbeddedInC8Oforms()) { return; }
+        			var theme = this.normalizeAgentHostContextValue(context.theme).toLowerCase();
+        			var dark = context.darkTheme === true || ('''' + context.darkTheme).toLowerCase() === ''true'' || theme === ''dark'';
+        			if (!this.global) { this.global = {}; }
+        			this.global.themeDark = dark;
+        			this.global.themeLockedFromUrl = true;
+        			var roots: any[] = [document.documentElement, document.body];
+        			for (var i = 0; i < roots.length; i++) {
+        				var root = roots[i];
+        				if (!root || !root.classList) { continue; }
+        				root.classList.remove(''force-dark'', ''force-light'');
+        				root.classList.add(dark ? ''force-dark'' : ''force-light'');
+        			}
+        		} catch (e) {}
+        	}
+        
+        	public getNoCodeContextCatalog() {
+        		try { return (this.local && this.local.NoCodeContextCatalog) || { forms: [], elements: [], baserow: { bases: [], tables: [] } }; } catch (e) {}
+        		return { forms: [], elements: [], baserow: { bases: [], tables: [] } };
+        	}
+        	public getNoCodeForms() {
+        		var catalog: any = this.getNoCodeContextCatalog ? this.getNoCodeContextCatalog() : {};
+        		return catalog && Array.isArray(catalog.forms) ? catalog.forms : [];
+        	}
+        	public getNoCodeElements() {
+        		var catalog: any = this.getNoCodeContextCatalog ? this.getNoCodeContextCatalog() : {};
+        		return catalog && Array.isArray(catalog.elements) ? catalog.elements : [];
+        	}
+        	public getNoCodeBaserowBases() {
+        		var catalog: any = this.getNoCodeContextCatalog ? this.getNoCodeContextCatalog() : {};
+        		var baserow: any = catalog && catalog.baserow ? catalog.baserow : {};
+        		return Array.isArray(baserow.bases) ? baserow.bases : [];
+        	}
+        	public getNoCodeBaserowTablesForSelectedBase() {
+        		var catalog: any = this.getNoCodeContextCatalog ? this.getNoCodeContextCatalog() : {};
+        		var baserow: any = catalog && catalog.baserow ? catalog.baserow : {};
+        		var tables: any[] = Array.isArray(baserow.tables) ? baserow.tables : [];
+        		var selected = "" + ((this.local && this.local.NoCodeSelectedBaserowDatabaseId) || "");
+        		if (!selected.length) { return []; }
+        		return tables.filter(function(table) {
+        			var databaseId = "" + ((table && (table.databaseId || table.database_id || table.applicationId)) || "");
+        			return databaseId === selected;
+        		});
+        	}
+        	public getNoCodeContextTargetLabel() {
+        		try {
+        			var kind = "" + ((this.local && this.local.NoCodeSelectedKind) || "");
+        			if (kind === "element") { return "" + (this.local.NoCodeSelectedElementName || this.local.NoCodeSelectedElementId || ""); }
+        			if (kind === "form") { return "" + (this.local.NoCodeSelectedFormName || this.local.NoCodeSelectedFormId || ""); }
+        			if (kind === "baserow-table") { return "" + (this.local.NoCodeSelectedBaserowTableName || this.local.NoCodeSelectedBaserowTableId || ""); }
+        			if (kind === "baserow-base") { return "" + (this.local.NoCodeSelectedBaserowDatabaseName || this.local.NoCodeSelectedBaserowDatabaseId || ""); }
+        		} catch (e) {}
+        		return "";
+        	}
+        	public getNoCodeContextTargetMeta() {
+        		try {
+        			var kind = "" + ((this.local && this.local.NoCodeSelectedKind) || "");
+        			if (kind === "element") { return this.getC8OformsText("elementMeta", this.local.NoCodeSelectedElementName || this.local.NoCodeSelectedElementId); }
+        			if (kind === "form") { return this.getC8OformsText("formMeta", this.local.NoCodeSelectedFormName || this.local.NoCodeSelectedFormId); }
+        			if (kind === "baserow-table") { return this.getC8OformsText("tableMeta", this.local.NoCodeSelectedBaserowTableName || this.local.NoCodeSelectedBaserowTableId); }
+        			if (kind === "baserow-base") { return this.getC8OformsText("baseMeta", this.local.NoCodeSelectedBaserowDatabaseName || this.local.NoCodeSelectedBaserowDatabaseId); }
+        		} catch (e) {}
+        		return this.getC8OformsText ? this.getC8OformsText("chooseContext") : "Choose a context";
+        	}
+        	public getC8OformsTargetLabel() {
+        		var selected = this.getNoCodeContextTargetLabel ? this.getNoCodeContextTargetLabel() : '''';
+        		if (selected.length) { return selected; }
+        		var element = this.getAssistantQueryParam ? this.getAssistantQueryParam(''elementName'') : '''';
+        		var form = this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentFormName'') || this.getAssistantQueryParam(''formName'')) : '''';
+        		if (element.length) { return element; }
+        		if (form.length) { return form; }
+        		return this.getC8OformsText ? this.getC8OformsText(''currentForm'', '''') : ''Formulaire courant'';
+        	}
+        
+        	public notifyC8OformsFormUpdated(mutation, runid?) {
+        		try {
+        			if (!this.isEmbeddedInC8Oforms || !this.isEmbeddedInC8Oforms() || !mutation || mutation.success !== true) { return false; }
+        			var formId = this.normalizeAgentHostContextValue(mutation.formId);
+        			if (!formId.length) { return false; }
+        			var completedAt = Number(mutation.completedAt || Date.now());
+        			var runKey = this.normalizeAgentHostContextValue(runid || (this.local && this.local.RunID) || "");
+        			var payload: any = {
+        				contextVersion: "1",
+        				formId: formId,
+        				formName: this.normalizeAgentHostContextValue(mutation.formName),
+        				previousRevision: this.normalizeAgentHostContextValue(mutation.formRevision),
+        				pageId: this.normalizeAgentHostContextValue(mutation.pageId),
+        				pageName: this.normalizeAgentHostContextValue(mutation.pageName),
+        				elementId: this.normalizeAgentHostContextValue(mutation.elementId),
+        				elementName: this.normalizeAgentHostContextValue(mutation.elementName),
+        				elementType: this.normalizeAgentHostContextValue(mutation.elementType),
+        				parentElementId: this.normalizeAgentHostContextValue(mutation.parentElementId),
+        				selectionKind: this.normalizeAgentHostContextValue(mutation.selectionKind),
+        				toolName: this.normalizeAgentHostContextValue(mutation.toolName),
+        				runid: runKey,
+        				completedAt: completedAt
+        			};
+        			payload.mutationKey = runKey + ":" + formId + ":" + completedAt;
+        			return this.postAgentHostMessage({ type: "ConvertigoAssistant.form-updated", payload: payload });
+        		} catch (e) {}
+        		return false;
+        	}
+        
         	public applyAgentHostContext(context) {
         		try {
         			if (!context || typeof context !== ''object'') { return; }
         			var next: any = {};
-        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAgentStackAvailable'',''localAgentStackState'',''localAgentStackLoading'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl''];
+        			var keys = [''contextVersion'',''embedMode'',''hostOrigin'',''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''currentFormName'',''formName'',''currentFormRevision'',''formRevision'',''applicationId'',''currentPage'',''pageId'',''pageName'',''elementId'',''elementName'',''elementType'',''parentElementId'',''selectionKind'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAgentStackAvailable'',''localAgentStackState'',''localAgentStackLoading'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl''];
         			for (var i = 0; i < keys.length; i++) {
         				var key = keys[i];
         				var raw = context[key];
@@ -192,7 +427,13 @@ scriptContent:
         			this.agentHostContext = next;
         			if (!this.local) { this.local = {}; }
         			this.local.AgentHostContext = next;
+        			this.ensureC8OformsEmbeddedStyles();
+        			this.applyC8OformsHostLanguage(next);
+        			this.applyC8OformsHostTheme(next);
+        			try { if (this.events && this.events.publish) { this.events.publish("AgentNoCodeContextChanged", next, true); } } catch (eCatalogEvent) {}
         			this.scheduleAgentSettingsRefreshAfterHostContext();
+        			this.syncFooterPlaceholder();
+        			this.tick();
         		} catch (e) {}
         	}
         
@@ -357,9 +598,15 @@ scriptContent:
         	public bindAgentHostContextListener() {
         		try {
         			if (this.agentHostContextMessageHandler) { return; }
+        			this.ensureC8OformsEmbeddedStyles();
         			this.agentHostContextMessageHandler = (event) => {
         				try {
-                            var data = event && event.data ? event.data : event;
+        					var nativeHostMessage = event && event.__agentNativeHost === true;
+        					if (!nativeHostMessage && this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) {
+        						var expectedOrigin = this.getConfiguredAgentHostOrigin ? this.getConfiguredAgentHostOrigin() : '''';
+        						if (!expectedOrigin || event.source !== window.parent || event.origin !== expectedOrigin) { return; }
+        					}
+        					var data = event && event.data ? event.data : event;
         					if (!data || typeof data !== ''object'') { return; }
         					var type = '''' + (data.type || data.kind || '''');
         					if (type === ''ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
@@ -372,21 +619,21 @@ scriptContent:
         					}
         				} catch (e) {}
         			};
-                    var w: any = window;
-                    if (w && typeof w[''receiveFromJava''] === ''function'' && !this.agentHostReceiveFromJavaWrapped) {
-                        this.agentHostReceiveFromJavaOriginal = w[''receiveFromJava''];
-                        var previousReceiveFromJava = this.agentHostReceiveFromJavaOriginal;
-                        var page: any = this;
-                        w[''receiveFromJava''] = function(message) {
-                            try {
-                                if (page && page.agentHostContextMessageHandler) {
-                                    page.agentHostContextMessageHandler({ data: message });
-                                }
-                            } catch (eBridgeMessage) {}
-                            try { return previousReceiveFromJava.apply(this, arguments); } catch (ePrevious) {}
-                        };
-                        this.agentHostReceiveFromJavaWrapped = true;
-                    }
+        			var w: any = window;
+        			if (w && typeof w[''receiveFromJava''] === ''function'' && !this.agentHostReceiveFromJavaWrapped) {
+        				this.agentHostReceiveFromJavaOriginal = w[''receiveFromJava''];
+        				var previousReceiveFromJava = this.agentHostReceiveFromJavaOriginal;
+        				var page: any = this;
+        				w[''receiveFromJava''] = function(message) {
+        					try {
+        						if (page && page.agentHostContextMessageHandler) {
+        							page.agentHostContextMessageHandler({ data: message, __agentNativeHost: true });
+        						}
+        					} catch (eBridgeMessage) {}
+        					try { return previousReceiveFromJava.apply(this, arguments); } catch (ePrevious) {}
+        				};
+        				this.agentHostReceiveFromJavaWrapped = true;
+        			}
         			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
         			this.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
         		} catch (e3) {}
@@ -419,8 +666,11 @@ scriptContent:
         				return true;
         			}
         			if (w && w.parent && w !== w.parent) {
-        				w.parent.postMessage(message, ''*'');
-        				return true;
+        				var targetOrigin = this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() ? this.getConfiguredAgentHostOrigin() : ''*'';
+        				if (targetOrigin && targetOrigin.length) {
+        					w.parent.postMessage(message, targetOrigin);
+        					return true;
+        				}
         			}
         		} catch (e) {}
         		return false;
@@ -1430,6 +1680,10 @@ scriptContent:
         			this.local.QuestionPlaceholder = this.getNoProjectSelectedMessage();
         			return;
         		}
+        		if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode") {
+        			this.local.QuestionPlaceholder = this.getC8OformsText ? this.getC8OformsText("questionPlaceholder") : "Décrivez ce que l’agent doit modifier dans ce contexte…";
+        			return;
+        		}
         		var fallback = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...") : this.t("Question_Placeholder", "Demandez comment construire quelque chose...");
         		var otherFallback = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Question_Placeholder", "Demandez comment construire quelque chose...") : this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
         		var placeholder = "" + (this.local.QuestionPlaceholder == null ? "" : this.local.QuestionPlaceholder);
@@ -2338,6 +2592,12 @@ title: Convertigo assistant
                             page.local.ShowAgentConfigPanel = false;
                             page.local.ConversationStarted = false;
                             page.local.Conversation = "";
+                            if (page.isEmbeddedInC8Oforms && page.isEmbeddedInC8Oforms()) {
+                                page.local.NoCodeContextSelectionTouched = false;
+                                if (page.events && page.events.publish) {
+                                    page.events.publish("AgentNoCodeContextChanged", page.local.AgentHostContext || {}, true);
+                                }
+                            }
                             page.local.AgentConversationResumed = false;
                             page.local.Messages = [];
                             page.local.RunID = "";
@@ -2625,6 +2885,352 @@ title: Convertigo assistant
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:Lang_Spanish
+  ↓NoCodeContextPicker [ngx.components.UIDynamicElement-1784905566193]: 
+    beanData: '{"ionBean":"DivTag"}'
+    comment: Persistent C8Oforms context header. It keeps the current form, exact element, Baserow base, and table selectable throughout an embedded conversation.
+    tagName: div
+    ↓Class [ngx.components.UIAttribute-1785232053580]: 
+      attrName: class
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'' && !(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) && ((this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) || (!this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel())))) ? ''agent-nocode-context-picker'' : ''agent-nocode-context-picker agent-hidden'''
+    ↓ContextTitle [ngx.components.UIDynamicElement-1784905566197]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1784905566199]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-nocode-context-title
+      ↓Text [ngx.components.UIText-1784905566201]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getC8OformsText('contextTitle')
+    ↓FormField [ngx.components.UIDynamicElement-1784905566203]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1784905566205]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-nocode-context-field
+      ↓Label [ngx.components.UIDynamicElement-1784905566207]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1784905566209]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-label
+        ↓Text [ngx.components.UIText-1784905566211]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getC8OformsText('formLabel')
+      ↓FormSelect [ngx.components.UIDynamicElement-1784905566213]: 
+        beanData: |
+          '{
+           "ionBean": "Select",
+           "ControlName": "plain:assistantContextForm",
+           "Interface": "plain:popover",
+           "Placeholder": "script:this.getC8OformsText(''formPlaceholder'')",
+           "Value": "script:(this.local && this.local.NoCodeSelectedFormId) || ''''"
+          }'
+        tagName: ion-select
+        ↓Class [ngx.components.UIAttribute-1784905566215]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-select
+        ↓Change [ngx.components.UIControlEvent-1784905566217]: 
+          attrName: (ionChange)
+          eventName: ionChange
+          ↓SelectForm [ngx.components.UIDynamicInvoke-1784905568125]: 
+            beanData: '{"ionBean":"InvokeAction"}'
+            stack: ConvertigoAssistant.Application.NgxApp.SelectNoCodeAssistantTarget
+            ↓kind [ngx.components.UIControlVariable-1784905570057]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:form
+            ↓value [ngx.components.UIControlVariable-1784905570059]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:event && event.detail ? event.detail.value : '''''
+        ↓NoForm [ngx.components.UIDynamicElement-1784905570061]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1784905570063]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getC8OformsText('formPlaceholder')
+        ↓Forms [ngx.components.UIControlDirective-1784905570065]: 
+          directiveItemName: form
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getNoCodeForms()
+          ↓FormOption [ngx.components.UIDynamicElement-1784905575575]: 
+            beanData: '{"ionBean":"SelectOption","Value":"script:form && (form.id || form._id)"}'
+            tagName: ion-select-option
+            ↓Text [ngx.components.UIText-1784905575577]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:form && (form.name || form.title || form.id || form._id)
+    ↓ElementField [ngx.components.UIDynamicElement-1784905575579]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1784905575581]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: 'script:(this.local && this.local.NoCodeSelectedFormId) ? ''agent-nocode-context-field'' : ''agent-nocode-context-field agent-hidden'''
+      ↓Label [ngx.components.UIDynamicElement-1784905575583]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1784905575585]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-label
+        ↓Text [ngx.components.UIText-1784905575587]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getC8OformsText('elementLabel')
+      ↓ElementSelect [ngx.components.UIDynamicElement-1784905575589]: 
+        beanData: |
+          '{
+           "ionBean": "Select",
+           "ControlName": "plain:assistantContextElement",
+           "Interface": "plain:popover",
+           "Placeholder": "script:this.getC8OformsText(''wholeForm'')",
+           "Value": "script:(this.local && this.local.NoCodeSelectedElementId) || ''''"
+          }'
+        tagName: ion-select
+        ↓Class [ngx.components.UIAttribute-1784905575591]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-select
+        ↓Change [ngx.components.UIControlEvent-1784905575593]: 
+          attrName: (ionChange)
+          eventName: ionChange
+          ↓SelectElement [ngx.components.UIDynamicInvoke-1784905575595]: 
+            beanData: '{"ionBean":"InvokeAction"}'
+            stack: ConvertigoAssistant.Application.NgxApp.SelectNoCodeAssistantTarget
+            ↓kind [ngx.components.UIControlVariable-1784905575597]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:element
+            ↓value [ngx.components.UIControlVariable-1784905575599]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:event && event.detail ? event.detail.value : '''''
+        ↓WholeForm [ngx.components.UIDynamicElement-1784905575601]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1784905575603]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getC8OformsText('wholeForm')
+        ↓Elements [ngx.components.UIControlDirective-1784905575605]: 
+          directiveItemName: formElement
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getNoCodeElements()
+          ↓ElementOption [ngx.components.UIDynamicElement-1784905575607]: 
+            beanData: '{"ionBean":"SelectOption","Value":"script:formElement && (formElement.id || formElement._id)"}'
+            tagName: ion-select-option
+            ↓Text [ngx.components.UIText-1784905575609]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:formElement && ((formElement.pageName ? formElement.pageName + '' · '' : '''') + (formElement.name || formElement.label || formElement.type || formElement.id || formElement._id))'
+    ↓BaserowBaseField [ngx.components.UIDynamicElement-1784905575611]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1784905575613]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-nocode-context-field
+      ↓Label [ngx.components.UIDynamicElement-1784905575615]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1784905575617]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-label
+        ↓Text [ngx.components.UIText-1784905575619]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getC8OformsText('baserowLabel')
+      ↓BaseSelect [ngx.components.UIDynamicElement-1784905575621]: 
+        beanData: |
+          '{
+           "ionBean": "Select",
+           "ControlName": "plain:assistantContextBaserowBase",
+           "Interface": "plain:popover",
+           "Placeholder": "script:this.getC8OformsText(''basePlaceholder'')",
+           "Value": "script:(this.local && this.local.NoCodeSelectedBaserowDatabaseId) || ''''"
+          }'
+        tagName: ion-select
+        ↓Class [ngx.components.UIAttribute-1784905575623]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-select
+        ↓Change [ngx.components.UIControlEvent-1784905575625]: 
+          attrName: (ionChange)
+          eventName: ionChange
+          ↓SelectBase [ngx.components.UIDynamicInvoke-1784905575627]: 
+            beanData: '{"ionBean":"InvokeAction"}'
+            stack: ConvertigoAssistant.Application.NgxApp.SelectNoCodeAssistantTarget
+            ↓kind [ngx.components.UIControlVariable-1784905575629]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:baserow-base
+            ↓value [ngx.components.UIControlVariable-1784905575631]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:event && event.detail ? event.detail.value : '''''
+        ↓NoBase [ngx.components.UIDynamicElement-1784905575633]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1784905575635]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getC8OformsText('basePlaceholder')
+        ↓Bases [ngx.components.UIControlDirective-1784905575637]: 
+          directiveItemName: baserowBase
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getNoCodeBaserowBases()
+          ↓BaseOption [ngx.components.UIDynamicElement-1784905575639]: 
+            beanData: '{"ionBean":"SelectOption","Value":"script:baserowBase && (baserowBase.id || baserowBase.databaseId || baserowBase.applicationId)"}'
+            tagName: ion-select-option
+            ↓Text [ngx.components.UIText-1784905575641]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:baserowBase && ((baserowBase.workspaceName ? baserowBase.workspaceName + '' · '' : '''') + (baserowBase.name || baserowBase.databaseName || baserowBase.applicationName || baserowBase.id))'
+    ↓BaserowTableField [ngx.components.UIDynamicElement-1784905575643]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1784905575645]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: 'script:(this.local && this.local.NoCodeSelectedBaserowDatabaseId) ? ''agent-nocode-context-field'' : ''agent-nocode-context-field agent-hidden'''
+      ↓Label [ngx.components.UIDynamicElement-1784905575647]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1784905575649]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-label
+        ↓Text [ngx.components.UIText-1784905575651]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getC8OformsText('tableLabel')
+      ↓TableSelect [ngx.components.UIDynamicElement-1784905575653]: 
+        beanData: |
+          '{
+           "ionBean": "Select",
+           "ControlName": "plain:assistantContextBaserowTable",
+           "Interface": "plain:popover",
+           "Placeholder": "script:this.getC8OformsText(''tablePlaceholder'')",
+           "Value": "script:(this.local && this.local.NoCodeSelectedBaserowTableId) || ''''"
+          }'
+        tagName: ion-select
+        ↓Class [ngx.components.UIAttribute-1784905575655]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-nocode-context-select
+        ↓Change [ngx.components.UIControlEvent-1784905575657]: 
+          attrName: (ionChange)
+          eventName: ionChange
+          ↓SelectTable [ngx.components.UIDynamicInvoke-1784905575659]: 
+            beanData: '{"ionBean":"InvokeAction"}'
+            stack: ConvertigoAssistant.Application.NgxApp.SelectNoCodeAssistantTarget
+            ↓kind [ngx.components.UIControlVariable-1784905575661]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:baserow-table
+            ↓value [ngx.components.UIControlVariable-1784905575663]: 
+              varValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:event && event.detail ? event.detail.value : '''''
+        ↓NoTable [ngx.components.UIDynamicElement-1784905575665]: 
+          beanData: '{"ionBean":"SelectOption","Value":"plain:"}'
+          tagName: ion-select-option
+          ↓Text [ngx.components.UIText-1784905575667]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getC8OformsText('tablePlaceholder')
+        ↓Tables [ngx.components.UIControlDirective-1784905575669]: 
+          directiveItemName: baserowTable
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getNoCodeBaserowTablesForSelectedBase()
+          ↓TableOption [ngx.components.UIDynamicElement-1784905575671]: 
+            beanData: '{"ionBean":"SelectOption","Value":"script:baserowTable && (baserowTable.id || baserowTable.tableId)"}'
+            tagName: ion-select-option
+            ↓Text [ngx.components.UIText-1784905575673]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:baserowTable && (baserowTable.name || baserowTable.tableName || baserowTable.id || baserowTable.tableId)
+    ↓TargetMeta [ngx.components.UIDynamicElement-1784905575675]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1784905575677]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-nocode-context-meta
+      ↓Text [ngx.components.UIText-1784905575679]: 
+        textValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getNoCodeContextTargetMeta()
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
   beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
   identifier: content
@@ -3083,7 +3689,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationTitle ? this.getAgentActivationTitle() : "Activer l''assistant local") : ''Démarrer maintenant'''
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.getC8OformsText ? this.getC8OformsText(''startTitle'') : ''Contexte :'') + '' '' + ((this.getNoCodeContextTargetLabel && this.getNoCodeContextTargetLabel()) || (this.getC8OformsText ? this.getC8OformsText(''chooseContext'') : ''Choisir un contexte''))) : ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationTitle ? this.getAgentActivationTitle() : "Activer l''assistant local") : ''Démarrer maintenant'')'
               ↓Meta [ngx.components.UIDynamicElement-1782746911806]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -3097,7 +3703,7 @@ title: Convertigo assistant
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationMeta ? this.getAgentActivationMeta() : ''Installe les projets Agent locaux et recharge la vue Assistant.'') : ''Sans projet sélectionné, ou en ignorant le projet sélectionné.'''
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? (this.getNoCodeContextTargetMeta ? this.getNoCodeContextTargetMeta() : '''') : ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationMeta ? this.getAgentActivationMeta() : ''Installe les projets Agent locaux et recharge la vue Assistant.'') : ''Sans projet sélectionné, ou en ignorant le projet sélectionné.'')'
             ↓Role [ngx.components.UIAttribute-1782746911812]: 
               attrName: role
               attrValue: 
@@ -3304,18 +3910,6 @@ title: Convertigo assistant
                    "IonSize": "plain:small"
                   }'
                 tagName: ion-button
-                ↓Class [ngx.components.UIAttribute-1781676493783]: 
-                  attrName: class
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'')'
-                ↓Aria [ngx.components.UIAttribute-1781676493785]: 
-                  attrName: aria-label
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Fermer les conversations
                 ↓Event [ngx.components.UIControlEvent-1781676493787]: 
                   ↓CloseConversations [ngx.components.UICustomAction-1781676495273]: 
                     actionValue: 
@@ -3325,11 +3919,23 @@ title: Convertigo assistant
                           →: |
                             		page.closeConversationsPanel();
                             		resolve();
-                ↓Icon [ngx.components.UIDynamicElement-1781676495275]: 
+                ↓Class [ngx.components.UIAttribute-1785165558761]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'') : ((this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden''))'
+                ↓Aria [ngx.components.UIAttribute-1785165558979]: 
+                  attrName: aria-label
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ''Retour à la nouvelle conversation'' : ''Fermer les conversations'''
+                ↓Icon [ngx.components.UIDynamicElement-1785165559197]: 
                   beanData: |
                     '{
                      "ionBean": "Icon",
-                     "IconName": "plain:close-outline",
+                     "IconName": "script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ''arrow-back-outline'' : ''close-outline''",
                      "IconSlot": "plain:icon-only"
                     }'
                   tagName: ion-icon
@@ -3777,87 +4383,6 @@ title: Convertigo assistant
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? ''Activé'' : ''Désactivé'''
-              ↓NewConversationButton [ngx.components.UIDynamicElement-1781676410893]: 
-                beanData: |
-                  '{
-                   "ionBean": "Button",
-                   "IonFill": "plain:clear",
-                   "IonSize": "plain:small"
-                  }'
-                tagName: ion-button
-                ↓Class [ngx.components.UIAttribute-1781676410895]: 
-                  attrName: class
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-new-conversation-button agent-hidden
-                ↓Aria [ngx.components.UIAttribute-1781676410897]: 
-                  attrName: aria-label
-                  attrValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:Démarrer une nouvelle conversation
-                ↓Icon [ngx.components.UIDynamicElement-1781676410899]: 
-                  beanData: |
-                    '{
-                     "ionBean": "Icon",
-                     "IconName": "plain:add-circle-outline",
-                     "IconSlot": "plain:start"
-                    }'
-                  tagName: ion-icon
-                  ↓IconName [ngx.components.UIAttribute-1783011667397]: 
-                    attrName: '[name]'
-                    attrValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:(this.local && this.local.NewConversationMode === true) ? ''list-outline'' : ''add-circle-outline'''
-                ↓Text [ngx.components.UIText-1781676410901]: 
-                  textValue: 
-                    - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.NewConversationMode === true) ? ''Conversations précédentes'' : ''Démarrer une nouvelle conversation'''
-                ↓Event [ngx.components.UIControlEvent-1781676410903]: 
-                  ↓CreateConversation [ngx.components.UICustomAction-1781676412389]: 
-                    actionValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                          →: |
-                            '		if (!page.local) {
-                            			page.local = {};
-                            		}
-                            		if (page.local.NewConversationMode === true) {
-                            			page.local.NewConversationMode = false;
-                            			page.local.ShowConversationPanel = true;
-                            			page.tick();
-                            			resolve();
-                            			return;
-                            		}
-                            		var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
-                            		if (project && page.setConversationProject) {
-                            			page.setConversationProject(project);
-                            		}
-                            		page.local.NewConversationMode = true;
-                            		page.local.ShowConversationPanel = false;
-                                    page.local.ShowAgentConfigPanel = false;
-                                    page.local.ConversationStarted = false;
-                            		page.local.Conversation = '''';
-                            		page.local.AgentConversationResumed = false;
-                            		page.local.Messages = [];
-                            		page.local.RunID = '''';
-                            		page.local.Buffer = {};
-                            		page.local.StreamingIndex = null;
-                            		page.local.IsProcessing = false;
-                            		page.local.AgentProgressHistory = [];
-                            		page.local.AgentProgressHistoryRunId = '''';
-                            		page.local.Question = '''';
-                            		if (page.chatfooter && page.chatfooter.setQuestionText) {
-                            			page.chatfooter.setQuestionText('''', false);
-                            		}
-                            		page.setEnableChat();
-                            		page.tick();
-                            		page.focusQuestionInput(20);
-                            		resolve();'
               ↓AgentSetupButton [ngx.components.UIDynamicElement-1781811000100]: 
                 beanData: |
                   '{
@@ -4825,6 +5350,93 @@ title: Convertigo assistant
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:conversation && conversation.provider ? conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''codex'')'
+          ↓NewConversationButton [ngx.components.UIDynamicElement-1781676410893]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonFill": "plain:clear",
+               "IonSize": "plain:small"
+              }'
+            tagName: ion-button
+            ↓Class [ngx.components.UIAttribute-1781676410895]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && this.local && this.local.Conversation && this.local.NewConversationMode !== true && this.local.ShowConversationPanel !== true) ? ''agent-new-conversation-button'' : ''agent-new-conversation-button agent-hidden'''
+            ↓Aria [ngx.components.UIAttribute-1781676410897]: 
+              attrName: aria-label
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Retour au nouveau contexte'' : ((this.local && this.local.NewConversationMode === true) ? ''Ouvrir les conversations précédentes'' : ''Démarrer une nouvelle conversation'')'
+            ↓Icon [ngx.components.UIDynamicElement-1781676410899]: 
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IconName": "plain:add-circle-outline",
+                 "IconSlot": "plain:start"
+                }'
+              tagName: ion-icon
+              ↓IconName [ngx.components.UIAttribute-1783011667397]: 
+                attrName: '[name]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''arrow-back-outline'' : ((this.local && this.local.NewConversationMode === true) ? ''list-outline'' : ''add-circle-outline'')'
+            ↓Text [ngx.components.UIText-1781676410901]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? ''Retour au nouveau contexte'' : ((this.local && this.local.NewConversationMode === true) ? ''Conversations précédentes'' : ''Démarrer une nouvelle conversation'')'
+            ↓Event [ngx.components.UIControlEvent-1781676410903]: 
+              ↓CreateConversation [ngx.components.UICustomAction-1781676412389]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        '		if (!page.local) {
+                        			page.local = {};
+                        		}
+                        		if (page.local.NewConversationMode === true) {
+                        			page.local.NewConversationMode = false;
+                        			page.local.ShowConversationPanel = true;
+                        			page.tick();
+                        			resolve();
+                        			return;
+                        		}
+                        		var project = page.getEffectiveProjectName ? page.getEffectiveProjectName() : '''';
+                        		if (project && page.setConversationProject) {
+                        			page.setConversationProject(project);
+                        		}
+                        		page.local.NewConversationMode = true;
+                        		page.local.ShowConversationPanel = false;
+                                page.local.ShowAgentConfigPanel = false;
+                                page.local.ConversationStarted = false;
+                        		page.local.Conversation = '''';
+                        		if (page.isEmbeddedInC8Oforms && page.isEmbeddedInC8Oforms()) {
+                        		    page.local.NoCodeContextSelectionTouched = false;
+                        		    if (page.events && page.events.publish) {
+                        		        page.events.publish("AgentNoCodeContextChanged", page.local.AgentHostContext || {}, true);
+                        		    }
+                        		}
+                        		page.local.AgentConversationResumed = false;
+                        		page.local.Messages = [];
+                        		page.local.RunID = '''';
+                        		page.local.Buffer = {};
+                        		page.local.StreamingIndex = null;
+                        		page.local.IsProcessing = false;
+                        		page.local.AgentProgressHistory = [];
+                        		page.local.AgentProgressHistoryRunId = '''';
+                        		page.local.Question = '''';
+                        		if (page.chatfooter && page.chatfooter.setQuestionText) {
+                        			page.chatfooter.setQuestionText('''', false);
+                        		}
+                        		page.setEnableChat();
+                        		page.tick();
+                        		page.focusQuestionInput(20);
+                        		resolve();'
       ↓ChatPreview [ngx.components.UIDynamicElement-1771942200001]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
@@ -6883,6 +7495,13 @@ title: Convertigo assistant
             		page.local.AgentProgressStartedAt = null;
             		page.local.AgentProgressStartedAtRunId = "";
             		page.local.AgentProgressFinishedAt = null;
+            		var formMutation = (state && state.formMutation) || (aiData && aiData.formMutation) || null;
+            		if (isCompleted && formMutation && formMutation.success === true) {
+            			var mutationKey = "" + (formMutation.completedAt || "") + ":" + (formMutation.formId || "") + ":" + (runid || "");
+            			if (page.local.LastC8OformsMutationNotificationKey !== mutationKey && page.notifyC8OformsFormUpdated && page.notifyC8OformsFormUpdated(formMutation, runid)) {
+            				page.local.LastC8OformsMutationNotificationKey = mutationKey;
+            			}
+            		}
             		page.tick();
             		page.scrollChatBottom(0);
             		resolve();
@@ -7564,16 +8183,6 @@ title: Convertigo assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentRoute'') || this.getAssistantQueryParam(''nocodeCurrentRoute'') || this.getAssistantQueryParam(''currentPath'') || '''') : '''''
-                  ↓currentFormId [ngx.components.UIControlVariable-1782486529827]: 
-                    varValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentFormId'') || this.getAssistantQueryParam(''nocodeCurrentFormId'') || this.getAssistantQueryParam(''formId'') || '''') : '''''
-                  ↓currentPage [ngx.components.UIControlVariable-1782486531581]: 
-                    varValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''currentPage'') || this.getAssistantQueryParam(''pageId'') || this.getAssistantQueryParam(''page'') || '''') : '''''
                   ↓browserDebugUrl [ngx.components.UIControlVariable-1782753944928]: 
                     varValue: 
                       - xmlizable: 
@@ -7619,6 +8228,126 @@ title: Convertigo assistant
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
+                  ↓locale [ngx.components.UIControlVariable-1784896625268]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''locale'') || this.getAssistantQueryParam(''language'') || '''') : '''''
+                  ↓assistantLanguage [ngx.components.UIControlVariable-1784896625270]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.getAssistantQueryParam ? (this.getAssistantQueryParam(''assistantLanguage'') || this.getAssistantQueryParam(''language'') || '''') : '''''
+                  ↓currentFormId [ngx.components.UIControlVariable-1784905629771]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormId || '''') : ''''; })(this.local)'
+                  ↓currentPage [ngx.components.UIControlVariable-1784905629989]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedPageId || '''') : ''''; })(this.local)'
+                  ↓currentFormName [ngx.components.UIControlVariable-1784905631043]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormName || '''') : ''''; })(this.local)'
+                  ↓currentFormRevision [ngx.components.UIControlVariable-1784905632905]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormRevision || '''') : ''''; })(this.local)'
+                  ↓formId [ngx.components.UIControlVariable-1784905634668]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormId || '''') : ''''; })(this.local)'
+                  ↓formName [ngx.components.UIControlVariable-1784905636253]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormName || '''') : ''''; })(this.local)'
+                  ↓formRevision [ngx.components.UIControlVariable-1784905637826]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormRevision || '''') : ''''; })(this.local)'
+                  ↓pageId [ngx.components.UIControlVariable-1784905639774]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedPageId || '''') : ''''; })(this.local)'
+                  ↓pageName [ngx.components.UIControlVariable-1784905641291]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedPageName || '''') : ''''; })(this.local)'
+                  ↓elementId [ngx.components.UIControlVariable-1784905642880]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedElementId || '''') : ''''; })(this.local)'
+                  ↓elementName [ngx.components.UIControlVariable-1784905644834]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedElementName || '''') : ''''; })(this.local)'
+                  ↓elementType [ngx.components.UIControlVariable-1784905646590]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedElementType || '''') : ''''; })(this.local)'
+                  ↓parentElementId [ngx.components.UIControlVariable-1784905647991]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ return (local && local.NoCodeSelectedKind === ''element'') ? (local.NoCodeSelectedParentElementId || '''') : ''''; })(this.local)'
+                  ↓selectionKind [ngx.components.UIControlVariable-1784905648854]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedKind) || ''
+                  ↓nocodeCurrentFormId [ngx.components.UIControlVariable-1784905648860]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:(function(local){ var kind = (local && local.NoCodeSelectedKind) || ''''; return (kind === ''form'' || kind === ''element'') ? (local.NoCodeSelectedFormId || '''') : ''''; })(this.local)'
+                  ↓contextTargetKind [ngx.components.UIControlVariable-1784905648862]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedKind) || ''
+                  ↓baserowWorkspaceId [ngx.components.UIControlVariable-1784905648864]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedBaserowWorkspaceId) || ''
+                  ↓baserowWorkspaceName [ngx.components.UIControlVariable-1784905648866]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedBaserowWorkspaceName) || ''
+                  ↓baserowDatabaseId [ngx.components.UIControlVariable-1784905648868]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedBaserowDatabaseId) || ''
+                  ↓baserowDatabaseName [ngx.components.UIControlVariable-1784905648870]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedBaserowDatabaseName) || ''
+                  ↓baserowTableId [ngx.components.UIControlVariable-1784905648872]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedBaserowTableId) || ''
+                  ↓baserowTableName [ngx.components.UIControlVariable-1784905648874]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:(this.local && this.local.NoCodeSelectedBaserowTableName) || ''
         ↓attachments [ngx.components.UIControlVariable-1751373371973]: 
           varValue: 
             - xmlizable: 
@@ -9738,3 +10467,99 @@ title: Convertigo assistant
               width: 100%;
             }
           }'
+↓AgentNoCodeContextChanged [ngx.components.UIEventSubscriber-1784905298700]: 
+  comment: Refresh the secure No Code resource catalog when C8Oforms sends a new host context.
+  topic: AgentNoCodeContextChanged
+  ↓LoadNoCodeContextCatalog [ngx.components.UIDynamicAction-1784905300608]: 
+    beanData: |
+      '{
+       "ionBean": "CallSequenceAction",
+       "requestable": "plain:ConvertigoAssistant.AgentNoCodeContextCatalog",
+       "noLoading": "plain:true"
+      }'
+    ↓userId [ngx.components.UIControlVariable-1784905302540]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:(stack && stack[''root''] && stack[''root''].out && stack[''root''].out.userId) || (this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'')'
+    ↓agentProfile [ngx.components.UIControlVariable-1784905302542]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:nocode
+    ↓skillProfile [ngx.components.UIControlVariable-1784905302544]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:nocode
+    ↓formId [ngx.components.UIControlVariable-1784905302546]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out && (stack['root'].out.formId || stack['root'].out.currentFormId || stack['root'].out.nocodeCurrentFormId)) || ''
+    ↓ApplyNoCodeCatalog [ngx.components.UIDynamicInvoke-1784905302548]: 
+      beanData: '{"ionBean":"InvokeAction"}'
+      stack: ConvertigoAssistant.Application.NgxApp.ApplyNoCodeAssistantCatalog
+      ↓response [ngx.components.UIControlVariable-1784905304480]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:parent.out
+      ↓hostContext [ngx.components.UIControlVariable-1784905304482]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out) || {}
+      ↓formId [ngx.components.UIControlVariable-1784905304484]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out && (stack['root'].out.formId || stack['root'].out.currentFormId || stack['root'].out.nocodeCurrentFormId)) || ''
+↓AgentNoCodeContextReload [ngx.components.UIEventSubscriber-1784905317464]: 
+  comment: Reload elements after the user chooses another form in the Assistant context picker.
+  topic: AgentNoCodeContextReload
+  ↓ReloadNoCodeContextCatalog [ngx.components.UIDynamicAction-1784905319372]: 
+    beanData: |
+      '{
+       "ionBean": "CallSequenceAction",
+       "requestable": "plain:ConvertigoAssistant.AgentNoCodeContextCatalog",
+       "noLoading": "plain:true"
+      }'
+    ↓userId [ngx.components.UIControlVariable-1784905321304]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+    ↓agentProfile [ngx.components.UIControlVariable-1784905321306]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:nocode
+    ↓skillProfile [ngx.components.UIControlVariable-1784905321308]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: plain:nocode
+    ↓formId [ngx.components.UIControlVariable-1784905321310]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out && stack['root'].out.formId) || (this.local && this.local.NoCodeSelectedFormId) || ''
+    ↓ApplyReloadedNoCodeCatalog [ngx.components.UIDynamicInvoke-1784905321312]: 
+      beanData: '{"ionBean":"InvokeAction"}'
+      stack: ConvertigoAssistant.Application.NgxApp.ApplyNoCodeAssistantCatalog
+      ↓response [ngx.components.UIControlVariable-1784905323244]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:parent.out
+      ↓hostContext [ngx.components.UIControlVariable-1784905323246]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out && stack['root'].out.hostContext) || (this.local && this.local.AgentHostContext) || {}
+      ↓formId [ngx.components.UIControlVariable-1784905323248]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out && stack['root'].out.formId) || (this.local && this.local.NoCodeSelectedFormId) || ''

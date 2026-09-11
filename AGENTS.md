@@ -49,6 +49,11 @@ rediscovering the same context.
 
 - Main client file: `js/agent_bridge_client.js`.
 - Bridge project: `c8oprj-convertigo-agent-bridge`.
+- In the C8Oforms embedded surface, a successful `nocode_form_edit` or
+  `nocode_form_update` tool completion is returned as `state.formMutation`.
+  The Assistant then posts `ConvertigoAssistant.form-updated` to the validated
+  `hostOrigin`; C8Oforms is responsible for re-fetching the authoritative form
+  and preserving the active page/selection when they still exist.
 - Codex is the priority provider; Vibe remains supported.
 - The default Codex home scope sent by the Assistant is `user`.
 - Managed Codex homes are visible directories under the Convertigo workspace,
@@ -98,6 +103,13 @@ rediscovering the same context.
   handle to the bridge, but must never expose the raw token in URLs, UI state,
   prompts, logs, or conversation records. Token labels must include the readable
   authenticated user, for example `Convertigo Agent Bridge - user@example.com`.
+- New embedded NoCode conversations use an explicit resource context picker:
+  users can choose any accessible C8Oforms form, optionally an exact element of
+  that form, or a Baserow base/table. When the iframe is opened from a form
+  editor, that form and the currently selected element are the defaults; the
+  home screen leaves the choice open. Catalog reads must remain authenticated
+  server-side, must respect C8Oforms ACLs, and must never expose the raw MCP
+  bearer token to the browser.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
   remotely inside Studio and no local bridge capability/local URL is provided,
   show an integrated local-agent activation message and do not call the remote
