@@ -30,6 +30,7 @@ parallel backend path for a local CLI agent managed by the
 - Provider: `vibe`
 - Per-conversation home: `<workspaceRoot>/agents/vibe/users/<userKey>/conversations/<conversationId>/vibe-home`
 - Codex managed home: `<workspaceRoot>/agents/codex/homes/users/<userKey>/codex-home`
+- Claude managed home: `<workspaceRoot>/agents/claude/homes/users/<userKey>/claude-home`
 - Default Studio user key: `studio`
 - NoCode user key: `u-<sha256-16>` computed from `userId`, so raw logins/emails
   are not written in folder names.

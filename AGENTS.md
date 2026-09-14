@@ -57,7 +57,15 @@ rediscovering the same context.
 
 - Main client file: `js/agent_bridge_client.js`.
 - Bridge project: `c8oprj-lib-convertigo-agent-bridge`.
-- Codex is the priority provider; Vibe remains supported.
+- Codex is the priority provider; Vibe remains supported. Claude Code is the
+  third provider: it follows the Codex resident path (`agent_claude_start` /
+  `agent_claude_prompt`), keeps its session id in `externalSessionId`, and stores
+  its managed home in `claudeHome`. Provider-specific sequence names come from
+  `providerSequence(provider, action)` and resident behaviour from
+  `isResidentProvider(provider)` in `js/agent_bridge_client.js`; do not add new
+  `provider === "codex"` forks for behaviour Claude shares.
+- Claude authentication has no in-app sign-in flow: the bridge copies local
+  Claude credentials, and the UI asks the user to run `claude auth login`.
 - The agent configuration panel shows the managed CLI installed/latest version
   and exposes explicit install, update, and reinstall actions. Opening the panel
   may request a latest-version check cached for six hours under
@@ -199,3 +207,26 @@ rediscovering the same context.
 - Before a demo, verify a fresh Codex conversation can list Convertigo projects
   through the Convertigo Generalist skill and MCP, without using a local
   hardcoded fast path.
+
+## Viewer automation for Claude and Vibe
+
+- `agentStartPayload`, `agentSetupPayload`, and the Claude prompt payload carry
+  the Studio viewer endpoints (`browserDebugUrl`, `playwrightCdpEndpoint`, ...)
+  for every provider. `providerHomeScopeForRun` switches Claude and Vibe to a
+  conversation-scoped home as soon as a viewer endpoint is known, mirroring
+  `codexHomeScopeForRun`.
+- `codexViewerSessionNeedsFreshThread` also covers Claude: a session recorded in
+  a user-scoped `claude-home` cannot be resumed from the viewer-scoped home.
+- The Claude sequence prompt names the `mcp__convertigo__*` and
+  `mcp__playwright__browser_*` tool routes explicitly.
+
+## Prompt attachments
+
+- The prompt footer sends files through `UploadFilesRouter`. With
+  `agentBridgeOperational=true` the uploaded temporary files are copied under
+  `<conversationDir>/attachments/` by `storeAttachments` and returned as `file`
+  entries with a local `path`; the legacy `UploadFiles` (OpenAI Files API) is
+  only used by the hosted assistant. The router never rejects the send chain:
+  errors are reported in `result.errors`.
+- `AgentSendMessage` receives the entries as `AIFiles`; the sequence prompt
+  lists `name=`/`path=` lines so Codex, Vibe, and Claude read the files locally.

@@ -820,7 +820,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function shouldAttachMcpTokenHandle(sequence) {
     return sequence === "agent_codex_setup" || sequence === "agent_codex_start"
-      || sequence === "agent_vibe_setup" || sequence === "agent_vibe_start";
+      || sequence === "agent_vibe_setup" || sequence === "agent_vibe_start"
+      || sequence === "agent_claude_setup" || sequence === "agent_claude_start";
   }
 
   function attachMcpTokenHandle(payload, options) {
@@ -1254,6 +1255,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return value.length ? value : defaultValue;
   }
 
+  function providerHomeScopeForRun(options, primaryName) {
+    if (existingViewerCdpEndpoint(options).length) {
+      return "conversation";
+    }
+    var value = trim(options[primaryName] || options.homeScope || options.scope);
+    return value.length ? value : "user";
+  }
+
   function codexHomeScopeForRun(options) {
     if (existingViewerCdpEndpoint(options).length) {
       return "conversation";
@@ -1281,8 +1290,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!existingViewerCdpEndpoint(options).length) {
       return false;
     }
+    if (normalizeProvider(state.provider) === "claude") {
+      var claudeHome = trim(state.claudeHome);
+      return claudeHome.length && !isConversationScopedClaudeHome(claudeHome);
+    }
     var home = trim(state.codexHome || state.agentHome);
     return home.length && !isConversationScopedCodexHome(home);
+  }
+
+  function isConversationScopedClaudeHome(value) {
+    var text = trim(value).replace(/\\/g, "/");
+    return text.indexOf("/conversations/") >= 0 && /\/claude-home\/?$/.test(text);
   }
 
   function clearCodexExternalSession(state) {
@@ -1340,11 +1358,52 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         serviceTier: state.serviceTier || ""
       };
     }
-    var vibeScope = providerHomeScope(options, "vibeHomeScope", "homeScope", "user");
+    if (provider === "claude") {
+      var claudeScope = providerHomeScopeForRun(options, "claudeHomeScope");
+      return {
+        handle: state.handle,
+        cwd: state.cwd,
+        claudeHome: claudeScope === "conversation" ? "" : trim(options.claudeHome || state.claudeHome),
+        claudeHomeScope: claudeScope,
+        homeScope: claudeScope,
+        conversationId: state.threadid || state.conversationId || "",
+        projectId: state.primaryProject || state.projectId || "",
+        userId: state.userId || state.userKey || "",
+        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+        assistantContext: state.assistantContext || options.assistantContext || "",
+        assistantSurface: state.assistantSurface || options.assistantSurface || "",
+        claudePath: trim(options.claudePath || options.commandPath),
+        install: installRequested ? "true" : "false",
+        nodeVersion: trim(options.nodeVersion),
+        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
+        npmPath: trim(options.npmPath),
+        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
+        claudePackage: trim(options.claudePackage),
+        claudeVersion: trim(options.claudeVersion),
+        forceClaudeInstall: typeof options.forceClaudeInstall === "undefined" ? "" : options.forceClaudeInstall,
+        mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
+        skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
+        mcpEndpoint: state.mcpEndpoint,
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+        agentRevealMode: revealModeOption(options),
+        env: JSON.stringify(env),
+        sessionId: state.externalSessionId || "",
+        claudeSessionId: state.externalSessionId || "",
+        model: state.model || "",
+        reasoningEffort: state.reasoningEffort || ""
+      };
+    }
+    var vibeScope = providerHomeScopeForRun(options, "vibeHomeScope");
     return {
       handle: state.handle,
       cwd: state.cwd,
-      vibeHome: trim(options.vibeHome),
+      vibeHome: vibeScope === "conversation" ? "" : trim(options.vibeHome),
       vibeHomeScope: vibeScope,
       homeScope: vibeScope,
       conversationId: state.threadid || state.conversationId || "",
@@ -1359,6 +1418,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
       env: JSON.stringify(env),
+      browserDebugUrl: trim(options.browserDebugUrl),
+      browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+      browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+      playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+      playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+      viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
       credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
       requestTimeoutMs: "60000"
@@ -1366,7 +1431,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function prewarmCodexAppServer(state, options) {
-    if (!state || normalizeProvider(state.provider) !== "codex") {
+    if (!state || !isResidentProvider(state.provider)) {
       return false;
     }
     if (state.status === "deleted" || state.status === "setup_required") {
@@ -1400,12 +1465,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       saveState(state);
     } catch (_ignorePrewarmSave) {}
 
-    var payload = agentStartPayload(state, options || {}, "codex", false);
+    var prewarmProvider = normalizeProvider(state.provider);
+    var payload = agentStartPayload(state, options || {}, prewarmProvider, false);
     attachMcpTokenHandle(payload, options || {});
+    var prewarmSequence = providerSequence(prewarmProvider, "start");
     var thread = new Thread(new Runnable({
       run: function () {
         try {
-          bridgeCall(bridgeOptions, "agent_codex_start", payload, 90000);
+          bridgeCall(bridgeOptions, prewarmSequence, payload, 90000);
         } catch (_ignorePrewarmCodexStart) {}
       }
     }), "lib_ConvertigoAssistant-codex-prewarm-" + state.threadid);
@@ -1480,7 +1547,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (provider === "mistral-vibe" || provider === "vibe-acp") {
       return "vibe";
     }
+    if (provider === "claude-code" || provider === "anthropic-claude" || provider === "anthropic" || provider === "claude-cli") {
+      return "claude";
+    }
     return provider.length ? safePathPart(provider) : "vibe";
+  }
+
+  function isResidentProvider(provider) {
+    var normalized = normalizeProvider(provider);
+    return normalized === "codex" || normalized === "claude";
+  }
+
+  function providerSequence(provider, action) {
+    var normalized = normalizeProvider(provider);
+    var name = normalized === "codex" ? "codex" : (normalized === "claude" ? "claude" : "vibe");
+    return "agent_" + name + "_" + action;
   }
 
   function normalizeProviderSelector(value) {
@@ -1621,7 +1702,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function providerSearchList(value) {
     var provider = normalizeProviderSelector(value);
     if (provider === "all") {
-      return ["codex", "vibe"];
+      return ["codex", "vibe", "claude"];
     }
     return [provider];
   }
@@ -1633,6 +1714,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (provider === "vibe") {
       return "Vibe";
+    }
+    if (provider === "claude") {
+      return "Claude";
     }
     return provider;
   }
@@ -1749,7 +1833,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function homeLeafForProvider(provider) {
-    return normalizeProvider(provider) === "codex" ? "codex-home" : "vibe-home";
+    var normalized = normalizeProvider(provider);
+    if (normalized === "codex") {
+      return "codex-home";
+    }
+    if (normalized === "claude") {
+      return "claude-home";
+    }
+    return "vibe-home";
   }
 
   function conversationRecordFile(dir) {
@@ -2142,9 +2233,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       reasoningEffort: String(record.reasoningEffort || ""),
       serviceTier: String(record.serviceTier || ""),
       warnings: record.warnings || [],
-      vibeHome: provider === "codex" ? "" : String(record.vibeHome || ""),
-      agentHome: provider === "codex" ? "" : String(record.agentHome || record.vibeHome || ""),
+      vibeHome: isResidentProvider(provider) ? "" : String(record.vibeHome || ""),
+      agentHome: isResidentProvider(provider) ? "" : String(record.agentHome || record.vibeHome || ""),
       codexHome: provider === "codex" ? sanitizeCodexHome(record.codexHome) : "",
+      claudeHome: provider === "claude" ? String(record.claudeHome || "") : "",
       externalSessionId: String(record.externalSessionId || "")
     };
   }
@@ -2305,9 +2397,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectNames: state.projectNames || [],
       workspaceRoot: state.workspaceRoot || "",
       cwd: state.cwd || "",
-      vibeHome: provider === "codex" ? "" : state.vibeHome || "",
-      agentHome: provider === "codex" ? "" : state.agentHome || state.vibeHome || "",
+      vibeHome: isResidentProvider(provider) ? "" : state.vibeHome || "",
+      agentHome: isResidentProvider(provider) ? "" : state.agentHome || state.vibeHome || "",
       codexHome: provider === "codex" ? sanitizeCodexHome(state.codexHome) : "",
+      claudeHome: provider === "claude" ? String(state.claudeHome || "") : "",
       conversationDir: state.conversationDir || "",
       externalSessionId: state.externalSessionId || "",
       createdAt: Number(state.createdAt || now()),
@@ -2786,6 +2879,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function isCodexAuthenticationError(data) {
     var lower = extractAgentErrorText(data, 0).toLowerCase();
     return lower.indexOf("refresh token") !== -1 ||
+      lower.indexOf("not logged in") !== -1 ||
+      lower.indexOf("please run /login") !== -1 ||
+      lower.indexOf("oauth token has expired") !== -1 ||
       lower.indexOf("access token could not be refreshed") !== -1 ||
       lower.indexOf("please log out and sign in again") !== -1 ||
       lower.indexOf("authentication is required before start") !== -1;
@@ -3078,7 +3174,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title = namedTool;
     }
     if (!title.length || isOpaqueCallId(title)) {
-      title = normalizeProvider(state && state.provider) === "codex" ? "Outil Codex" : "Outil";
+      title = normalizeProvider(state && state.provider) === "codex" ? "Outil Codex" : (normalizeProvider(state && state.provider) === "claude" ? "Outil Claude" : "Outil");
     }
     return title;
   }
@@ -3872,7 +3968,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function codexAnswerChunkIsProgress(state, data) {
-    if (normalizeProvider(state && state.provider) !== "codex" || !data) {
+    if (!isResidentProvider(state && state.provider) || !data) {
       return false;
     }
     var text = eventText(data);
@@ -4115,8 +4211,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       ))
     );
     var codexHome = normalizeProvider(provider) === "codex" ? sanitizeCodexHome(options.codexHome || (record && record.codexHome)) : "";
-    var vibeHome = normalizeProvider(provider) === "codex" ? "" : trim(options.vibeHome || options.agentHome || options.codexHome);
-    if (normalizeProvider(provider) !== "codex" && !vibeHome.length) {
+    var claudeHome = normalizeProvider(provider) === "claude" ? trim(options.claudeHome || (record && record.claudeHome)) : "";
+    var vibeHome = isResidentProvider(provider) ? "" : trim(options.vibeHome || options.agentHome || options.codexHome);
+    if (!isResidentProvider(provider) && !vibeHome.length) {
       vibeHome = record && trim(record.agentHome || record.vibeHome).length ? trim(record.agentHome || record.vibeHome) : childPath(conversationDir, homeLeafForProvider(provider));
     }
     var model = normalizeModel(provider, options.model || options.agentModel || (record && record.model));
@@ -4150,8 +4247,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       cwd: trim(options.cwd) || (record && trim(record.cwd)) || workspaceRoot,
       userKey: userKey,
       codexHome: codexHome,
+      claudeHome: claudeHome,
       vibeHome: vibeHome,
-      agentHome: normalizeProvider(provider) === "codex" ? "" : vibeHome,
+      agentHome: isResidentProvider(provider) ? "" : vibeHome,
       conversationDir: filePath(conversationDir),
       conversationFile: filePath(conversationRecordFile(conversationDir)),
       transcriptFile: filePath(conversationTranscriptFile(conversationDir)),
@@ -4202,9 +4300,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       conversationId: state.conversationId || state.threadid,
       userKey: state.userKey || "studio",
       workspaceRoot: state.workspaceRoot || "",
-      vibeHome: normalizeProvider(state.provider) === "codex" ? "" : state.vibeHome,
-      agentHome: normalizeProvider(state.provider) === "codex" ? "" : state.agentHome || state.vibeHome || "",
+      vibeHome: isResidentProvider(state.provider) ? "" : state.vibeHome,
+      agentHome: isResidentProvider(state.provider) ? "" : state.agentHome || state.vibeHome || "",
       codexHome: normalizeProvider(state.provider) === "codex" ? sanitizeCodexHome(state.codexHome) : "",
+      claudeHome: normalizeProvider(state.provider) === "claude" ? String(state.claudeHome || "") : "",
       conversationDir: state.conversationDir || "",
       externalSessionId: state.externalSessionId || "",
       projectId: state.projectId,
@@ -4312,6 +4411,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (normalizeProvider(provider) === "vibe" && trim(options.installVibe).length) {
       return boolValue(options.installVibe, false);
     }
+    if (normalizeProvider(provider) === "claude" && trim(options.installClaude).length) {
+      return boolValue(options.installClaude, false);
+    }
     return false;
   }
 
@@ -4322,7 +4424,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (trim(state.externalSessionId || state.codexThreadId || state.sessionId).length) {
       return false;
     }
-    if (boolValue(options.forceCodexInstall || options.forceVibeInstall || options.forceInstall || options.forceAgentInstall, false)) {
+    if (boolValue(options.forceCodexInstall || options.forceVibeInstall || options.forceClaudeInstall || options.forceInstall || options.forceAgentInstall, false)) {
       return true;
     }
     return state.setupRequired === true || !trim(state.setupReport && state.setupReport.status).length;
@@ -4331,7 +4433,43 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function agentSetupPayload(state, options, installOverride) {
     options = options || {};
     var provider = normalizeProvider(state.provider);
-    var install = typeof installOverride === "undefined" ? boolValue(options.install || options.installCodex || options.installVibe, false) : installOverride === true;
+    var install = typeof installOverride === "undefined" ? boolValue(options.install || options.installCodex || options.installVibe || options.installClaude, false) : installOverride === true;
+    if (provider === "claude") {
+      var claudeSetupScope = providerHomeScopeForRun(options, "claudeHomeScope");
+      return {
+        claudeHome: claudeSetupScope === "conversation" ? "" : trim(options.claudeHome || state.claudeHome),
+        claudeHomeScope: claudeSetupScope,
+        homeScope: claudeSetupScope,
+        conversationId: state.threadid || state.conversationId || "",
+        projectId: state.primaryProject || state.projectId || "",
+        userId: state.userId || state.userKey || "",
+        agentProfile: state.agentProfile || state.skillProfile || options.agentProfile || options.skillProfile || "",
+        skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
+        assistantContext: state.assistantContext || options.assistantContext || "",
+        assistantSurface: state.assistantSurface || options.assistantSurface || "",
+        claudePath: trim(options.claudePath || options.commandPath),
+        install: install ? "true" : "false",
+        nodeVersion: trim(options.nodeVersion),
+        nodeDir: trim(options.nodeDir || options.nodeInstallDir),
+        npmPath: trim(options.npmPath),
+        allowNodeDownload: typeof options.allowNodeDownload === "undefined" ? "" : options.allowNodeDownload,
+        claudePackage: trim(options.claudePackage),
+        claudeVersion: trim(options.claudeVersion),
+        forceClaudeInstall: typeof options.forceClaudeInstall === "undefined" ? "" : options.forceClaudeInstall,
+        mcpSkillsSourceDir: trim(options.mcpSkillsSourceDir || options.skillsSourceDir || options.convertigoMcpDir),
+        skipSkillsInstall: typeof options.skipSkillsInstall === "undefined" ? "" : options.skipSkillsInstall,
+        mcpEndpoint: state.mcpEndpoint,
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+        agentRevealMode: revealModeOption(options),
+        model: state.model || "",
+        reasoningEffort: state.reasoningEffort || ""
+      };
+    }
     if (provider === "codex") {
       var codexScope = codexHomeScopeForRun(options);
       return {
@@ -4373,14 +4511,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         serviceTier: state.serviceTier || ""
       };
     }
-    var vibeScope = trim(options.vibeHomeScope || options.homeScope);
-    if (!vibeScope.length) {
-      vibeScope = "user";
-    }
+    var vibeScope = providerHomeScopeForRun(options, "vibeHomeScope");
     return {
       install: install ? "true" : "false",
       configure: "true",
-      vibeHome: trim(options.vibeHome),
+      browserDebugUrl: trim(options.browserDebugUrl),
+      browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+      browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+      playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+      playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+      viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+      vibeHome: vibeScope === "conversation" ? "" : trim(options.vibeHome),
       vibeHomeScope: vibeScope,
       homeScope: vibeScope,
       conversationId: state.threadid || state.conversationId || "",
@@ -4412,7 +4553,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function callAgentSetup(state, options, installOverride) {
     var provider = normalizeProvider(state.provider);
-    var setupSequence = provider === "codex" ? "agent_codex_setup" : "agent_vibe_setup";
+    var setupSequence = providerSequence(provider, "setup");
     var setup = bridgeCall(state, setupSequence, agentSetupPayload(state, options, installOverride), 900000);
     return {
       provider: provider,
@@ -4457,7 +4598,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       boolValue(options.forceRuntimeUpdate, false) ||
       boolValue(options.forceUpdate, false) ||
       boolValue(options.forceCodexInstall, false) ||
-      boolValue(options.forceVibeInstall, false);
+      boolValue(options.forceVibeInstall, false) ||
+      boolValue(options.forceClaudeInstall, false);
   }
 
   function stateForRuntimeSetup(providerSetup, options) {
@@ -4552,6 +4694,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (normalizeProvider(state.provider) === "codex") {
         lines.push(state.language === "fr" ? "Codex est installé, mais aucune authentification utilisable n'a été trouvée." : "Codex is installed, but no usable authentication was found.");
         lines.push(state.language === "fr" ? "Connectez-vous avec Codex Desktop ou lancez `codex login`, puis revenez dans cette configuration." : "Sign in with Codex Desktop or run `codex login`, then return to this configuration.");
+      } else if (normalizeProvider(state.provider) === "claude") {
+        lines.push(state.language === "fr" ? "Claude Code est installé, mais aucune authentification utilisable n'a été trouvée." : "Claude Code is installed, but no usable authentication was found.");
+        lines.push(state.language === "fr" ? "Lancez `claude auth login` (ou `claude setup-token`) sur ce poste, puis revenez dans cette configuration." : "Run `claude auth login` (or `claude setup-token`) on this workstation, then return to this configuration.");
       } else {
         lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");
         lines.push(state.language === "fr" ? "Ajoutez `MISTRAL_API_KEY` au profil Vibe (`~/.vibe/.env`), puis revenez dans cette configuration." : "Add `MISTRAL_API_KEY` to the Vibe profile (`~/.vibe/.env`), then return to this configuration.");
@@ -4919,6 +5064,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (updateRequested) {
       if (normalizeProvider(state.provider) === "codex") {
         options.forceCodexInstall = true;
+      } else if (normalizeProvider(state.provider) === "claude") {
+        options.forceClaudeInstall = true;
       } else {
         options.forceVibeInstall = true;
       }
@@ -5034,6 +5181,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  function attachedImagePaths(value) {
+    var files = parseSequenceFiles(value);
+    var paths = [];
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i] || {};
+      var path = sequenceFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath"]);
+      var type = sequenceFileValue(file, ["type", "mime", "mimeType", "content_type", "contentType"]).toLowerCase();
+      var name = sequenceFileValue(file, ["filename", "name", "file_name"]).toLowerCase();
+      var isImage = type.indexOf("image/") === 0 || /\.(png|jpe?g|gif|webp)$/.test(name) || /\.(png|jpe?g|gif|webp)$/.test(path.toLowerCase());
+      if (path.length && isImage && paths.indexOf(path) === -1) {
+        paths.push(path);
+      }
+    }
+    return paths;
+  }
+
   function sequenceAttachmentLine(file, index) {
     var label = sequenceFileValue(file, ["filename", "name", "file_name", "id", "object"]);
     var path = sequenceFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath", "file"]);
@@ -5142,6 +5305,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Managed JxBrowser proof routes are `tools.mcp__playwright__browser_tabs`, `tools.mcp__playwright__browser_find`, and `tools.mcp__playwright__browser_evaluate`. Call them directly and do not enumerate Playwright metadata.");
       promptParts.push("- Named Convertigo resources are read directly with `read_mcp_resource({server:\"convertigo\",uri:...})`; do not enumerate resource catalogs first.");
     }
+    if (normalizedProvider === "claude" && !isNoCodeSurface) {
+      promptParts.push("- Convertigo MCP tools are exposed as `mcp__convertigo__<tool-name>` (for example `mcp__convertigo__project-list`, `mcp__convertigo__mobile-builder-open`, `mcp__convertigo__databaseobject-tree-apply`, `mcp__convertigo__batch-call`). Use them directly; do not search the filesystem for tool definitions.");
+      promptParts.push("- Managed JxBrowser proof routes are `mcp__playwright__browser_tabs`, `mcp__playwright__browser_snapshot`, `mcp__playwright__browser_click`, and `mcp__playwright__browser_evaluate`, attached to the Studio viewer over CDP. Use them only after `mobile-builder-open` reports `browserDebugPortMatched:true` and `browserControlReady:true`, and never open another browser, tab, or page.");
+    }
     var viewerControlReady = boolValue(options.browserControlReady, true);
     var viewerCdpEndpoint = viewerControlReady ? existingViewerCdpEndpoint(options) : "";
     var establishedAgentFollowup = boolValue(options.establishedAgentFollowup, false);
@@ -5219,6 +5386,132 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push(String(rawQuestion));
     return promptParts.join("\n");
   }
+
+  function attachmentPathList(value) {
+    var out = [];
+    var push = function (item) {
+      var text = trim(item);
+      if (text.length && out.indexOf(text) === -1) {
+        out.push(text);
+      }
+    };
+    if (value === null || typeof value === "undefined") {
+      return out;
+    }
+    if (typeof value === "string") {
+      var text = trim(value);
+      if (text.indexOf("[") === 0) {
+        try {
+          var parsed = JSON.parse(text);
+          for (var p = 0; p < parsed.length; p++) {
+            push(parsed[p]);
+          }
+          return out;
+        } catch (_ignoreAttachmentJson) {}
+      }
+      push(text);
+      return out;
+    }
+    try {
+      var length = Number(value.length);
+      if (!isNaN(length)) {
+        for (var i = 0; i < length; i++) {
+          push(value[i]);
+        }
+        return out;
+      }
+    } catch (_ignoreAttachmentLength) {}
+    push(String(value));
+    return out;
+  }
+
+  function attachmentMimeType(name) {
+    var lower = String(name || "").toLowerCase();
+    var extension = lower.lastIndexOf(".") >= 0 ? lower.substring(lower.lastIndexOf(".") + 1) : "";
+    var types = {
+      png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml",
+      pdf: "application/pdf", txt: "text/plain", md: "text/markdown", csv: "text/csv", json: "application/json",
+      yaml: "text/yaml", yml: "text/yaml", xml: "application/xml", html: "text/html", js: "text/javascript", ts: "text/typescript",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      zip: "application/zip"
+    };
+    return types[extension] || "application/octet-stream";
+  }
+
+  function attachmentTargetDirectory(options) {
+    var workspaceRoot = resolveWorkspaceRoot(options);
+    var threadid = normalizeConversationId(options.threadid || options.conversationId);
+    var userKey = normalizeUserKey(options.userId);
+    if (threadid.length) {
+      var record = readConversationRecord(workspaceRoot, userKey, threadid, "all");
+      if (record && trim(record.conversationDir).length) {
+        return new File(new File(String(record.conversationDir)), "attachments");
+      }
+      var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "";
+      if (provider.length) {
+        return new File(conversationDirectory(workspaceRoot, userKey, threadid, provider), "attachments");
+      }
+    }
+    return new File(new File(new File(new File(workspaceRoot, "agents"), "attachments"), userKey), safePathPart(threadid || "shared"));
+  }
+
+  // Local agents (Codex, Vibe, Claude) read attachments from disk: the uploaded
+  // temporary files are copied under the conversation folder and their local
+  // paths are returned as `file` entries, mirroring the legacy UploadFiles shape.
+  C8O.assistantAgentBridge.storeAttachments = function (options) {
+    options = options || {};
+    var stored = [];
+    var errors = [];
+    var sources = attachmentPathList(options.files).concat(attachmentPathList(options.attachments));
+    var targetDir = null;
+    try {
+      targetDir = attachmentTargetDirectory(options);
+      if (sources.length) {
+        targetDir.mkdirs();
+      }
+    } catch (dirError) {
+      errors.push(String(dirError));
+    }
+    for (var i = 0; i < sources.length && targetDir !== null; i++) {
+      var source = new File(sources[i]);
+      if (!source.isFile()) {
+        errors.push("Uploaded file not found: " + sources[i]);
+        continue;
+      }
+      try {
+        var baseName = safePathPart(String(source.getName())) || ("attachment-" + (i + 1));
+        var target = new File(targetDir, baseName);
+        var suffix = 1;
+        while (target.exists()) {
+          var dot = baseName.lastIndexOf(".");
+          var stem = dot > 0 ? baseName.substring(0, dot) : baseName;
+          var extension = dot > 0 ? baseName.substring(dot) : "";
+          target = new File(targetDir, stem + "-" + (++suffix) + extension);
+        }
+        Packages.java.nio.file.Files.copy(source.toPath(), target.toPath());
+        stored.push({
+          filename: String(target.getName()),
+          path: filePath(target),
+          type: attachmentMimeType(target.getName()),
+          bytes: Number(target.length()),
+          object: "file"
+        });
+        try { source["delete"](); } catch (_ignoreTempDelete) {}
+      } catch (copyError) {
+        errors.push(String(copyError));
+      }
+    }
+    return {
+      ok: errors.length === 0,
+      status: errors.length ? (stored.length ? "partial" : "error") : "ok",
+      mode: "local",
+      directory: targetDir === null ? "" : filePath(targetDir),
+      file: stored,
+      errors: errors
+    };
+  };
 
   C8O.assistantAgentBridge.sendMessageFromSequenceScope = function (scope) {
     var names = [
@@ -5354,10 +5647,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     try {
       var provider = runProvider;
-      var startSequence = provider === "codex" ? "agent_codex_start" : "agent_vibe_start";
-      var promptSequence = provider === "codex" ? "agent_codex_prompt" : "agent_vibe_prompt";
+      var startSequence = providerSequence(provider, "start");
+      var promptSequence = providerSequence(provider, "prompt");
+      var closeSequence = providerSequence(provider, "close");
       var installRequested = runInstallRequested;
-      if (provider !== "codex") {
+      if (!isResidentProvider(provider)) {
         var setupInfo = callAgentSetup(state, options, installRequested);
         var setup = setupInfo.result || {};
         if (setup.ok === false) {
@@ -5398,7 +5692,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (cancellationRequested(state.threadid)) {
         return cancelledRunResponse(state);
       }
-      if (provider === "codex" && codexViewerSessionNeedsFreshThread(options, state)) {
+      if (isResidentProvider(provider) && codexViewerSessionNeedsFreshThread(options, state)) {
         clearCodexExternalSession(state);
       }
 
@@ -5419,26 +5713,49 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         bypassApprovalsAndSandbox: typeof options.bypassApprovalsAndSandbox === "undefined" ? "true" : options.bypassApprovalsAndSandbox,
         sandbox: trim(options.sandbox),
         agentRevealMode: revealModeOption(options)
+      } : (provider === "claude" ? {
+        handle: state.handle,
+        prompt: question,
+        browserDebugUrl: trim(options.browserDebugUrl),
+        browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
+        browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
+        playwrightCdpEndpoint: trim(options.playwrightCdpEndpoint || options.viewerCdpEndpoint),
+        playwrightMcpEndpoint: trim(options.playwrightMcpEndpoint),
+        viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
+
+        sessionId: state.externalSessionId || "",
+        claudeSessionId: state.externalSessionId || "",
+        model: state.model || "",
+        reasoningEffort: state.reasoningEffort || "",
+        agentRevealMode: revealModeOption(options)
       } : {
         handle: state.handle,
         prompt: question,
         model: state.model || "",
+        images: JSON.stringify(attachedImagePaths(options.AIFiles)),
         agentRevealMode: revealModeOption(options),
         waitForCompletion: "false"
-      };
+      });
       var prompt = null;
-      if (provider === "codex" && trim(state.externalSessionId).length) {
+      if (isResidentProvider(provider) && trim(state.externalSessionId).length) {
         var ensureStarted = bridgeCall(state, startSequence, startPayload, 90000);
         if (ensureStarted.ok === false) {
           throw new Error(ensureStarted.error || startSequence + " failed");
         }
         rememberCodexSessionFromResult(state, ensureStarted);
-        promptPayload.codexThreadId = state.externalSessionId || promptPayload.codexThreadId;
+        if (provider === "codex") {
+          promptPayload.codexThreadId = state.externalSessionId || promptPayload.codexThreadId;
+        } else {
+          promptPayload.sessionId = state.externalSessionId || promptPayload.sessionId;
+          promptPayload.claudeSessionId = promptPayload.sessionId;
+        }
         prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
         if (prompt.ok === false && codexPromptRequiresStart(prompt)) {
-          if (existingViewerCdpEndpoint(options).length) {
+          if (isResidentProvider(provider) && existingViewerCdpEndpoint(options).length) {
             clearCodexExternalSession(state);
             promptPayload.codexThreadId = "";
+            promptPayload.sessionId = "";
+            promptPayload.claudeSessionId = "";
           }
           prompt = null;
         } else if (prompt.ok === false) {
@@ -5452,7 +5769,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (start.ok === false) {
           throw new Error(start.error || startSequence + " failed");
         }
-        if (provider === "codex" && start.setup) {
+        if (isResidentProvider(provider) && start.setup) {
           state.setupReport = publicSetupReport(start.setup);
         }
         if (provider === "vibe" && start.state) {
@@ -5466,9 +5783,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           state.agentHome = "";
           state.vibeHome = "";
         }
+        if (provider === "claude" && startedHome && trim(startedHome.path).length) {
+          state.claudeHome = trim(startedHome.path);
+          state.agentHome = "";
+          state.vibeHome = "";
+        }
         if (cancellationRequested(state.threadid)) {
           try {
-            bridgeCall(state, provider === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+            bridgeCall(state, closeSequence, {
               handle: state.handle
             }, 15000);
           } catch (_ignoreCloseAfterStartCancel) {}
@@ -5476,18 +5798,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         if (provider === "codex") {
           promptPayload.codexThreadId = state.externalSessionId || "";
+        } else if (provider === "claude") {
+          promptPayload.sessionId = state.externalSessionId || "";
+          promptPayload.claudeSessionId = promptPayload.sessionId;
         }
         prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
       }
       if (prompt.ok === false) {
         throw new Error(prompt.error || promptSequence + " failed");
       }
-      if (provider === "codex") {
+      if (isResidentProvider(provider)) {
         rememberCodexSessionFromResult(state, prompt);
       }
       if (cancellationRequested(state.threadid)) {
         try {
-          bridgeCall(state, provider === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+          bridgeCall(state, closeSequence, {
             handle: state.handle
           }, 15000);
         } catch (_ignoreCloseAfterPromptCancel) {}
@@ -5534,7 +5859,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         };
       }
       state.status = "failed";
-      if (provider === "codex" && isCodexAuthenticationError(String(e))) {
+      if (isResidentProvider(provider) && isCodexAuthenticationError(String(e))) {
         state.error = lang(state).codexAuthExpired;
         state.setupRequired = true;
         state.setupReport = {
@@ -5604,7 +5929,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = recoverState(options, threadid);
     }
     state = ensureState(state);
-    if (!isTerminalStatus(state.status) && normalizeProvider(state.provider) === "codex" && trim(state.answer).length && state.answerIsFinal !== true) {
+    if (!isTerminalStatus(state.status) && isResidentProvider(state.provider) && trim(state.answer).length && state.answerIsFinal !== true) {
       state.answer = "";
     }
     if (state.status === "completed" || state.status === "failed" || state.status === "cancelled" || state.status === "closed" || state.status === "deleted") {
@@ -5719,7 +6044,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
           state.status = "failed";
           state.error = userFacingAgentError(state, data);
-          if (normalizeProvider(state.provider) === "codex" && isCodexAuthenticationError(data)) {
+          if (isResidentProvider(state.provider) && isCodexAuthenticationError(data)) {
             state.setupRequired = true;
             state.setupReport = {
               ok: false,
@@ -5887,7 +6212,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var bridge = {};
     var cleanup = {};
     try {
-      bridge = bridgeCall(state, normalizeProvider(state.provider) === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+      bridge = bridgeCall(state, providerSequence(state.provider, "close"), {
         handle: state.handle
       }, 15000);
     } catch (e) {
@@ -6083,7 +6408,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     markCancellationRequested(threadid);
     var bridge = {};
     try {
-      bridge = bridgeCall(state, normalizeProvider(state.provider) === "codex" ? "agent_codex_close" : "agent_vibe_close", {
+      bridge = bridgeCall(state, providerSequence(state.provider, "close"), {
         handle: state.handle
       }, 15000);
     } catch (e) {

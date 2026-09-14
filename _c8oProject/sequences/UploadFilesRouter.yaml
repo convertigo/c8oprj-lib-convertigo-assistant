@@ -1,0 +1,168 @@
+comment: Static requestable router for prompt attachments. In local agent mode the uploaded files are copied under the conversation folder and their local paths are returned; otherwise the legacy OpenAI UploadFiles sequence is used.
+responseTimeout: 120
+↓Route [steps.SimpleStep-1789382489449]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    var HashMap = Packages.java.util.HashMap;
+    var InternalRequester = Packages.com.twinsoft.convertigo.engine.requesters.InternalRequester;
+    var XMLUtils = Packages.com.twinsoft.convertigo.engine.util.XMLUtils;
+    var JsonOutput = Packages.com.twinsoft.convertigo.engine.enums.JsonOutput;
+    var Engine = Packages.com.twinsoft.convertigo.engine.Engine;
+    var System = Packages.java.lang.System;
+    
+    function routerTrim(value) {
+      return value === null || typeof value === "undefined" ? "" : String(value).replace(/^\s+|\s+$/g, "");
+    }
+    
+    function routerTruthy(value) {
+      var text = routerTrim(value).toLowerCase();
+      return text === "true" || text === "1" || text === "yes" || text === "on";
+    }
+    
+    function routerList(value) {
+      var out = [];
+      if (value === null || typeof value === "undefined") {
+        return out;
+      }
+      if (typeof value === "string") {
+        if (routerTrim(value).length) {
+          out.push(routerTrim(value));
+        }
+        return out;
+      }
+      try {
+        var length = Number(value.length);
+        if (!isNaN(length)) {
+          for (var i = 0; i < length; i++) {
+            var item = routerTrim(value[i]);
+            if (item.length) {
+              out.push(item);
+            }
+          }
+          return out;
+        }
+      } catch (e) {}
+      if (routerTrim(value).length) {
+        out.push(routerTrim(value));
+      }
+      return out;
+    }
+    
+    function routerValue(name) {
+      try {
+        var request = context.httpServletRequest;
+        if (request !== null && typeof request !== "undefined") {
+          var values = request.getParameterValues(name);
+          if (values !== null && typeof values !== "undefined") {
+            return routerList(values);
+          }
+        }
+      } catch (e) {}
+      return [];
+    }
+    
+    function routerUnwrap(response) {
+      if (response && response.document) {
+        return response.document;
+      }
+      return response || {};
+    }
+    
+    function routerCallLegacy(fileValues, attachmentValues) {
+      var params = new HashMap();
+      var projectArray = java.lang.reflect.Array.newInstance(java.lang.String, 1);
+      projectArray[0] = "lib_ConvertigoAssistant";
+      params.put("__project", projectArray);
+      params.put("__sequence", "UploadFiles");
+      params.put("__context", "upload_router_" + String(System.currentTimeMillis()));
+      var toArray = function (values) {
+        var array = java.lang.reflect.Array.newInstance(java.lang.String, values.length);
+        for (var i = 0; i < values.length; i++) {
+          array[i] = String(values[i]);
+        }
+        return array;
+      };
+      if (fileValues.length) {
+        params.put("files", toArray(fileValues));
+      }
+      if (attachmentValues.length) {
+        params.put("attachments", toArray(attachmentValues));
+      }
+      var requester = new InternalRequester(params, context.httpServletRequest);
+      try {
+        var response = requester.processRequest();
+        var json = JSON.parse(XMLUtils.XmlToJson(response.getDocumentElement(), true, true, JsonOutput.JsonRoot.docNode).toString());
+        var document = routerUnwrap(json);
+        var files = document && document.file ? document.file : [];
+        if (files && typeof files.length === "undefined") {
+          files = [files];
+        }
+        return { ok: true, status: "ok", mode: "openai", file: files || [], errors: [] };
+      } finally {
+        try {
+          Engine.theApp.contextManager.remove(requester.getContext());
+        } catch (e) {}
+      }
+    }
+    
+    var routerFiles = routerList(typeof files === "undefined" ? null : files);
+    if (!routerFiles.length) {
+      routerFiles = routerValue("files");
+    }
+    var routerAttachments = routerList(typeof attachments === "undefined" ? null : attachments);
+    if (!routerAttachments.length) {
+      routerAttachments = routerValue("attachments");
+    }
+    var routerAgentMode = routerTruthy(typeof agentBridgeOperational === "undefined" ? "" : agentBridgeOperational);
+    try {
+      if (!routerFiles.length && !routerAttachments.length) {
+        result = { ok: true, status: "empty", mode: routerAgentMode ? "local" : "openai", file: [], errors: [] };
+      } else if (routerAgentMode) {
+        result = C8O.assistantAgentBridge.storeAttachments({
+          files: routerFiles,
+          attachments: routerAttachments,
+          threadid: typeof threadid === "undefined" ? "" : threadid,
+          userId: typeof userId === "undefined" ? "" : userId,
+          provider: typeof provider === "undefined" ? "" : provider,
+          workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot
+        });
+      } else {
+        result = routerCallLegacy(routerFiles, routerAttachments);
+      }
+    } catch (routerError) {
+      result = { ok: false, status: "error", mode: routerAgentMode ? "local" : "openai", file: [], errors: [String(routerError)] };
+    }'
+↓result [steps.JsonToXmlStep-1789382489452]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓files [variables.RequestableMultiValuedVariable-1789382489456]: 
+  comment: Uploaded image files (temporary server paths).
+  description: Uploaded image files (temporary server paths).
+↓attachments [variables.RequestableMultiValuedVariable-1789382489458]: 
+  comment: Uploaded attachment files (temporary server paths).
+  description: Uploaded attachment files (temporary server paths).
+↓agentBridgeOperational [variables.RequestableVariable-1789382489460]: 
+  comment: 'true when the local Agent Bridge is used: files are stored under the conversation folder instead of being sent to OpenAI.'
+  description: 'true when the local Agent Bridge is used: files are stored under the conversation folder instead of being sent to OpenAI.'
+↓threadid [variables.RequestableVariable-1789382489462]: 
+  comment: Agent conversation id used to locate the conversation folder.
+  description: Agent conversation id used to locate the conversation folder.
+↓userId [variables.RequestableVariable-1789382489464]: 
+  comment: Assistant user id (studio by default).
+  description: Assistant user id (studio by default).
+↓provider [variables.RequestableVariable-1789382489466]: 
+  comment: Optional agent provider used when the conversation record does not exist yet.
+  description: Optional agent provider used when the conversation record does not exist yet.
+↓workspaceRoot [variables.RequestableVariable-1789382489468]: 
+  comment: Optional Convertigo workspace root override.
+  description: Optional Convertigo workspace root override.

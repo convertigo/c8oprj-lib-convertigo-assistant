@@ -22,6 +22,8 @@ responseTimeout: 900
       agentHome: typeof agentHome === "undefined" ? "" : agentHome,
       codexHome: typeof codexHome === "undefined" ? "" : codexHome,
       codexHomeScope: typeof codexHomeScope === "undefined" ? "" : codexHomeScope,
+      claudeHome: typeof claudeHome === "undefined" ? "" : claudeHome,
+      claudeHomeScope: typeof claudeHomeScope === "undefined" ? "" : claudeHomeScope,
       homeScope: typeof homeScope === "undefined" ? "" : homeScope,
       agentProfile: _agentProfile,
       skillProfile: _skillProfile,
@@ -40,10 +42,13 @@ responseTimeout: 900
       forceLogin: typeof forceLogin === "undefined" ? "" : forceLogin,
       installCodex: typeof installCodex === "undefined" ? "" : installCodex,
       installVibe: typeof installVibe === "undefined" ? "" : installVibe,
+      installClaude: typeof installClaude === "undefined" ? "" : installClaude,
       forceCodexInstall: typeof forceCodexInstall === "undefined" ? "" : forceCodexInstall,
       forceVibeInstall: typeof forceVibeInstall === "undefined" ? "" : forceVibeInstall,
+      forceClaudeInstall: typeof forceClaudeInstall === "undefined" ? "" : forceClaudeInstall,
       forcePythonInstall: typeof forcePythonInstall === "undefined" ? "" : forcePythonInstall,
       codexPath: typeof codexPath === "undefined" ? "" : codexPath,
+      claudePath: typeof claudePath === "undefined" ? "" : claudePath,
       nodeVersion: typeof nodeVersion === "undefined" ? "" : nodeVersion,
       nodeDir: typeof nodeDir === "undefined" ? "" : nodeDir,
       npmPath: typeof npmPath === "undefined" ? "" : npmPath,
@@ -273,4 +278,21 @@ responseTimeout: 900
 ↓updateRuntime [variables.RequestableVariable-1788513000001]: 
   comment: Marks a provider runtime installation or update that must not reuse conversation, project, or viewer context.
   description: Marks a provider runtime installation or update that must not reuse conversation, project, or viewer context.
+  schemaType: xsd:boolean
+↓claudeHome [variables.RequestableVariable-1789370036679]: 
+  comment: Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+  description: Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+↓claudeHomeScope [variables.RequestableVariable-1789370036701]: 
+  comment: 'Optional Claude home scope: default, shared, user, conversation, or explicit.'
+  description: 'Optional Claude home scope: default, shared, user, conversation, or explicit.'
+↓claudePath [variables.RequestableVariable-1789370036734]: 
+  comment: Optional Claude Code CLI executable path.
+  description: Optional Claude Code CLI executable path.
+↓installClaude [variables.RequestableVariable-1789370036774]: 
+  comment: When true, installs the Claude Code runtime if it is missing.
+  description: When true, installs the Claude Code runtime if it is missing.
+  schemaType: xsd:boolean
+↓forceClaudeInstall [variables.RequestableVariable-1789370036794]: 
+  comment: When true, reinstall the Claude Code runtime even when found.
+  description: When true, reinstall the Claude Code runtime even when found.
   schemaType: xsd:boolean

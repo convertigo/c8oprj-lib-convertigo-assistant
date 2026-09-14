@@ -57,9 +57,9 @@ assert.doesNotMatch(runtimeUpdateBlock[0], /getEffectiveProjectName/);
 assert.match(setupSequenceSource, /updateRuntime: typeof updateRuntime === "undefined" \? "" : updateRuntime/);
 assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/);
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
-assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.5", tag: "v0\.2\.5"/);
-assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.4", tag: "v0\.4\.4"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.8", tag: "v1\.4\.8"/);
+assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.6", tag: "v0\.2\.6"/);
+assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.5", tag: "v0\.4\.5"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.9", tag: "v1\.4\.9"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
@@ -228,3 +228,35 @@ global.context = {};
 assert.equal(testApi.bridgeSessionCookie({}, "commands"), "");
 
 console.log("Assistant routing contract OK");
+
+// Claude provider routing.
+const claudeTest = C8O.assistantAgentBridge._test;
+assert.match(source, /function providerSequence\(provider, action\)/);
+assert.match(source, /function isResidentProvider\(provider\)/);
+assert.doesNotMatch(source, /"agent_codex_close" : "agent_vibe_close"/);
+assert.match(source, /claudeHome: provider === "claude" \? String\(record\.claudeHome \|\| ""\) : ""/);
+assert.equal(claudeTest.shouldInstallForRun({ installClaude: "true" }, "claude"), true);
+assert.equal(claudeTest.shouldInstallForRun({ installCodex: "true" }, "claude"), false);
+assert.equal(claudeTest.runtimeSetupRequested({ forceClaudeInstall: true }), true);
+const claudeSetupState = claudeTest.stateForExplicitProviderSetup({ provider: "vibe", threadid: "t1", handle: "h1" }, { provider: "claude-code" });
+assert.equal(claudeSetupState.state.provider, "claude");
+assert.equal(claudeSetupState.isolated, true);
+const setupSequenceClaude = fs.readFileSync("_c8oProject/sequences/AgentSetup.yaml", "utf8");
+assert.match(setupSequenceClaude, /installClaude: typeof installClaude === "undefined" \? "" : installClaude/);
+assert.match(setupSequenceClaude, /claudeHomeScope: typeof claudeHomeScope === "undefined" \? "" : claudeHomeScope/);
+const pageSourceClaude = fs.readFileSync("_c8oProject/mobilePages/Page.yaml", "utf8");
+assert.match(pageSourceClaude, /↓ClaudeButton \[ngx\.components\.UIDynamicElement-/);
+assert.match(pageSourceClaude, /Agent_Auth_Claude_Required/);
+console.log("Assistant Claude routing OK");
+
+// Prompt attachments: local agents read files from the conversation folder instead of OpenAI Files.
+const routerSequenceSource = fs.readFileSync("_c8oProject/sequences/UploadFilesRouter.yaml", "utf8");
+assert.match(routerSequenceSource, /storeAttachments\(/, "the upload router must store attachments locally in agent mode");
+assert.match(routerSequenceSource, /"UploadFiles"/, "the upload router must keep the legacy OpenAI upload for the hosted assistant");
+assert.match(pageSource, /requestable":"plain:lib_ConvertigoAssistant\.UploadFilesRouter"/, "the prompt footer must call the upload router");
+assert.match(pageSource, /"path\\":\\"\?\.result\.file\\"/, "the upload loop must iterate the router result");
+assert.equal(typeof C8O.assistantAgentBridge.storeAttachments, "function");
+const emptyStore = C8O.assistantAgentBridge.storeAttachments({ threadid: "", userId: "studio", files: [], attachments: [] });
+assert.equal(emptyStore.status, "ok");
+assert.deepEqual(emptyStore.file, []);
+console.log("Assistant attachment routing OK");
