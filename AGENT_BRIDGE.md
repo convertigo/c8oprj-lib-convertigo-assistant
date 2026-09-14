@@ -134,3 +134,19 @@ message:
 
 The next UI step is to improve the conversation list labels with richer
 previews and dates, now that resume/history behavior is functional.
+
+## Browser sign-in
+
+When a resident provider reports `authentication_required` (setup, start or a
+`turn/error` recognised by `isCodexAuthenticationError`), the runtime panel
+turns its action button into a sign-in button for the selected provider
+(`Agent_Auth_<Provider>_Connect`). The button calls `AgentSetup` with
+`login=true` / `forceLogin=true`; the client forwards it to the bridge setup
+sequence of the provider (`codexLogin`, `claudeLogin`, `vibeLogin`), opens the
+returned `verificationUrl` in the user's browser through the host
+(`openAgentExternalUrl`), then polls with `loginStatus=true` every second until
+`authenticated`, an error, or a 10 minute timeout. Codex runs `codex login`,
+Claude runs `claude auth login`, Vibe drives the Mistral AI Studio browser
+sign-in headlessly; credentials always land in the user scoped managed home.
+`state.setupReport.authentication.action` is `codex_login`, `claude_login` or
+`vibe_login` accordingly (`providerLoginAction`).

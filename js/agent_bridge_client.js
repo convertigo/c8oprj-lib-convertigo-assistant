@@ -2781,7 +2781,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour du traitement.",
       bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
-      codexAuthExpired: "L'authentification Codex du profil local a expiré. Le bridge a resynchronisé les identifiants disponibles, mais ils ne permettent pas d'ouvrir une session. Ouvrez Codex Desktop ou lancez `codex login`, puis renvoyez la demande.",
+      codexAuthExpired: "L'authentification du profil local de l'agent a expiré ou est absente. Utilisez le bouton de connexion de la configuration de l'agent pour vous authentifier dans votre navigateur, puis renvoyez la demande.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -2814,7 +2814,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "I cannot read the current response.",
       bridgeStateRecover: "I am checking that the task is still running.",
       bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
-      codexAuthExpired: "The local Codex profile authentication has expired. The bridge synchronized the available credentials, but they cannot open a session. Open Codex Desktop or run `codex login`, then send the request again.",
+      codexAuthExpired: "The local agent profile authentication has expired or is missing. Use the sign-in button of the agent configuration to authenticate in your browser, then send the request again.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -2876,9 +2876,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return lang(state).bridgeReadError;
   }
 
+  function providerLoginAction(provider) {
+    var normalized = normalizeProvider(provider);
+    if (normalized === "claude") {
+      return "claude_login";
+    }
+    if (normalized === "vibe") {
+      return "vibe_login";
+    }
+    return "codex_login";
+  }
+
   function isCodexAuthenticationError(data) {
     var lower = extractAgentErrorText(data, 0).toLowerCase();
     return lower.indexOf("refresh token") !== -1 ||
+      lower.indexOf("authentication_error") !== -1 ||
+      lower.indexOf("invalid api key") !== -1 ||
+      lower.indexOf("authentication is required") !== -1 ||
+      lower.indexOf("mistral_api_key") !== -1 ||
+      lower.indexOf("unauthenticated") !== -1 ||
       lower.indexOf("not logged in") !== -1 ||
       lower.indexOf("please run /login") !== -1 ||
       lower.indexOf("oauth token has expired") !== -1 ||
@@ -4449,6 +4465,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         assistantSurface: state.assistantSurface || options.assistantSurface || "",
         claudePath: trim(options.claudePath || options.commandPath),
         install: install ? "true" : "false",
+        login: typeof options.login === "undefined" ? (typeof options.claudeLogin === "undefined" ? "" : options.claudeLogin) : options.login,
+        loginStatus: typeof options.loginStatus === "undefined" ? (typeof options.claudeLoginStatus === "undefined" ? "" : options.claudeLoginStatus) : options.loginStatus,
+        forceLogin: typeof options.forceLogin === "undefined" ? "" : options.forceLogin,
         nodeVersion: trim(options.nodeVersion),
         nodeDir: trim(options.nodeDir || options.nodeInstallDir),
         npmPath: trim(options.npmPath),
@@ -4484,8 +4503,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         assistantSurface: state.assistantSurface || options.assistantSurface || "",
         codexPath: trim(options.codexPath || options.commandPath),
         install: install ? "true" : "false",
-        codexLogin: typeof options.codexLogin === "undefined" ? "" : options.codexLogin,
-        codexLoginStatus: typeof options.codexLoginStatus === "undefined" ? "" : options.codexLoginStatus,
+        codexLogin: typeof options.codexLogin === "undefined" ? (typeof options.login === "undefined" ? "" : options.login) : options.codexLogin,
+        codexLoginStatus: typeof options.codexLoginStatus === "undefined" ? (typeof options.loginStatus === "undefined" ? "" : options.loginStatus) : options.codexLoginStatus,
         forceLogin: typeof options.forceLogin === "undefined" ? "" : options.forceLogin,
         nodeVersion: trim(options.nodeVersion),
         nodeDir: trim(options.nodeDir || options.nodeInstallDir),
@@ -4515,6 +4534,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return {
       install: install ? "true" : "false",
       configure: "true",
+      login: typeof options.login === "undefined" ? (typeof options.vibeLogin === "undefined" ? "" : options.vibeLogin) : options.login,
+      loginStatus: typeof options.loginStatus === "undefined" ? (typeof options.vibeLoginStatus === "undefined" ? "" : options.vibeLoginStatus) : options.loginStatus,
+      forceLogin: typeof options.forceLogin === "undefined" ? "" : options.forceLogin,
       browserDebugUrl: trim(options.browserDebugUrl),
       browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
       browserDevToolsWebSocketUrl: trim(options.browserDevToolsWebSocketUrl),
@@ -4693,13 +4715,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (setup && setup.status === "authentication_required") {
       if (normalizeProvider(state.provider) === "codex") {
         lines.push(state.language === "fr" ? "Codex est installé, mais aucune authentification utilisable n'a été trouvée." : "Codex is installed, but no usable authentication was found.");
-        lines.push(state.language === "fr" ? "Connectez-vous avec Codex Desktop ou lancez `codex login`, puis revenez dans cette configuration." : "Sign in with Codex Desktop or run `codex login`, then return to this configuration.");
+        lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Codex » pour vous authentifier dans votre navigateur (ou lancez `codex login`), puis revenez dans cette configuration." : "Use the \"Sign in to Codex\" button to authenticate in your browser (or run `codex login`), then return to this configuration.");
       } else if (normalizeProvider(state.provider) === "claude") {
         lines.push(state.language === "fr" ? "Claude Code est installé, mais aucune authentification utilisable n'a été trouvée." : "Claude Code is installed, but no usable authentication was found.");
-        lines.push(state.language === "fr" ? "Lancez `claude auth login` (ou `claude setup-token`) sur ce poste, puis revenez dans cette configuration." : "Run `claude auth login` (or `claude setup-token`) on this workstation, then return to this configuration.");
+        lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Claude » pour vous authentifier dans votre navigateur (ou lancez `claude auth login`), puis revenez dans cette configuration." : "Use the \"Sign in to Claude\" button to authenticate in your browser (or run `claude auth login`), then return to this configuration.");
       } else {
         lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");
-        lines.push(state.language === "fr" ? "Ajoutez `MISTRAL_API_KEY` au profil Vibe (`~/.vibe/.env`), puis revenez dans cette configuration." : "Add `MISTRAL_API_KEY` to the Vibe profile (`~/.vibe/.env`), then return to this configuration.");
+        lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Mistral » pour vous authentifier dans votre navigateur (ou ajoutez `MISTRAL_API_KEY` dans `~/.vibe/.env`), puis revenez dans cette configuration." : "Use the \"Sign in to Mistral\" button to authenticate in your browser (or add `MISTRAL_API_KEY` to `~/.vibe/.env`), then return to this configuration.");
       }
       return lines.join("\n");
     }
@@ -5030,8 +5052,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var updateRequested = runtimeSetupRequested(options);
     var providerSetup = stateForRuntimeSetup(stateForExplicitProviderSetup(state, options), options);
     state = providerSetup.state;
-    var codexLoginRequested = normalizeProvider(state.provider) === "codex" && boolValue(options.codexLogin || options.codexLoginStatus, false);
-    if (codexLoginRequested) {
+    var loginProvider = normalizeProvider(state.provider);
+    var loginRequested = isResidentProvider(loginProvider) && boolValue(
+      options.login || options.loginStatus ||
+      options.codexLogin || options.codexLoginStatus ||
+      options.claudeLogin || options.claudeLoginStatus ||
+      options.vibeLogin || options.vibeLoginStatus, false);
+    if (loginRequested) {
       var loginInfo = callAgentSetup(state, options, false);
       var login = loginInfo.result || {};
       state.setupRequired = login.authenticated !== true;
@@ -5041,7 +5068,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         authentication: {
           configured: login.authenticated === true,
           status: login.authenticated === true ? "configured" : "missing",
-          action: login.authenticated === true ? "" : "codex_login"
+          action: login.authenticated === true ? "" : providerLoginAction(loginProvider)
         }
       };
       state.updatedAt = now();
@@ -5054,7 +5081,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         id: state.threadid,
         object: "agent.login",
         status: login.status || (login.authenticated === true ? "authenticated" : "login_required"),
-        provider: "codex",
+        provider: loginProvider,
         setupRequired: login.authenticated !== true,
         login: login,
         state: publicState(state),
@@ -5868,7 +5895,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           authentication: {
             configured: false,
             status: "expired",
-            action: "codex_login"
+            action: providerLoginAction(provider)
           }
         };
       } else {
@@ -6052,7 +6079,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
               authentication: {
                 configured: false,
                 status: "expired",
-                action: "codex_login"
+                action: providerLoginAction(state.provider)
               }
             };
           }

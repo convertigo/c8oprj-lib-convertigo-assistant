@@ -58,8 +58,8 @@ assert.match(setupSequenceSource, /updateRuntime: typeof updateRuntime === "unde
 assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/);
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.6", tag: "v0\.2\.6"/);
-assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.5", tag: "v0\.4\.5"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.9", tag: "v1\.4\.9"/);
+assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.6", tag: "v0\.4\.6"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.10", tag: "v1\.4\.10"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
@@ -260,3 +260,33 @@ const emptyStore = C8O.assistantAgentBridge.storeAttachments({ threadid: "", use
 assert.equal(emptyStore.status, "ok");
 assert.deepEqual(emptyStore.file, []);
 console.log("Assistant attachment routing OK");
+
+// Browser sign-in is provider generic: Codex, Claude and Vibe share the login button flow.
+{
+  const clientSource = fs.readFileSync("js/agent_bridge_client.js", "utf8");
+  assert.match(clientSource, /function providerLoginAction\(provider\)/);
+  assert.doesNotMatch(clientSource, /action: "codex_login"/, "login actions must be derived from the provider");
+  assert.match(clientSource, /var loginRequested = isResidentProvider\(loginProvider\) && boolValue\([\s\S]*?options\.claudeLogin[\s\S]*?options\.vibeLogin/);
+  const claudeBranch = clientSource.match(/if \(provider === "claude"\) \{\s*var claudeSetupScope[\s\S]*?\n    \}\n/)[0];
+  assert.match(claudeBranch, /login: typeof options\.login === "undefined"/);
+  assert.match(claudeBranch, /loginStatus: typeof options\.loginStatus === "undefined"/);
+  assert.match(claudeBranch, /forceLogin: typeof options\.forceLogin === "undefined"/);
+  const vibeBranch = clientSource.match(/var vibeScope = providerHomeScopeForRun\(options, "vibeHomeScope"\);[\s\S]*?agentRevealMode: revealModeOption\(options\)\s*\};/)[0];
+  assert.match(vibeBranch, /login: typeof options\.login === "undefined"/);
+  assert.match(vibeBranch, /loginStatus: typeof options\.loginStatus === "undefined"/);
+  assert.match(clientSource, /codexLogin: typeof options\.codexLogin === "undefined" \? \(typeof options\.login === "undefined" \? "" : options\.login\)/);
+  assert.match(setupSequenceSource, /login: typeof login === "undefined" \? "" : login/);
+  assert.match(setupSequenceSource, /loginStatus: typeof loginStatus === "undefined" \? "" : loginStatus/);
+  assert.match(setupSequenceSource, /↓login \[variables\.RequestableVariable-/);
+  assert.match(setupSequenceSource, /↓loginStatus \[variables\.RequestableVariable-/);
+  assert.match(runtimeUpdateBlock[0], /var loginRequested = \(provider === ''codex'' \|\| provider === ''claude'' \|\| provider === ''vibe''\) && page\.local\.AgentAuthenticationRequired === true;/);
+  assert.match(runtimeUpdateBlock[0], /payload\.login = true;/);
+  assert.match(runtimeUpdateBlock[0], /payload\.loginStatus = true;/);
+  assert.match(runtimeUpdateBlock[0], /page\.openAgentExternalUrl\(verificationUrl\)/);
+  assert.doesNotMatch(runtimeUpdateBlock[0], /Lancez claude auth login sur ce poste/);
+  for (const key of ["Agent_Auth_Claude_Connect", "Agent_Auth_Claude_Waiting", "Agent_Auth_Claude_Connected", "Agent_Auth_Claude_Login_Failed", "Agent_Auth_Vibe_Connect", "Agent_Auth_Vibe_Waiting", "Agent_Auth_Vibe_Connected", "Agent_Auth_Vibe_Login_Failed"]) {
+    assert.equal((pageSource.match(new RegExp(key + ': "', "g")) || []).length, 4, key + " must be translated in the four languages");
+  }
+  assert.match(pageSource, /tr\(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude''\)/);
+  assert.match(pageSource, /tr\(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral''\)/);
+}
