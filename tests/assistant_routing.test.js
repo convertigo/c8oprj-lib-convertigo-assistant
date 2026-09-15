@@ -59,7 +59,7 @@ assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/)
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.7", tag: "v0\.2\.7"/);
 assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.8", tag: "v0\.4\.8"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.14", tag: "v1\.4\.14"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.15", tag: "v1\.4\.15"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
@@ -307,4 +307,10 @@ console.log("Assistant attachment routing OK");
     assert.equal((pageSource.match(new RegExp(key + ': "', "g")) || []).length, 4, key + " must be translated in the four languages");
   }
   assert.match(pageSource, /if \(provider === ''vibe'' \|\| provider === ''convertigo''\) \{ payload\.forceVibeInstall = true; \}/);
+}
+
+// Early viewer start reminder for frontend work (bootstrap and continuation turns).
+{
+  const src = fs.readFileSync("js/agent_bridge_client.js", "utf8");
+  assert.equal((src.match(/mobile-builder-open\(\{project, wait:false\}\)/g) || []).length, 2, "the early start reminder must appear in the operational rules and in the continuation rules");
 }
