@@ -47,7 +47,15 @@ exposed: false
           			page.local.NoCodeSelectedBaserowDatabaseName = "";
           			page.local.NoCodeSelectedBaserowTableId = "";
           			page.local.NoCodeSelectedBaserowTableName = "";
-          			page.local.NoCodeContextLoading = !!form;
+          			if (pageAny.isEmbeddedInC8Oforms && pageAny.isEmbeddedInC8Oforms()) {
+                          // An explicit picker choice may retarget a conversation; host navigation may not.
+                          page.local.FormsConversationContext = form ? { formId: page.local.NoCodeSelectedFormId, formName: page.local.NoCodeSelectedFormName, formRevision: page.local.NoCodeSelectedFormRevision, selectionKind: "form" } : null;
+                          page.local.FormsContextMissing = false;
+                          page.local.FormsContextUnavailable = false;
+                          page.local.FormsContextPartial = false;
+                          page.local.FormsResumePending = false;
+                      }
+                      page.local.NoCodeContextLoading = !!form;
           			if (form && pageAny.events && pageAny.events.publish) {
           				pageAny.events.publish("AgentNoCodeContextReload", { formId: page.local.NoCodeSelectedFormId, hostContext: page.local.AgentHostContext || {} }, true);
           			}

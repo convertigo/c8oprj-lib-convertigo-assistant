@@ -26,7 +26,12 @@ exposed: false
           		var pageAny: any = page;
           		if (!page.local) { page.local = {}; }
           		var catalog = unwrap(vars.response);
-          		var baserow = catalog.baserow && typeof catalog.baserow === "object" ? catalog.baserow : {};
+          		if (pageAny.isEmbeddedInC8Oforms && pageAny.isEmbeddedInC8Oforms() && catalog.requestedFormId != null) {
+                      var desired = pageAny.getFormsCatalogContext(page.local.AgentHostContext || {});
+                      var desiredId = page.local.NoCodeContextSelectionTouched ? clean(page.local.NoCodeSelectedFormId) : clean(desired.formId || desired.currentFormId || desired.nocodeCurrentFormId);
+                      if (clean(catalog.requestedFormId) !== desiredId) { resolve(page.local.NoCodeContextCatalog); return; }
+                  }
+                  var baserow = catalog.baserow && typeof catalog.baserow === "object" ? catalog.baserow : {};
           		page.local.NoCodeContextCatalog = {
           			status: clean(catalog.status || "ready"),
           			forms: asArray(catalog.forms),
@@ -45,7 +50,8 @@ exposed: false
           		page.local.NoCodeContextLoading = false;
           		page.local.NoCodeContextError = catalog.ok === false ? "catalog-unavailable" : "";
           		var host = vars.hostContext && typeof vars.hostContext === "object" ? vars.hostContext : (page.local.AgentHostContext || {});
-          		var hostFormId = clean(host.formId || host.currentFormId || host.nocodeCurrentFormId || vars.formId);
+          		host = pageAny.getFormsCatalogContext ? pageAny.getFormsCatalogContext(host) : host;
+                  var hostFormId = clean(host.formId || host.currentFormId || host.nocodeCurrentFormId || vars.formId);
           		var hostElementId = clean(host.elementId);
           		var hostSignature = clean(host.currentRoute || host.nocodeCurrentRoute || host.currentUrl) + "::" + hostFormId + "::" + hostElementId;
           		if (page.local.NoCodeSelectionHostSignature && page.local.NoCodeSelectionHostSignature !== hostSignature) {
@@ -64,6 +70,36 @@ exposed: false
           			return null;
           		};
           		var forms = page.local.NoCodeContextCatalog.forms;
+                  // selectedForm is ACL-checked server-side, and may be outside the list page.
+                  var accessible = page.local.NoCodeContextCatalog.selectedForm;
+                  if (accessible && clean(accessible.id || accessible._id) === hostFormId && !findById(forms, hostFormId, ["id", "_id"])) {
+                      forms.push(accessible);
+                  }
+                  if (pageAny.isEmbeddedInC8Oforms && pageAny.isEmbeddedInC8Oforms() && page.local.FormsResumePending) {
+                      // Ignore responses initiated for the previous host context.
+                      if (clean(catalog.requestedFormId != null ? catalog.requestedFormId : vars.formId) !== hostFormId) { resolve(page.local.NoCodeContextCatalog); return; }
+                      page.local.NoCodeContextSelectionTouched = false;
+                      page.local.FormsContextUnavailable = !accessible || clean(accessible.id || accessible._id) !== hostFormId;
+                      page.local.FormsContextPartial = false;
+                      page.local.FormsResumePending = false;
+                      if (!page.local.FormsContextUnavailable) {
+                          var restored = Object.assign({}, host);
+                          if (restored.elementId && !findById(page.local.NoCodeContextCatalog.elements, restored.elementId, ["id", "_id"])) {
+                              restored.elementId = ""; restored.elementName = ""; restored.elementType = ""; restored.parentElementId = ""; restored.selectionKind = "form";
+                              page.local.FormsContextPartial = true;
+                          }
+                          if (restored.pageId && !findById(page.local.NoCodeContextCatalog.pages, restored.pageId, ["id", "_id"])) {
+                              restored.pageId = ""; restored.pageName = "";
+                              page.local.FormsContextPartial = true;
+                          }
+                          page.local.FormsConversationContext = restored;
+                          host = restored;
+                          hostElementId = clean(restored.elementId);
+                          if (pageAny.notifyC8OformsFormUpdated) {
+                              pageAny.notifyC8OformsFormUpdated(Object.assign({}, restored, { success: true, changed: false, completedAt: Date.now() }), "resume:" + page.local.Conversation);
+                          }
+                      }
+                  }
           		var elements = page.local.NoCodeContextCatalog.elements;
           		var bases = page.local.NoCodeContextCatalog.baserow.bases;
           		var tables = page.local.NoCodeContextCatalog.baserow.tables;
@@ -99,7 +135,10 @@ exposed: false
           				page.local.NoCodeSelectedFormId = clean(defaultForm.id || defaultForm._id);
           				page.local.NoCodeSelectedFormName = clean(defaultForm.name || defaultForm.title || host.formName || host.currentFormName);
           				page.local.NoCodeSelectedFormRevision = clean(defaultForm.revision || defaultForm._rev || host.formRevision || host.currentFormRevision);
-          				var defaultElement = findById(elements, hostElementId, ["id", "_id"]);
+          				var defaultPage = findById(page.local.NoCodeContextCatalog.pages, host.pageId || host.currentPage, ["id", "_id"]);
+                          page.local.NoCodeSelectedPageId = defaultPage ? clean(defaultPage.id || defaultPage._id) : "";
+                          page.local.NoCodeSelectedPageName = defaultPage ? clean(defaultPage.name || defaultPage.title || host.pageName) : "";
+                          var defaultElement = findById(elements, hostElementId, ["id", "_id"]);
           				if (defaultElement) {
           					page.local.NoCodeSelectedKind = "element";
           					page.local.NoCodeSelectedElementId = clean(defaultElement.id || defaultElement._id);
@@ -111,7 +150,16 @@ exposed: false
           				}
           			}
           		}
-          		try { if (pageAny.syncFooterPlaceholder) { pageAny.syncFooterPlaceholder(); } } catch (eFooter) {}
+          		if (pageAny.isEmbeddedInC8Oforms && pageAny.isEmbeddedInC8Oforms() && page.local.FormsConversationContext && clean(page.local.NoCodeSelectedFormId) === clean(page.local.FormsConversationContext.formId)) {
+                      page.local.FormsConversationContext = Object.assign({}, page.local.FormsConversationContext, {
+                          formName: page.local.NoCodeSelectedFormName, formRevision: page.local.NoCodeSelectedFormRevision,
+                          pageId: page.local.NoCodeSelectedPageId, pageName: page.local.NoCodeSelectedPageName,
+                          elementId: page.local.NoCodeSelectedElementId, elementName: page.local.NoCodeSelectedElementName,
+                          elementType: page.local.NoCodeSelectedElementType, parentElementId: page.local.NoCodeSelectedParentElementId,
+                          selectionKind: page.local.NoCodeSelectedKind
+                      });
+                  }
+                  try { if (pageAny.syncFooterPlaceholder) { pageAny.syncFooterPlaceholder(); } } catch (eFooter) {}
           		try { page.tick(); } catch (eTick) {}
           		resolve(page.local.NoCodeContextCatalog);
           '

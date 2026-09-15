@@ -202,10 +202,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lines.push("- Reply to the user and write progress/details in " + language + ".");
     }
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
-    lines.push("- If a selected element id is provided, treat that element as the exact default target. Fetch the current form contract first, locate the element by id, and apply the smallest possible `nocode-form-edit` operation to that element.");
+    lines.push("- Read the latest saved form with `nocode-form-get` using its document id before auditing, proposing improvements, or editing. The contract tool describes supported components, not this form's content.");
+    lines.push("- If a selected element id is provided, locate it in the form returned by `nocode-form-get`. Apply the smallest `nocode-form-edit` operation only when the user requests a change; suggestions and audits are read-only.");
     lines.push("- If a Baserow database or table is selected, treat it as the exact default data target. Use `nocode-baserow-catalog-list` to re-read its current schema before applying a minimal `nocode-baserow-schema-apply` change.");
-    lines.push("- The form revision and selected element context are a snapshot taken when this message was sent. Re-read the form contract and refuse or re-plan on a revision/identity mismatch instead of silently editing another element.");
-    lines.push("- If a first tool discovery attempt does not show NoCode tools, retry with exact searches for `Convertigo NoCode form contract get edit update validate compile C8Oforms`, `nocode-form-contract-get nocode-form-edit nocode-form-update`, and `mcp__convertigo nocode_form_contract_get nocode_form_edit nocode_form_update` before reporting a blocker.");
+    lines.push("- The form revision and selected element context are a snapshot taken when this message was sent. Re-read with `nocode-form-get` and refuse or re-plan on a revision/identity mismatch instead of silently editing another element. Saved content may differ from unsaved editor changes.");
+    lines.push("- Use only the managed no-code tools. If discovery fails, search for `nocode-form-get nocode_form_get` and the exact required no-code tool before reporting a blocker. Never fall back to requestable-execute, databaseobject/project tools, raw HTTP or shell, and never use an empty edit/update as a read.");
     return lines.join("\n");
   }
 
@@ -312,8 +313,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
-  function defaultBridgeUrl() {
-    return engineConvertigoBaseUrl().replace(/\/+$/g, "") + "/projects/" + DEFAULT_BRIDGE_PROJECT + "/.json";
+  function defaultBridgeUrl(options) {
+    // Studio supplies its bridge endpoint. No Code uses the deployed library.
+    var project = normalizeSkillProfile(options) === "nocode" ? "lib_ConvertigoAgentBridge" : DEFAULT_BRIDGE_PROJECT;
+    return engineConvertigoBaseUrl().replace(/\/+$/g, "") + "/projects/" + project + "/.json";
   }
 
   function defaultMcpEndpoint() {
@@ -1063,6 +1066,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return {
       ok: errors.length === 0 || forms.length > 0 || baserow.tables.length > 0,
       status: errors.length ? "partial" : "ready",
+      requestedFormId: trim(options.formId),
       forms: forms,
       selectedForm: details.form,
       pages: details.pages,
@@ -1369,7 +1373,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         payload.nocodeMcpTokenHandle = tokenHandle;
       }
     }
-    var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(), payload, timeoutMs || 70000);
+    var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(options), payload, timeoutMs || 70000);
+    if (normalizeSkillProfile(options) === "nocode" && response && response.document && response.document.error) {
+      throw new Error(trim(response.document.error.message) || "Agent bridge request failed");
+    }
     return response && typeof response.result !== "undefined" ? response.result : response;
   }
 
@@ -1528,7 +1535,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return false;
     }
     var bridgeOptions = {
-      bridgeBaseUrl: state.bridgeBaseUrl || (options && options.bridgeBaseUrl) || defaultBridgeUrl(),
+      bridgeBaseUrl: state.bridgeBaseUrl || (options && options.bridgeBaseUrl) || defaultBridgeUrl(state),
       workspaceRoot: state.workspaceRoot,
       primaryProject: state.primaryProject || state.projectId || "",
       projectId: state.projectId || state.primaryProject || "",
@@ -1655,12 +1662,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function normalizeSkillProfile(options) {
     options = options || {};
+    // Match the bridge's Studio identity rule, including stale NoCode metadata.
+    if (trim(options.userId).toLowerCase() === "studio") {
+      return "generalist";
+    }
     var value = trim(options.agentProfile || options.skillProfile || options.assistantContext || options.assistantSurface || options.profile).toLowerCase();
-    var project = trim(options.targetProject || options.projectName || options.projectId || options.primaryProject).toLowerCase();
-    if (value === "nocode" || value === "no-code" || value === "c8oforms" || value === "forms" || project === "c8oforms") {
+    if (value === "generalist" || value === "studio") {
+      return "generalist";
+    }
+    if (value === "nocode" || value === "no-code" || value === "c8oforms" || value === "forms") {
       return "nocode";
     }
-    return "generalist";
+    if (trim(options.assistantSurface).toLowerCase() === "studio") {
+      return "generalist";
+    }
+    // Keep the project-name fallback for legacy callers without a known profile.
+    var project = trim(options.targetProject || options.projectName || options.projectId || options.primaryProject).toLowerCase();
+    return project === "c8oforms" ? "nocode" : "generalist";
   }
 
   function hasExplicitSkillProfile(record) {
@@ -1674,6 +1692,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return normalizeSkillProfile(record);
     }
     return normalizeSkillProfile({
+      userId: record.userId,
       primaryProject: record.primaryProject || record.projectId,
       projectName: record.primaryProject || record.projectId
     });
@@ -1686,6 +1705,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (requested === "nocode" && !hasExplicitSkillProfile(record)) {
       return normalizeSkillProfile({
+        userId: record && record.userId,
         primaryProject: record && (record.primaryProject || record.projectId),
         projectName: record && (record.primaryProject || record.projectId)
       }) === "nocode";
@@ -2183,9 +2203,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return title.length ? title : "Conversation";
   }
 
+  // Persist only resource identity, never host URLs, credentials or form contents.
+  function noCodeConversationContext(value) {
+    if (!value || !trim(value.formId).length) { return null; }
+    var result = {};
+    var fields = ["formId", "formName", "formRevision", "pageId", "pageName", "elementId", "elementName", "elementType", "parentElementId", "selectionKind"];
+    for (var i = 0; i < fields.length; i++) {
+      result[fields[i]] = trim(value[fields[i]]);
+    }
+    return result;
+  }
+
+  function savedNoCodeContext(state) {
+    if (normalizeSkillProfile(state || {}) !== "nocode") { return null; }
+    return noCodeConversationContext(state.nocodeContext) || noCodeConversationContext(state.formMutation) || noCodeConversationContext(state.hostFormContext);
+  }
+
   function publicConversation(record) {
     record = record || {};
     var provider = normalizeProvider(record.provider);
+    var resourceContext = savedNoCodeContext(record);
+    // Older records can still have structured context in this user's live session.
+    if (!resourceContext && normalizeSkillProfile(record) === "nocode") {
+      var live = readState(String(record.conversationId || record.threadid || ""));
+      if (live && String(live.userKey || "") === String(record.userKey || "") && normalizeProvider(live.provider) === provider) {
+        resourceContext = savedNoCodeContext(live);
+      }
+    }
     return {
       conversationId: String(record.conversationId || record.threadid || ""),
       title: conversationTitleForRecord(record || {}),
@@ -2195,6 +2239,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: conversationSkillProfile(record),
       assistantContext: String(record.assistantContext || ""),
       assistantSurface: String(record.assistantSurface || ""),
+      nocodeContext: resourceContext,
       status: String(record.status || ""),
       primaryProject: String(record.primaryProject || record.projectId || ""),
       projectNames: record.projectNames || [],
@@ -2336,6 +2381,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
+      nocodeContext: savedNoCodeContext(state),
       language: state.language || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
@@ -3141,8 +3187,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function isNoCodeFormMutationTool(value) {
     var normalized = trim(value).toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    return normalized.indexOf("nocode_form_edit") !== -1 ||
-      normalized.indexOf("nocode_form_update") !== -1;
+    return /(?:^|_)nocode_form_(?:create|edit|update|get)$/.test(normalized);
+  }
+
+  function noCodeFormToolResult(value, depth) {
+    if (depth > 10 || value == null) { return null; }
+    if (typeof value === "string") {
+      try { return noCodeFormToolResult(JSON.parse(value), depth + 1); } catch (_notJson) { return null; }
+    }
+    if (typeof value !== "object" || value.isError === true || value.Err || value.error) { return null; }
+    if (value.status === "ok" && (value.saved === true || value.fetched === true) && value.form && value.form._id) { return value; }
+    var nested = Array.isArray(value) ? value : [value.Ok, value.structuredContent, value.result, value.content, value.output, value.text];
+    for (var i = 0; i < nested.length; i++) {
+      var found = noCodeFormToolResult(nested[i], depth + 1);
+      if (found) { return found; }
+    }
+    return null;
   }
 
   function markSuccessfulNoCodeFormMutation(state, event, data, type) {
@@ -3170,16 +3230,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!matchedTool.length) {
       return;
     }
+    var result = noCodeFormToolResult(data.result || (data.item && data.item.result), 0);
+    if (!result) { return; }
+    var form = result.form;
+    var formId = trim(form._id);
+    var isRead = result.fetched === true && result.saved !== true;
+    if (isRead && state.formMutation && state.formMutation.formId === formId && state.formMutation.changed === true) { return; }
     var hostContext = state.hostFormContext || {};
-    var formId = trim(hostContext.formId);
-    if (!formId.length) {
-      return;
-    }
+    if (trim(hostContext.formId) !== formId) { hostContext = {}; }
     state.formMutation = {
       success: true,
+      changed: !isRead,
       formId: formId,
-      formName: trim(hostContext.formName),
-      formRevision: trim(hostContext.formRevision),
+      formName: trim(form.name),
+      formRevision: trim(form._rev),
       pageId: trim(hostContext.pageId),
       pageName: trim(hostContext.pageName),
       elementId: trim(hostContext.elementId),
@@ -3191,6 +3255,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       callId: callId,
       completedAt: now()
     };
+    state.nocodeContext = noCodeConversationContext(state.formMutation);
   }
 
   function pushProgressEvent(state, item) {
@@ -4208,6 +4273,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       externalSessionId = recoverCodexExternalSessionId(record, externalSessionId);
     }
     var skillProfile = normalizeSkillProfile({
+      userId: options.userId || (record && record.userId),
       agentProfile: options.agentProfile || (record && record.agentProfile),
       skillProfile: options.skillProfile || (record && record.skillProfile),
       assistantContext: options.assistantContext || (record && record.assistantContext),
@@ -4221,12 +4287,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       provider: provider,
       agentProfile: trim(options.agentProfile || (record && record.agentProfile)) || skillProfile,
       skillProfile: skillProfile,
+      nocodeContext: record ? savedNoCodeContext(record) : null,
       assistantContext: trim(options.assistantContext || (record && record.assistantContext)),
       assistantSurface: trim(options.assistantSurface || (record && record.assistantSurface)),
       model: model,
       reasoningEffort: reasoningEffort,
       serviceTier: serviceTier,
-      bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || defaultBridgeUrl(),
+      bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || defaultBridgeUrl({ skillProfile: skillProfile }),
       mcpEndpoint: trim(options.mcpEndpoint) || (record && trim(record.mcpEndpoint)) || defaultMcpEndpoint(),
       workspaceRoot: workspaceRoot,
       cwd: trim(options.cwd) || (record && trim(record.cwd)) || workspaceRoot,
@@ -4297,6 +4364,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
       formMutation: state.formMutation || null,
+      nocodeContext: savedNoCodeContext(state),
       setupRequired: state.setupRequired === true,
       setup: state.setupReport || null,
       codexPrewarmStartedAt: state.codexPrewarmStartedAt || 0,
@@ -5101,7 +5169,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("");
     promptParts.push("Operational rules:");
-    promptParts.push("- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
+    promptParts.push(isNoCodeSurface ? "- Use only the tools allowed by convertigo-nocode. Read existing forms with nocode-form-get; never use requestable-execute, databaseobject/project/mobile-builder tools, raw HTTP or shell as a workaround." : "- Use the Convertigo MCP/tools exposed to you whenever you need to inspect or change Convertigo objects.");
     promptParts.push(isNoCodeSurface ? "- Use the Convertigo NoCode workflow and vocabulary. Prefer forms, applications, pages, fields, data sources, roles, publication, and permissions over Eclipse Studio terminology." : "- When a project is selected, work only on it unless the user explicitly asks for another project.");
     promptParts.push(isNoCodeSurface ? "- If a specific form, application, page, or data source is needed but not identified by the current context, inspect the available NoCode/C8Oforms resources first, then ask a focused clarification only if still ambiguous." : "- A missing project selection does not block an explicit new-project or new-application request. Derive a concise valid technical name from the request when none was supplied, check for collisions with Convertigo MCP, create the starter project, and continue. Ask for a selection only when the user wants work on an existing project that cannot be identified.");
     if (!simpleViewerFollowup && !establishedAgentFollowup) {
@@ -5109,8 +5177,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("- Prefer Convertigo source objects and MCP operations. Do not edit generated folders such as _private/ionic, DisplayObjects, dist, build outputs, or generated runtime artifacts.");
     promptParts.push("- If the user asks for advice only, answer without modifying the project.");
+    if (!isNoCodeSurface) {
     promptParts.push("- For UI clicks, button presses, visual checks, or browser interactions, target the Convertigo app/viewer, not the Studio shell or operating-system UI. First identify or create the target project and open or reuse its mobile builder through Convertigo MCP. Then use the managed Playwright MCP/browser-control tools attached to the returned Studio JxBrowser debug endpoint.");
     promptParts.push("- If an existing project or button still cannot be identified, explain that blocker and ask for the missing context. If the managed Playwright/browser-control tools are unavailable or not attached to the returned Studio JxBrowser endpoint, first distinguish builder warm-up from configuration failure: `about:blank` before `browserControlReady:true` means poll `mobile-builder-open(stateOnly=true, wait=true)`, while mismatch after `browserControlReady:true` means report the managed Playwright MCP configuration problem. Do not use PowerShell, UIAutomation, computer-use, raw CDP, Node scripts, a separate browser, a new tab, or generic OS-level clicks as a workaround unless the user explicitly asks to operate the Studio/OS chrome itself.");
+    }
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
     promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
     promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
@@ -5260,6 +5330,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       baserowTableId: firstOptionValue(options, ["baserowTableId"]),
       baserowTableName: firstOptionValue(options, ["baserowTableName"])
     };
+    state.nocodeContext = normalizeSkillProfile(state) === "nocode" ? noCodeConversationContext(state.hostFormContext) : null;
     state.formMutation = null;
     state.setupRequired = false;
     state.setupReport = null;
