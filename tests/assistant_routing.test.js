@@ -59,7 +59,7 @@ assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/)
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.7", tag: "v0\.2\.7"/);
 assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.6", tag: "v0\.4\.6"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.11", tag: "v1\.4\.11"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.12", tag: "v1\.4\.12"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
@@ -282,6 +282,7 @@ console.log("Assistant attachment routing OK");
   assert.match(runtimeUpdateBlock[0], /var loginRequested = \(provider === ''codex'' \|\| provider === ''claude'' \|\| provider === ''vibe''\) && page\.local\.AgentAuthenticationRequired === true;/);
   assert.match(runtimeUpdateBlock[0], /payload\.login = true;/);
   assert.match(runtimeUpdateBlock[0], /payload\.loginStatus = true;/);
+  assert.match(runtimeUpdateBlock[0], /installedRuntime\.installed === true && installedAuthentication\.configured === false[\s\S]*?page\.local\.AgentAuthenticationRequired = true;[\s\S]*?Agent_Auth_Vibe_Connect/, "a freshly installed runtime without credentials must switch to the sign-in button instead of failing on missing models");
   assert.match(runtimeUpdateBlock[0], /page\.openAgentExternalUrl\(verificationUrl\)/);
   assert.doesNotMatch(runtimeUpdateBlock[0], /Lancez claude auth login sur ce poste/);
   for (const key of ["Agent_Auth_Claude_Connect", "Agent_Auth_Claude_Waiting", "Agent_Auth_Claude_Connected", "Agent_Auth_Claude_Login_Failed", "Agent_Auth_Vibe_Connect", "Agent_Auth_Vibe_Waiting", "Agent_Auth_Vibe_Connected", "Agent_Auth_Vibe_Login_Failed"]) {

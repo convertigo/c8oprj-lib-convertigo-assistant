@@ -1094,7 +1094,7 @@ scriptContent:
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.7", tag: "v0.2.7", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.7/lib_ConvertigoMCP.car" },
                         { name: "lib_ConvertigoAgentBridge", version: "0.4.6", tag: "v0.4.6", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.6/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.11", tag: "v1.4.11", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.11/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAssistant", version: "1.4.12", tag: "v1.4.12", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.12/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -5364,6 +5364,25 @@ title: Tigo
                                                 if (normalize(providers[i] && providers[i].id) === provider) { selected = providers[i]; break; }
                                             }
                                             page.local.AgentModels = selected && selected.models ? selected.models : [];
+                                            var installedRuntime = selected && selected.runtime ? selected.runtime : {};
+                                            var installedAuthentication = selected && selected.authentication ? selected.authentication : {};
+                                            if (selected && installedRuntime.installed === true && installedAuthentication.configured === false) {
+                                                // Runtime installed but not signed in: switch the panel to the provider sign-in button.
+                                                page.local.AgentRuntime = installedRuntime;
+                                                page.local.AgentRuntimeProvider = provider;
+                                                page.local.AgentAuthenticationRequired = true;
+                                                page.local.AgentRuntimeError = ''authentication_required'';
+                                                var installedNow = clean(installedRuntime.installedVersion);
+                                                page.local.AgentRuntimeVersionText = installedNow.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installedNow) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
+                                                page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Required'', ''Authentification Codex requise. Utilisez le bouton de connexion.'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Required'', ''Authentification Claude requise. Utilisez le bouton de connexion.'') : tr(''Agent_Auth_Vibe_Required'', ''Authentification Mistral requise. Utilisez le bouton de connexion.''));
+                                                page.local.AgentRuntimeActionText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Connect'', ''Se connecter à Codex'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude'') : tr(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral''));
+                                                page.local.AgentRuntimeLoading = false;
+                                                page.local.AgentProviderSelectionPending = false;
+                                                page.local.ShowAgentConfigPanel = true;
+                                                page.tick();
+                                                resolve();
+                                                return;
+                                            }
                                             if (!selected || selected.ready !== true || !page.local.AgentModels.length) {
                                                 throw new Error(tr(''Agent_Runtime_No_Models'', ''Le runtime ne fournit aucun modèle utilisable pour le fournisseur sélectionné.''));
                                             }
