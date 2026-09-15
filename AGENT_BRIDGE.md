@@ -150,3 +150,15 @@ Claude runs `claude auth login`, Vibe drives the Mistral AI Studio browser
 sign-in headlessly; credentials always land in the user scoped managed home.
 `state.setupReport.authentication.action` is `codex_login`, `claude_login` or
 `vibe_login` accordingly (`providerLoginAction`).
+
+## Convertigo mode
+
+`convertigo` is a logical provider: no personal account, the user's Convertigo
+LiteLLM virtual key drives a harness announced by the bridge in
+`settings.providers[].harness` (Vibe today). The client never hard-codes Vibe for
+it: `providerHarness()` selects the bridge sequences (`agent_<harness>_*`) and
+`vibeProfileForProvider()` adds `vibeProfile=convertigo` to the setup, start and
+settings payloads. The tile is listed first and selected by default when ready.
+When the key is missing the panel shows "Check the key" which only re-reads the
+settings; the key is provisioned by the upcoming automatic onboarding (or dropped
+in `<workspace>/agents/convertigo/llm-api-key` meanwhile).

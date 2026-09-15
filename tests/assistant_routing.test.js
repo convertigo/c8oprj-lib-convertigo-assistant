@@ -58,8 +58,8 @@ assert.match(setupSequenceSource, /updateRuntime: typeof updateRuntime === "unde
 assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/);
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.7", tag: "v0\.2\.7"/);
-assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.7", tag: "v0\.4\.7"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.13", tag: "v1\.4\.13"/);
+assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.8", tag: "v0\.4\.8"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.14", tag: "v1\.4\.14"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
@@ -267,7 +267,7 @@ console.log("Assistant attachment routing OK");
   assert.match(clientSource, /function providerLoginAction\(provider\)/);
   assert.doesNotMatch(clientSource, /action: "codex_login"/, "login actions must be derived from the provider");
   assert.match(clientSource, /var loginRequested = isResidentProvider\(loginProvider\) && boolValue\([\s\S]*?options\.claudeLogin[\s\S]*?options\.vibeLogin/);
-  const claudeBranch = clientSource.match(/if \(provider === "claude"\) \{\s*var claudeSetupScope[\s\S]*?\n    \}\n/)[0];
+  const claudeBranch = clientSource.match(/if \(harness === "claude"\) \{\s*var claudeSetupScope[\s\S]*?\n    \}\n/)[0];
   assert.match(claudeBranch, /login: typeof options\.login === "undefined"/);
   assert.match(claudeBranch, /loginStatus: typeof options\.loginStatus === "undefined"/);
   assert.match(claudeBranch, /forceLogin: typeof options\.forceLogin === "undefined"/);
@@ -290,4 +290,21 @@ console.log("Assistant attachment routing OK");
   }
   assert.match(pageSource, /tr\(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude''\)/);
   assert.match(pageSource, /tr\(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral''\)/);
+}
+
+// Convertigo mode: logical provider routed through the harness announced by the bridge.
+{
+  const clientSource = fs.readFileSync("js/agent_bridge_client.js", "utf8");
+  assert.match(clientSource, /function providerHarness\(provider, settingsProvider\)/);
+  assert.match(clientSource, /return "agent_" \+ providerHarness\(provider\) \+ "_" \+ action;/);
+  assert.match(clientSource, /vibeProfile: vibeProfileForProvider\(provider\),/);
+  assert.match(clientSource, /return \["convertigo", "codex", "vibe", "claude"\];/);
+  assert.match(clientSource, /return "convertigo_key";/);
+  assert.doesNotMatch(clientSource, /normalizeProvider\(state && state\.provider\) === "vibe"/, "vibe-specific behaviour must go through the harness");
+  assert.match(pageSource, /↓ConvertigoButton \[ngx\.components\.UIDynamicElement-/);
+  assert.ok(pageSource.indexOf("↓ConvertigoButton [") < pageSource.indexOf("↓VibeButton ["), "the Convertigo tile comes first");
+  for (const key of ["Agent_Provider_Convertigo_Copy", "Agent_Auth_Convertigo_Required", "Agent_Auth_Convertigo_Check", "Agent_Runtime_Updating_Convertigo"]) {
+    assert.equal((pageSource.match(new RegExp(key + ': "', "g")) || []).length, 4, key + " must be translated in the four languages");
+  }
+  assert.match(pageSource, /if \(provider === ''vibe'' \|\| provider === ''convertigo''\) \{ payload\.forceVibeInstall = true; \}/);
 }

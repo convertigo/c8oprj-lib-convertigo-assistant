@@ -122,6 +122,10 @@ scriptContent:
         				Agent_Provider_Vibe_Copy: "Explore and create quickly",
         				Agent_Provider_Codex_Copy: "Build and modify code",
         				Agent_Provider_Claude_Copy: "Reason deeply and build carefully",
+        				Agent_Provider_Convertigo_Copy: "No setup, uses your Convertigo account",
+        				Agent_Auth_Convertigo_Required: "Convertigo agent key missing. It will be provisioned automatically at activation.",
+        				Agent_Auth_Convertigo_Check: "Check the key",
+        				Agent_Runtime_Updating_Convertigo: "Preparing the Convertigo agent...",
         				Agent_Auth_Claude_Required: "Claude authentication is required. Use the sign-in button to authenticate in your browser.",
         				Agent_Runtime_Updating_Claude: "Updating Claude Code...",
         				Agent_Settings_Title: "AI Agent settings",
@@ -186,6 +190,10 @@ scriptContent:
         				Agent_Provider_Vibe_Copy: "Explorer et créer rapidement",
         				Agent_Provider_Codex_Copy: "Construire et modifier du code",
         				Agent_Provider_Claude_Copy: "Raisonner en profondeur et construire avec soin",
+        				Agent_Provider_Convertigo_Copy: "Sans configuration, avec votre compte Convertigo",
+        				Agent_Auth_Convertigo_Required: "Clé d'agent Convertigo absente. Elle sera fournie automatiquement à l'activation.",
+        				Agent_Auth_Convertigo_Check: "Vérifier la clé",
+        				Agent_Runtime_Updating_Convertigo: "Préparation de l'agent Convertigo...",
         				Agent_Auth_Claude_Required: "Authentification Claude requise. Utilisez le bouton de connexion pour vous authentifier dans votre navigateur.",
         				Agent_Runtime_Updating_Claude: "Mise à jour de Claude Code en cours...",
         				Agent_Settings_Title: "Configuration Agent IA",
@@ -250,6 +258,10 @@ scriptContent:
         				Agent_Provider_Vibe_Copy: "Esplora e crea rapidamente",
         				Agent_Provider_Codex_Copy: "Crea e modifica codice",
         				Agent_Provider_Claude_Copy: "Ragiona a fondo e costruisci con cura",
+        				Agent_Provider_Convertigo_Copy: "Nessuna configurazione, con il tuo account Convertigo",
+        				Agent_Auth_Convertigo_Required: "Chiave agente Convertigo assente. Verrà fornita automaticamente all'attivazione.",
+        				Agent_Auth_Convertigo_Check: "Verifica la chiave",
+        				Agent_Runtime_Updating_Convertigo: "Preparazione dell'agente Convertigo...",
         				Agent_Auth_Claude_Required: "Autenticazione Claude richiesta. Usa il pulsante di accesso per autenticarti nel browser.",
         				Agent_Runtime_Updating_Claude: "Aggiornamento di Claude Code...",
         				Agent_Settings_Title: "Configurazione Agente IA",
@@ -314,6 +326,10 @@ scriptContent:
         				Agent_Provider_Vibe_Copy: "Explora y crea rápidamente",
         				Agent_Provider_Codex_Copy: "Crea y modifica código",
         				Agent_Provider_Claude_Copy: "Razona en profundidad y construye con cuidado",
+        				Agent_Provider_Convertigo_Copy: "Sin configuración, con su cuenta Convertigo",
+        				Agent_Auth_Convertigo_Required: "Falta la clave del agente Convertigo. Se proporcionará automáticamente al activar.",
+        				Agent_Auth_Convertigo_Check: "Comprobar la clave",
+        				Agent_Runtime_Updating_Convertigo: "Preparando el agente Convertigo...",
         				Agent_Auth_Claude_Required: "Se requiere autenticación de Claude. Use el botón de inicio de sesión para autenticarse en el navegador.",
         				Agent_Runtime_Updating_Claude: "Actualizando Claude Code...",
         				Agent_Settings_Title: "Configuración del Agente IA",
@@ -702,11 +718,11 @@ scriptContent:
         						this.local.AgentRuntimeError = runtime.error || (authenticationRequired ? ''authentication_required'' : '''');
         						var installed = clean(runtime.installedVersion);
         						var latest = clean(runtime.latestVersion);
-        						var authenticationKey = provider === ''codex'' ? ''Agent_Auth_Codex_Required'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Required'' : ''Agent_Auth_Vibe_Required'');
-        						var authenticationFallback = provider === ''codex'' ? ''Authentification Codex requise. Utilisez le bouton de connexion.'' : (provider === ''claude'' ? ''Authentification Claude requise. Utilisez le bouton de connexion.'' : ''Authentification Mistral requise. Utilisez le bouton de connexion.'');
+        						var authenticationKey = provider === ''codex'' ? ''Agent_Auth_Codex_Required'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Required'' : (provider === ''convertigo'' ? ''Agent_Auth_Convertigo_Required'' : ''Agent_Auth_Vibe_Required''));
+        						var authenticationFallback = provider === ''codex'' ? ''Authentification Codex requise. Utilisez le bouton de connexion.'' : (provider === ''claude'' ? ''Authentification Claude requise. Utilisez le bouton de connexion.'' : (provider === ''convertigo'' ? ''Clé d''''agent Convertigo absente.'' : ''Authentification Mistral requise. Utilisez le bouton de connexion.''));
         						this.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
         						this.local.AgentRuntimeStatusText = authenticationRequired ? tr(authenticationKey, authenticationFallback) : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
-        						this.local.AgentRuntimeActionText = authenticationRequired ? tr(provider === ''codex'' ? ''Agent_Auth_Codex_Connect'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Connect'' : ''Agent_Auth_Vibe_Connect''), provider === ''codex'' ? ''Se connecter à Codex'' : (provider === ''claude'' ? ''Se connecter à Claude'' : ''Se connecter à Mistral'')) : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
+        						this.local.AgentRuntimeActionText = authenticationRequired ? tr(provider === ''codex'' ? ''Agent_Auth_Codex_Connect'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Connect'' : (provider === ''convertigo'' ? ''Agent_Auth_Convertigo_Check'' : ''Agent_Auth_Vibe_Connect'')), provider === ''codex'' ? ''Se connecter à Codex'' : (provider === ''claude'' ? ''Se connecter à Claude'' : (provider === ''convertigo'' ? ''Vérifier la clé'' : ''Se connecter à Mistral''))) : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
         						var providerReady = this.isAgentProviderReady && this.isAgentProviderReady(selectedProvider);
         						if (providerReady && this.local.AgentProviderChoiceConfirmed === true && this.local.AgentConfigExplicitOpen !== true) {
         							this.local.ShowAgentConfigPanel = false;
@@ -1093,8 +1109,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.7", tag: "v0.2.7", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.7/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.7", tag: "v0.4.7", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.7/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.13", tag: "v1.4.13", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.13/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.8", tag: "v0.4.8", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.8/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.14", tag: "v1.4.14", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.14/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -1390,14 +1406,14 @@ scriptContent:
         	public getAgentHomeScope(provider) {
         		var name = '''';
         		try { name = ('''' + (provider || (this.getAgentProvider ? this.getAgentProvider() : ''''))).replace(/^\s+|\s+$/g, '''').toLowerCase(); } catch (e) {}
-        		var key = name === ''vibe'' ? ''vibeHomeScope'' : (name === ''claude'' ? ''claudeHomeScope'' : ''codexHomeScope'');
+        		var key = (name === ''vibe'' || name === ''convertigo'') ? ''vibeHomeScope'' : (name === ''claude'' ? ''claudeHomeScope'' : ''codexHomeScope'');
         		var value = '''';
         		try { value = '''' + (this.getAssistantQueryParam(key) || this.getAssistantQueryParam(''homeScope'') || ''''); } catch (e2) {}
         		value = value.replace(/^\s+|\s+$/g, '''').toLowerCase();
         		if (value === ''shared'' || value === ''workspace'' || value === ''conversation'' || value === ''default'') {
         			return value;
         		}
-        		if (name !== ''vibe'') {
+        		if (name !== ''vibe'' && name !== ''convertigo'') {
         			try {
         				var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : ((this.local && this.local.AgentHostContext) || {});
         				var debug = '''' + ((this.getAssistantQueryParam ? (this.getAssistantQueryParam(''playwrightCdpEndpoint'') || this.getAssistantQueryParam(''viewerCdpEndpoint'') || this.getAssistantQueryParam(''browserDebugUrl'')) : '''') || context.playwrightCdpEndpoint || context.viewerCdpEndpoint || context.browserDebugUrl || context.browserDevToolsWebSocketUrl || context.browserDevToolsJsonUrl || '''');
@@ -4163,6 +4179,211 @@ title: Tigo
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: plain:agent-choice-row agent-provider-options
+                    ↓ConvertigoButton [ngx.components.UIDynamicElement-1789580000002]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Button",
+                         "IonFill": "plain:clear",
+                         "IonSize": "plain:small"
+                        }'
+                      tagName: ion-button
+                      ↓Class [ngx.components.UIAttribute-1789580000004]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:(this.local && this.local.AgentProvider === ''convertigo'') ? ''agent-choice-button agent-provider-option active'' : ''agent-choice-button agent-provider-option'''
+                      ↓Event [ngx.components.UIControlEvent-1789580000006]: 
+                        ↓SetProvider [ngx.components.UICustomAction-1789580000008]: 
+                          actionValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                →: |
+                                  '        var provider = ''convertigo'';
+                                          if (!page.local) { page.local = {}; }
+                                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                          var settings = page.local.AgentSettings || {};
+                                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                          var providers = settings.providers || [];
+                                          var selectedProvider = null;
+                                          for (var i = 0; i < providers.length; i++) {
+                                              if (clean(providers[i] && providers[i].id).toLowerCase() === provider) {
+                                                  selectedProvider = providers[i];
+                                                  break;
+                                              }
+                                          }
+                                          page.local.AgentProvider = provider;
+                                          page.local.AgentProviderChoiceConfirmed = true;
+                                          page.local.AgentProviderSelectionPending = true;
+                                          var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
+                                          page.local.AgentModels = models;
+                                          page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                                          var model = clean(selectedProvider && selectedProvider.defaultModel);
+                                          if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
+                                              model = clean(settings.defaults.model);
+                                          }
+                                          if (!model.length && models.length) { model = clean(models[0] && models[0].id); }
+                                          var selectedModel = null;
+                                          for (var j = 0; j < models.length; j++) {
+                                              if (clean(models[j] && models[j].id) === model) {
+                                                  selectedModel = models[j];
+                                                  break;
+                                              }
+                                          }
+                                          if (selectedModel === null && models.length) {
+                                              selectedModel = models[0];
+                                              model = clean(selectedModel && selectedModel.id);
+                                          }
+                                          page.local.AgentModel = model;
+                                          page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+                                          var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
+                                          if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
+                                              reasoning = clean(settings.defaults.reasoning);
+                                          }
+                                          if (page.local.AgentProviderSupportsReasoning !== true) {
+                                              reasoning = '''';
+                                          }
+                                          page.local.AgentReasoningEffort = reasoning;
+                                          var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
+                                          page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
+                                          try {
+                                              if (typeof window !== ''undefined'' && window.localStorage) {
+                                                  window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProvider'', page.local.AgentProvider);
+                                                  window.localStorage.setItem(''lib_ConvertigoAssistant.AgentProviderChoiceConfirmed'', ''true'');
+                                              }
+                                          } catch (e) {}
+                                          page.tick();
+                                          resolve();'
+                        ↓SetRuntimeSummary [ngx.components.UICustomAction-1789580000010]: 
+                          actionValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                →: |
+                                  '        if (!page.local) { page.local = {}; }
+                                          var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                          var tr = function(key, fallback) { try { return page.t ? page.t(key, fallback) : fallback; } catch (e) { return fallback; } };
+                                          var settings = page.local.AgentSettings || {};
+                                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                          var providers = settings.providers || [];
+                                          var selected = null;
+                                          for (var i = 0; i < providers.length; i++) {
+                                              if (clean(providers[i] && providers[i].id).toLowerCase() === ''convertigo'') { selected = providers[i]; break; }
+                                          }
+                                          var runtime = selected && selected.runtime ? selected.runtime : {};
+                                          var authentication = selected && selected.authentication ? selected.authentication : {};
+                                          var authenticationRequired = runtime.installed === true && authentication.configured === false;
+                                          page.local.AgentRuntime = runtime;
+                                          page.local.AgentRuntimeProvider = ''convertigo'';
+                                          page.local.AgentAuthenticationRequired = authenticationRequired;
+                                          page.local.AgentRuntimeError = runtime.error || (authenticationRequired ? ''authentication_required'' : '''');
+                                          var installed = clean(runtime.installedVersion);
+                                          var latest = clean(runtime.latestVersion);
+                                          page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
+                                          page.local.AgentRuntimeStatusText = authenticationRequired ? tr(''Agent_Auth_Convertigo_Required'', ''Clé d''''agent Convertigo absente. Elle sera fournie automatiquement à l''''activation.'') : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
+                                          page.local.AgentRuntimeActionText = authenticationRequired ? tr(''Agent_Auth_Convertigo_Check'', ''Vérifier la clé'') : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
+                                          page.tick();
+                                          resolve();'
+                        ↓UseDiscoveredModels [ngx.components.UICustomAction-1789580000012]: 
+                          actionValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                →: |
+                                  '        var settings = page.local && page.local.AgentSettings ? page.local.AgentSettings : {};
+                                          if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                          var providers = settings.providers || [];
+                                          var selected = null;
+                                          for (var i = 0; i < providers.length; i++) {
+                                              if (('''' + (providers[i] && providers[i].id || '''')).toLowerCase() === ''convertigo'') { selected = providers[i]; break; }
+                                          }
+                                          page.local.AgentModels = selected && selected.models ? selected.models : [];
+                                          if (!page.local.AgentModels.length) { page.local.AgentModel = ''''; }
+                                          resolve();'
+                      ↓ProviderIcon [ngx.components.UIDynamicElement-1789580000014]: 
+                        beanData: |
+                          '{
+                           "ionBean": "Icon",
+                           "IconName": "plain:shield-checkmark-outline",
+                           "IconSlot": "plain:start"
+                          }'
+                        tagName: ion-icon
+                        ↓Class [ngx.components.UIAttribute-1789580000016]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-provider-icon
+                      ↓ProviderCopy [ngx.components.UIDynamicElement-1789580000018]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1789580000020]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-provider-copy
+                        ↓ProviderTitle [ngx.components.UIDynamicElement-1789580000022]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1789580000024]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-provider-title
+                          ↓Text [ngx.components.UIText-1789580000026]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:Convertigo - Agent intégré
+                        ↓ProviderDescription [ngx.components.UIDynamicElement-1789580000028]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1789580000030]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-provider-description
+                          ↓Text [ngx.components.UIText-1789580000032]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.t('Agent_Provider_Convertigo_Copy', 'No setup, uses your Convertigo account')
+                      ↓SelectedIcon [ngx.components.UIDynamicElement-1789580000034]: 
+                        beanData: |
+                          '{
+                           "ionBean": "Icon",
+                           "IconName": "plain:checkmark-circle",
+                           "IconSlot": "plain:end"
+                          }'
+                        tagName: ion-icon
+                        ↓Class [ngx.components.UIAttribute-1789580000036]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-provider-check
+                ↓Class [ngx.components.UIAttribute-1789580000038]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ((this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-create-settings agent-config-settings'' : ''agent-create-settings'') : ''agent-create-settings agent-hidden'''
+                ↓RevealSettings [ngx.components.UIDynamicElement-1789580000040]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1789580000042]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-reveal-setting
+                  ↓RevealLabel [ngx.components.UIDynamicElement-1789580000044]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
                     ↓VibeButton [ngx.components.UIDynamicElement-1781700500017]: 
                       beanData: |
                         '{
@@ -5344,13 +5565,24 @@ title: Tigo
                                             pollLogin(true);
                                             return;
                                         }
+                                        if (provider === ''convertigo'' && page.local.AgentAuthenticationRequired === true) {
+                                            // The Convertigo agent key comes from the managed key file: re-read the settings instead of reinstalling.
+                                            page.local.AgentRuntimeLoading = true;
+                                            page.local.AgentSettingsRefreshDone = false;
+                                            page.tick();
+                                            if (page.refreshAgentSettingsAfterHostContext) { page.refreshAgentSettingsAfterHostContext(true); }
+                                            page.local.AgentRuntimeLoading = false;
+                                            page.tick();
+                                            resolve();
+                                            return;
+                                        }
                                         if (provider === ''codex'') { payload.forceCodexInstall = true; }
-                                        if (provider === ''vibe'') { payload.forceVibeInstall = true; }
+                                        if (provider === ''vibe'' || provider === ''convertigo'') { payload.forceVibeInstall = true; }
                                         if (provider === ''claude'') { payload.forceClaudeInstall = true; }
                                         page.local.AgentProviderSelectionPending = true;
                                         page.local.AgentRuntimeLoading = true;
                                         page.local.AgentRuntimeError = '''';
-                                        page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Runtime_Updating_Codex'', ''Mise à jour de Codex en cours...'') : (provider === ''claude'' ? tr(''Agent_Runtime_Updating_Claude'', ''Mise à jour de Claude Code en cours...'') : tr(''Agent_Runtime_Updating_Vibe'', ''Mise à jour de Vibe en cours...''));
+                                        page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Runtime_Updating_Codex'', ''Mise à jour de Codex en cours...'') : (provider === ''claude'' ? tr(''Agent_Runtime_Updating_Claude'', ''Mise à jour de Claude Code en cours...'') : (provider === ''convertigo'' ? tr(''Agent_Runtime_Updating_Convertigo'', ''Préparation de l''''agent Convertigo...'') : tr(''Agent_Runtime_Updating_Vibe'', ''Mise à jour de Vibe en cours...'')));
                                         page.tick();
                                         page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(response) {
                                             var result = response && response.result ? response.result : {};
@@ -5366,7 +5598,7 @@ title: Tigo
                                             page.local.AgentModels = selected && selected.models ? selected.models : [];
                                             var installedRuntime = selected && selected.runtime ? selected.runtime : {};
                                             var installedAuthentication = selected && selected.authentication ? selected.authentication : {};
-                                            if (selected && installedRuntime.installed === true && installedAuthentication.configured === false) {
+                                            if (selected && provider !== ''convertigo'' && installedRuntime.installed === true && installedAuthentication.configured === false) {
                                                 // Runtime installed but not signed in: switch the panel to the provider sign-in button.
                                                 page.local.AgentRuntime = installedRuntime;
                                                 page.local.AgentRuntimeProvider = provider;

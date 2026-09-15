@@ -1315,8 +1315,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function agentStartPayload(state, options, provider, installRequested) {
     options = options || {};
     provider = normalizeProvider(provider || (state && state.provider));
+    var harness = providerHarness(provider);
     var env = {};
-    if (provider === "codex") {
+    if (harness === "codex") {
       var codexScope = codexHomeScopeForRun(options);
       return {
         handle: state.handle,
@@ -1358,7 +1359,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         serviceTier: state.serviceTier || ""
       };
     }
-    if (provider === "claude") {
+    if (harness === "claude") {
       var claudeScope = providerHomeScopeForRun(options, "claudeHomeScope");
       return {
         handle: state.handle,
@@ -1403,6 +1404,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return {
       handle: state.handle,
       cwd: state.cwd,
+      vibeProfile: vibeProfileForProvider(provider),
       vibeHome: vibeScope === "conversation" ? "" : trim(options.vibeHome),
       vibeHomeScope: vibeScope,
       homeScope: vibeScope,
@@ -1553,15 +1555,39 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return provider.length ? safePathPart(provider) : "vibe";
   }
 
-  function isResidentProvider(provider) {
+  // The "convertigo" mode is a logical provider (Convertigo LiteLLM gateway, per-user key,
+  // no personal account). The CLI that drives it is its harness: Vibe today, possibly
+  // another one later, so everything below goes through providerHarness().
+  var CONVERTIGO_MODE_DEFAULT_HARNESS = "vibe";
+
+  function providerHarness(provider, settingsProvider) {
     var normalized = normalizeProvider(provider);
-    return normalized === "codex" || normalized === "claude";
+    if (normalized === "convertigo") {
+      var announced = normalizeProvider(settingsProvider && settingsProvider.harness);
+      return announced === "codex" || announced === "claude" || announced === "vibe" ? announced : CONVERTIGO_MODE_DEFAULT_HARNESS;
+    }
+    return normalized === "codex" || normalized === "claude" ? normalized : "vibe";
+  }
+
+  function isConvertigoMode(provider) {
+    return normalizeProvider(provider) === "convertigo";
+  }
+
+  function isVibeHarness(provider) {
+    return providerHarness(provider) === "vibe";
+  }
+
+  function vibeProfileForProvider(provider) {
+    return isConvertigoMode(provider) ? "convertigo" : "";
+  }
+
+  function isResidentProvider(provider) {
+    var harness = providerHarness(provider);
+    return harness === "codex" || harness === "claude";
   }
 
   function providerSequence(provider, action) {
-    var normalized = normalizeProvider(provider);
-    var name = normalized === "codex" ? "codex" : (normalized === "claude" ? "claude" : "vibe");
-    return "agent_" + name + "_" + action;
+    return "agent_" + providerHarness(provider) + "_" + action;
   }
 
   function normalizeProviderSelector(value) {
@@ -1702,7 +1728,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function providerSearchList(value) {
     var provider = normalizeProviderSelector(value);
     if (provider === "all") {
-      return ["codex", "vibe", "claude"];
+      return ["convertigo", "codex", "vibe", "claude"];
     }
     return [provider];
   }
@@ -1717,6 +1743,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (provider === "claude") {
       return "Claude";
+    }
+    if (provider === "convertigo") {
+      return "Convertigo";
     }
     return provider;
   }
@@ -2884,6 +2913,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (normalized === "vibe") {
       return "vibe_login";
     }
+    if (normalized === "convertigo") {
+      return "convertigo_key";
+    }
     return "codex_login";
   }
 
@@ -3525,7 +3557,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.answer = text;
       return;
     }
-    if (normalizeProvider(state && state.provider) === "vibe") {
+    if (isVibeHarness(state && state.provider)) {
       // ACP agent_message_chunk content is a delta. Treating short, repeated
       // fragments as cumulative snapshots drops valid text such as list rows.
       state.answer += text;
@@ -3550,7 +3582,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function flushVibeInterimAnswerToProgress(state) {
-    if (!state || normalizeProvider(state.provider) !== "vibe") {
+    if (!state || !isVibeHarness(state.provider)) {
       return false;
     }
     var interim = String(state.answer || "");
@@ -4424,7 +4456,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (normalizeProvider(provider) === "codex" && trim(options.installCodex).length) {
       return boolValue(options.installCodex, false);
     }
-    if (normalizeProvider(provider) === "vibe" && trim(options.installVibe).length) {
+    if (isVibeHarness(provider) && trim(options.installVibe).length) {
       return boolValue(options.installVibe, false);
     }
     if (normalizeProvider(provider) === "claude" && trim(options.installClaude).length) {
@@ -4449,8 +4481,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function agentSetupPayload(state, options, installOverride) {
     options = options || {};
     var provider = normalizeProvider(state.provider);
+    var harness = providerHarness(provider);
     var install = typeof installOverride === "undefined" ? boolValue(options.install || options.installCodex || options.installVibe || options.installClaude, false) : installOverride === true;
-    if (provider === "claude") {
+    if (harness === "claude") {
       var claudeSetupScope = providerHomeScopeForRun(options, "claudeHomeScope");
       return {
         claudeHome: claudeSetupScope === "conversation" ? "" : trim(options.claudeHome || state.claudeHome),
@@ -4489,7 +4522,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         reasoningEffort: state.reasoningEffort || ""
       };
     }
-    if (provider === "codex") {
+    if (harness === "codex") {
       var codexScope = codexHomeScopeForRun(options);
       return {
         codexHome: codexHomeForRun(options, codexScope),
@@ -4532,6 +4565,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var vibeScope = providerHomeScopeForRun(options, "vibeHomeScope");
     return {
+      vibeProfile: vibeProfileForProvider(provider),
       install: install ? "true" : "false",
       configure: "true",
       login: typeof options.login === "undefined" ? (typeof options.vibeLogin === "undefined" ? "" : options.vibeLogin) : options.login,
@@ -4677,6 +4711,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       codexPath: trim(options.codexPath || options.commandPath),
       vibeHome: trim(options.vibeHome || options.agentHome),
       vibeHomeScope: trim(options.vibeHomeScope || options.homeScope),
+      vibeProfile: vibeProfileForProvider(providerFilter),
       model: trim(options.model),
       reasoningEffort: trim(options.reasoningEffort || options.reasoningLevel),
       serviceTier: trim(options.serviceTier),
@@ -4719,6 +4754,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       } else if (normalizeProvider(state.provider) === "claude") {
         lines.push(state.language === "fr" ? "Claude Code est installé, mais aucune authentification utilisable n'a été trouvée." : "Claude Code is installed, but no usable authentication was found.");
         lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Claude » pour vous authentifier dans votre navigateur (ou lancez `claude auth login`), puis revenez dans cette configuration." : "Use the \"Sign in to Claude\" button to authenticate in your browser (or run `claude auth login`), then return to this configuration.");
+      } else if (isConvertigoMode(state.provider)) {
+        lines.push(state.language === "fr" ? "Le mode Convertigo est installé, mais aucune clé d'agent Convertigo n'a été trouvée pour cet utilisateur." : "The Convertigo mode is installed, but no Convertigo agent key was found for this user.");
+        lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `agents/convertigo/llm-api-key` du workspace Studio." : "The key will be provisioned automatically during activation; meanwhile, drop it in the `agents/convertigo/llm-api-key` file of the Studio workspace.");
       } else {
         lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");
         lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Mistral » pour vous authentifier dans votre navigateur (ou ajoutez `MISTRAL_API_KEY` dans `~/.vibe/.env`), puis revenez dans cette configuration." : "Use the \"Sign in to Mistral\" button to authenticate in your browser (or add `MISTRAL_API_KEY` to `~/.vibe/.env`), then return to this configuration.");
@@ -5320,7 +5358,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
     var normalizedProvider = trim(options.provider).toLowerCase();
-    var isVibeProvider = normalizedProvider === "vibe" || normalizedProvider === "mistral-vibe" || normalizedProvider === "vibe-acp";
+    var isVibeProvider = isVibeHarness(normalizedProvider);
     var promptMcpEndpoint = trim(options.mcpEndpoint);
     promptParts.push("- MCP endpoint: " + (promptMcpEndpoint.length ? promptMcpEndpoint : "managed by Agent Bridge"));
     if (normalizedProvider === "codex" && !isNoCodeSurface) {
@@ -5799,7 +5837,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (isResidentProvider(provider) && start.setup) {
           state.setupReport = publicSetupReport(start.setup);
         }
-        if (provider === "vibe" && start.state) {
+        if (isVibeHarness(provider) && start.state) {
           state.model = trim(start.state.model) || state.model;
           state.reasoningEffort = normalizeReasoningEffort(start.state.reasoningEffort) || state.reasoningEffort;
         }
