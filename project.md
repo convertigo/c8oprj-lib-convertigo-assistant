@@ -1,18 +1,28 @@
 
 # ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/core/images/project_color_16x16.png?raw=true "Project") lib_ConvertigoAssistant
 
-This is the AI Assistant for Convertigo Performing RAG on OpenAI Apis.
+Tigo is Convertigo's local AI agent for Studio. It connects OpenAI Codex or Mistral Vibe to the current workspace through Convertigo MCP and Convertigo Agent Bridge, with managed local runtimes, Reveal mode, and short-lived server-side MCP credentials.
 
-## Symbols
-
-
-| Symbol    | Usage |
-|-----------|-------------------|
-|lib_C8Oforms_AI.GPT.apikey.secret  | the openAI Api Key |
-
+Requires Convertigo Studio 8.4.4 or newer.
 
 <details><summary><span style="color:DarkGoldenRod"><i>Connectors</i></span></summary><blockquote><p>
 
+
+<details><summary><b>AgentStackRelease</b> : Fetches the published Tigo stack manifest through the Convertigo HTTP client and proxy settings</summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/connectors/images/httpconnector_color_16x16.png?raw=true "HttpConnector") AgentStackRelease
+
+Fetches the published Tigo stack manifest through the Convertigo HTTP client and proxy settings.
+
+<details><summary><span style="color:DarkGoldenRod"><i>Transactions</i></span></summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/jsonhttptransaction_color_16x16.png?raw=true "JsonHttpTransaction") GetManifest
+
+Returns the current Tigo stack release manifest.
+</p></blockquote></details>
+</p></blockquote></details>
 
 <details><summary><b>HostedAssistant</b></summary><blockquote><p>
 
@@ -668,6 +678,22 @@ Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Con
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHome
+</td>
+<td>
+Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHomeScope
+</td>
+<td>
+Optional Claude home scope.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;codexHome
 </td>
 <td>
@@ -994,6 +1020,68 @@ Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
 
 </p></blockquote></details>
 
+<details><summary><b>AgentNoCodeContextCatalog</b> : Return the forms, selected form elements, and Baserow bases/tables available to the authenticated No Code Assistant user</summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") AgentNoCodeContextCatalog
+
+Return the forms, selected form elements, and Baserow bases/tables available to the authenticated No Code Assistant user.
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;agentProfile
+</td>
+<td>
+Assistant profile. Must remain nocode for catalog access.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;formId
+</td>
+<td>
+Optional form id whose pages and elements must be returned.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;skillProfile
+</td>
+<td>
+Managed skill profile used to provision the No Code MCP token.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;userId
+</td>
+<td>
+Authenticated C8Oforms user identifier used for the scoped No Code token.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;workspaceRoot
+</td>
+<td>
+Optional Convertigo user workspace root.
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
 <details><summary><b>AgentReadResponse</b> : Poll a local agent conversation and update the existing assistant streaming buffer</summary><blockquote><p>
 
 
@@ -1250,6 +1338,22 @@ Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Con
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHome
+</td>
+<td>
+Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHomeScope
+</td>
+<td>
+Optional Claude home scope.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;codexHome
 </td>
 <td>
@@ -1456,6 +1560,14 @@ Set false to forbid Python downloads and only report missing runtime.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;applicationId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;assistantContext
 </td>
 <td>
@@ -1464,10 +1576,66 @@ Assistant host context, for example nocode, studio, or admin.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;assistantLanguage
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;assistantSurface
 </td>
 <td>
 Assistant UI surface, for example nocode, studio, or admin.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;baserowDatabaseId
+</td>
+<td>
+Selected No Code conversation context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;baserowDatabaseName
+</td>
+<td>
+Selected No Code conversation context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;baserowTableId
+</td>
+<td>
+Selected No Code conversation context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;baserowTableName
+</td>
+<td>
+Selected No Code conversation context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;baserowWorkspaceId
+</td>
+<td>
+Selected No Code conversation context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;baserowWorkspaceName
+</td>
+<td>
+Selected No Code conversation context.
 </td>
 </tr>
 <tr>
@@ -1508,6 +1676,30 @@ Visible Studio viewer DevTools websocket URL.
 </td>
 <td>
 For Codex, bypass approvals and sandbox for Studio-local project work.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHome
+</td>
+<td>
+Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHomeScope
+</td>
+<td>
+Optional Claude home scope: default, shared, user, conversation, or explicit.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudePath
+</td>
+<td>
+Optional Claude Code CLI executable path.
 </td>
 </tr>
 <tr>
@@ -1568,10 +1760,122 @@ Optional npm package version for Codex CLI. Defaults to latest.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;contextTargetKind
+</td>
+<td>
+Selected No Code conversation context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentApplicationId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentFormId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentFormName
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentFormRevision
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentFormUrl
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentPage
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentPath
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentRoute
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;currentUrl
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;cwd
 </td>
 <td>
 Agent working directory. Defaults to workspaceRoot.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;elementId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;elementName
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;elementType
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;forceClaudeInstall
+</td>
+<td>
+When true, reinstall the Claude Code runtime even when found.
 </td>
 </tr>
 <tr>
@@ -1600,6 +1904,30 @@ When true, install or update the workspace-local Vibe venv even when Vibe is fou
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;formId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;formName
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;formRevision
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;homeScope
 </td>
 <td>
@@ -1616,6 +1944,14 @@ When true, installs the selected local agent CLI if it is missing.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;installClaude
+</td>
+<td>
+When true, installs the Claude Code runtime if it is missing.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;installCodex
 </td>
 <td>
@@ -1628,6 +1964,22 @@ When true, installs the Codex CLI if it is missing.
 </td>
 <td>
 When true, installs the Vibe CLI stack if it is missing.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;language
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;locale
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
 </td>
 </tr>
 <tr>
@@ -1656,6 +2008,38 @@ Optional model selected for this conversation.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;nocodeCurrentFormId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;nocodeCurrentFormUrl
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;nocodeCurrentRoute
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;nocodeCurrentUrl
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;nodeDir
 </td>
 <td>
@@ -1676,6 +2060,30 @@ Optional Node.js version used by the Convertigo workspace Node installer.
 </td>
 <td>
 Optional npm executable path override.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;pageId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;pageName
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;parentElementId
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
 </td>
 </tr>
 <tr>
@@ -1724,6 +2132,14 @@ User prompt sent to the agent.
 </td>
 <td>
 Optional Codex sandbox mode.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;selectionKind
+</td>
+<td>
+Optional C8Oforms embedded context snapshot for the current user message.
 </td>
 </tr>
 <tr>
@@ -1838,6 +2254,38 @@ Optional lib_ConvertigoAgentBridge project endpoint. Defaults to the current Con
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;checkUpdates
+</td>
+<td>
+Check package registries for newer CLI versions.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHome
+</td>
+<td>
+Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHomeScope
+</td>
+<td>
+Optional Claude home scope.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudePath
+</td>
+<td>
+Optional Claude Code CLI executable path.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;codexHome
 </td>
 <td>
@@ -1878,6 +2326,14 @@ Optional Convertigo MCP endpoint. Defaults to the current Convertigo endpoint pl
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;model
+</td>
+<td>
+Optional model preference.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;projectName
 </td>
 <td>
@@ -1890,6 +2346,46 @@ Optional target Convertigo project name.
 </td>
 <td>
 Optional provider filter: codex, vibe, or all.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;reasoningEffort
+</td>
+<td>
+Optional reasoningEffort preference.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;refreshUpdateCheck
+</td>
+<td>
+Bypass the cached CLI version check.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;runtimePresenceOnly
+</td>
+<td>
+Check only for runtime files without invoking the CLI.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;savePreferences
+</td>
+<td>
+Optional savePreferences preference.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;serviceTier
+</td>
+<td>
+Optional serviceTier preference.
 </td>
 </tr>
 <tr>
@@ -1914,6 +2410,22 @@ Optional target Convertigo project name. Preferred over projectName.
 </td>
 <td>
 Optional current assistant conversation id.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;updateCheckCacheMs
+</td>
+<td>
+Cache duration in milliseconds for package registry checks.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;updateCheckTimeoutMs
+</td>
+<td>
+Timeout in milliseconds for package registry checks.
 </td>
 </tr>
 <tr>
@@ -2060,6 +2572,30 @@ Visible Studio viewer DevTools websocket URL.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHome
+</td>
+<td>
+Optional explicit CLAUDE_CONFIG_DIR for the Claude provider.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudeHomeScope
+</td>
+<td>
+Optional Claude home scope: default, shared, user, conversation, or explicit.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;claudePath
+</td>
+<td>
+Optional Claude Code CLI executable path.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;codexHome
 </td>
 <td>
@@ -2088,6 +2624,22 @@ Codex install method. Only npm is currently supported.
 </td>
 <td>
 Timeout in milliseconds for npm install. Defaults to 600000.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;codexLogin
+</td>
+<td>
+Starts browser-based Codex authentication asynchronously.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;codexLoginStatus
+</td>
+<td>
+Returns the current browser-based Codex authentication status.
 </td>
 </tr>
 <tr>
@@ -2124,10 +2676,26 @@ Agent working directory. Defaults to workspaceRoot.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;forceClaudeInstall
+</td>
+<td>
+When true, reinstall the Claude Code runtime even when found.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;forceCodexInstall
 </td>
 <td>
 When true, reinstall Codex even when an executable is already found.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;forceLogin
+</td>
+<td>
+Starts a fresh Codex login even when scoped credentials are present.
 </td>
 </tr>
 <tr>
@@ -2164,6 +2732,14 @@ When true, installs the selected local agent CLI if it is missing.
 </tr>
 <tr>
 <td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;installClaude
+</td>
+<td>
+When true, installs the Claude Code runtime if it is missing.
+</td>
+</tr>
+<tr>
+<td>
 <img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;installCodex
 </td>
 <td>
@@ -2176,6 +2752,22 @@ When true, installs the Codex CLI if it is missing.
 </td>
 <td>
 When true, installs the Vibe CLI stack if it is missing.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;login
+</td>
+<td>
+When true, starts the browser sign-in of the selected local provider (Codex, Claude or Vibe) and returns the URL to open.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;loginStatus
+</td>
+<td>
+When true, reports the state of the pending browser sign-in of the selected local provider.
 </td>
 </tr>
 <tr>
@@ -2384,6 +2976,14 @@ Optional target Convertigo project name. Preferred over projectName.
 </td>
 <td>
 Optional existing agent conversation id.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;updateRuntime
+</td>
+<td>
+Marks a provider runtime installation or update that must not reuse conversation, project, or viewer context.
 </td>
 </tr>
 <tr>
@@ -2805,6 +3405,84 @@ comment
 </table>
 
 </p></blockquote></details>
+
+<details><summary><b>UploadFilesRouter</b> : Static requestable router for prompt attachments</summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") UploadFilesRouter
+
+Static requestable router for prompt attachments. In local agent mode the uploaded files are copied under the conversation folder and their local paths are returned; otherwise the legacy OpenAI UploadFiles sequence is used.
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;agentBridgeOperational
+</td>
+<td>
+true when the local Agent Bridge is used: files are stored under the conversation folder instead of being sent to OpenAI.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/multivaluedvariable_color_16x16.png?raw=true "  alt="RequestableMultiValuedVariable" >&nbsp;attachments
+</td>
+<td>
+Uploaded attachment files (temporary server paths).
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/multivaluedvariable_color_16x16.png?raw=true "  alt="RequestableMultiValuedVariable" >&nbsp;files
+</td>
+<td>
+Uploaded image files (temporary server paths).
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;provider
+</td>
+<td>
+Optional agent provider used when the conversation record does not exist yet.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;threadid
+</td>
+<td>
+Agent conversation id used to locate the conversation folder.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;userId
+</td>
+<td>
+Assistant user id (studio by default).
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;workspaceRoot
+</td>
+<td>
+Optional Convertigo workspace root override.
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
 </p></blockquote></details>
 
 <details><summary><span style="color:DarkGoldenRod"><i>Mobile Application</i></span></summary><blockquote><p>
@@ -2841,12 +3519,100 @@ Figma Assistant Page
 IT Support Page
 </p></blockquote></details>
 
-<details><summary><b>Page</b> : Convertigo Assistant Page</summary><blockquote><p>
+<details><summary><b>Page</b> : Tigo agent page</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/pagecomponent_color_16x16.png?raw=true "PageComponent") Page
 
-Convertigo Assistant Page
+Tigo agent page
+</p></blockquote></details>
+</p></blockquote></details>
+
+<details><summary><span style="color:DarkGoldenRod"><i>Shared Actions</i></span></summary><blockquote><p>
+
+
+<details><summary><b>ApplyNoCodeAssistantCatalog</b> : Apply the authenticated No Code catalog and choose the current host form/element by default without overriding a manual context choice</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uiactionstack_color_16x16.png?raw=true "UIActionStack") ApplyNoCodeAssistantCatalog
+
+Apply the authenticated No Code catalog and choose the current host form/element by default without overriding a manual context choice.
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uistackvariable_16x16.png?raw=true "  alt="UIStackVariable" >&nbsp;formId
+</td>
+<td>
+Form id used to hydrate the catalog.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uistackvariable_16x16.png?raw=true "  alt="UIStackVariable" >&nbsp;hostContext
+</td>
+<td>
+Current C8Oforms iframe context.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uistackvariable_16x16.png?raw=true "  alt="UIStackVariable" >&nbsp;response
+</td>
+<td>
+AgentNoCodeContextCatalog response.
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
+<details><summary><b>SelectNoCodeAssistantTarget</b> : Select a form, exact form element, Baserow base, or Baserow table for the next Assistant conversation</summary><blockquote><p>
+
+
+### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uiactionstack_color_16x16.png?raw=true "UIActionStack") SelectNoCodeAssistantTarget
+
+Select a form, exact form element, Baserow base, or Baserow table for the next Assistant conversation.
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uistackvariable_16x16.png?raw=true "  alt="UIStackVariable" >&nbsp;kind
+</td>
+<td>
+form, element, baserow-base, or baserow-table.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/ngx/components/images/uistackvariable_16x16.png?raw=true "  alt="UIStackVariable" >&nbsp;value
+</td>
+<td>
+Selected resource id.
+</td>
+</tr>
+</table>
+
 </p></blockquote></details>
 </p></blockquote></details>
 
