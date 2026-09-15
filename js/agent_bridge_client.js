@@ -112,9 +112,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "userId", "agentProfile", "skillProfile", "assistantContext",
       "assistantSurface", "codexHomeScope", "vibeHomeScope", "homeScope",
       "agentRevealMode", "convertigoRevealMode", "uiRevealMode", "revealMode",
-      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormUrl",
+      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormName", "currentFormRevision", "currentFormUrl",
       "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
-      "formId", "pageId", "applicationId", "currentPage", "currentApplicationId",
+      "formId", "formName", "formRevision", "pageId", "pageName", "applicationId", "currentPage", "currentApplicationId",
+      "elementId", "elementName", "elementType", "parentElementId", "selectionKind",
+      "contextTargetKind", "baserowWorkspaceId", "baserowWorkspaceName",
+      "baserowDatabaseId", "baserowDatabaseName", "baserowTableId", "baserowTableName",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
       "settingsTimeoutMs", "checkUpdates", "refreshUpdateCheck", "updateCheckTimeoutMs",
       "updateCheckCacheMs", "runtimePresenceOnly", "updateRuntime", "forceRuntimeUpdate",
@@ -194,7 +197,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var currentUrl = firstOptionValue(options, ["currentUrl", "nocodeCurrentUrl", "currentFormUrl", "nocodeCurrentFormUrl"]);
     var currentRoute = firstOptionValue(options, ["currentRoute", "nocodeCurrentRoute", "currentPath"]);
     var currentFormId = firstOptionValue(options, ["currentFormId", "nocodeCurrentFormId", "formId", "applicationId", "currentApplicationId"]);
+    var currentFormName = firstOptionValue(options, ["currentFormName", "formName"]);
+    var currentFormRevision = firstOptionValue(options, ["currentFormRevision", "formRevision"]);
     var currentPage = firstOptionValue(options, ["pageId", "currentPage"]);
+    var currentPageName = firstOptionValue(options, ["pageName"]);
+    var elementId = firstOptionValue(options, ["elementId"]);
+    var elementName = firstOptionValue(options, ["elementName"]);
+    var elementType = firstOptionValue(options, ["elementType"]);
+    var parentElementId = firstOptionValue(options, ["parentElementId"]);
+    var selectionKind = firstOptionValue(options, ["selectionKind"]);
+    var contextTargetKind = firstOptionValue(options, ["contextTargetKind", "selectionKind"]);
+    var baserowWorkspaceId = firstOptionValue(options, ["baserowWorkspaceId"]);
+    var baserowWorkspaceName = firstOptionValue(options, ["baserowWorkspaceName"]);
+    var baserowDatabaseId = firstOptionValue(options, ["baserowDatabaseId", "baserowBaseId"]);
+    var baserowDatabaseName = firstOptionValue(options, ["baserowDatabaseName", "baserowBaseName"]);
+    var baserowTableId = firstOptionValue(options, ["baserowTableId"]);
+    var baserowTableName = firstOptionValue(options, ["baserowTableName"]);
     var language = assistantLanguageName(firstOptionValue(options, ["language", "locale", "assistantLanguage"]));
     var lines = [];
     lines.push("Runtime NoCode context supplied by the host application:");
@@ -203,12 +221,28 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     lines.push("- Current URL: " + (currentUrl.length ? currentUrl : "none"));
     lines.push("- Current route: " + (currentRoute.length ? currentRoute : "none"));
     lines.push("- Current form/application id: " + (currentFormId.length ? currentFormId : "none"));
+    lines.push("- Current form name: " + (currentFormName.length ? currentFormName : "none"));
+    lines.push("- Current form revision: " + (currentFormRevision.length ? currentFormRevision : "none"));
     lines.push("- Current page id/name: " + (currentPage.length ? currentPage : "none"));
+    lines.push("- Current page display name: " + (currentPageName.length ? currentPageName : "none"));
+    lines.push("- Selected element id: " + (elementId.length ? elementId : "none"));
+    lines.push("- Selected element name: " + (elementName.length ? elementName : "none"));
+    lines.push("- Selected element type: " + (elementType.length ? elementType : "none"));
+    lines.push("- Selected element parent id: " + (parentElementId.length ? parentElementId : "none"));
+    lines.push("- Selection kind: " + (selectionKind.length ? selectionKind : "none"));
+    lines.push("- Explicit context target kind: " + (contextTargetKind.length ? contextTargetKind : "none"));
+    lines.push("- Selected Baserow workspace id/name: " + (baserowWorkspaceId.length ? baserowWorkspaceId : "none") + " / " + (baserowWorkspaceName.length ? baserowWorkspaceName : "none"));
+    lines.push("- Selected Baserow database id/name: " + (baserowDatabaseId.length ? baserowDatabaseId : "none") + " / " + (baserowDatabaseName.length ? baserowDatabaseName : "none"));
+    lines.push("- Selected Baserow table id/name: " + (baserowTableId.length ? baserowTableId : "none") + " / " + (baserowTableName.length ? baserowTableName : "none"));
     if (language.length) {
       lines.push("- Reply to the user and write progress/details in " + language + ".");
     }
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
-    lines.push("- If a first tool discovery attempt does not show NoCode tools, retry with exact searches for `Convertigo NoCode form contract get edit update validate compile C8Oforms`, `nocode-form-contract-get nocode-form-edit nocode-form-update`, and `mcp__convertigo nocode_form_contract_get nocode_form_edit nocode_form_update` before reporting a blocker.");
+    lines.push("- Read the latest saved form with `nocode-form-get` using its document id before auditing, proposing improvements, or editing. The contract tool describes supported components, not this form's content.");
+    lines.push("- If a selected element id is provided, locate it in the form returned by `nocode-form-get`. Apply the smallest `nocode-form-edit` operation only when the user requests a change; suggestions and audits are read-only.");
+    lines.push("- If a Baserow database or table is selected, treat it as the exact default data target. Use `nocode-baserow-catalog-list` to re-read its current schema before applying a minimal `nocode-baserow-schema-apply` change.");
+    lines.push("- The form revision and selected element context are a snapshot taken when this message was sent. Re-read with `nocode-form-get` and refuse or re-plan on a revision/identity mismatch instead of silently editing another element. Saved content may differ from unsaved editor changes.");
+    lines.push("- Use only the managed no-code tools. If discovery fails, search for `nocode-form-get nocode_form_get` and the exact required no-code tool before reporting a blocker. Never fall back to requestable-execute, databaseobject/project tools, raw HTTP or shell, and never use an empty edit/update as a read.");
     return lines.join("\n");
   }
 
@@ -315,8 +349,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
-  function defaultBridgeUrl() {
-    return engineConvertigoBaseUrl().replace(/\/+$/g, "") + "/projects/" + DEFAULT_BRIDGE_PROJECT + "/.json";
+  function defaultBridgeUrl(options) {
+    // Studio supplies its bridge endpoint. No Code uses the deployed library.
+    var project = normalizeSkillProfile(options) === "nocode" ? "lib_ConvertigoAgentBridge" : DEFAULT_BRIDGE_PROJECT;
+    return engineConvertigoBaseUrl().replace(/\/+$/g, "") + "/projects/" + project + "/.json";
   }
 
   function defaultMcpEndpoint(profileOptions) {
@@ -841,6 +877,343 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  function sequencePayload(response) {
+    var value = unwrapSequenceResult(response);
+    if (value === null || typeof value === "undefined") {
+      value = response && response.document ? response.document : response;
+    }
+    var guard = 0;
+    while (value && typeof value === "object" && value.result && typeof value.result === "object" && guard < 4) {
+      value = value.result;
+      guard++;
+    }
+    return value || {};
+  }
+
+  function catalogArray(value) {
+    if (Object.prototype.toString.call(value) === "[object Array]") {
+      return value;
+    }
+    if (value && Object.prototype.toString.call(value.item) === "[object Array]") {
+      return value.item;
+    }
+    if (value && value.item !== null && typeof value.item !== "undefined") {
+      return [value.item];
+    }
+    return [];
+  }
+
+  function findCatalogValue(root, names, depth) {
+    if (!root || typeof root !== "object" || depth > 8) {
+      return null;
+    }
+    for (var i = 0; i < names.length; i++) {
+      var direct = root[names[i]];
+      if (direct !== null && typeof direct !== "undefined") {
+        return direct;
+      }
+    }
+    for (var key in root) {
+      if (!Object.prototype.hasOwnProperty.call(root, key)) {
+        continue;
+      }
+      var child = root[key];
+      if (!child || typeof child !== "object") {
+        continue;
+      }
+      var found = findCatalogValue(child, names, depth + 1);
+      if (found !== null && typeof found !== "undefined") {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  function normalizeNoCodeFormSummary(row) {
+    row = row || {};
+    var value = row.value && typeof row.value === "object" ? row.value : {};
+    var doc = row.doc && typeof row.doc === "object" ? row.doc : {};
+    var source = Object.keys(doc).length ? doc : (Object.keys(value).length ? value : row);
+    var id = trim(source._id || source.id || row.id || row.key);
+    var name = trim(source.name || source.title || source.label || value.name || value.title || id);
+    var type = trim(source.type || value.type || row.type).toLowerCase();
+    if (!id.length || type === "folder" || type === "c8oforms_folder" || id.indexOf("folder_") === 0) {
+      return null;
+    }
+    return {
+      id: id,
+      name: name.length ? name : id,
+      revision: trim(source._rev || source.rev || value._rev || value.rev),
+      description: trim(source.description || value.description),
+      folder: trim(source.folder || value.folder),
+      updatedAt: source.updatedAt || source.lastUpdate || value.updatedAt || value.lastUpdate || null
+    };
+  }
+
+  function listNoCodeForms(options) {
+    var response = callLocalSequence("C8Oforms", "APIV2_ExecuteView", {
+      target: "formsV2/out_folder",
+      acl: "true",
+      dynamicParams: JSON.stringify({
+        folder: "",
+        filters: {},
+        pagination: {
+          pageSize: "infinite",
+          pageToken: null
+        }
+      })
+    });
+    var payload = sequencePayload(response);
+    var docsValue = findCatalogValue(payload, ["docs"], 0);
+    var docs = catalogArray(docsValue);
+    var forms = [];
+    var ids = {};
+    for (var i = 0; i < docs.length; i++) {
+      var form = normalizeNoCodeFormSummary(docs[i]);
+      if (!form || ids[form.id]) {
+        continue;
+      }
+      ids[form.id] = true;
+      forms.push(form);
+    }
+    forms.sort(function (left, right) {
+      return String(left.name || left.id).toLowerCase().localeCompare(String(right.name || right.id).toLowerCase());
+    });
+    return forms;
+  }
+
+  function findNoCodeFormDocument(value, formId, depth) {
+    if (!value || typeof value !== "object" || depth > 10) {
+      return null;
+    }
+    var id = trim(value._id || value.id);
+    if ((id.length && (!formId.length || id === formId)) &&
+        (Object.prototype.toString.call(value.formulaire) === "[object Array]" ||
+         Object.prototype.toString.call(value.flows) === "[object Array]" ||
+         Object.prototype.toString.call(value.pages) === "[object Array]")) {
+      return value;
+    }
+    for (var key in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) {
+        continue;
+      }
+      var child = value[key];
+      if (!child || typeof child !== "object") {
+        continue;
+      }
+      if (Object.prototype.toString.call(child) === "[object Array]") {
+        for (var i = 0; i < child.length; i++) {
+          var foundInArray = findNoCodeFormDocument(child[i], formId, depth + 1);
+          if (foundInArray) {
+            return foundInArray;
+          }
+        }
+      } else {
+        var found = findNoCodeFormDocument(child, formId, depth + 1);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  function noCodePageMap(form) {
+    var pages = catalogArray(form && form.pages);
+    var map = {};
+    for (var i = 0; i < pages.length; i++) {
+      var page = pages[i] || {};
+      var id = trim(page.pageTechName || page.id || page.name);
+      if (!id.length) {
+        continue;
+      }
+      map[id] = {
+        id: id,
+        name: trim(page.name || page.title || id)
+      };
+    }
+    return map;
+  }
+
+  function flattenNoCodeFormElements(form) {
+    var elements = [];
+    var ids = {};
+    var pageMap = noCodePageMap(form);
+    var walk = function (value, parentId, depth) {
+      if (!value || typeof value !== "object" || depth > 16) {
+        return;
+      }
+      if (Object.prototype.toString.call(value) === "[object Array]") {
+        for (var ai = 0; ai < value.length; ai++) {
+          walk(value[ai], parentId, depth + 1);
+        }
+        return;
+      }
+      var id = trim(value.id || value._id);
+      var type = trim(value.type || value.ctype);
+      var config = value.config && typeof value.config === "object" ? value.config : {};
+      var effectiveParent = trim(value.parentRef || value.parentId || parentId);
+      if (id.length && !ids[id] && (type.length || Object.keys(config).length || effectiveParent.length)) {
+        var pageId = trim(config.page || value.pageId || value.page);
+        var page = pageMap[pageId] || { id: pageId, name: pageId };
+        elements.push({
+          id: id,
+          name: trim(value.name || config.label || config.title || type || id),
+          type: type,
+          parentElementId: effectiveParent,
+          pageId: page.id || "",
+          pageName: page.name || ""
+        });
+        ids[id] = true;
+        effectiveParent = id;
+      }
+      var childKeys = ["children", "items", "columns", "questions", "blocks", "formulaire", "flows"];
+      for (var ci = 0; ci < childKeys.length; ci++) {
+        var child = value[childKeys[ci]];
+        if (child && typeof child === "object") {
+          walk(child, effectiveParent, depth + 1);
+        }
+      }
+    };
+    walk(form && form.formulaire, "", 0);
+    walk(form && form.flows, "", 0);
+    return elements;
+  }
+
+  function loadNoCodeFormDetails(formId) {
+    formId = trim(formId);
+    if (!formId.length) {
+      return {
+        form: null,
+        pages: [],
+        elements: []
+      };
+    }
+    var response = callLocalSequence("C8Oforms", "APIV2_getDocument", {
+      id: formId
+    });
+    var payload = sequencePayload(response);
+    var doc = findNoCodeFormDocument(payload, formId, 0);
+    if (!doc) {
+      return {
+        form: null,
+        pages: [],
+        elements: []
+      };
+    }
+    var pages = [];
+    var map = noCodePageMap(doc);
+    for (var key in map) {
+      if (Object.prototype.hasOwnProperty.call(map, key)) {
+        pages.push(map[key]);
+      }
+    }
+    return {
+      form: {
+        id: trim(doc._id || doc.id || formId),
+        name: trim(doc.name || doc.title || formId),
+        revision: trim(doc._rev || doc.rev),
+        description: trim(doc.description)
+      },
+      pages: pages,
+      elements: flattenNoCodeFormElements(doc)
+    };
+  }
+
+  function loadNoCodeBaserowCatalog(options) {
+    var handle = noCodeMcpTokenHandle(options);
+    var token = handle.length ? sharedSecretGet(handle) : "";
+    if (!token.length) {
+      return {
+        status: "auth_required",
+        workspaces: [],
+        bases: [],
+        tables: []
+      };
+    }
+    var response = callLocalSequence("lib_ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
+      token: token,
+      includeColumns: "false",
+      __nolog: "true"
+    });
+    var payload = sequencePayload(response);
+    return {
+      status: trim(payload.status || "ok") || "ok",
+      workspaces: catalogArray(findCatalogValue(payload, ["workspaces"], 0)),
+      bases: catalogArray(findCatalogValue(payload, ["bases", "applications", "databases"], 0)),
+      tables: catalogArray(findCatalogValue(payload, ["tables"], 0)),
+      error: payload.error || null
+    };
+  }
+
+  function noCodeContextCatalogFromScope(scope) {
+    var names = ["userId", "workspaceRoot", "agentProfile", "skillProfile", "formId"];
+    var options = {};
+    for (var i = 0; i < names.length; i++) {
+      options[names[i]] = sequenceScopeValue(scope, names[i]);
+    }
+    if (!trim(options.agentProfile).length) {
+      options.agentProfile = "nocode";
+    }
+    if (!trim(options.skillProfile).length) {
+      options.skillProfile = "nocode";
+    }
+    var forms = [];
+    var details = {
+      form: null,
+      pages: [],
+      elements: []
+    };
+    var baserow = {
+      status: "unavailable",
+      workspaces: [],
+      bases: [],
+      tables: []
+    };
+    var errors = [];
+    try {
+      forms = listNoCodeForms(options);
+    } catch (formListError) {
+      errors.push({
+        scope: "forms",
+        message: String(formListError)
+      });
+    }
+    try {
+      details = loadNoCodeFormDetails(options.formId);
+    } catch (formDetailsError) {
+      errors.push({
+        scope: "form",
+        message: String(formDetailsError)
+      });
+    }
+    try {
+      baserow = loadNoCodeBaserowCatalog(options);
+    } catch (baserowError) {
+      baserow = {
+        status: "failed",
+        workspaces: [],
+        bases: [],
+        tables: []
+      };
+      errors.push({
+        scope: "baserow",
+        message: String(baserowError)
+      });
+    }
+    return {
+      ok: errors.length === 0 || forms.length > 0 || baserow.tables.length > 0,
+      status: errors.length ? "partial" : "ready",
+      requestedFormId: trim(options.formId),
+      forms: forms,
+      selectedForm: details.form,
+      pages: details.pages,
+      elements: details.elements,
+      baserow: baserow,
+      errors: errors
+    };
+  }
+
   function normalizeWorkspaceRootPath(value) {
     var text = trim(value);
     if (!text.length) {
@@ -1215,7 +1588,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (shouldAttachMcpTokenHandle(sequence)) {
       attachMcpTokenHandle(payload, options);
     }
-    var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(), payload, timeoutMs || 70000);
+    var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(options), payload, timeoutMs || 70000);
+    if (normalizeSkillProfile(options) === "nocode" && response && response.document && response.document.error) {
+      throw new Error(trim(response.document.error.message) || "Agent bridge request failed");
+    }
     return response && typeof response.result !== "undefined" ? response.result : response;
   }
 
@@ -1440,7 +1816,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return false;
     }
     var bridgeOptions = {
-      bridgeBaseUrl: state.bridgeBaseUrl || (options && options.bridgeBaseUrl) || defaultBridgeUrl(),
+      bridgeBaseUrl: state.bridgeBaseUrl || (options && options.bridgeBaseUrl) || defaultBridgeUrl(state),
       workspaceRoot: state.workspaceRoot,
       primaryProject: state.primaryProject || state.projectId || "",
       projectId: state.projectId || state.primaryProject || "",
@@ -1706,6 +2082,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return normalizeSkillProfile(record);
     }
     return normalizeSkillProfile({
+      userId: record.userId,
       primaryProject: record.primaryProject || record.projectId,
       projectName: record.primaryProject || record.projectId
     });
@@ -1718,6 +2095,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (requested === "nocode" && !hasExplicitSkillProfile(record)) {
       return normalizeSkillProfile({
+        userId: record && record.userId,
         primaryProject: record && (record.primaryProject || record.projectId),
         projectName: record && (record.primaryProject || record.projectId)
       }) === "nocode";
@@ -2234,10 +2612,34 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return title.length ? title : "Conversation";
   }
 
+  // Persist only resource identity, never host URLs, credentials or form contents.
+  function noCodeConversationContext(value) {
+    if (!value || !trim(value.formId).length) { return null; }
+    var result = {};
+    var fields = ["formId", "formName", "formRevision", "pageId", "pageName", "elementId", "elementName", "elementType", "parentElementId", "selectionKind"];
+    for (var i = 0; i < fields.length; i++) {
+      result[fields[i]] = trim(value[fields[i]]);
+    }
+    return result;
+  }
+
+  function savedNoCodeContext(state) {
+    if (normalizeSkillProfile(state || {}) !== "nocode") { return null; }
+    return noCodeConversationContext(state.nocodeContext) || noCodeConversationContext(state.formMutation) || noCodeConversationContext(state.hostFormContext);
+  }
+
   function publicConversation(record) {
     record = record || {};
     var provider = normalizeProvider(record.provider);
     var normalizedProfile = conversationSkillProfile(record);
+    var resourceContext = savedNoCodeContext(record);
+    // Older records can still have structured context in this user's live session.
+    if (!resourceContext && normalizeSkillProfile(record) === "nocode") {
+      var live = readState(String(record.conversationId || record.threadid || ""));
+      if (live && String(live.userKey || "") === String(record.userKey || "") && normalizeProvider(live.provider) === provider) {
+        resourceContext = savedNoCodeContext(live);
+      }
+    }
     return {
       conversationId: String(record.conversationId || record.threadid || ""),
       title: conversationTitleForRecord(record || {}),
@@ -2247,6 +2649,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizedProfile,
       assistantContext: String(record.assistantContext || ""),
       assistantSurface: String(record.assistantSurface || ""),
+      nocodeContext: resourceContext,
       status: String(record.status || ""),
       primaryProject: String(record.primaryProject || record.projectId || ""),
       projectNames: record.projectNames || [],
@@ -2414,6 +2817,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
+      nocodeContext: savedNoCodeContext(state),
       language: state.language || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
@@ -3247,6 +3651,84 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  function isSuccessfulToolStatus(status) {
+    status = trim(status).toLowerCase();
+    return status === "completed" || status === "complete" || status === "success" || status === "succeeded";
+  }
+
+  function isNoCodeFormMutationTool(value) {
+    var normalized = trim(value).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    return /(?:^|_)nocode_form_(?:create|edit|update|get)$/.test(normalized);
+  }
+
+  function noCodeFormToolResult(value, depth) {
+    if (depth > 10 || value == null) { return null; }
+    if (typeof value === "string") {
+      try { return noCodeFormToolResult(JSON.parse(value), depth + 1); } catch (_notJson) { return null; }
+    }
+    if (typeof value !== "object" || value.isError === true || value.Err || value.error) { return null; }
+    if (value.status === "ok" && (value.saved === true || value.fetched === true) && value.form && value.form._id) { return value; }
+    var nested = Array.isArray(value) ? value : [value.Ok, value.structuredContent, value.result, value.content, value.output, value.text];
+    for (var i = 0; i < nested.length; i++) {
+      var found = noCodeFormToolResult(nested[i], depth + 1);
+      if (found) { return found; }
+    }
+    return null;
+  }
+
+  function markSuccessfulNoCodeFormMutation(state, event, data, type) {
+    if (!state || type !== "tool/update" || !isSuccessfulToolStatus(eventToolStatus(data))) {
+      return;
+    }
+    var rawTitle = eventToolTitle(event, data);
+    var title = normalizedToolTitle(state, data, rawTitle);
+    var toolName = toolNameFromData(data);
+    var callId = toolCallId(data);
+    var remembered = callId.length && state.toolCalls && state.toolCalls[callId] ? state.toolCalls[callId] : {};
+    var candidates = [
+      toolName,
+      title,
+      remembered.toolName,
+      remembered.title
+    ];
+    var matchedTool = "";
+    for (var i = 0; i < candidates.length; i++) {
+      if (isNoCodeFormMutationTool(candidates[i])) {
+        matchedTool = trim(candidates[i]);
+        break;
+      }
+    }
+    if (!matchedTool.length) {
+      return;
+    }
+    var result = noCodeFormToolResult(data.result || (data.item && data.item.result), 0);
+    if (!result) { return; }
+    var form = result.form;
+    var formId = trim(form._id);
+    var isRead = result.fetched === true && result.saved !== true;
+    if (isRead && state.formMutation && state.formMutation.formId === formId && state.formMutation.changed === true) { return; }
+    var hostContext = state.hostFormContext || {};
+    if (trim(hostContext.formId) !== formId) { hostContext = {}; }
+    state.formMutation = {
+      success: true,
+      changed: !isRead,
+      formId: formId,
+      formName: trim(form.name),
+      formRevision: trim(form._rev),
+      pageId: trim(hostContext.pageId),
+      pageName: trim(hostContext.pageName),
+      elementId: trim(hostContext.elementId),
+      elementName: trim(hostContext.elementName),
+      elementType: trim(hostContext.elementType),
+      parentElementId: trim(hostContext.parentElementId),
+      selectionKind: trim(hostContext.selectionKind),
+      toolName: matchedTool,
+      callId: callId,
+      completedAt: now()
+    };
+    state.nocodeContext = noCodeConversationContext(state.formMutation);
+  }
+
   function pushProgressEvent(state, item) {
     if (!state) {
       return null;
@@ -3421,6 +3903,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       groupKey: shellCommand.length ? "exec_command" : title.toLowerCase(),
       current: !(status === "completed" || status === "complete" || status === "success" || status === "succeeded" || status === "failed" || status === "error")
     });
+    markSuccessfulNoCodeFormMutation(state, event, data, type);
     state.lastStatusText = label;
   }
 
@@ -4212,6 +4695,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.assistantSurface === "undefined" || state.assistantSurface === null) {
       state.assistantSurface = "";
     }
+    if (!state.hostFormContext || typeof state.hostFormContext !== "object") {
+      state.hostFormContext = {};
+    }
+    if (typeof state.formMutation === "undefined") {
+      state.formMutation = null;
+    }
     return sanitizeProgressLog(refreshTerminalStateFromRecord(state));
   }
 
@@ -4272,6 +4761,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       externalSessionId = recoverCodexExternalSessionId(record, externalSessionId);
     }
     var skillProfile = normalizeSkillProfile({
+      userId: options.userId || (record && record.userId),
       agentProfile: options.agentProfile || (record && record.agentProfile),
       skillProfile: options.skillProfile || (record && record.skillProfile),
       assistantContext: options.assistantContext || (record && record.assistantContext),
@@ -4284,12 +4774,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       provider: provider,
       agentProfile: skillProfile,
       skillProfile: skillProfile,
+      nocodeContext: record ? savedNoCodeContext(record) : null,
       assistantContext: trim(options.assistantContext || (record && record.assistantContext)),
       assistantSurface: trim(options.assistantSurface || (record && record.assistantSurface)),
       model: model,
       reasoningEffort: reasoningEffort,
       serviceTier: serviceTier,
-      bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || defaultBridgeUrl(),
+      bridgeBaseUrl: trim(options.bridgeBaseUrl) || (record && trim(record.bridgeBaseUrl)) || defaultBridgeUrl(options),
       mcpEndpoint: trim(options.mcpEndpoint) || (record && trim(record.mcpEndpoint)) || defaultMcpEndpoint({ agentProfile: skillProfile }),
       workspaceRoot: workspaceRoot,
       cwd: trim(options.cwd) || (record && trim(record.cwd)) || workspaceRoot,
@@ -4361,6 +4852,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progressEvents: state.progressEvents || [],
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
+      formMutation: state.formMutation || null,
+      nocodeContext: savedNoCodeContext(state),
       setupRequired: state.setupRequired === true,
       setup: state.setupReport || null,
       codexPrewarmStartedAt: state.codexPrewarmStartedAt || 0,
@@ -4411,6 +4904,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         explanation: state.answer || state.error || "",
         progress: state.progressLog || "",
         progressEvents: state.progressEvents || [],
+        formMutation: state.formMutation || null,
         setupRequired: state.setupRequired === true,
         setup: state.setupReport || null,
         warnings: state.warnings || [],
@@ -5411,7 +5905,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("");
     promptParts.push("Operational rules:");
     promptParts.push(isNoCodeSurface
-      ? "- Use the Convertigo NoCode MCP/tools for all form and no-code work."
+      ? "- Use only the tools allowed by convertigo-nocode. Read existing forms with nocode-form-get; never use requestable-execute, databaseobject/project/mobile-builder tools, raw HTTP or shell as a workaround."
       : (hasFlowCapability
         ? "- Route the task through the managed `convertigo-studio` skill before authoring. Explicit Flow/FlowScript/Flow Svelte intent selects `convertigo-flow`; explicit Legacy/NGX intent selects `convertigo`; otherwise inspect the selected project's model and choose its owner."
         : (isVibeProvider
@@ -5593,7 +6087,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "codexInstallTimeoutMs", "forceCodexInstall", "forceVibeInstall", "forcePythonInstall",
       "allowPythonDownload", "mcpSkillsSourceDir", "skipSkillsInstall", "agentRevealMode",
       "browserDebugUrl", "browserDevToolsJsonUrl", "browserDevToolsWebSocketUrl",
-      "playwrightCdpEndpoint", "viewerCdpEndpoint", "playwrightMcpEndpoint", "AIFiles"
+      "playwrightCdpEndpoint", "viewerCdpEndpoint", "playwrightMcpEndpoint", "AIFiles",
+      "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath",
+      "currentFormId", "currentFormName", "currentFormRevision", "currentFormUrl",
+      "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
+      "formId", "formName", "formRevision", "pageId", "pageName", "applicationId",
+      "currentPage", "currentApplicationId", "elementId", "elementName", "elementType",
+      "parentElementId", "selectionKind", "contextTargetKind",
+      "baserowWorkspaceId", "baserowWorkspaceName", "baserowDatabaseId",
+      "baserowDatabaseName", "baserowTableId", "baserowTableName"
     ];
     var options = {};
     for (var i = 0; i < names.length; i++) {
@@ -5604,6 +6106,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options.userQuestion = rawQuestion;
     options.Question = buildSequencePrompt(rawQuestion, options);
     return C8O.assistantAgentBridge.sendMessage(options);
+  };
+
+  C8O.assistantAgentBridge.noCodeContextCatalogFromSequenceScope = function (scope) {
+    return noCodeContextCatalogFromScope(scope);
   };
 
   C8O.assistantAgentBridge.sendMessage = function (options) {
@@ -5680,6 +6186,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.progressLog = "";
     state.progressEvents = [];
     state.lastProgressLine = "";
+    state.hostFormContext = {
+      formId: firstOptionValue(options, ["formId", "currentFormId", "nocodeCurrentFormId", "applicationId", "currentApplicationId"]),
+      formName: firstOptionValue(options, ["formName", "currentFormName"]),
+      formRevision: firstOptionValue(options, ["formRevision", "currentFormRevision"]),
+      pageId: firstOptionValue(options, ["pageId", "currentPage"]),
+      pageName: firstOptionValue(options, ["pageName"]),
+      elementId: firstOptionValue(options, ["elementId"]),
+      elementName: firstOptionValue(options, ["elementName"]),
+      elementType: firstOptionValue(options, ["elementType"]),
+      parentElementId: firstOptionValue(options, ["parentElementId"]),
+      selectionKind: firstOptionValue(options, ["selectionKind"]),
+      contextTargetKind: firstOptionValue(options, ["contextTargetKind", "selectionKind"]),
+      baserowWorkspaceId: firstOptionValue(options, ["baserowWorkspaceId"]),
+      baserowWorkspaceName: firstOptionValue(options, ["baserowWorkspaceName"]),
+      baserowDatabaseId: firstOptionValue(options, ["baserowDatabaseId", "baserowBaseId"]),
+      baserowDatabaseName: firstOptionValue(options, ["baserowDatabaseName", "baserowBaseName"]),
+      baserowTableId: firstOptionValue(options, ["baserowTableId"]),
+      baserowTableName: firstOptionValue(options, ["baserowTableName"])
+    };
+    state.nocodeContext = normalizeSkillProfile(state) === "nocode" ? noCodeConversationContext(state.hostFormContext) : null;
+    state.formMutation = null;
     state.setupRequired = false;
     state.setupReport = null;
     state.userQuestion = rawUserQuestion;

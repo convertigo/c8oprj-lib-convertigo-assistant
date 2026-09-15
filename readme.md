@@ -75,6 +75,15 @@ the configured Convertigo proxy is used and the response is cached for six hours
 Projects imported from local Git checkouts are detected as source-managed and
 are never overwritten by this operation.
 
+## C8Oforms integration
+
+In the embedded NoCode surface, Tigo uses the authenticated C8Oforms user and
+the NoCode tool profile. Conversations retain their form/page/element context;
+resuming a conversation validates access before selecting the saved subject.
+Successful form creation and updates can focus the form as soon as the saved
+result is available. Studio keeps its own session, routing and capabilities.
+The Baserow gateway is unchanged.
+
 ## Development
 
 The `HandlePostMessage` application initialization action owns

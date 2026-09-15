@@ -66,6 +66,21 @@ rediscovering the same context.
   `provider === "codex"` forks for behaviour Claude shares.
 - Claude authentication has no in-app sign-in flow: the bridge copies local
   Claude credentials, and the UI asks the user to run `claude auth login`.
+- In the C8Oforms embedded surface, successful `nocode-form-create`,
+  `nocode-form-edit`, `nocode-form-update`, and `nocode-form-get` results are
+  returned as `state.formMutation`. Derive the subject ID only from the
+  structured saved/fetched form, never from the previous host selection or
+  narrative text. Reads use `changed: false`; a read of the same form after a
+  mutation must retain the mutation signal.
+  The Assistant then posts `ConvertigoAssistant.form-updated` to the validated
+  `hostOrigin` on the first polling response containing the saved/fetched form,
+  without waiting for run completion; C8Oforms checks access, selects the subject,
+  and opens its editor if needed. On the current form, preserve the active
+  page/selection when they still exist, and never replace local editor contents
+  for a read-only focus. Keep Studio and collapsed progress/final UI unchanged.
+- Deduplicate form notifications per run/resource/result, including the terminal
+  polling response. Baserow auto-navigation is intentionally out of scope: the
+  user does not want changes to the authenticated `/c8o/` gateway.
 - The agent configuration panel shows the managed CLI installed/latest version
   and exposes explicit install, update, and reinstall actions. Opening the panel
   may request a latest-version check cached for six hours under
@@ -86,9 +101,54 @@ rediscovering the same context.
 - Do not auto-resume the latest conversation on view startup. Startup should
   prepare settings and list conversations; the first prompt creates a new
   conversation unless an explicit conversation is resumed.
+- Forms conversations persist an allowlisted `nocodeContext` (form, page and
+  element identity only). Never persist host URLs, tokens or form contents in
+  this metadata. Older conversations without reliable context remain readable
+  but require an explicit target selection; never infer a form id from prose.
+- Forms welcome lists at most three recent conversations for the selected app;
+  the full history supports title/context search and an application filter.
+  Resuming restores messages, then validates resource access with the context
+  catalog before posting a read-only (`changed:false`) focus event. Never replay
+  a mutation. Missing elements/pages fall back to the application; inaccessible
+  applications keep their history with a warning and block contextual sends.
+- Within one app, host navigation may update the page/selection. Navigating to
+  another app must not silently retarget an active conversation. Keep the bound
+  context and offer return/new-conversation controls. Ignore stale catalog
+  responses by comparing `requestedFormId` with the current intended resource.
+- Run `node --test tests/nocode-*.test.cjs` with TypeScript installed for startup, history,
+  context persistence, scoped filtering, access fallback and Studio isolation.
+- Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
+  query server agent settings and conversations without waiting for Studio's
+  local-stack capability flags. Keep the Studio capability checks unchanged.
+  No Code settings checks are presence-only by default, bounded to 15 seconds,
+  and settle into an explicit error/configuration state on failure. Never infer
+  a working project from an unrelated Studio selection for these checks.
+  No Code defaults to `lib_ConvertigoAgentBridge`; explicit bridge URLs take
+  precedence, and Studio keeps its existing default endpoint. HTTP-200 engine
+  error documents must be treated as failures in the No Code bridge path.
+  Never infer NoCode from the selected `C8Oforms` project when the caller is
+  Studio: `userId=studio` wins over stale profile metadata; an explicit
+  Studio/generalist profile never overrides the authenticated identity.
+  Preserve that identity when creating/restoring conversation state and
+  filtering history. Missing identities retain the standard Studio profile;
+  non-Studio users use NoCode regardless of stale project/profile hints.
+  `tests/nocode-studio-profile.test.cjs` covers routing, token isolation,
+  history and Codex/Vibe/Claude state creation without launching agents or writing data.
+  Request-fallback profile parameters must be verified through an HTTP call:
+  MCP internal execution does not populate the original servlet parameters.
+  Run `node --test tests/nocode-agent-startup.test.cjs` after Mobile Builder has
+  installed its TypeScript dependency to check this separation and timeout paths.
 
 ## UI Expectations
 
+- Forms-only UI uses `forms-integrated` on the page header/content/footer and
+  `FormsIntegratedStyle`; leave the Studio layout unaffected. Context expansion
+  and history navigation use SetLocal beans. Suggestions only prepare drafts.
+- Pass dynamic MCP properties as `{mode, value}` objects. A `plain:` or `script:`
+  prefix inside a plain value is literal text and breaks icons/actions.
+- To validate the C8Oforms iframe, reload the saved Assistant project and run
+  `npm run ionic:build:fast` in its generated `_private/ionic` directory, then
+  reload the browser. Dev-viewer HMR alone does not refresh `DisplayObjects/mobile`.
 - The assistant is a product UI seen by customers. It must feel like talking to
   an agent that is working for the user.
 - Progress should accumulate like Codex Desktop: meaningful steps remain visible,
@@ -171,6 +231,17 @@ rediscovering the same context.
   generated success actions run. A failed resume preserves conversation state
   and shows an inline error. Clear old messages/polling only when applying a
   successful history response. Test with `node tests/assistant_session_recovery.test.js`.
+- New embedded NoCode conversations use an explicit resource context picker:
+  users can choose any accessible C8Oforms form, optionally an exact element of
+  that form, or a Baserow base/table. When the iframe is opened from a form
+  editor, that form and the currently selected element are the defaults; the
+  home screen leaves the choice open. Catalog reads must remain authenticated
+  server-side, must respect C8Oforms ACLs, and must never expose the raw MCP
+  bearer token to the browser.
+- Context prompts must distinguish `nocode-form-get` (saved form contents) from
+  `nocode-form-contract-get` (supported component contract). Audits/suggestions
+  must stay read-only. Never suggest generic Studio tools or empty updates as a
+  fallback when a no-code read fails.
 - `agentBridge=1` is not enough to call the bridge. If the Assistant is served
   remotely inside Studio and no local bridge capability/local URL is provided,
   show an integrated local-agent activation message and do not call the remote
@@ -200,6 +271,11 @@ rediscovering the same context.
 
 ## Validation
 
+- After merges, run `node --test tests/assistant_*.test.js tests/assistant_merge.test.cjs tests/nocode-*.test.cjs`.
+  NoCode tests read the checked-in YAML rather than stale generated app files;
+  they require the installed TypeScript/Sass dependencies but no reload or agent
+  process. These offline checks do not replace a Mobile Builder build or a live
+  Studio/C8Oforms smoke test.
 - For client JavaScript changes, run `node --check js/agent_bridge_client.js`.
 - For Convertigo UI/object changes, use MCP validation such as
   `mobile_builder_open` or the relevant requestable execution instead of manual

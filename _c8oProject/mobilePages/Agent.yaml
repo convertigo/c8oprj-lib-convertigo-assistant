@@ -24,8 +24,14 @@ scriptContent:
         				}
         			} catch (e2) {}
         			if (this.angularRouter && this.angularRouter.navigate) {
+        				var queryParams: any = {};
+        				try {
+        					var searchParams = new URLSearchParams(window.location.search || '''');
+        					searchParams.forEach(function(value, key) { queryParams[key] = value; });
+        				} catch (eQuery) {}
+        				queryParams.agentBridge = ''1'';
                         if (this.global && this.global.isAssistantAgentReleaseEnabled && this.global.isAssistantAgentReleaseEnabled()) {
-                            this.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: { agentBridge: ''1'' }, preserveFragment: true, replaceUrl: true });
+                            this.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: queryParams, preserveFragment: true, replaceUrl: true });
                         } else {
                             this.angularRouter.navigate([''/path-to-lightrag''], { preserveFragment: true, replaceUrl: true });
                         }
