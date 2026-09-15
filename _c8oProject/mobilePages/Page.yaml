@@ -1108,6 +1108,13 @@ scriptContent:
         						this.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
         						this.local.AgentRuntimeStatusText = authenticationRequired ? tr(authenticationKey, authenticationFallback) : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
         						this.local.AgentRuntimeActionText = authenticationRequired ? tr(provider === ''codex'' ? ''Agent_Auth_Codex_Connect'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Connect'' : (provider === ''convertigo'' ? ''Agent_Auth_Convertigo_Check'' : ''Agent_Auth_Vibe_Connect'')), provider === ''codex'' ? ''Se connecter à Codex'' : (provider === ''claude'' ? ''Se connecter à Claude'' : (provider === ''convertigo'' ? ''Vérifier la clé'' : ''Se connecter à Mistral''))) : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
+        						// Zero-configuration Convertigo mode: install the harness automatically instead of asking for a click.
+        						if (provider === ''convertigo'' && runtime.installed !== true && !runtime.error && this.local.AgentRuntimeLoading !== true && this.local.AgentConvertigoAutoInstall !== ''started'') {
+        						    this.local.AgentConvertigoAutoInstall = ''started'';
+        						    this.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Updating_Convertigo'', ''Préparation de l\''agent Convertigo...'');
+        						    this.local.ShowAgentConfigPanel = true;
+        						    setTimeout(() => { try { var runtimeButton: any = document.querySelector(''ion-button.agent-runtime-action''); if (runtimeButton) { runtimeButton.click(); } } catch (eAuto) {} }, 400);
+        						}
         						var providerReady = this.isAgentProviderReady && this.isAgentProviderReady(selectedProvider);
         						if (providerReady && this.local.AgentProviderChoiceConfirmed === true && this.local.AgentConfigExplicitOpen !== true) {
         							this.local.ShowAgentConfigPanel = false;
@@ -1512,8 +1519,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.7", tag: "v0.2.7", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.7/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.8", tag: "v0.4.8", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.8/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.15", tag: "v1.4.15", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.15/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.10", tag: "v0.4.10", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.10/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.16", tag: "v1.4.16", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.16/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -6554,7 +6561,7 @@ title: Tigo
                                             page.local.AgentModels = selected && selected.models ? selected.models : [];
                                             var installedRuntime = selected && selected.runtime ? selected.runtime : {};
                                             var installedAuthentication = selected && selected.authentication ? selected.authentication : {};
-                                            if (selected && provider !== ''convertigo'' && installedRuntime.installed === true && installedAuthentication.configured === false) {
+                                            if (selected && installedRuntime.installed === true && installedAuthentication.configured === false) {
                                                 // Runtime installed but not signed in: switch the panel to the provider sign-in button.
                                                 page.local.AgentRuntime = installedRuntime;
                                                 page.local.AgentRuntimeProvider = provider;
@@ -6562,8 +6569,8 @@ title: Tigo
                                                 page.local.AgentRuntimeError = ''authentication_required'';
                                                 var installedNow = clean(installedRuntime.installedVersion);
                                                 page.local.AgentRuntimeVersionText = installedNow.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installedNow) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
-                                                page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Required'', ''Authentification Codex requise. Utilisez le bouton de connexion.'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Required'', ''Authentification Claude requise. Utilisez le bouton de connexion.'') : tr(''Agent_Auth_Vibe_Required'', ''Authentification Mistral requise. Utilisez le bouton de connexion.''));
-                                                page.local.AgentRuntimeActionText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Connect'', ''Se connecter à Codex'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude'') : tr(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral''));
+                                                page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Required'', ''Authentification Codex requise. Utilisez le bouton de connexion.'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Required'', ''Authentification Claude requise. Utilisez le bouton de connexion.'') : (provider === ''convertigo'' ? tr(''Agent_Auth_Convertigo_Required'', ''Clé d\''agent Convertigo absente. Elle sera fournie automatiquement à l\''activation.'') : tr(''Agent_Auth_Vibe_Required'', ''Authentification Mistral requise. Utilisez le bouton de connexion.'')));
+                                                page.local.AgentRuntimeActionText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Connect'', ''Se connecter à Codex'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude'') : (provider === ''convertigo'' ? tr(''Agent_Auth_Convertigo_Check'', ''Vérifier la clé'') : tr(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral'')));
                                                 page.local.AgentRuntimeLoading = false;
                                                 page.local.AgentProviderSelectionPending = false;
                                                 page.local.ShowAgentConfigPanel = true;
