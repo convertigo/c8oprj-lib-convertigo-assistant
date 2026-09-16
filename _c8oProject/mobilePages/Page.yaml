@@ -79,7 +79,9 @@ scriptContent:
                             && page.global.isStudioSessionAuthFailure(error);
                         page.local.AgentOperationError = authentication
                             ? page.t(''Agent_Studio_Session_Failed'', ''La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.'')
-                            : page.t(''Agent_Operation_Failed'', ''L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.'');
+                            : ((page.isServerAgentSurface && page.isServerAgentSurface()) || (page.isEmbeddedNoCodeAgent && page.isEmbeddedNoCodeAgent()))
+                                    ? page.t(''Agent_Operation_Failed_Server'', ''L’opération a échoué. Réessayez ; si le problème persiste, contactez l’administrateur pour consulter les logs du serveur.'')
+                                    : page.t(''Agent_Operation_Failed'', ''L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.'');
                         // Reject so generated success actions cannot consume a missing result.
                         throw error;
                     }).finally(function() {
@@ -118,6 +120,7 @@ scriptContent:
         			en: {
                         Agent_Studio_Session_Failed: "The Studio session could not be restored. Close and reopen the Assistant view, then try again.",
                         Agent_Operation_Failed: "The operation failed. Try again; if the problem persists, check the Studio logs.",
+                        Agent_Operation_Failed_Server: "The operation failed. Try again; if the problem persists, contact the administrator to check the server logs.",
         				Agent_Title: "Tigo the agent",
         				Agent_Provider_Vibe_Copy: "Explore and create quickly",
         				Agent_Provider_Codex_Copy: "Build and modify code",
@@ -198,6 +201,7 @@ scriptContent:
         			fr: {
                         Agent_Studio_Session_Failed: "La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.",
                         Agent_Operation_Failed: "L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.",
+                        Agent_Operation_Failed_Server: "L’opération a échoué. Réessayez ; si le problème persiste, contactez l’administrateur pour consulter les logs du serveur.",
         				Agent_Title: "Tigo l’agent",
         				Agent_Provider_Vibe_Copy: "Explorer et créer rapidement",
         				Agent_Provider_Codex_Copy: "Construire et modifier du code",
@@ -278,6 +282,7 @@ scriptContent:
         			it: {
                         Agent_Studio_Session_Failed: "Impossibile ripristinare la sessione di Studio. Chiudi e riapri la vista Assistente, poi riprova.",
                         Agent_Operation_Failed: "Operazione non riuscita. Riprova; se il problema persiste, consulta i log di Studio.",
+                        Agent_Operation_Failed_Server: "Operazione non riuscita. Riprova; se il problema persiste, contatta l’amministratore per consultare i log del server.",
         				Agent_Title: "Tigo l’agente",
         				Agent_Provider_Vibe_Copy: "Esplora e crea rapidamente",
         				Agent_Provider_Codex_Copy: "Crea e modifica codice",
@@ -358,6 +363,7 @@ scriptContent:
         			es: {
                         Agent_Studio_Session_Failed: "No se pudo restablecer la sesión de Studio. Cierre y vuelva a abrir la vista del Asistente e inténtelo de nuevo.",
                         Agent_Operation_Failed: "La operación falló. Inténtelo de nuevo; si el problema persiste, consulte los registros de Studio.",
+                        Agent_Operation_Failed_Server: "La operación falló. Inténtelo de nuevo; si el problema persiste, contacte al administrador para consultar los registros del servidor.",
         				Agent_Title: "Tigo el agente",
         				Agent_Provider_Vibe_Copy: "Explora y crea rápidamente",
         				Agent_Provider_Codex_Copy: "Crea y modifica código",

@@ -132,6 +132,25 @@ function fixture({remote = false, iframe = false, response = '<admin><authentica
   await assert.rejects(malformed.page.call('lib_ConvertigoAssistant.AgentResumeConversation'), /invalid_resume_response/);
   assert.equal(malformed.requests.length, 0);
 
+  const server = fixture({iframe: true});
+  let serverCalls = 0;
+  Object.assign(server.page, {local: {}, isServerAgentSurface: () => true,
+    tick() {}, t(_key, fallback) { return fallback; },
+    call: async () => { serverCalls++; return {result: {error: {message: 'Internal error with secret details'}}}; }});
+  install.call(server.page);
+  await assert.rejects(server.page.call('lib_ConvertigoAssistant.AgentSendMessageRouter'));
+  assert.match(server.page.local.AgentOperationError, /serveur/);
+  assert.doesNotMatch(server.page.local.AgentOperationError, /Studio|secret details/);
+  assert.equal(serverCalls, 1, 'never replay a failed server operation');
+  assert.equal(server.requests.length, 0);
+
+  const setupResponse = {result: {ok: false, status: 'setup_required', setupRequired: true,
+    setup: {status: 'authentication_required'}, AIData: {explanation: 'Configure the Convertigo agent key'}}};
+  const setupPage = {local: {}, global: server.page.global, tick() {}, t(_k, fallback) { return fallback; }, call: async () => setupResponse};
+  install.call(setupPage);
+  assert.equal(await setupPage.call('lib_ConvertigoAssistant.AgentSendMessageRouter'), setupResponse);
+  assert.equal(setupPage.local.AgentOperationError, '', 'structured setup guidance must reach generated UI actions');
+
   const success = fixture();
   let successfulCalls = 0;
   const payload = {result: {id: 'resumed', state: {status: 'idle'}, AIData: {messages: []}}};

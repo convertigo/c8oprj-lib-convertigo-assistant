@@ -5250,7 +5250,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Claude » pour vous authentifier dans votre navigateur (ou lancez `claude auth login`), puis revenez dans cette configuration." : "Use the \"Sign in to Claude\" button to authenticate in your browser (or run `claude auth login`), then return to this configuration.");
       } else if (isConvertigoMode(state.provider)) {
         lines.push(state.language === "fr" ? "Le mode Convertigo est installé, mais aucune clé d'agent Convertigo n'a été trouvée pour cet utilisateur." : "The Convertigo mode is installed, but no Convertigo agent key was found for this user.");
-        lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `agents/convertigo/llm-api-key` du workspace Studio." : "The key will be provisioned automatically during activation; meanwhile, drop it in the `agents/convertigo/llm-api-key` file of the Studio workspace.");
+        if (normalizeSkillProfile(state) === "nocode") {
+          lines.push(state.language === "fr" ? "Demandez à l'administrateur de configurer la clé d'agent Convertigo du serveur, puis réessayez. Une réinstallation du runtime n'est pas nécessaire." : "Ask the administrator to configure the server's Convertigo agent key, then retry. Reinstalling the runtime is not necessary.");
+        } else {
+          lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `agents/convertigo/llm-api-key` du workspace Studio." : "The key will be provisioned automatically during activation; meanwhile, drop it in the `agents/convertigo/llm-api-key` file of the Studio workspace.");
+        }
       } else {
         lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");
         lines.push(state.language === "fr" ? "Utilisez le bouton « Se connecter à Mistral » pour vous authentifier dans votre navigateur (ou ajoutez `MISTRAL_API_KEY` dans `~/.vibe/.env`), puis revenez dans cette configuration." : "Use the \"Sign in to Mistral\" button to authenticate in your browser (or add `MISTRAL_API_KEY` to `~/.vibe/.env`), then return to this configuration.");
@@ -6251,7 +6255,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         var setupInfo = callAgentSetup(state, options, installRequested);
         var setup = setupInfo.result || {};
         if (setup.ok === false) {
-          if (!installRequested && trim(setup.status).toLowerCase() === "missing") {
+          var setupStatus = trim(setup.status).toLowerCase();
+          // Missing credentials are actionable setup information, not an opaque
+          // execution failure. Preserve the report without starting the agent.
+          if (setupStatus === "authentication_required" || (!installRequested && setupStatus === "missing")) {
             state.status = "setup_required";
             state.setupRequired = true;
             state.setupReport = publicSetupReport(setup);
@@ -6271,7 +6278,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
               status: "setup_required",
               threadid: state.threadid,
               setupRequired: true,
-              canInstall: true,
+              canInstall: setupStatus === "missing",
               setup: state.setupReport,
               AIData: responseForState(state).AIData,
               state: publicState(state)

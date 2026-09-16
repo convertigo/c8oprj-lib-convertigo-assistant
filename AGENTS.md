@@ -66,6 +66,12 @@ rediscovering the same context.
   `provider === "codex"` forks for behaviour Claude shares.
 - Claude authentication has no in-app sign-in flow: the bridge copies local
   Claude credentials, and the UI asks the user to run `claude auth login`.
+- Non-resident setup returning `authentication_required` must preserve a
+  structured `setup_required` response and its credential diagnostic, including
+  after explicit installation. Do not start the agent or suggest reinstalling
+  to repair missing credentials. Convertigo NoCode guidance refers to server
+  administration; Studio retains its workspace instructions. Cover this with
+  `node --test tests/assistant_setup_failure.test.cjs`.
 - In the C8Oforms embedded surface, successful `nocode-form-create`,
   `nocode-form-edit`, `nocode-form-update`, and `nocode-form-get` results are
   returned as `state.formMutation`. Derive the subject ID only from the
