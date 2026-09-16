@@ -58,8 +58,8 @@ assert.match(setupSequenceSource, /updateRuntime: typeof updateRuntime === "unde
 assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/);
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.7", tag: "v0\.2\.7"/);
-assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.10", tag: "v0\.4\.10"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.18", tag: "v1\.4\.18"/);
+assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.12", tag: "v0\.4\.12"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.22", tag: "v1\.4\.22"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
