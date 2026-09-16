@@ -3022,6 +3022,52 @@ Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
 
 </p></blockquote></details>
 
+<details><summary><b>AgentStackInstall</b> : Install or update the agent stack projects on this Convertigo server from the official GitHub release CARs</summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") AgentStackInstall
+
+Install or update the agent stack projects on this Convertigo server from the official GitHub release CARs. Requires an administrator session unless the symbol assistant.stack.selfupdate relaxes the policy.
+
+<span style="color:DarkGoldenRod">Variables</span>
+
+<table>
+<tr>
+<th>
+name
+</th>
+<th>
+comment
+</th>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;forceUpdate
+</td>
+<td>
+Reinstall projects that are already up to date when true.
+</td>
+</tr>
+<tr>
+<td>
+<img src="https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/variables/images/variable_color_16x16.png?raw=true "  alt="RequestableVariable" >&nbsp;projects
+</td>
+<td>
+JSON array of stack projects ({name, version, importUrl}) from the published manifest. Only official release CARs are accepted.
+</td>
+</tr>
+</table>
+
+</p></blockquote></details>
+
+<details><summary><b>AgentStackStatus</b> : Report the agent stack projects installed on this Convertigo server and whether the Assistant may update them (symbol assistant</summary><blockquote><p>
+
+
+## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") AgentStackStatus
+
+Report the agent stack projects installed on this Convertigo server and whether the Assistant may update them (symbol assistant.stack.selfupdate).
+</p></blockquote></details>
+
 <details><summary><b>AskAssitant</b></summary><blockquote><p>
 
 

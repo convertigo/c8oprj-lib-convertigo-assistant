@@ -41,25 +41,6 @@ published stack manifest and can update CAR-managed installations. The manifest
 uses the configured Convertigo proxy and is cached for six hours. Local Git
 checkouts are detected and are never overwritten automatically.
 
-### Server installations (No Code Studio, C8Oforms, hosted Assistant)
-
-When the Assistant runs on a Convertigo server instead of Studio, the same
-**Update the stack** button installs or updates `lib_ConvertigoMCP`,
-`lib_ConvertigoAgentBridge` and `lib_ConvertigoAssistant` on that server through
-the engine project importer (`AgentStackStatus` and `AgentStackInstall`
-sequences). Only the official GitHub release CARs listed in the published
-manifest are accepted, whatever the browser sends. The Assistant is imported
-last and the page reloads once it has been replaced.
-
-Access is controlled by the global symbol `assistant.stack.selfupdate`:
-
-| Value | Who can install or update the stack |
-| --- | --- |
-| `admin` (default) | Sessions holding the `WEB_ADMIN` or `PROJECTS_CONFIG` role, for example after signing in to the administration console in the same browser session. |
-| `authenticated` | Administrators and any request whose Convertigo context has an authenticated user (C8Oforms sessions). |
-| `true` | Anyone reaching the Assistant. Reserve this for private test servers. |
-| `false` | Nobody; the button stays disabled. |
-
 ## Companion projects
 
 - [Convertigo MCP](https://github.com/convertigo/c8oprj-lib-c8o-mcp)
