@@ -134,6 +134,14 @@ rediscovering the same context.
   non-Studio users use NoCode regardless of stale project/profile hints.
   `tests/nocode-studio-profile.test.cjs` covers routing, token isolation,
   history and Codex/Vibe/Claude state creation without launching agents or writing data.
+  Server/NoCode startup also checks the published stack and `AgentStackStatus`
+  independently of Bridge settings: the repair panel can open automatically
+  when the Bridge is absent. Keep this read-only, deduplicated, and out of the
+  Studio startup path. A cached manifest must not skip the server status check.
+  Distinguish unchecked/loading/failed diagnostics from actual permission denial,
+  and missing projects from unknown versions. Status checks time out after 15
+  seconds, discard stale authorization, ignore late results, and retry on an
+  explicit settings reopen. Cover this with `node --test tests/assistant_stack_ui.test.cjs`.
   Request-fallback profile parameters must be verified through an HTTP call:
   MCP internal execution does not populate the original servlet parameters.
   Run `node --test tests/nocode-agent-startup.test.cjs` after Mobile Builder has

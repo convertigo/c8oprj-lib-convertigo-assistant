@@ -319,7 +319,7 @@ console.log("Assistant attachment routing OK");
 {
   const page = fs.readFileSync("_c8oProject/mobilePages/Page.yaml", "utf8");
   assert.match(page, /AgentConvertigoAutoInstall !== ''started''/);
-  assert.match(page, /querySelector\(''ion-button\.agent-runtime-action''\)/);
+  assert.match(page, /querySelector\(''\.agent-runtime-settings:not\(\.agent-stack-settings\) ion-button\.agent-runtime-action''\)/);
   assert.doesNotMatch(page, /provider !== ''convertigo'' && installedRuntime\.installed === true/);
 }
 
