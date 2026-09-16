@@ -59,7 +59,7 @@ assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/)
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.7", tag: "v0\.2\.7"/);
 assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.10", tag: "v0\.4\.10"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.16", tag: "v1\.4\.16"/);
+assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.18", tag: "v1\.4\.18"/);
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
@@ -321,4 +321,10 @@ console.log("Assistant attachment routing OK");
   assert.match(page, /AgentConvertigoAutoInstall !== ''started''/);
   assert.match(page, /querySelector\(''ion-button\.agent-runtime-action''\)/);
   assert.doesNotMatch(page, /provider !== ''convertigo'' && installedRuntime\.installed === true/);
+}
+
+// Vibe/Convertigo: a new ACP message id flushes the previous narration out of the final answer.
+{
+  const src = fs.readFileSync("js/agent_bridge_client.js", "utf8");
+  assert.match(src, /state\.vibeAnswerMessageId !== chunkMessageId\) \{\s*flushVibeInterimAnswerToProgress\(state\);/);
 }

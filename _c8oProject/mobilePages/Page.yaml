@@ -142,6 +142,12 @@ scriptContent:
         				Agent_Stack_Reinstall: "Reinstall stack",
         				Agent_Stack_Updating: "Stack update in progress...",
         				Agent_Stack_Update_Disabled: "Automatic updates are disabled for local source checkouts.",
+        				Agent_Stack_Server_Restricted: "Updating the stack on this server requires an administrator session (symbol assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Disabled: "Stack updates are disabled on this server (symbol assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Updating: "Updating the stack on the server...",
+        				Agent_Stack_Server_Updated: "Stack updated on the server. Reloading the Assistant...",
+        				Agent_Stack_Server_Up_To_Date: "The server stack is already up to date.",
+        				Agent_Stack_Server_Failed: "The stack could not be updated on the server.",
         				Agent_Stack_Check_Failed: "Unable to check the published stack.",
         				Agent_Runtime_Checking: "Checking the environment...",
         				Agent_Runtime_Not_Checked: "Version not checked",
@@ -210,6 +216,12 @@ scriptContent:
         				Agent_Stack_Reinstall: "Réinstaller la stack",
         				Agent_Stack_Updating: "Mise à jour de la stack...",
         				Agent_Stack_Update_Disabled: "La mise à jour automatique est désactivée pour les sources locales.",
+        				Agent_Stack_Server_Restricted: "La mise à jour de la stack sur ce serveur nécessite une session administrateur (symbole assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Disabled: "La mise à jour de la stack est désactivée sur ce serveur (symbole assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Updating: "Mise à jour de la stack sur le serveur...",
+        				Agent_Stack_Server_Updated: "Stack mise à jour sur le serveur. Rechargement de l''Assistant...",
+        				Agent_Stack_Server_Up_To_Date: "La stack du serveur est déjà à jour.",
+        				Agent_Stack_Server_Failed: "La stack n''a pas pu être mise à jour sur le serveur.",
         				Agent_Stack_Check_Failed: "Impossible de vérifier la stack publiée.",
         				Agent_Runtime_Checking: "Vérification de l’environnement...",
         				Agent_Runtime_Not_Checked: "Version non vérifiée",
@@ -278,6 +290,12 @@ scriptContent:
         				Agent_Stack_Reinstall: "Reinstalla stack",
         				Agent_Stack_Updating: "Aggiornamento dello stack...",
         				Agent_Stack_Update_Disabled: "Gli aggiornamenti automatici sono disabilitati per i sorgenti locali.",
+        				Agent_Stack_Server_Restricted: "L''aggiornamento dello stack su questo server richiede una sessione amministratore (simbolo assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Disabled: "Gli aggiornamenti dello stack sono disabilitati su questo server (simbolo assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Updating: "Aggiornamento dello stack sul server...",
+        				Agent_Stack_Server_Updated: "Stack aggiornato sul server. Ricaricamento dell''Assistente...",
+        				Agent_Stack_Server_Up_To_Date: "Lo stack del server è già aggiornato.",
+        				Agent_Stack_Server_Failed: "Impossibile aggiornare lo stack sul server.",
         				Agent_Stack_Check_Failed: "Impossibile verificare lo stack pubblicato.",
         				Agent_Runtime_Checking: "Verifica dell’ambiente...",
         				Agent_Runtime_Not_Checked: "Versione non verificata",
@@ -346,6 +364,12 @@ scriptContent:
         				Agent_Stack_Reinstall: "Reinstalar stack",
         				Agent_Stack_Updating: "Actualizando el stack...",
         				Agent_Stack_Update_Disabled: "Las actualizaciones automáticas están deshabilitadas para fuentes locales.",
+        				Agent_Stack_Server_Restricted: "Actualizar la stack en este servidor requiere una sesión de administrador (símbolo assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Disabled: "Las actualizaciones de la stack están deshabilitadas en este servidor (símbolo assistant.stack.selfupdate).",
+        				Agent_Stack_Server_Updating: "Actualizando la stack en el servidor...",
+        				Agent_Stack_Server_Updated: "Stack actualizada en el servidor. Recargando el Asistente...",
+        				Agent_Stack_Server_Up_To_Date: "La stack del servidor ya está actualizada.",
+        				Agent_Stack_Server_Failed: "No se pudo actualizar la stack en el servidor.",
         				Agent_Stack_Check_Failed: "No se pudo comprobar el stack publicado.",
         				Agent_Runtime_Checking: "Comprobando el entorno...",
         				Agent_Runtime_Not_Checked: "Versión no comprobada",
@@ -1520,7 +1544,7 @@ scriptContent:
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.7", tag: "v0.2.7", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.7/lib_ConvertigoMCP.car" },
                         { name: "lib_ConvertigoAgentBridge", version: "0.4.10", tag: "v0.4.10", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.10/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.16", tag: "v1.4.16", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.16/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAssistant", version: "1.4.18", tag: "v1.4.18", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.18/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -1581,6 +1605,7 @@ scriptContent:
         			this.local.AgentStackReleaseError = "" + error;
         			this.tick();
         		});
+        		if (this.refreshAgentStackServerStatus) { this.refreshAgentStackServerStatus(); }
         	}
         
         	public getAgentActivationProjects() {
@@ -1619,8 +1644,40 @@ scriptContent:
         		return 0;
         	}
         
+        	public isServerManagedAgentStack() {
+        		try {
+        			if (this.isServerAgentSurface && this.isServerAgentSurface()) { return true; }
+        			if (this.isStudioAssistantSurface && this.isStudioAssistantSurface()) { return false; }
+        		} catch (e) {}
+        		return true;
+        	}
+        
+        	public getAgentStackServerStatus() {
+        		try { return (this.local && this.local.AgentStackServerStatus) || null; } catch (e) {}
+        		return null;
+        	}
+        
+        	public refreshAgentStackServerStatus() {
+        		if (!this.isServerManagedAgentStack || !this.isServerManagedAgentStack()) { return; }
+        		if (!this.c8o || !this.c8o.callJsonObject) { return; }
+        		if (!this.local) { this.local = {}; }
+        		if (this.local.AgentStackServerStatusLoading === true) { return; }
+        		this.local.AgentStackServerStatusLoading = true;
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then((response) => {
+        			var result = response && response.result ? response.result : response;
+        			if (result && typeof result === "object" && result.projects) { this.local.AgentStackServerStatus = result; }
+        			this.local.AgentStackServerStatusLoading = false;
+        			this.tick();
+        		}).catch((error) => {
+        			this.local.AgentStackServerStatusLoading = false;
+        			this.tick();
+        		});
+        	}
+        
         	public getInstalledAgentStackVersion(projectName) {
         		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        		var serverStatus: any = this.getAgentStackServerStatus ? this.getAgentStackServerStatus() : null;
+        		if (serverStatus && this.isServerManagedAgentStack && this.isServerManagedAgentStack()) { context = serverStatus; }
         		if (projectName === "lib_ConvertigoAssistant") { return this.normalizeAgentHostContextValue(context.localAssistantVersion); }
         		if (projectName === "lib_ConvertigoMCP") { return this.normalizeAgentHostContextValue(context.localMcpVersion); }
         		if (projectName === "lib_ConvertigoAgentBridge") { return this.normalizeAgentHostContextValue(context.localAgentBridgeVersion); }
@@ -1629,6 +1686,11 @@ scriptContent:
         
         	public isAgentStackUpdateAllowed() {
         		var context: any = this.getAgentHostContextObject ? this.getAgentHostContextObject() : {};
+        		if (this.isServerManagedAgentStack && this.isServerManagedAgentStack()) {
+        			var serverStatus: any = this.getAgentStackServerStatus ? this.getAgentStackServerStatus() : null;
+        			if (!serverStatus) { return false; }
+        			context = serverStatus;
+        		}
         		return context.localAgentStackUpdateAllowed === true || ("" + context.localAgentStackUpdateAllowed).toLowerCase() === "true";
         	}
         
@@ -1659,7 +1721,7 @@ scriptContent:
         		if (this.local && this.local.AgentActivationInProgress === true) { return this.local.AgentActivationMessage || this.t("Agent_Stack_Updating", "Mise à jour de la stack..."); }
         		if (this.local && this.local.AgentStackReleaseLoading === true) { return this.t("Agent_Stack_Checking", "Vérification de la stack publiée..."); }
         		if (this.local && this.local.AgentStackReleaseError) { return this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée."); }
-        		if (!this.isAgentStackUpdateAllowed()) { return this.t("Agent_Stack_Source_Managed", "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement."); }
+        		if (!this.isAgentStackUpdateAllowed()) { return this.getAgentStackRestrictedText(); }
         		var projects = this.getAgentActivationProjects ? this.getAgentActivationProjects() : [];
         		for (var i = 0; i < projects.length; i++) {
         			if (!this.getInstalledAgentStackVersion(projects[i].name).length) { return this.t("Agent_Stack_Missing_Versions", "Les versions des projets installés ne sont pas encore disponibles."); }
@@ -1686,11 +1748,56 @@ scriptContent:
         		}
         		if (!this.isAgentStackUpdateAllowed()) {
         			if (!this.local) { this.local = {}; }
-        			this.local.AgentActivationMessage = this.t("Agent_Stack_Update_Disabled", "La mise à jour automatique est désactivée pour les sources locales.");
+        			this.local.AgentActivationMessage = this.isServerManagedAgentStack && this.isServerManagedAgentStack() ? this.getAgentStackRestrictedText() : this.t("Agent_Stack_Update_Disabled", "La mise à jour automatique est désactivée pour les sources locales.");
         			this.tick();
         			return;
         		}
         		this.triggerAgentOnboardingAction(true);
+        	}
+        
+        	public getAgentStackRestrictedText() {
+        		if (this.isServerManagedAgentStack && this.isServerManagedAgentStack()) {
+        			var serverStatus: any = this.getAgentStackServerStatus ? this.getAgentStackServerStatus() : null;
+        			if (serverStatus && serverStatus.localAgentStackUpdateReason === "source_managed") { return this.t("Agent_Stack_Source_Managed", "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement."); }
+        			if (serverStatus && serverStatus.localAgentStackUpdateReason === "disabled") { return this.t("Agent_Stack_Server_Disabled", "La mise à jour de la stack est désactivée sur ce serveur (symbole assistant.stack.selfupdate)."); }
+        			return this.t("Agent_Stack_Server_Restricted", "La mise à jour de la stack sur ce serveur nécessite une session administrateur (symbole assistant.stack.selfupdate).");
+        		}
+        		return this.t("Agent_Stack_Source_Managed", "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement.");
+        	}
+        
+        	public installAgentStackOnServer(payload, forceUpdate) {
+        		if (!this.local) { this.local = {}; }
+        		if (!this.c8o || !this.c8o.callJsonObject) { return false; }
+        		var projects = payload && payload.projects ? payload.projects : [];
+        		this.local.AgentActivationInProgress = true;
+        		this.local.AgentActivationStatus = "running";
+        		this.local.AgentActivationMessage = this.t("Agent_Stack_Server_Updating", "Mise à jour de la stack sur le serveur...");
+        		this.tick();
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackInstall", { projects: JSON.stringify(projects), forceUpdate: forceUpdate === true ? "true" : "false" }).async().then((response) => {
+        			var result: any = response && response.result ? response.result : response;
+        			var status = ("" + ((result && result.status) || "")).toLowerCase();
+        			this.local.AgentActivationInProgress = false;
+        			this.local.AgentActivationStartedAt = 0;
+        			if (status === "success") {
+        				this.local.AgentActivationStatus = "success";
+        				var changed = !!(result && (result.assistantUpdated === true || (result.installedCount || 0) > 0));
+        				this.local.AgentActivationMessage = changed ? this.t("Agent_Stack_Server_Updated", "Stack mise à jour sur le serveur. Rechargement de l''Assistant...") : this.t("Agent_Stack_Server_Up_To_Date", "La stack du serveur est déjà à jour.");
+        				if (result && result.state && result.state.projects) { this.local.AgentStackServerStatus = result.state; }
+        				if (changed) { setTimeout(() => { try { window.location.reload(); } catch (eReload) {} }, 2500); }
+        			} else {
+        				this.local.AgentActivationStatus = "error";
+        				var detail = "" + ((result && result.message) || "");
+        				this.local.AgentActivationMessage = status === "forbidden" ? this.getAgentStackRestrictedText() : (this.t("Agent_Stack_Server_Failed", "La stack n''a pas pu être mise à jour sur le serveur.") + (detail.length ? " " + detail : ""));
+        			}
+        			this.tick();
+        		}).catch((error) => {
+        			this.local.AgentActivationInProgress = false;
+        			this.local.AgentActivationStartedAt = 0;
+        			this.local.AgentActivationStatus = "error";
+        			this.local.AgentActivationMessage = this.t("Agent_Stack_Server_Failed", "La stack n''a pas pu être mise à jour sur le serveur.") + " " + error;
+        			this.tick();
+        		});
+        		return true;
         	}
         
         	public openAgentExternalUrl(url) {
@@ -1729,6 +1836,10 @@ scriptContent:
         			};
         			var stamp = (new Date()).getTime();
         			this.local.AgentActivationStartedAt = stamp;
+        			if (this.isServerManagedAgentStack && this.isServerManagedAgentStack() && this.installAgentStackOnServer) {
+        				this.installAgentStackOnServer(message.payload, forceUpdate === true);
+        				return;
+        			}
         			var sent = this.postAgentHostMessage ? this.postAgentHostMessage(message) : false;
         			if (!sent) {
         				this.local.AgentActivationInProgress = false;

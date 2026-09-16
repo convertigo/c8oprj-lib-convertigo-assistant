@@ -1,0 +1,20 @@
+accessibility: Hidden
+comment: Report the agent stack projects installed on this Convertigo server and whether the Assistant may update them (symbol assistant.stack.selfupdate).
+responseTimeout: 30
+↓Run [steps.SimpleStep-1789000000001]: 
+  expression: |
+    'include("js/agent_stack_server.js");
+    result = C8O.assistantAgentStack.status({});'
+↓result [steps.JsonToXmlStep-1789000000002]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result

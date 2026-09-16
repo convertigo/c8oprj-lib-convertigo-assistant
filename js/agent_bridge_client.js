@@ -6594,6 +6594,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (codexAnswerChunkIsProgress(state, data)) {
             appendProgressChunk(state, eventText(data));
           } else {
+            // ACP: each agent message has its own messageId. When a new message starts, the
+            // previous one was narration (the model kept working after it): move it to the
+            // progress log so the final answer only holds the last message.
+            var chunkMessageId = String(data.update && (data.update.messageId || data.update.message_id) || "");
+            if (isVibeHarness(state.provider) && chunkMessageId.length) {
+              if (String(state.vibeAnswerMessageId || "").length && state.vibeAnswerMessageId !== chunkMessageId) {
+                flushVibeInterimAnswerToProgress(state);
+              }
+              state.vibeAnswerMessageId = chunkMessageId;
+            }
             markProgressEventsIdle(state);
             appendAnswerChunk(state, eventText(data));
             state.answerIsFinal = true;

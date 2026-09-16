@@ -1,0 +1,29 @@
+accessibility: Hidden
+comment: Install or update the agent stack projects on this Convertigo server from the official GitHub release CARs. Requires an administrator session unless the symbol assistant.stack.selfupdate relaxes the policy.
+responseTimeout: 600
+↓Run [steps.SimpleStep-1789000000003]: 
+  expression: |
+    'include("js/agent_stack_server.js");
+    result = C8O.assistantAgentStack.install({
+      projects: typeof projects === "undefined" ? "" : projects,
+      forceUpdate: typeof forceUpdate === "undefined" ? "" : forceUpdate
+    });'
+↓result [steps.JsonToXmlStep-1789000000004]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓projects [variables.RequestableVariable-1789000000005]: 
+  comment: JSON array of stack projects ({name, version, importUrl}) from the published manifest. Only official release CARs are accepted.
+  description: JSON array of stack projects ({name, version, importUrl}) from the published manifest. Only official release CARs are accepted.
+↓forceUpdate [variables.RequestableVariable-1789000000006]: 
+  comment: Reinstall projects that are already up to date when true.
+  description: Reinstall projects that are already up to date when true.
