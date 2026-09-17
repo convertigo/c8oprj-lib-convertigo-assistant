@@ -3669,8 +3669,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof value !== "object" || value.isError === true || value.Err || value.error) { return null; }
     if (value.status === "ok" && (value.saved === true || value.fetched === true) && value.form && value.form._id) { return value; }
     // ACP runtimes (Vibe) carry the MCP tool result in rawOutput/content of the
-    // raw session update instead of a bridge-normalized result field.
-    var nested = Array.isArray(value) ? value : [value.Ok, value.structuredContent, value.result, value.rawOutput, value.raw_output, value.content, value.output, value.text, value.update];
+    // raw session update instead of a bridge-normalized result field. Vibe also
+    // renames structuredContent to structured in its MCPToolResult envelope
+    // ({ok, server, tool, text, structured}), so both spellings are read here:
+    // without structured, no no-code tool call under Vibe is ever detected as a
+    // form mutation and the No Code Studio never focuses the form.
+    var nested = Array.isArray(value) ? value : [value.Ok, value.structuredContent, value.structured, value.result, value.rawOutput, value.raw_output, value.content, value.output, value.text, value.update];
     for (var i = 0; i < nested.length; i++) {
       var found = noCodeFormToolResult(nested[i], depth + 1);
       if (found) { return found; }

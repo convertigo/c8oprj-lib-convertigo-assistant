@@ -33,6 +33,15 @@ test('an ACP update with rawOutput is detected, errors are not', () => {
   assert.equal(sandbox.noCodeFormToolResult({ update: { status: 'completed', content: [] } }, 0), null);
 });
 
+test('the real Vibe MCPToolResult envelope is detected', () => {
+  // vibe/core/tools/remote.py: {ok, server, tool, text, structured}; Vibe renames
+  // the MCP structuredContent to structured, so reading only structuredContent
+  // silently missed every no-code tool call made through Vibe.
+  const envelope = { ok: true, server: 'https://test-nocode.convertigo.net/convertigo/api/mcp', tool: 'nocode-form-create', text: null, structured: saved };
+  assert.equal(sandbox.noCodeFormToolResult(envelope, 0).form._id, '1789572167318');
+  assert.equal(sandbox.noCodeFormToolResult({ update: { rawOutput: envelope } }, 0).form._id, '1789572167318');
+});
+
 test('the mutation detector and the preview read the ACP update', () => {
   assert.match(source, /noCodeFormToolResult\(data\.update, 0\)/);
   assert.match(source, /data\.update && data\.update\.content/);
