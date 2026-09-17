@@ -3668,7 +3668,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (typeof value !== "object" || value.isError === true || value.Err || value.error) { return null; }
     if (value.status === "ok" && (value.saved === true || value.fetched === true) && value.form && value.form._id) { return value; }
-    var nested = Array.isArray(value) ? value : [value.Ok, value.structuredContent, value.result, value.content, value.output, value.text];
+    // ACP runtimes (Vibe) carry the MCP tool result in rawOutput/content of the
+    // raw session update instead of a bridge-normalized result field.
+    var nested = Array.isArray(value) ? value : [value.Ok, value.structuredContent, value.result, value.rawOutput, value.raw_output, value.content, value.output, value.text, value.update];
     for (var i = 0; i < nested.length; i++) {
       var found = noCodeFormToolResult(nested[i], depth + 1);
       if (found) { return found; }
@@ -3701,7 +3703,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!matchedTool.length) {
       return;
     }
-    var result = noCodeFormToolResult(data.result || (data.item && data.item.result), 0);
+    var result = noCodeFormToolResult(data.result || (data.item && data.item.result), 0) || noCodeFormToolResult(data.update, 0);
     if (!result) { return; }
     var form = result.form;
     var formId = trim(form._id);
@@ -4343,7 +4345,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       data.item && data.item.output,
       data.item && data.item.result,
       data.item && data.item.content,
-      data.item && data.item.arguments
+      data.item && data.item.arguments,
+      data.update && (data.update.rawOutput || data.update.raw_output),
+      data.update && data.update.content
     ];
     for (var i = 0; i < candidates.length; i++) {
       var value = candidates[i];

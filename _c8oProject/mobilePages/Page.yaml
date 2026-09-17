@@ -1323,6 +1323,8 @@ scriptContent:
         	public requestAgentHostContext(attempt = 0) {
         		try {
         			this.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
+        			// C8Oforms still listens for the pre-rename message type.
+        			this.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
         			if (attempt >= 5) {
         				if (this[''_agentHostContextRequestTimer'']) { clearTimeout(this[''_agentHostContextRequestTimer'']); }
         				this[''_agentHostContextRequestTimer''] = null;
@@ -1349,7 +1351,7 @@ scriptContent:
         					var data = event && event.data ? event.data : event;
         					if (!data || typeof data !== ''object'') { return; }
         					var type = '''' + (data.type || data.kind || '''');
-        					if (type === ''lib_ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
+        					if (type === ''lib_ConvertigoAssistant.context'' || type === ''ConvertigoAssistant.context'' || type === ''convertigo-assistant-context'') {
         						this.applyAgentHostContext(data.payload || data.context || data);
         						return;
         					}
@@ -1577,9 +1579,9 @@ scriptContent:
         			schemaVersion: 1,
                                 channel: "stable",
         			projects: [
-                        { name: "lib_ConvertigoMCP", version: "0.2.12", tag: "v0.2.12", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.12/lib_ConvertigoMCP.car" },
+                        { name: "lib_ConvertigoMCP", version: "0.2.13", tag: "v0.2.13", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.13/lib_ConvertigoMCP.car" },
                         { name: "lib_ConvertigoAgentBridge", version: "0.4.12", tag: "v0.4.12", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.12/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.27", tag: "v1.4.27", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.27/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAssistant", version: "1.4.28", tag: "v1.4.28", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.28/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -9002,6 +9004,7 @@ title: Tigo
                                 try {
                                     if (page.postAgentHostMessage) {
                                         page.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
+                                                        page.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
                                     }
                                 } catch (e2) {}
                             }
