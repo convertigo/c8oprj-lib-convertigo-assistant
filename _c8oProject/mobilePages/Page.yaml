@@ -127,6 +127,7 @@ scriptContent:
         				Agent_Provider_Claude_Copy: "Reason deeply and build carefully",
         				Agent_Provider_Convertigo_Copy: "No setup, uses your Convertigo account",
         				Agent_Auth_Convertigo_Required: "Convertigo agent key missing. It will be provisioned automatically at activation.",
+        				Agent_Auth_Convertigo_Rejected: "The Convertigo gateway refused the agent key. Replace it in the agents/convertigo/llm-api-key file of the workspace.",
         				Agent_Auth_Convertigo_Check: "Check the key",
         				Agent_Runtime_Updating_Convertigo: "Preparing the Convertigo agent...",
         				Agent_Auth_Claude_Required: "Claude authentication is required. Use the sign-in button to authenticate in your browser.",
@@ -208,6 +209,7 @@ scriptContent:
         				Agent_Provider_Claude_Copy: "Raisonner en profondeur et construire avec soin",
         				Agent_Provider_Convertigo_Copy: "Sans configuration, avec votre compte Convertigo",
         				Agent_Auth_Convertigo_Required: "Clé d''agent Convertigo absente. Elle sera fournie automatiquement à l''activation.",
+        				Agent_Auth_Convertigo_Rejected: "La passerelle Convertigo a refusé la clé d''agent. Remplacez-la dans le fichier agents/convertigo/llm-api-key du workspace.",
         				Agent_Auth_Convertigo_Check: "Vérifier la clé",
         				Agent_Runtime_Updating_Convertigo: "Préparation de l''agent Convertigo...",
         				Agent_Auth_Claude_Required: "Authentification Claude requise. Utilisez le bouton de connexion pour vous authentifier dans votre navigateur.",
@@ -289,6 +291,7 @@ scriptContent:
         				Agent_Provider_Claude_Copy: "Ragiona a fondo e costruisci con cura",
         				Agent_Provider_Convertigo_Copy: "Nessuna configurazione, con il tuo account Convertigo",
         				Agent_Auth_Convertigo_Required: "Chiave agente Convertigo assente. Verrà fornita automaticamente all''attivazione.",
+        				Agent_Auth_Convertigo_Rejected: "Il gateway Convertigo ha rifiutato la chiave dell''agente. Sostituiscila nel file agents/convertigo/llm-api-key del workspace.",
         				Agent_Auth_Convertigo_Check: "Verifica la chiave",
         				Agent_Runtime_Updating_Convertigo: "Preparazione dell''agente Convertigo...",
         				Agent_Auth_Claude_Required: "Autenticazione Claude richiesta. Usa il pulsante di accesso per autenticarti nel browser.",
@@ -370,6 +373,7 @@ scriptContent:
         				Agent_Provider_Claude_Copy: "Razona en profundidad y construye con cuidado",
         				Agent_Provider_Convertigo_Copy: "Sin configuración, con su cuenta Convertigo",
         				Agent_Auth_Convertigo_Required: "Falta la clave del agente Convertigo. Se proporcionará automáticamente al activar.",
+        				Agent_Auth_Convertigo_Rejected: "La pasarela Convertigo rechazó la clave del agente. Reemplázala en el archivo agents/convertigo/llm-api-key del workspace.",
         				Agent_Auth_Convertigo_Check: "Comprobar la clave",
         				Agent_Runtime_Updating_Convertigo: "Preparando el agente Convertigo...",
         				Agent_Auth_Claude_Required: "Se requiere autenticación de Claude. Use el botón de inicio de sesión para autenticarse en el navegador.",
@@ -1580,8 +1584,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.14", tag: "v0.2.14", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.14/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.14", tag: "v0.4.14", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.14/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.32", tag: "v1.4.32", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.32/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.15", tag: "v0.4.15", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.15/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.33", tag: "v1.4.33", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.33/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -6756,6 +6760,7 @@ title: Tigo
                                                 var installedNow = clean(installedRuntime.installedVersion);
                                                 page.local.AgentRuntimeVersionText = installedNow.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installedNow) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
                                                 page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Required'', ''Authentification Codex requise. Utilisez le bouton de connexion.'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Required'', ''Authentification Claude requise. Utilisez le bouton de connexion.'') : (provider === ''convertigo'' ? tr(''Agent_Auth_Convertigo_Required'', ''Clé d\''agent Convertigo absente. Elle sera fournie automatiquement à l\''activation.'') : tr(''Agent_Auth_Vibe_Required'', ''Authentification Mistral requise. Utilisez le bouton de connexion.'')));
+                                                if (provider === ''convertigo'' && installedAuthentication.status === ''rejected'') { page.local.AgentRuntimeStatusText = tr(''Agent_Auth_Convertigo_Rejected'', ''La passerelle Convertigo a refusé la clé d\''agent. Remplacez-la dans le fichier agents/convertigo/llm-api-key du workspace.''); }
                                                 page.local.AgentRuntimeActionText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Connect'', ''Se connecter à Codex'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude'') : (provider === ''convertigo'' ? tr(''Agent_Auth_Convertigo_Check'', ''Vérifier la clé'') : tr(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral'')));
                                                 page.local.AgentRuntimeLoading = false;
                                                 page.local.AgentProviderSelectionPending = false;

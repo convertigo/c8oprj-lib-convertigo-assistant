@@ -3290,6 +3290,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (nestedDetails.length) {
         return nestedDetails;
       }
+      // Bridge envelopes: acp/response_error carries the JSON-RPC answer in `response`, a failed
+      // call reports `acpError`. Without this the whole envelope was shown as the answer.
+      var nestedEnvelope = extractAgentErrorText(value.response || value.acpError || value.result, depth + 1);
+      if (nestedEnvelope.length) {
+        return nestedEnvelope;
+      }
       try {
         return trim(JSON.stringify(value));
       } catch (_ignoreErrorStringify) {}
@@ -3297,8 +3303,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return trim(value);
   }
 
+  function condenseLlmBackendError(text) {
+    // Vibe reports LLM failures as a multi-line dump (endpoint, body excerpt, payload summary).
+    // Keep the provider's own sentence when there is one, otherwise the head of the report.
+    var raw = String(text || "");
+    if (raw.indexOf("LLM backend error") === -1 && raw.indexOf("API error from") === -1) {
+      return raw;
+    }
+    var head = trim(raw.split(/\n\s*(?:request_id|endpoint|body_excerpt|payload_summary)\s*:/)[0]).replace(/\s*\n\s*/g, " ");
+    var provider = /\\?"message\\?"\s*:\s*\\?"((?:[^"\\]|\\[^"])+?)\\?"\s*,\s*\\?"(?:type|param|code)/.exec(raw);
+    var sentence = provider ? trim(provider[1].replace(/\\+'/g, "'").replace(/\\+"/g, '"')) : "";
+    if (sentence.length && sentence.indexOf("litellm.") !== 0) {
+      var status = /status:\s*([0-9]{3}[^\n]*)/.exec(raw);
+      var model = /\(model:\s*([^)]+)\)/.exec(raw);
+      return sentence + (model ? " [" + trim(model[1]) + (status ? ", " + trim(status[1]) : "") + "]" : "");
+    }
+    return head.length > 400 ? head.substring(0, 400) + "..." : head;
+  }
+
   function userFacingAgentError(state, data) {
-    var raw = extractAgentErrorText(data, 0);
+    var raw = condenseLlmBackendError(extractAgentErrorText(data, 0));
     var lower = raw.toLowerCase();
     if (lower.indexOf("refresh token") !== -1 || lower.indexOf("access token could not be refreshed") !== -1 || lower.indexOf("please log out and sign in again") !== -1) {
       return lang(state).codexAuthExpired;
