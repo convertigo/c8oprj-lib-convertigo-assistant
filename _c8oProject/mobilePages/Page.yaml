@@ -2360,6 +2360,9 @@ scriptContent:
             if (p === "claude") {
                 return "Claude";
             }
+            if (p === "convertigo") {
+                return "Convertigo";
+            }
             return "Agent";
         }
         public hasReadyAgentProvider(provider = null) {
@@ -11416,6 +11419,11 @@ title: Tigo
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningEffort) ? local.AgentReasoningEffort : '''''
+    ↓AgentProviderLabel [ngx.components.UIUseVariable-1789743727415]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentProviderLabel && this.getAgentProviderLabel() !== ''Agent'') ? this.getAgentProviderLabel() : '''''
     ↓ModelChange [ngx.components.UIControlEvent-1782124897336]: 
       attrName: (ModelChange)
       eventName: ModelChange

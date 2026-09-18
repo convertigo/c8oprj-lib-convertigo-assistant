@@ -2450,6 +2450,39 @@ scriptContent:
       ↓ControlsRight [ngx.components.UIDynamicElement-1782125437312]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
+        ↓ProviderLabel [ngx.components.UIDynamicElement-1789743675347]: 
+          beanData: '{"ionBean":"SpanTag"}'
+          comment: Read-only reminder of the agent provider answering the prompt.
+          tagName: span
+          ↓Class [ngx.components.UIAttribute-1789743675349]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-prompt-provider-label
+          ↓Hidden [ngx.components.UIAttribute-1789743675351]: 
+            attrName: '[hidden]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:!(this.AgentProviderLabel && ('' + this.AgentProviderLabel).length > 0)
+          ↓Aria [ngx.components.UIAttribute-1789743675353]: 
+            attrName: aria-label
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:this.t(''Agent_Provider_Active_Aria'', ''Agent actif'') + '' : '' + (this.AgentProviderLabel || '''')'
+          ↓Title [ngx.components.UIAttribute-1789743675355]: 
+            attrName: title
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:this.t(''Agent_Provider_Active_Aria'', ''Agent actif'') + '' : '' + (this.AgentProviderLabel || '''')'
+          ↓Text [ngx.components.UIText-1789743675357]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.AgentProviderLabel || ''
         ↓Class [ngx.components.UIAttribute-1782125437314]: 
           attrName: class
           attrValue: 
@@ -3682,6 +3715,48 @@ scriptContent:
               padding: 4px 10px 7px;
             }
           }'
+↓AgentPromptProviderLabelStyle [ngx.components.UIStyle-1789743687932]: 
+  comment: Styling of the read-only provider reminder in the prompt bar.
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          ':host-context(ion-footer.agent-footer-codex) .agent-prompt-provider-label {
+            display: inline-flex;
+            align-items: center;
+            flex: 0 0 auto;
+            height: 30px;
+            min-height: 30px;
+            max-width: 110px;
+            padding: 0 7px;
+            border: 1px solid color-mix(in srgb, var(--modern-border) 45%, transparent);
+            border-radius: 8px;
+            background: transparent;
+            color: color-mix(in srgb, var(--ion-text-color) 62%, transparent);
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 30px;
+            letter-spacing: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          :host-context(ion-footer.legacy-prompt-footer) .agent-prompt-provider-label {
+            display: none !important;
+          }
+          @media (max-width: 640px) {
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-provider-label {
+              max-width: 86px;
+              padding: 0 5px;
+              font-size: 12px;
+            }
+          }
+          @media (max-width: 420px) {
+            :host-context(ion-footer.agent-footer-codex) .agent-prompt-provider-label {
+              display: none !important;
+            }
+          }'
 ↓AgentModel [ngx.components.UICompVariable-1782124529780]: 
   value: null
 ↓AgentModels [ngx.components.UICompVariable-1782124534048]: 
@@ -3693,6 +3768,9 @@ scriptContent:
 ↓AgentModelLabel [ngx.components.UICompVariable-1782124546852]: 
   value: null
 ↓AgentReasoningLabel [ngx.components.UICompVariable-1782124551120]: 
+  value: null
+↓AgentProviderLabel [ngx.components.UICompVariable-1789743663132]: 
+  comment: Read-only display name of the active agent provider (Convertigo, Codex, Claude, Vibe), resolved by the page through getAgentProviderLabel().
   value: null
 ↓ModelChange [ngx.components.UICompEvent-1782124555388]: 
   attrName: ModelChange
