@@ -16,7 +16,12 @@ server: assistant.convertigo.com
   ↓stream [variables.RequestableHttpVariable-1782296019830]: 
     httpMethod: POST
     value: false
-  ↓__header_Cookie [variables.RequestableHttpVariable-1782306798351]: 
+  ↓__header_x_c8o_assistant_relay [variables.RequestableHttpVariable-1789800000011]:
+    comment: Loop guard marker, let the hosted server refuse to relay a relayed query
+    httpMethod: POST
+    httpName: x-c8o-assistant-relay
+    value: '1'
+  ↓__header_Cookie [variables.RequestableHttpVariable-1782306798351]:
     httpMethod: POST
     value: 
       - ↑traceable: false

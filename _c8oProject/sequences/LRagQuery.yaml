@@ -243,85 +243,122 @@ responseTimeout: 300
               - ↑mode: PLAIN
               - →→: conversation_history
         output: false
-    ↓Prime_Hosted_Buffer [steps.TransactionStep-1782306814622]: 
-      sourceTransaction: lib_ConvertigoAssistant.HostedAssistantBuffer.GetTokenBuffer
-    ↓hostedCookie [steps.SimpleSourceStep-1782306850840]: 
-      sourceDefinition: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-          - com.twinsoft.convertigo.beans.common.XMLVector: 
-            - java.lang.String: 
-              - ↑value: 1782306814622
-            - java.lang.String: 
-              - ↑value: substring-before(./document/HttpInfo/responseHeaders/header[@name='Set-Cookie']/@value, ';')
-      variableName: hostedCookie
-    ↓Store_Hosted_Cookie [steps.SimpleStep-1782306866873]: 
-      expression: |
-        'if (typeof hostedCookie != ''undefined'' && hostedCookie) {
-        	context.httpSession.setAttribute(''HostedAssistantCookie'', String(hostedCookie));
-        } else {
-        	context.httpSession.removeAttribute(''HostedAssistantCookie'');
-        }'
-    ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
-      sourceTransaction: lib_ConvertigoAssistant.HostedAssistant.LRagQuery
-      ↓Question [variables.StepVariable-1782296021206]: 
-        sourceDefinition: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1767364410194
-              - java.lang.String: 
-                - ↑value: ./Question/text()
-      ↓History [variables.StepVariable-1782296021377]: 
-        sourceDefinition: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1767364410194
-              - java.lang.String: 
-                - ↑value: ./History/text()
-      ↓Prompt [variables.StepVariable-1782296021565]: 
-        sourceDefinition: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1767364410194
-              - java.lang.String: 
-                - ↑value: ./Prompt/text()
-      ↓stream [variables.StepVariable-1782296021691]: 
-        sourceDefinition: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1767364410194
-              - java.lang.String: 
-                - ↑value: ./stream/text()
-        value: 
-      ↓__header_Cookie [variables.StepVariable-1782306884264]: 
-        sourceDefinition: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: 1782306814622
-              - java.lang.String: 
-                - ↑value: substring-before(./document/HttpInfo/responseHeaders/header[@name='Set-Cookie']/@value, ';')
-        value: 
-          - ↑traceable: false
-        visibility: 3
-    ↓Copy [steps.XMLCopyStep-1767365310190]: 
-      sourceDefinition: 
-        - xmlizable: 
-          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-          - com.twinsoft.convertigo.beans.common.XMLVector: 
-            - java.lang.String: 
-              - ↑value: 1767113489319
-            - java.lang.String: 
-              - ↑value: ./document/object/object
+    ↓LocalLightRag [steps.IfThenElseStep-1789800000001]: 
+      condition: '"${assistant.lrag.host.url=}" != ""'
+      ↓lThen [steps.ThenStep-1789800000002]: 
+        ↓Call_LightRag [steps.TransactionStep-1789800000004]: 
+          sourceTransaction: lib_ConvertigoAssistant.LightRAG.query_text
+          ↓__body [variables.StepVariable-1789800000005]: 
+            sourceDefinition: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                - com.twinsoft.convertigo.beans.common.XMLVector: 
+                  - java.lang.String: 
+                    - ↑value: 1767113260210
+                  - java.lang.String: 
+                    - ↑value: ./*
+        ↓Copy_LightRag [steps.XMLCopyStep-1789800000006]: 
+          sourceDefinition: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1789800000004
+                - java.lang.String: 
+                  - ↑value: ./document/object
+      ↓lElse [steps.ElseStep-1789800000003]: 
+        ↓RelayGuard [steps.IfThenElseStep-1789800000007]: 
+          condition: '(context.httpServletRequest == null ? "" : String(context.httpServletRequest.getHeader("x-c8o-assistant-relay") || "")) != "1"'
+          ↓gThen [steps.ThenStep-1789800000008]: 
+            ↓Prime_Hosted_Buffer [steps.TransactionStep-1782306814622]: 
+              sourceTransaction: lib_ConvertigoAssistant.HostedAssistantBuffer.GetTokenBuffer
+            ↓hostedCookie [steps.SimpleSourceStep-1782306850840]: 
+              sourceDefinition: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                  - com.twinsoft.convertigo.beans.common.XMLVector: 
+                    - java.lang.String: 
+                      - ↑value: 1782306814622
+                    - java.lang.String: 
+                      - ↑value: substring-before(./document/HttpInfo/responseHeaders/header[@name='Set-Cookie']/@value, ';')
+              variableName: hostedCookie
+            ↓Store_Hosted_Cookie [steps.SimpleStep-1782306866873]: 
+              expression: |
+                'if (typeof hostedCookie != ''undefined'' && hostedCookie) {
+                	context.httpSession.setAttribute(''HostedAssistantCookie'', String(hostedCookie));
+                } else {
+                	context.httpSession.removeAttribute(''HostedAssistantCookie'');
+                }'
+            ↓Call_Transaction [steps.TransactionStep-1767113489319]: 
+              sourceTransaction: lib_ConvertigoAssistant.HostedAssistant.LRagQuery
+              ↓Question [variables.StepVariable-1782296021206]: 
+                sourceDefinition: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                    - com.twinsoft.convertigo.beans.common.XMLVector: 
+                      - java.lang.String: 
+                        - ↑value: 1767364410194
+                      - java.lang.String: 
+                        - ↑value: ./Question/text()
+              ↓History [variables.StepVariable-1782296021377]: 
+                sourceDefinition: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                    - com.twinsoft.convertigo.beans.common.XMLVector: 
+                      - java.lang.String: 
+                        - ↑value: 1767364410194
+                      - java.lang.String: 
+                        - ↑value: ./History/text()
+              ↓Prompt [variables.StepVariable-1782296021565]: 
+                sourceDefinition: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                    - com.twinsoft.convertigo.beans.common.XMLVector: 
+                      - java.lang.String: 
+                        - ↑value: 1767364410194
+                      - java.lang.String: 
+                        - ↑value: ./Prompt/text()
+              ↓stream [variables.StepVariable-1782296021691]: 
+                sourceDefinition: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                    - com.twinsoft.convertigo.beans.common.XMLVector: 
+                      - java.lang.String: 
+                        - ↑value: 1767364410194
+                      - java.lang.String: 
+                        - ↑value: ./stream/text()
+                value: 
+              ↓__header_Cookie [variables.StepVariable-1782306884264]: 
+                sourceDefinition: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                    - com.twinsoft.convertigo.beans.common.XMLVector: 
+                      - java.lang.String: 
+                        - ↑value: 1782306814622
+                      - java.lang.String: 
+                        - ↑value: substring-before(./document/HttpInfo/responseHeaders/header[@name='Set-Cookie']/@value, ';')
+                value: 
+                  - ↑traceable: false
+                visibility: 3
+            ↓Copy [steps.XMLCopyStep-1767365310190]: 
+              sourceDefinition: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+                  - com.twinsoft.convertigo.beans.common.XMLVector: 
+                    - java.lang.String: 
+                      - ↑value: 1767113489319
+                    - java.lang.String: 
+                      - ↑value: ./document/object/object
+          ↓gElse [steps.ElseStep-1789800000009]: 
+            ↓Relay_Loop_Error [steps.SimpleStep-1789800000010]: 
+              expression: |
+                'log.error("LRagQuery: relay loop detected, the request already carries the relay marker; not calling HostedAssistant again.");
+                var doc = context.outputDocument;
+                var el = doc.createElement("object");
+                doc.getDocumentElement().appendChild(el);
+                var er = doc.createElement("response");
+                er.appendChild(doc.createTextNode("The knowledge base is not reachable: a relay loop was detected. The hosted Assistant relayed the query to itself, which means its assistant.lrag.host.url global symbol is not set."));
+                el.appendChild(er);'
 ↓Question [variables.RequestableVariable-1767113097776]: 
 ↓History [variables.RequestableVariable-1767698342784]: 
 ↓Prompt [variables.RequestableVariable-1767974017753]: 
