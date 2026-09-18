@@ -42,8 +42,9 @@ test('the non-streaming branch calls LightRAG.query_text when the symbol is defi
   assert.match(lightrag, /↓query_text \[transactions\.JsonHttpTransaction\]/);
   // and it posts the JSON message the branch already builds.
   const body = localThen.slice(localThen.indexOf('↓__body '));
-  assert.match(body, /↑value: 1767113260210/);
-  assert.match(body, /↑value: \.\/\*/);
+  assert.doesNotMatch(body.split('↓Copy_LightRag')[0], /↑value: 1767113260210/, 'the body is not sourced from XML nodes: the transaction needs a JSON string (ClassCastException otherwise)');
+  assert.match(localThen, /__body = JSON\.stringify\(\{[\s\S]*?query: String\(Question\)[\s\S]*?stream: false[\s\S]*?conversation_history: lightRagHistory/);
+  assert.ok(localThen.indexOf('Build_LightRag_Body') < localThen.indexOf('Call_LightRag'));
   assert.match(nonStream, /↓Message \[steps\.JsonObjectStep-1767113260210\]/);
   for (const field of ['query', 'response_type', 'mode', 'include_references', 'stream', 'conversation_history']) {
     assert.match(nonStream, new RegExp('↓' + field + ' \\[steps\\.Json'), field);

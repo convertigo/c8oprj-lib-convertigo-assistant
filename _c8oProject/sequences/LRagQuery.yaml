@@ -246,17 +246,22 @@ responseTimeout: 300
     ↓LocalLightRag [steps.IfThenElseStep-1789800000001]: 
       condition: '"${assistant.lrag.host.url=}" != ""'
       ↓lThen [steps.ThenStep-1789800000002]: 
+        ↓Build_LightRag_Body [steps.SimpleStep-1789800000012]: 
+          comment: The LightRAG transaction takes its JSON body as a string, not as the XML nodes of the Message step.
+          expression: |
+            var lightRagHistory = [];
+            try { lightRagHistory = History ? JSON.parse(String(History)) : []; } catch (ignoredHistory) { lightRagHistory = []; }
+            __body = JSON.stringify({
+              query: String(Question),
+              response_type: "Multiple Paragraphs",
+              mode: "mix",
+              include_references: true,
+              stream: false,
+              conversation_history: lightRagHistory
+            });
         ↓Call_LightRag [steps.TransactionStep-1789800000004]: 
           sourceTransaction: lib_ConvertigoAssistant.LightRAG.query_text
           ↓__body [variables.StepVariable-1789800000005]: 
-            sourceDefinition: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-                - com.twinsoft.convertigo.beans.common.XMLVector: 
-                  - java.lang.String: 
-                    - ↑value: 1767113260210
-                  - java.lang.String: 
-                    - ↑value: ./*
         ↓Copy_LightRag [steps.XMLCopyStep-1789800000006]: 
           sourceDefinition: 
             - xmlizable: 
