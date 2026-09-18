@@ -1155,7 +1155,12 @@ scriptContent:
         						}
         						this.local.AgentReasoningLevels = this.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
                                                         var preferredReasoning = clean(preserveSelection ? this.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (this.local.AgentReasoningEffort || storedReasoning)));
-        						this.local.AgentReasoningEffort = this.local.AgentProviderSupportsReasoning === true ? (preferredReasoning || clean(selectedModel && selectedModel.defaultReasoning)) : '''';
+        						var reasoningOffered = false;
+        						for (var rl = 0; rl < this.local.AgentReasoningLevels.length; rl++) {
+        							if (preferredReasoning.length && clean(this.local.AgentReasoningLevels[rl] && this.local.AgentReasoningLevels[rl].id) === preferredReasoning) { reasoningOffered = true; break; }
+        						}
+        						if (!reasoningOffered) { preferredReasoning = clean(selectedModel && selectedModel.defaultReasoning); }
+        						this.local.AgentReasoningEffort = this.local.AgentProviderSupportsReasoning === true ? preferredReasoning : '''';
                                                         this.local.AgentServiceTier = clean(preserveSelection ? this.local.AgentServiceTier : (preferencesConfirmed ? preferences.serviceTier : (this.local.AgentServiceTier || storedServiceTier)));
         						var runtime = selectedProvider && selectedProvider.runtime ? selectedProvider.runtime : {};
         						var authentication = selectedProvider && selectedProvider.authentication ? selectedProvider.authentication : {};
@@ -9393,7 +9398,11 @@ title: Tigo
                   page.local.AgentModel = model;
                   page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
                   var reasoning = clean(preserveSelection ? page.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (state.reasoningEffort || result.reasoningEffort || page.local.AgentReasoningEffort || storedReasoning)));
-                  if (!reasoning.length && page.local.AgentProviderSupportsReasoning === true) {
+                  var reasoningOffered = false;
+                  for (var rl = 0; rl < page.local.AgentReasoningLevels.length; rl++) {
+                      if (reasoning.length && clean(page.local.AgentReasoningLevels[rl] && page.local.AgentReasoningLevels[rl].id) === reasoning) { reasoningOffered = true; break; }
+                  }
+                  if (!reasoningOffered && page.local.AgentProviderSupportsReasoning === true) {
                       reasoning = clean(selectedModel && selectedModel.defaultReasoning);
                   }
                   page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : '''';
