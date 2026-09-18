@@ -1795,6 +1795,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
+      // Lets the harness reload the conversation when its process had to be restarted.
+      sessionId: state.externalSessionId || "",
       env: JSON.stringify(env),
       browserDebugUrl: trim(options.browserDebugUrl),
       browserDevToolsJsonUrl: trim(options.browserDevToolsJsonUrl),
@@ -6407,6 +6409,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (isResidentProvider(provider) && start.setup) {
           state.setupReport = publicSetupReport(start.setup);
         }
+        if (isVibeHarness(provider) && start.state && trim(start.state.sessionId).length) {
+          state.externalSessionId = String(start.state.sessionId);
+        }
         if (isVibeHarness(provider) && start.state) {
           state.model = trim(start.state.model) || state.model;
           state.reasoningEffort = normalizeReasoningEffort(start.state.reasoningEffort) || state.reasoningEffort;
@@ -7051,6 +7056,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state = ensureState(state);
     markCancellationRequested(threadid);
+    // Stop the turn, not the agent: the process keeps the conversation context, which some
+    // harnesses (Vibe) cannot reload. Killing it is the fallback when the turn does not stop.
+    var interrupted = null;
+    if (options.forceClose !== true && trim(state.handle).length) {
+      try {
+        interrupted = bridgeCall(state, "agent_interrupt", {
+          handle: state.handle,
+          waitMs: 8000
+        }, 20000);
+      } catch (_ignoreInterruptFailure) {
+        interrupted = null;
+      }
+    }
+    if (interrupted && interrupted.ok === true) {
+      state.status = "cancelled";
+      state.updatedAt = now();
+      saveState(state);
+      setBuffer("", "");
+      return {
+        ok: true,
+        status: "interrupted",
+        threadid: threadid,
+        contextKept: true,
+        conversation: publicConversation(readJsonFile(new File(state.conversationFile)) || {}),
+        bridge: interrupted
+      };
+    }
     var bridge = {};
     try {
       bridge = bridgeCall(state, providerSequence(state.provider, "close"), {

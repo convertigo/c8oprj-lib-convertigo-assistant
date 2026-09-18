@@ -1584,8 +1584,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.14", tag: "v0.2.14", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.14/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.16", tag: "v0.4.16", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.16/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.34", tag: "v1.4.34", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.34/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.17", tag: "v0.4.17", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.17/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.35", tag: "v1.4.35", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.35/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -5286,6 +5286,94 @@ title: Tigo
               ↓CreateSettings [ngx.components.UIDynamicElement-1781700500010]: 
                 beanData: '{"ionBean":"DivTag"}'
                 tagName: div
+                ↓StackSettings [ngx.components.UIDynamicElement-1787742888340]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1787742888342]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-create-settings-block agent-runtime-settings agent-stack-settings agent-setting-section
+                  ↓StackLabel [ngx.components.UIDynamicElement-1787742888344]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1787742888346]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-create-label agent-runtime-label
+                    ↓Text [ngx.components.UIText-1787742888348]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.t('Agent_Stack_Local', 'Stack Agent locale')
+                  ↓StackVersion [ngx.components.UIDynamicElement-1787742888350]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1787742888352]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-runtime-version
+                    ↓Text [ngx.components.UIText-1787742888354]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackVersionText ? this.getAgentStackVersionText() : '''''
+                  ↓StackStatus [ngx.components.UIDynamicElement-1787742888356]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1787742888358]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackStatusClass ? this.getAgentStackStatusClass() : ''agent-runtime-status'''
+                    ↓Text [ngx.components.UIText-1787742888360]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackStatusText ? this.getAgentStackStatusText() : '''''
+                  ↓StackAction [ngx.components.UIDynamicElement-1787742888362]: 
+                    beanData: |
+                      '{
+                       "ionBean": "Button",
+                       "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true || !!this.local.AgentStackReleaseError)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
+                       "IonFill": "plain:clear",
+                       "IonSize": "plain:small"
+                      }'
+                    tagName: ion-button
+                    ↓Class [ngx.components.UIAttribute-1787742888364]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-runtime-action
+                    ↓Icon [ngx.components.UIDynamicElement-1787742888366]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Icon",
+                         "IconName": "plain:cloud-download-outline",
+                         "IconSlot": "plain:start"
+                        }'
+                      tagName: ion-icon
+                    ↓Text [ngx.components.UIText-1787742888368]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.getAgentStackActionText ? this.getAgentStackActionText() : this.t(''Agent_Stack_Update'', ''Mettre à jour la stack'')'
+                    ↓Event [ngx.components.UIControlEvent-1787742888370]: 
+                      ↓UpdateStack [ngx.components.UICustomAction-1787742889964]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                if (page.triggerAgentStackUpdate) { page.triggerAgentStackUpdate(); }
+                                resolve();
                 ↓ProviderSettings [ngx.components.UIDynamicElement-1787737342312]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -6395,94 +6483,6 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
-                ↓StackSettings [ngx.components.UIDynamicElement-1787742888340]: 
-                  beanData: '{"ionBean":"DivTag"}'
-                  tagName: div
-                  ↓Class [ngx.components.UIAttribute-1787742888342]: 
-                    attrName: class
-                    attrValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: plain:agent-create-settings-block agent-runtime-settings agent-stack-settings agent-setting-section
-                  ↓StackLabel [ngx.components.UIDynamicElement-1787742888344]: 
-                    beanData: '{"ionBean":"Paragraph"}'
-                    tagName: p
-                    ↓Class [ngx.components.UIAttribute-1787742888346]: 
-                      attrName: class
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: plain:agent-create-label agent-runtime-label
-                    ↓Text [ngx.components.UIText-1787742888348]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:this.t('Agent_Stack_Local', 'Stack Agent locale')
-                  ↓StackVersion [ngx.components.UIDynamicElement-1787742888350]: 
-                    beanData: '{"ionBean":"Paragraph"}'
-                    tagName: p
-                    ↓Class [ngx.components.UIAttribute-1787742888352]: 
-                      attrName: class
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: plain:agent-runtime-version
-                    ↓Text [ngx.components.UIText-1787742888354]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:this.getAgentStackVersionText ? this.getAgentStackVersionText() : '''''
-                  ↓StackStatus [ngx.components.UIDynamicElement-1787742888356]: 
-                    beanData: '{"ionBean":"Paragraph"}'
-                    tagName: p
-                    ↓Class [ngx.components.UIAttribute-1787742888358]: 
-                      attrName: class
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:this.getAgentStackStatusClass ? this.getAgentStackStatusClass() : ''agent-runtime-status'''
-                    ↓Text [ngx.components.UIText-1787742888360]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:this.getAgentStackStatusText ? this.getAgentStackStatusText() : '''''
-                  ↓StackAction [ngx.components.UIDynamicElement-1787742888362]: 
-                    beanData: |
-                      '{
-                       "ionBean": "Button",
-                       "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true || !!this.local.AgentStackReleaseError)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
-                       "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
-                      }'
-                    tagName: ion-button
-                    ↓Class [ngx.components.UIAttribute-1787742888364]: 
-                      attrName: class
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: plain:agent-runtime-action
-                    ↓Icon [ngx.components.UIDynamicElement-1787742888366]: 
-                      beanData: |
-                        '{
-                         "ionBean": "Icon",
-                         "IconName": "plain:cloud-download-outline",
-                         "IconSlot": "plain:start"
-                        }'
-                      tagName: ion-icon
-                    ↓Text [ngx.components.UIText-1787742888368]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:this.getAgentStackActionText ? this.getAgentStackActionText() : this.t(''Agent_Stack_Update'', ''Mettre à jour la stack'')'
-                    ↓Event [ngx.components.UIControlEvent-1787742888370]: 
-                      ↓UpdateStack [ngx.components.UICustomAction-1787742889964]: 
-                        actionValue: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                              →: |
-                                if (page.triggerAgentStackUpdate) { page.triggerAgentStackUpdate(); }
-                                resolve();
                 ↓RuntimeSettings [ngx.components.UIDynamicElement-1785253202525]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
