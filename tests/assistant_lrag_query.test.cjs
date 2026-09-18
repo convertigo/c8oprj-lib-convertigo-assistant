@@ -52,12 +52,55 @@ test('the non-streaming branch calls LightRAG.query_text when the symbol is defi
 });
 
 test('the LightRAG answer keeps the response/references shape consumers rely on', () => {
-  const copy = localThen.slice(localThen.indexOf('↓Copy_LightRag '));
+  const copy = localThen.slice(localThen.indexOf('↓Copy_LightRag '), localThen.indexOf('↓Lrag_Guard '));
   assert.match(copy, /steps\.XMLCopyStep-\d{13}/);
   assert.match(copy, /↑value: \.\/document\/object$/m);
   // same <object> wrapper as the streaming branch and as the relayed answer
   assert.match(streamThen, /doc\.createElement\("object"\)/);
   assert.match(relayThen, /↑value: \.\/document\/object\/object$/m);
+});
+
+test('a failing LightRAG call is surfaced as an explicit response, never as an empty document', () => {
+  // the HTTP status of the call is read...
+  const status = localThen.slice(localThen.indexOf('↓Lrag_Status '), localThen.indexOf('↓Copy_LightRag '));
+  assert.match(status, /steps\.SimpleSourceStep-\d{13}/);
+  assert.match(status, /↑value: \.\/document\/HttpInfo\/status\/@code$/m);
+  assert.match(status, /variableName: lragStatus/);
+  // ...then a guard placed after the copy guarantees an object/response element
+  const guard = localThen.slice(localThen.indexOf('↓Lrag_Guard '));
+  assert.match(guard, /steps\.SimpleStep-\d{13}/);
+  assert.match(guard, /doc\.createElement\("object"\)/);
+  assert.match(guard, /doc\.createElement\("response"\)/);
+  assert.match(guard, /The knowledge base could not be queried/);
+  assert.match(guard, /lragStatus/);
+  // order: status, copy, guard
+  assert.ok(localThen.indexOf('↓Call_LightRag ') < localThen.indexOf('↓Lrag_Status '));
+  assert.ok(localThen.indexOf('↓Lrag_Status ') < localThen.indexOf('↓Copy_LightRag '));
+  assert.ok(localThen.indexOf('↓Copy_LightRag ') < localThen.indexOf('↓Lrag_Guard '));
+});
+
+test('HTTP headers stay nested XMLVectors, the shape HttpConnector casts to List<String>', () => {
+  // A flattened "[Name, value]" string entry makes HttpConnector.prepareForTransaction throw
+  // java.lang.ClassCastException: class java.lang.String cannot be cast to class java.util.List
+  // before any HTTP exchange happens. Only the Studio writes these files: never hand-edit them.
+  const fs2 = require('node:fs'), path2 = require('node:path');
+  const dir = path2.resolve(__dirname, '../_c8oProject');
+  const bad = [];
+  (function walk(d) {
+    for (const name of fs2.readdirSync(d)) {
+      const full = path2.join(d, name);
+      if (fs2.statSync(full).isDirectory()) { walk(full); continue; }
+      if (!name.endsWith('.yaml')) continue;
+      fs2.readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
+        if (/↑value: '\[[^\]]*, /.test(line)) bad.push(path2.relative(dir, full) + ':' + (i + 1));
+      });
+    }
+  })(dir);
+  assert.deepEqual(bad, []);
+  // and the LightRAG headers are really there, one XMLVector per header
+  for (const header of ['Accept', 'Content-Type', 'X-API-Key']) {
+    assert.match(lightrag, new RegExp('↑value: ' + header + '\\n'), header);
+  }
 });
 
 test('HostedAssistant is only reached when the symbol is empty', () => {
@@ -75,7 +118,7 @@ test('a relayed query is never relayed again', () => {
   // the relay marks its own call...
   assert.match(hosted, /↓__header_x_c8o_assistant_relay \[variables\.RequestableHttpVariable-\d{13}\]/);
   assert.match(hosted, /httpName: x-c8o-assistant-relay/);
-  assert.match(hosted, /httpName: x-c8o-assistant-relay\n\s+value: '1'/);
+  assert.match(hosted, /httpName: x-c8o-assistant-relay\n\s+value: '?1'?\n/);
   // ...and refuses to relay a request that already carries it
   assert.match(localElse, /condition: '.*getHeader\("x-c8o-assistant-relay"\).*!= "1"'/);
   assert.match(localElse, /context\.httpServletRequest == null \? ""/);

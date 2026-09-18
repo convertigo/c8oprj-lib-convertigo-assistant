@@ -9,12 +9,27 @@ server: ${assistant.lrag.host.url=}
     - xmlizable: 
       - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
       - com.twinsoft.convertigo.beans.common.XMLVector: 
-        - java.lang.String: 
-          - ↑value: '[Accept, application/json]'
-        - java.lang.String: 
-          - ↑value: '[Content-Type, application/json]'
-        - java.lang.String: 
-          - ↑value: '[X-API-Key, ${assistant.lrag.apikey.secret=}]'
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Accept
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: X-API-Key
+            - java.lang.String: 
+              - ↑value: ${assistant.lrag.apikey.secret=}
   httpVerb: POST
   responseTimeout: 300
   subDir: ${assistant.lrag.host.url=}/query
@@ -67,12 +82,27 @@ server: ${assistant.lrag.host.url=}
     - xmlizable: 
       - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
       - com.twinsoft.convertigo.beans.common.XMLVector: 
-        - java.lang.String: 
-          - ↑value: '[Accept, application/json]'
-        - java.lang.String: 
-          - ↑value: '[Content-Type, application/json]'
-        - java.lang.String: 
-          - ↑value: '[X-API-Key, ${assistant.lrag.apikey.secret=}]'
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Accept
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/json
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: X-API-Key
+            - java.lang.String: 
+              - ↑value: ${assistant.lrag.apikey.secret=}
   httpVerb: POST
   subDir: ${assistant.lrag.host.url=}/query/stream
   ↓Test_Case [core.TestCase]: 

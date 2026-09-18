@@ -249,7 +249,7 @@ responseTimeout: 300
         ↓Build_LightRag_Body [steps.SimpleStep-1789800000012]: 
           comment: The LightRAG transaction takes its JSON body as a string, not as the XML nodes of the Message step.
           expression: |
-            var lightRagHistory = [];
+            'var lightRagHistory = [];
             try { lightRagHistory = History ? JSON.parse(String(History)) : []; } catch (ignoredHistory) { lightRagHistory = []; }
             __body = JSON.stringify({
               query: String(Question),
@@ -258,10 +258,21 @@ responseTimeout: 300
               include_references: true,
               stream: false,
               conversation_history: lightRagHistory
-            });
+            });'
         ↓Call_LightRag [steps.TransactionStep-1789800000004]: 
           sourceTransaction: lib_ConvertigoAssistant.LightRAG.query_text
           ↓__body [variables.StepVariable-1789800000005]: 
+        ↓Lrag_Status [steps.SimpleSourceStep-1789738869697]: 
+          comment: HTTP status of the LightRAG call, used by Lrag_Guard to surface an explicit error.
+          sourceDefinition: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+              - com.twinsoft.convertigo.beans.common.XMLVector: 
+                - java.lang.String: 
+                  - ↑value: 1789800000004
+                - java.lang.String: 
+                  - ↑value: ./document/HttpInfo/status/@code
+          variableName: lragStatus
         ↓Copy_LightRag [steps.XMLCopyStep-1789800000006]: 
           sourceDefinition: 
             - xmlizable: 
@@ -271,6 +282,38 @@ responseTimeout: 300
                   - ↑value: 1789800000004
                 - java.lang.String: 
                   - ↑value: ./document/object
+        ↓Lrag_Guard [steps.SimpleStep-1789738879919]: 
+          comment: 'Guarantees an object/response element: when LightRAG answers an error or nothing, replace the copied payload by an explicit error message.'
+          expression: |
+            'var doc = context.outputDocument;
+            var root = doc.getDocumentElement();
+            var obj = null;
+            for (var n = root.getFirstChild(); n != null; n = n.getNextSibling()) {
+            	if (n.getNodeType() == 1 && n.getNodeName() == "object") { obj = n; }
+            }
+            if (obj == null) {
+            	obj = doc.createElement("object");
+            	root.appendChild(obj);
+            }
+            var hasResponse = false;
+            for (var c = obj.getFirstChild(); c != null; c = c.getNextSibling()) {
+            	if (c.getNodeType() == 1 && c.getNodeName() == "response") { hasResponse = true; }
+            }
+            if (!hasResponse) {
+            	var status = "";
+            	try { if (typeof lragStatus != "undefined" && lragStatus != null) { status = String(lragStatus); } } catch (eStatus) { status = ""; }
+            	var detail = "";
+            	try { detail = String(obj.getTextContent()).replace(/\s+/g, " ").trim(); } catch (eDetail) { detail = ""; }
+            	var msg = "The knowledge base could not be queried";
+            	if (status != "" && status != "200") { msg += " (HTTP " + status + ")"; }
+            	msg += ".";
+            	if (detail != "") { msg += " " + detail; }
+            	log.error("LRagQuery: " + msg);
+            	while (obj.getFirstChild() != null) { obj.removeChild(obj.getFirstChild()); }
+            	var er = doc.createElement("response");
+            	er.appendChild(doc.createTextNode(msg));
+            	obj.appendChild(er);
+            }'
       ↓lElse [steps.ElseStep-1789800000003]: 
         ↓RelayGuard [steps.IfThenElseStep-1789800000007]: 
           condition: '(context.httpServletRequest == null ? "" : String(context.httpServletRequest.getHeader("x-c8o-assistant-relay") || "")) != "1"'
