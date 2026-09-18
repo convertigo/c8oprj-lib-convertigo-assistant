@@ -92,3 +92,20 @@ test('no bean property carries a global symbol without a default value', () => {
     }
   }
 });
+
+test('Convertigo YAML keeps a space after a trailing colon (the project loader rejects a bare one)', () => {
+  const fs2 = require('node:fs'), path2 = require('node:path');
+  const dir = path2.resolve(__dirname, '../_c8oProject');
+  const bad = [];
+  (function walk(d) {
+    for (const name of fs2.readdirSync(d)) {
+      const full = path2.join(d, name);
+      if (fs2.statSync(full).isDirectory()) { walk(full); continue; }
+      if (!name.endsWith('.yaml')) continue;
+      fs2.readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
+        if (/^\s*↓.*\]:$/.test(line)) bad.push(path2.relative(dir, full) + ':' + (i + 1));
+      });
+    }
+  })(dir);
+  assert.deepEqual(bad, []);
+});

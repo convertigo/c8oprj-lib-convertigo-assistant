@@ -60,6 +60,10 @@ curl -s https://raw.githubusercontent.com/convertigo/c8oprj-lib-convertigo-assis
 
 ## Tests
 
+- Before tagging any of the three projects, load it exactly as the CI does: `sh gradlew -q load`.
+  It catches what the Node tests cannot: a malformed bean header (Convertigo YAML needs a space
+  after a trailing colon, `]: `), a duplicated bean id, an undefined symbol. A tag whose build
+  fails is burnt: take the next version number.
 - Assistant: `for t in tests/*.test.js tests/*.test.cjs; do node --test "$t"; done`
   (they read the checked-in YAML, not a Mobile Builder output).
 - Agent Bridge: `for t in tests/*.test.js; do node --test "$t"; done`
