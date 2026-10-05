@@ -59,9 +59,11 @@ assert.match(footerSource, /\.agent-prompt-model-select \{\s+max-width: 220px;/)
 assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-model-select \{\s+max-width: 160px;/);
 assert.match(pageSource, /type === ''lib_ConvertigoAssistant\.context'' \|\| type === ''ConvertigoAssistant\.context''/);
 assert.match(pageSource, /postAgentHostMessage\(\{ type: ''ConvertigoAssistant\.context\.request'' \}\)/);
-assert.match(pageSource, /lib_ConvertigoMCP", version: "0\.2\.16", tag: "v0\.2\.16"/);
-assert.match(pageSource, /lib_ConvertigoAgentBridge", version: "0\.4\.18", tag: "v0\.4\.18"/);
-assert.match(pageSource, /lib_ConvertigoAssistant", version: "1\.4\.42", tag: "v1\.4\.42"/);
+const stackManifest = JSON.parse(fs.readFileSync("stack-release.json", "utf8"));
+for (const project of stackManifest.projects) {
+  assert.ok(pageSource.includes(`name: "${project.name}", version: "${project.version}", tag: "${project.tag}", importUrl: "${project.importUrl}"`),
+    `embedded stack entry must match the release manifest for ${project.name}`);
+}
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
 assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
