@@ -5568,16 +5568,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   };
 
-  // Never create a conversation, start a CLI, discover credentials or accept a caller bridge URL here.
+  // Resolve only trusted identity/ownership here. The private native sequence may
+  // read account metadata before the first conversation; never create one.
   C8O.assistantAgentBridge.quota = function(options) {
     options = options || {};
     var provider = normalizeProvider(options.provider);
     var empty = {status:"ok",quota:{provider:provider,source:"wrapper",available:false,kind:"limits",windows:[],updatedAt:null}};
     var id = normalizeThreadId(options.threadid);
+    if (!id.length) { empty.accountAllowed = true;return empty; }
     var state = id.length ? readState(id) : null;
     if (!state || String(state.userKey) !== normalizeUserKey(options.userId) || normalizeProvider(state.provider) !== provider) { return empty; }
     // This server-only handle is consumed by a Private SequenceStep after the facade's session guard.
-    return {status:"ok",quota:empty.quota,handle:trim(state.handle)};
+    return {status:"ok",quota:empty.quota,handle:trim(state.handle),accountAllowed:true};
   };
 
   C8O.assistantAgentBridge.settings = function (options) {

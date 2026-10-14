@@ -323,7 +323,7 @@ rediscovering the same context.
 
 ## Quota display (8.4.6)
 
-- The native NGX `Page.Header.QuotaIf` bar reads the authenticated `AgentQuota`
+- The native NGX `LightRagFooterComponent` quota arc reads the authenticated `AgentQuota`
   facade through a `CallSequenceAction` subscriber (`AgentQuotaRefresh`). Keep
   this visible when the prompt is disabled or agent settings are open.
 - Convertigo uses `TigoAccessStatus` (HTTPS `getQuota(apiKey)`), never the Vibe
@@ -338,11 +338,20 @@ rediscovering the same context.
   display those separately and leave account quota unknown.
 - Startup/settings, provider selection, explicit refresh and completed turns
   refresh quota. Active-turn polling may refresh it at most every 30 seconds,
-  retaining the current snapshot. Never add idle polling, or start a CLI or
-  conversation just to populate the bar.
+  retaining the current snapshot. Never add idle polling or create a conversation to populate the arc. An explicit
+  authenticated refresh may run the Bridge’s cached metadata-only CLI probe
+  before the first prompt; it must never send a user message or model request.
   Discard late provider/conversation responses; failures release the pending
   flag so an explicit retry works. Do not show context from a prior conversation.
 - `tests/assistant_quota.test.cjs` consumes a canonical Page tree exported through
   MCP, not project descriptors. Set `CONVERTIGO_QUOTA_UI_SNAPSHOT` to that JSON
   file and run `node tests/assistant_quota.test.cjs` after Mobile Builder has
   installed TypeScript. Native compilation and backend proof remain required.
+
+## Compact quota popup
+
+- `Page.getAgentQuotaView()` derives the compact account usage and detail rows. Pick the highest known utilization window; use its actual duration before its primary/secondary id to label it. Unknown account quota stays neutral; Vibe context never fills the account arc.
+- The shared footer uses the native `InlinePopover`, with a stable unique trigger id per component instance. Keep the trigger a button independent from prompt enablement. Ionic handles outside click, Escape and focus return. Refresh emits `QuotaRefresh` to the Page, which keeps the existing authenticated subscriber and API transport.
+- `ensureAgentNativeContextBridge()` installs the Java receiver wrapper during host-context retries too: the native receiver can appear after Page initialization or be replaced on reload. Forward native context exactly once, retain the original delegate and restore it only when the wrapper is still current. Check `tests/assistant_native_context.test.cjs`.
+
+- Release 1.4.45 pairs Bridge 0.4.20 with the clickable quota popup. Both `stack-release.json` and the Page fallback must pin those exact CAR versions. CI honors `[skip deploy]` in the release commit on branch and tag pushes, so publication can happen without server deployment.

@@ -7,6 +7,8 @@ scriptContent:
         import { HostListener, signal, NgZone } from ''@angular/core'';
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
+            public quotaTriggerId = ''tigo-quota-'' + Math.random().toString(36).slice(2);
+        
         	disabled = false;
         	questionInputEl = null;
         	questionInputKeydownHandler = null;
@@ -2637,6 +2639,369 @@ scriptContent:
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.label ? reasoningLevel.label : (reasoningLevel && reasoningLevel.id ? reasoningLevel.id : '''')'
+        ↓QuotaIf [ngx.components.UIControlDirective-1792000349513]: 
+          directiveExpression: '!!this.AgentQuotaView'
+          directiveName: If
+          ↓QuotaTrigger [ngx.components.UIDynamicElement-1792000354041]: 
+            beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+            tagName: ion-button
+            ↓Id [ngx.components.UIAttribute-1792000354043]: 
+              attrName: '[id]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:quotaTriggerId
+            ↓Class [ngx.components.UIAttribute-1792000354045]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-quota-trigger
+            ↓Aria [ngx.components.UIAttribute-1792000354047]: 
+              attrName: '[attr.aria-label]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:AgentQuotaView?.label
+            ↓Title [ngx.components.UIAttribute-1792000354049]: 
+              attrName: '[title]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:AgentQuotaView?.label
+            ↓Popup [ngx.components.UIAttribute-1792000354051]: 
+              attrName: aria-haspopup
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:dialog
+            ↓Arc [ngx.components.UIDynamicElement-1792000354053]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792000354055]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-quota-arc
+              ↓Background [ngx.components.UIAttribute-1792000354057]: 
+                attrName: '[style.background]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:AgentQuotaView?.background
+              ↓Hidden [ngx.components.UIAttribute-1792000354059]: 
+                attrName: aria-hidden
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:true
+          ↓QuotaPopover [ngx.components.UIDynamicElement-1792000355689]: 
+            beanData: |
+              '{
+               "ionBean": "InlinePopover",
+               "Alignment": "plain:end",
+               "Arrow": "plain:false",
+               "Reference": "plain:trigger",
+               "Side": "plain:top",
+               "Trigger": "script:quotaTriggerId",
+               "TriggerAction": "plain:click"
+              }'
+            tagName: ion-popover
+            ↓Class [ngx.components.UIAttribute-1792000355691]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-quota-popover
+            ↓Aria [ngx.components.UIAttribute-1792000355693]: 
+              attrName: '[attr.aria-label]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:AgentQuotaView?.title
+            ↓Details [ngx.components.UIDynamicElement-1792000355695]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792000355697]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:quota-popup
+              ↓Heading [ngx.components.UIDynamicElement-1792000355699]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1792000355701]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:quota-popup-heading
+                ↓Title [ngx.components.UIDynamicElement-1792000355703]: 
+                  beanData: '{"ionBean":"Heading2"}'
+                  tagName: h2
+                  ↓Text [ngx.components.UIText-1792000355705]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:AgentQuotaView?.title
+                ↓Close [ngx.components.UIDynamicElement-1792000355707]: 
+                  beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+                  tagName: ion-button
+                  ↓Label [ngx.components.UIText-1792000355709]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:AgentQuotaView?.closeLabel
+                  ↓Click [ngx.components.UIControlEvent-1792000355711]: 
+                    ↓Dismiss [ngx.components.UIDynamicAction-1792000355713]: 
+                      beanData: '{"ionBean":"ClosePopoverAction"}'
+              ↓Provider [ngx.components.UIDynamicElement-1792000355715]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1792000355717]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:quota-provider
+                ↓Text [ngx.components.UIText-1792000355719]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:AgentQuotaView?.provider
+              ↓SummaryIf [ngx.components.UIControlDirective-1792000355721]: 
+                directiveExpression: AgentQuotaView?.summary
+                directiveName: If
+                ↓Summary [ngx.components.UIDynamicElement-1792000355723]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792000355725]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:quota-summary
+                  ↓Text [ngx.components.UIText-1792000355727]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:AgentQuotaView?.summary
+              ↓QuotaRows [ngx.components.UIControlDirective-1792000355729]: 
+                directiveIndexName: quotaRowIndex
+                directiveItemName: quotaRow
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.AgentQuotaView?.rows || []
+                ↓QuotaRow [ngx.components.UIDynamicElement-1792000355731]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792000355733]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:quota-detail-row
+                  ↓Labels [ngx.components.UIDynamicElement-1792000355735]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1792000355737]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:quota-row-labels
+                    ↓Name [ngx.components.UIDynamicElement-1792001467865]: 
+                      beanData: '{"ionBean":"SpanTag"}'
+                      tagName: span
+                      ↓Text [ngx.components.UIText-1792001467867]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:quotaRow.title
+                    ↓Amount [ngx.components.UIDynamicElement-1792001472395]: 
+                      beanData: '{"ionBean":"SpanTag"}'
+                      tagName: span
+                      ↓Text [ngx.components.UIText-1792001472397]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:quotaRow.usage
+                  ↓KnownUsage [ngx.components.UIControlDirective-1792000355743]: 
+                    directiveExpression: quotaRow.usedPercent != null
+                    directiveName: If
+                    ↓Track [ngx.components.UIDynamicElement-1792000355745]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Class [ngx.components.UIAttribute-1792000355747]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:quota-meter-track
+                      ↓Role [ngx.components.UIAttribute-1792000355749]: 
+                        attrName: role
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:progressbar
+                      ↓AriaLabel [ngx.components.UIAttribute-1792000355751]: 
+                        attrName: '[attr.aria-label]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:quotaRow.title
+                      ↓Min [ngx.components.UIAttribute-1792000355753]: 
+                        attrName: aria-valuemin
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:0
+                      ↓Max [ngx.components.UIAttribute-1792000355755]: 
+                        attrName: aria-valuemax
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:100
+                      ↓Now [ngx.components.UIAttribute-1792000355757]: 
+                        attrName: '[attr.aria-valuenow]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:quotaRow.usedPercent
+                      ↓Fill [ngx.components.UIDynamicElement-1792000355759]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1792000355761]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:quota-meter-fill
+                        ↓Width [ngx.components.UIAttribute-1792000355763]: 
+                          attrName: '[style.width.%]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:quotaRow.usedPercent
+                        ↓Color [ngx.components.UIAttribute-1792000355765]: 
+                          attrName: '[style.background]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:quotaRow.color
+                  ↓ResetIf [ngx.components.UIControlDirective-1792000355767]: 
+                    directiveExpression: quotaRow.reset
+                    directiveName: If
+                    ↓Reset [ngx.components.UIDynamicElement-1792000355769]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Class [ngx.components.UIAttribute-1792000355771]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:quota-reset
+                      ↓Text [ngx.components.UIText-1792000355773]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:quotaRow.reset
+              ↓ExpiryIf [ngx.components.UIControlDirective-1792000355775]: 
+                directiveExpression: AgentQuotaView?.expiry
+                directiveName: If
+                ↓Expiry [ngx.components.UIDynamicElement-1792000355777]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792000355779]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:quota-reset
+                  ↓Text [ngx.components.UIText-1792000355781]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:AgentQuotaView?.expiry
+              ↓ContextIf [ngx.components.UIControlDirective-1792000355783]: 
+                directiveExpression: AgentQuotaView?.context
+                directiveName: If
+                ↓Context [ngx.components.UIDynamicElement-1792000355785]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792000355787]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:quota-context
+                  ↓Text [ngx.components.UIText-1792000355789]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:AgentQuotaView?.context
+              ↓Actions [ngx.components.UIDynamicElement-1792000355791]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1792000355793]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:quota-popup-actions
+                ↓Refresh [ngx.components.UIDynamicElement-1792000355795]: 
+                  beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+                  tagName: ion-button
+                  ↓Label [ngx.components.UIText-1792000355797]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:AgentQuotaView?.refreshLabel
+                  ↓Click [ngx.components.UIControlEvent-1792000355799]: 
+                    ↓Notify [ngx.components.UICustomAction-1792000355801]: 
+                      actionValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                            →: page.QuotaRefresh.emit({});resolve();
+                ↓PortalIf [ngx.components.UIControlDirective-1792000355803]: 
+                  directiveExpression: AgentQuotaView?.portalUrl
+                  directiveName: If
+                  ↓Portal [ngx.components.UIDynamicElement-1792000355805]: 
+                    beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+                    tagName: ion-button
+                    ↓Href [ngx.components.UIAttribute-1792000355807]: 
+                      attrName: '[href]'
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:AgentQuotaView.portalUrl
+                    ↓Target [ngx.components.UIAttribute-1792000355809]: 
+                      attrName: target
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:_blank
+                    ↓Rel [ngx.components.UIAttribute-1792000355811]: 
+                      attrName: rel
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:noopener noreferrer
+                    ↓Text [ngx.components.UIText-1792000355813]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:AgentQuotaView.extendLabel
+            ↓RefreshOnOpen [ngx.components.UIAttribute-1792001605516]: 
+              attrName: (didPresent)
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:QuotaRefresh.emit({})
         ↓Voice [ngx.components.UIDynamicElement-1782125441570]: 
           beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
           tagName: ion-button
@@ -3995,3 +4360,34 @@ scriptContent:
               color: #06111f !important;
             }
           }'
+↓AgentQuotaView [ngx.components.UICompVariable-1792000335809]: 
+  value: null
+↓QuotaRefresh [ngx.components.UICompEvent-1792000340397]: 
+  attrName: QuotaRefresh
+↓AgentQuotaPopoverStyle [ngx.components.UIStyle-1792000344985]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          .agent-quota-trigger { flex:0 0 34px; width:34px; min-width:34px; height:34px; margin:0; --padding-start:5px;--padding-end:5px;--border-radius:9px;color:var(--ion-text-color); }
+          .agent-quota-trigger::part(native) { padding:5px; border-radius:9px; }
+          .agent-quota-trigger:hover { background:color-mix(in srgb,var(--ion-text-color) 9%,transparent);border-radius:9px; }
+          .agent-quota-trigger:focus-visible { outline:2px solid var(--ion-color-primary,#3b82f6);outline-offset:2px; }
+          .agent-quota-arc { display:block;width:23px;height:23px;border-radius:50%;mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px)); }
+          .agent-quota-popover { --width:min(360px,calc(100vw - 24px));--height:min(320px,calc(100vh - 120px));--max-height:75vh;--background:var(--ion-background-color,#fff);--box-shadow:0 12px 44px #0005; }
+          .quota-popup { box-sizing:border-box;height:100%;display:flex;flex-direction:column;padding:18px; color:var(--ion-text-color,#1e293b);font-size:14px;line-height:1.5;overflow:auto; }
+          .quota-popup-heading,.quota-row-labels { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+          .quota-popup-heading h2 { margin:0;font-size:20px;font-weight:600; }
+          .quota-popup-heading ion-button { font-size:12px;margin:0;--padding-start:4px;--padding-end:4px; }
+          .quota-provider { color:var(--ion-color-medium,#64748b);font-size:12px;margin-bottom:14px; }
+          .quota-summary { margin-bottom:14px; }
+          .quota-detail-row { margin:16px 0; }
+          .quota-row-labels { margin-bottom:8px;flex-wrap:wrap; }
+          .quota-meter-track { height:7px;background:color-mix(in srgb,var(--ion-text-color,#64748b) 18%,transparent);border-radius:8px;overflow:hidden; }
+          .quota-meter-fill { height:100%;border-radius:8px;transition:width .2s ease; }
+          .quota-reset { margin-top:6px;color:var(--ion-color-medium,#64748b);font-size:12px;overflow-wrap:anywhere; }
+          .quota-context { margin-top:12px;padding-top:12px;border-top:1px solid var(--ion-color-step-150,#e2e8f0);font-size:12px; }
+          .quota-popup-actions { display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;margin-top:auto;padding-top:14px; }
+          .quota-popup-actions ion-button { margin:0;height:30px;font-size:12px;--padding-start:0;--padding-end:4px; }
+          

@@ -1332,6 +1332,7 @@ scriptContent:
         
         	public requestAgentHostContext(attempt = 0) {
         		try {
+                    this.ensureAgentNativeContextBridge();
         			this.postAgentHostMessage({ type: ''lib_ConvertigoAssistant.context.request'' });
         			// C8Oforms still listens for the pre-rename message type.
         			this.postAgentHostMessage({ type: ''ConvertigoAssistant.context.request'' });
@@ -1371,21 +1372,7 @@ scriptContent:
         					}
         				} catch (e) {}
         			};
-        			var w: any = window;
-        			if (w && typeof w[''receiveFromJava''] === ''function'' && !this.agentHostReceiveFromJavaWrapped) {
-        				this.agentHostReceiveFromJavaOriginal = w[''receiveFromJava''];
-        				var previousReceiveFromJava = this.agentHostReceiveFromJavaOriginal;
-        				var page: any = this;
-        				w[''receiveFromJava''] = function(message) {
-        					try {
-        						if (page && page.agentHostContextMessageHandler) {
-        							page.agentHostContextMessageHandler({ data: message, __agentNativeHost: true });
-        						}
-        					} catch (eBridgeMessage) {}
-        					try { return previousReceiveFromJava.apply(this, arguments); } catch (ePrevious) {}
-        				};
-        				this.agentHostReceiveFromJavaWrapped = true;
-        			}
+        			this.ensureAgentNativeContextBridge();
         			window.addEventListener(''message'', this.agentHostContextMessageHandler, false);
         			this.requestAgentHostContext(0);
         		} catch (e3) {}
@@ -1400,11 +1387,12 @@ scriptContent:
         				this.agentHostContextMessageHandler = null;
         			}
                     var w: any = window;
-                    if (this.agentHostReceiveFromJavaWrapped && this.agentHostReceiveFromJavaOriginal && w) {
+                    if (this.agentHostReceiveFromJavaWrapped && this.agentHostReceiveFromJavaOriginal && w && w[''receiveFromJava''] === this[''agentHostNativeReceiver'']) {
                         w[''receiveFromJava''] = this.agentHostReceiveFromJavaOriginal;
                     }
                     this.agentHostReceiveFromJavaOriginal = null;
                     this.agentHostReceiveFromJavaWrapped = false;
+                    this[''agentHostNativeReceiver''] = null;
         		} catch (e) {}
         	}
         
@@ -1590,8 +1578,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.20", tag: "v0.2.20", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.20/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.19", tag: "v0.4.19", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.19/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.44", tag: "v1.4.44", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.44/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.20", tag: "v0.4.20", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.20/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.45", tag: "v1.4.45", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.45/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -3566,7 +3554,7 @@ scriptContent:
                 try { language = String(this.translate.currentLang || language).toLowerCase(); } catch (ignore) {}
                 var fr = language.indexOf(''fr'') === 0;
                 var labels = {
-                    loading:fr ? ''Chargement du quota…'' : ''Loading quota…'',
+                    usage:fr ? ''Utilisation'' : ''Usage'', close:fr ? ''Fermer'' : ''Close'', used:fr ? ''d’utilisation'' : ''used'', credit:fr ? ''Crédit Tigo'' : ''Tigo credit'', resetIn:fr ? ''Réinitialisation dans'' : ''Resets in'', session:fr ? ''Limite de session'' : ''Session limit'', weekly:fr ? ''Hebdomadaire'' : ''Weekly'', expires:fr ? ''Expiration'' : ''Expires'', loading:fr ? ''Chargement du quota…'' : ''Loading quota…'',
                     window:fr ? ''Fenêtre de quota'' : ''Quota window'',
                     overage:fr ? ''Crédits supplémentaires'' : ''Extra usage'',
                     days:fr ? ''j'' : ''d'',
@@ -3611,6 +3599,88 @@ scriptContent:
                 var text = window.remainingPercent == null ? this.quotaLabel(window.status || ''unknown'') : Math.round(window.remainingPercent) + ''% '' + this.quotaLabel(''remaining'');
                 if (window.resetsAt != null) { text += '' · '' + this.quotaLabel(''reset'') + '' '' + new Date(window.resetsAt * 1000).toLocaleString(); }
                 return title + '' : '' + text;
+            }
+        
+        
+            public quotaUsedPercent(window) {
+                var value = window && window.usedPercent;
+                if(value == null && window && window.remainingPercent != null) { value = 100 - Number(window.remainingPercent); }
+                if(value == null || value === '''' || !isFinite(Number(value))) { return null; }
+                return Math.max(0, Math.min(100, Number(value)));
+            }
+            public quotaUsageColor(percent, state = '''') {
+                if([''expired'',''exhausted'',''blocked'',''revoked'',''rejected''].indexOf(state) >= 0 || percent != null && percent >= 95) { return ''#ef4444''; }
+                if(state === ''allowed_warning'' || percent != null && percent >= 80) { return ''#f59e0b''; }
+                return percent == null ? ''#94a3b8'' : ''#3b82f6'';
+            }
+            public quotaWindowTitle(window) {
+                var minutes = window.windowDurationMins;
+                var id = String(window.id || '''');
+                if(minutes != null ? Number(minutes) < 1440 : /five_hour/.test(id)) { return this.quotaLabel(''session''); }
+                if(minutes != null ? Number(minutes) >= 1440 : /seven_day/.test(id)) {
+                    var model = id.match(/^seven_day_(?!oauth_apps$)(.+)$/i);
+                    var suffix = model ? '' · '' + model[1].replace(/_/g, '' '') : '''';
+                    if(model) { suffix = '' · '' + model[1].charAt(0).toUpperCase() + model[1].slice(1).replace(/_/g, '' ''); }
+                    return this.quotaLabel(''weekly'') + suffix;
+                }
+                return this.quotaLabel(id === ''overage'' ? ''overage'' : ''window'');
+            }
+            public quotaResetText(window) {
+                if(window.resetsAt == null || !isFinite(Number(window.resetsAt))) { return ''''; }
+                var date = new Date(Number(window.resetsAt) * 1000);
+                var minutes = Math.max(0, Math.ceil((date.getTime() - Date.now()) / 60000));
+                if(window.windowDurationMins != null ? Number(window.windowDurationMins) < 1440 : /five_hour/.test(String(window.id || ''''))) {
+                    var hours = Math.floor(minutes / 60);
+                    return this.quotaLabel(''resetIn'') + '' '' + (hours ? hours + '' h '' : '''') + (minutes % 60) + '' min'';
+                }
+                return this.quotaLabel(''reset'') + '' '' + date.toLocaleString();
+            }
+            public getAgentQuotaView() {
+                if(!this.isAgentBridgeMode || !this.isAgentBridgeMode()) { return null; }
+                var provider = this.getAgentProvider();
+                var current = this.local && this.local.AgentQuota;
+                var q = current && current.provider === provider && this.local.AgentQuotaConversation === String(this.local.Conversation || '''') ? current : null;
+                var rows = [], percent = null, state = '''', expiry = '''', summary = this.quotaLabel(this.local && this.local.AgentQuotaLoading ? ''loading'' : ''unknown'');
+                if(q && q.available && q.kind === ''credit'') {
+                    var budget = Number(q.budgetUsd), spent = Number(q.spentUsd), balance = Number(q.balanceUsd);
+                    if(isFinite(budget) && isFinite(spent) && budget > 0) { percent = Math.max(0, Math.min(100, spent / budget * 100)); }
+                    else if(q.keyState === ''exhausted'') { percent = 100; }
+                    state = String(q.keyState || ''active'');
+                    summary = balance.toFixed(2) + '' $ '' + this.quotaLabel(''remaining'') + '' / '' + budget.toFixed(2) + '' $ · '' + this.quotaLabel(state);
+                    rows.push({title:this.quotaLabel(''credit''),usedPercent:percent,usage:spent.toFixed(2)+'' $ / ''+budget.toFixed(2)+'' $'',reset:'''',state:state});
+                    if(q.expiresAt && isFinite(Date.parse(String(q.expiresAt)))) { expiry = this.quotaLabel(''expires'') + '' · '' + new Date(q.expiresAt).toLocaleString(); }
+                } else if(q && q.kind === ''limits'' && Array.isArray(q.windows)) {
+                    for(var i=0;i<q.windows.length;i++) {
+                        var w=q.windows[i], used=this.quotaUsedPercent(w);
+                        if(used != null && (percent == null || used > percent)) { percent=used; state=String(w.status || ''''); }
+                        else if(percent == null && [''rejected'',''allowed_warning''].indexOf(w.status) >= 0) { state=w.status; }
+                        rows.push({title:this.quotaWindowTitle(w),usedPercent:used,usage:used == null ? this.quotaLabel(w.status || ''unknown'') : Math.round(used)+'' % ''+this.quotaLabel(''used''),reset:this.quotaResetText(w),state:String(w.status || '''')});
+                    }
+                    if(percent != null) { summary=''''; }
+                }
+                rows.forEach(row => { row.color=this.quotaUsageColor(row.usedPercent,row.state); });
+                var color=this.quotaUsageColor(percent,state);
+                var label=this.quotaLabel(''usage'')+'' · ''+this.getAgentProviderLabel(provider)+'' · ''+(percent == null ? this.quotaLabel(''unknown'') : Math.round(percent)+'' % ''+this.quotaLabel(''used''));
+                return {title:this.quotaLabel(''usage''),provider:this.getAgentProviderLabel(provider),percent:percent,color:color,
+                    background:''conic-gradient(from 225deg, ''+color+'' 0deg ''+(percent == null ? 0 : percent*2.7)+''deg, var(--ion-color-step-300, #64748b) ''+(percent == null ? 0 : percent*2.7)+''deg 270deg, transparent 270deg 360deg)'',
+                    label:label,summary:summary,rows:rows,expiry:expiry,context:q && this.local && this.local.AgentQuotaContext || '''',
+                    portalUrl:provider === ''convertigo'' && this.local && this.local.AgentQuotaPortalUrl || '''',
+                    refreshLabel:this.quotaLabel(''refresh''),extendLabel:this.quotaLabel(''extend''),closeLabel:this.quotaLabel(''close'')};
+            }
+        
+        
+            public ensureAgentNativeContextBridge() {
+                var w: any = window;
+                if (!this.agentHostContextMessageHandler || !w || typeof w[''receiveFromJava''] !== ''function'' || w[''receiveFromJava''] === this[''agentHostNativeReceiver'']) { return; }
+                var previous = w[''receiveFromJava''], page: any = this;
+                this.agentHostReceiveFromJavaOriginal = previous;
+                var receiver = function(message) {
+                    try { if(page.agentHostContextMessageHandler) { page.agentHostContextMessageHandler({data:message,__agentNativeHost:true}); } } catch(ignore) {}
+                    return previous.apply(this,arguments);
+                };
+                this[''agentHostNativeReceiver''] = receiver;
+                w[''receiveFromJava''] = receiver;
+                this.agentHostReceiveFromJavaWrapped = true;
             }
         
         /*End_c8o_PageFunction*/
@@ -4648,137 +4718,6 @@ title: Tigo
                    "topic": "plain:AgentNoCodeContextReload",
                    "data": "script:{formId: this.local.FormsConversationContext.formId, hostContext: this.local.FormsConversationContext}"
                   }'
-  ↓QuotaIf [ngx.components.UIControlDirective-1791878671371]: 
-    directiveExpression: this.isAgentBridgeMode && this.isAgentBridgeMode()
-    directiveName: If
-    ↓Quota [ngx.components.UIDynamicElement-1791878672631]: 
-      beanData: '{"ionBean":"DivTag"}'
-      tagName: div
-      ↓Class [ngx.components.UIAttribute-1791878672633]: 
-        attrName: class
-        attrValue: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:agent-quota
-      ↓Details [ngx.components.UIDynamicElement-1791878672635]: 
-        beanData: '{"ionBean":"DivTag"}'
-        tagName: div
-        ↓Class [ngx.components.UIAttribute-1791878672637]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:agent-quota-details
-        ↓Message [ngx.components.UIText-1791878672639]: 
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuotaMessage","prefix":"","suffix":"","custom":"","useCustom":false}}
-        ↓Windows [ngx.components.UIControlDirective-1791878672641]: 
-          directiveIndexName: quotaIndex
-          directiveItemName: quotaWindow
-          directiveSource: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuota?.windows","prefix":"","suffix":"","custom":"","useCustom":false}}
-          ↓Window [ngx.components.UIDynamicElement-1791878672643]: 
-            beanData: '{"ionBean":"DivTag"}'
-            tagName: div
-            ↓Class [ngx.components.UIAttribute-1791878672645]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:agent-quota-window
-            ↓WindowValue [ngx.components.UIText-1791878672647]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:this.quotaWindowText(quotaWindow)
-        ↓ContextIf [ngx.components.UIControlDirective-1791878672649]: 
-          directiveExpression: local?.AgentQuotaContext && local?.AgentQuotaConversation === (local?.Conversation || '')
-          directiveName: If
-          ↓ContextValue [ngx.components.UIText-1791878672651]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuotaContext","prefix":"","suffix":"","custom":"","useCustom":false}}
-      ↓Actions [ngx.components.UIDynamicElement-1791878672653]: 
-        beanData: '{"ionBean":"DivTag"}'
-        tagName: div
-        ↓Class [ngx.components.UIAttribute-1791878672655]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:agent-quota-actions
-        ↓Refresh [ngx.components.UIDynamicElement-1791878672657]: 
-          beanData: |
-            '{
-             "ionBean": "Button",
-             "Disabled": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.AgentQuotaLoading\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-             "IonFill": "plain:clear"
-            }'
-          tagName: ion-button
-          ↓Class [ngx.components.UIAttribute-1791878672659]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:agent-quota-refresh
-          ↓Label [ngx.components.UIAttribute-1791878672661]: 
-            attrName: '[attr.aria-label]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.quotaLabel('refresh')
-          ↓RefreshLabel [ngx.components.UIText-1791878672663]: 
-            textValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.quotaLabel('refresh')
-          ↓RefreshQuota [ngx.components.UIControlEvent-1791878672665]: 
-            ↓RequestQuota [ngx.components.UICustomAction-1791878673167]: 
-              actionValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                    →: page.requestAgentQuota(true);resolve();
-        ↓PortalIf [ngx.components.UIControlDirective-1791878673169]: 
-          directiveExpression: this.getAgentProvider()==='convertigo' && local?.AgentQuotaPortalUrl
-          directiveName: If
-          ↓Portal [ngx.components.UIDynamicElement-1791878673171]: 
-            beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
-            tagName: ion-button
-            ↓Class [ngx.components.UIAttribute-1791878673173]: 
-              attrName: class
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:agent-quota-portal
-            ↓Href [ngx.components.UIAttribute-1791878673175]: 
-              attrName: href
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuotaPortalUrl","prefix":"","suffix":"","custom":"","useCustom":false}}
-            ↓Target [ngx.components.UIAttribute-1791878673177]: 
-              attrName: target
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:_blank
-            ↓Rel [ngx.components.UIAttribute-1791878673179]: 
-              attrName: rel
-              attrValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:noopener noreferrer
-            ↓PortalLabel [ngx.components.UIText-1791878673181]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:this.quotaLabel('extend')
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
   beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
   identifier: content
@@ -11696,7 +11635,7 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentModel) ? local.AgentModel : '''''
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentModelLabel) ? this.getAgentModelLabel() : '''''
     ↓AgentReasoningLabel [ngx.components.UIUseVariable-1782124585072]: 
       varValue: 
         - xmlizable: 
@@ -11793,6 +11732,20 @@ title: Tigo
                 	}
                 } catch (e) {}
                 resolve();'
+    ↓AgentQuotaView [ngx.components.UIUseVariable-1792000360369]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.getAgentQuotaView()
+    ↓QuotaRefresh [ngx.components.UIControlEvent-1792000364925]: 
+      attrName: (QuotaRefresh)
+      eventName: QuotaRefresh
+      ↓ReadQuota [ngx.components.UICustomAction-1792000366519]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: page.requestAgentQuota(true);resolve();
   ↓Class [ngx.components.UIAttribute-1782123550292]: 
     attrName: class
     attrValue: 
@@ -14659,17 +14612,3 @@ title: Tigo
               var answer=out&&out.response;
               if(page.applyAgentQuotaSnapshot){page.applyAgentQuotaSnapshot(answer&&answer.quota,stack.root.out.provider,answer&&answer.portalUrl, !answer||answer.status==='error');}
               resolve();
-↓AgentQuotaStyle [ngx.components.UIStyle-1791878674413]: 
-  styleContent: 
-    - xmlizable: 
-      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-      - com.twinsoft.convertigo.beans.common.FormatedContent: 
-        →: |
-           .agent-quota { align-items:center; background:var(--ion-background-color,#fff); border-top:1px solid var(--ion-color-step-150,#e2e8f0); color:var(--ion-text-color,#334155); display:flex; flex-wrap:wrap; gap:4px 12px; padding:6px 12px; font-size:12px; line-height:1.45; }
-          .agent-quota-details { flex:1 1 170px; min-width:0; }
-          .agent-quota-window { color:var(--ion-color-medium,#64748b); overflow-wrap:anywhere; }
-          .agent-quota-actions { display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
-          .agent-quota ion-button { font-size:12px; height:28px; margin:0; --padding-start:5px; --padding-end:5px; }
-          
-          .modern-header.forms-integrated .agent-quota { grid-column:1 / -1; }
-          

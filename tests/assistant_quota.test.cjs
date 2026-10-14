@@ -41,12 +41,30 @@ page.requestAgentQuota(true);assert.equal(events.length,5,'retry works after fai
 page.local.Conversation='second';respond(events[4].data,{status:'ok',quota:{provider:'vibe',available:true,kind:'limits',windows:[]}});
 assert.equal(page.local.AgentQuota.available,false,'late conversation response is discarded');
 const quotaBar=find(root,'QuotaIf');assert.ok(quotaBar&&quotaBar.children.length);
-assert.equal(find(root,'PortalIf').properties.directiveExpression,"this.getAgentProvider()==='convertigo' && local?.AgentQuotaPortalUrl");
-assert.equal(find(root,'Href').properties.attrValue.mode,'SOURCE');
+assert.equal(find(root,'PortalIf').properties.directiveExpression,"AgentQuotaView?.portalUrl");
+assert.equal(find(root,'Href').properties.attrValue.mode,'SCRIPT');
 assert.equal(find(root,'Rel').properties.attrValue.value,'noopener noreferrer');
-assert.equal(find(root,'Windows').properties.directiveItemName,'quotaWindow');
+assert.equal(find(root,'QuotaRows').properties.directiveItemName,'quotaRow');
 assert.equal(find(root,'ReadQuota').properties.requestable.value,'lib_ConvertigoAssistant.AgentQuota');
 assert.ok(!/fetch\(|callJson/.test(methods));
+// The compact indicator uses the limiting account window, never Vibe context capacity.
+provider='codex';page.local.AgentQuotaConversation=page.local.Conversation;
+page.local.AgentQuota={provider:'codex',available:true,kind:'limits',windows:[{usedPercent:21,windowDurationMins:300},{remainingPercent:7,windowDurationMins:10080}]};
+let view=page.getAgentQuotaView();assert.equal(view.percent,93);assert.equal(view.color,'#f59e0b');assert.equal(view.rows.length,2);assert.match(view.rows[0].title,/session/);assert.equal(view.rows[0].color,'#3b82f6');
+page.local.AgentQuota.windows[1].remainingPercent=1;assert.equal(page.getAgentQuotaView().color,'#ef4444');
+page.local.AgentQuota={provider:'codex',available:false,kind:'limits',windows:[{usedPercent:null}]};assert.equal(page.getAgentQuotaView().percent,null);assert.equal(page.getAgentQuotaView().color,'#94a3b8');
+provider='convertigo';page.local.AgentQuota={provider,available:true,kind:'credit',budgetUsd:10,spentUsd:2.5,balanceUsd:7.5,keyState:'expired'};page.local.AgentQuotaPortalUrl=portal;
+view=page.getAgentQuotaView();assert.equal(view.percent,25);assert.equal(view.color,'#ef4444');assert.equal(view.portalUrl,portal);assert.match(view.summary,/7.50/);
+provider='vibe';page.local.AgentQuota={provider,available:false,kind:'context',context:{usedTokens:999,limitTokens:1000}};page.local.AgentQuotaContext='Contexte: 999 / 1000 tokens';view=page.getAgentQuotaView();assert.equal(view.percent,null);assert.match(view.context,/999/);assert.equal(view.portalUrl,'');
+page.local.Conversation='new-conversation';view=page.getAgentQuotaView();assert.equal(view.percent,null);assert.equal(view.context,'','context from another conversation stays hidden');
+assert.equal(find(root,'QuotaPopover').className,'ngx.components.UIDynamicElement#InlinePopover');
+assert.equal(find(root,'QuotaPopover').properties.Side.value,'top');
+assert.equal(find(root,'QuotaTrigger').properties.ButtonFormType.value,'button');
+assert.equal(page.quotaWindowTitle({id:'codex:primary',windowDurationMins:10080}),page.quotaLabel('weekly'));
+assert.match(page.quotaWindowTitle({id:'seven_day_Fable',windowDurationMins:10080}),/Fable/);
+assert.equal(find(root,'QuotaPopover').properties.Trigger.value,'quotaTriggerId');
+assert.equal(find(root,'Id').properties.attrValue.value,'quotaTriggerId');
+console.log('Quota arc: limiting window, colors, unknown usage, context isolation and native popup passed');
 console.log('Quota UI: provider isolation, exhausted/expired credit, portal, context distinction, failure and retry passed');
 // Exercise the real server-only handle lookup with a stubbed state store.
 const proxy=new Proxy(function(){},{get(_t,p){if(p===Symbol.toPrimitive)return ()=>'';return proxy;},apply(){return proxy;},construct(){return proxy;}});
@@ -57,8 +75,10 @@ const bridgeSource=fs.readFileSync('js/agent_bridge_client.js','utf8').replace('
 vm.runInNewContext(bridgeSource,backend);
 const helper=backend.C8O.assistantAgentBridge.quota;
 assert.equal(helper({provider:'codex',userId:'studio',threadid:'missing'}).quota.available,false);assert.equal(backend.bridgeCalls,0);
+assert.equal(helper({provider:'codex',userId:'studio',threadid:''}).accountAllowed,true,'an authenticated new conversation can read account quota without creating a thread');
 backend.fixtureState={provider:'codex',userKey:'another-user',handle:'opaque'};
 assert.equal(helper({provider:'codex',userId:'studio',threadid:'a'}).quota.available,false);assert.equal(backend.bridgeCalls,0);
+assert.notEqual(helper({provider:'codex',userId:'studio',threadid:'a'}).accountAllowed,true,'foreign conversations cannot fall back to account probing');
 backend.fixtureState={provider:'claude',userKey:'studio',handle:'opaque'};
 assert.equal(helper({provider:'codex',userId:'studio',threadid:'a'}).quota.available,false);assert.equal(backend.bridgeCalls,0);
 backend.fixtureState={provider:'codex',userKey:'studio',handle:'opaque'};

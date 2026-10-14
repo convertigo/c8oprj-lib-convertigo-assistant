@@ -45,7 +45,7 @@ responseTimeout: 120
     if(provider!=="convertigo"){
      include("js/agent_bridge_client.js");
      var scoped=C8O.assistantAgentBridge.quota({provider:provider,threadid:threadid,userId:trustedUserId});
-     response.quota=scoped.quota;trustedHandle=String(scoped.handle||"");knownWrapper=trustedHandle.length>0;scoped=null;
+     response.quota=scoped.quota;trustedHandle=String(scoped.handle||"");knownWrapper=scoped.accountAllowed===true;scoped=null;
     }
     var handle=trustedHandle;
     '
@@ -54,6 +54,12 @@ responseTimeout: 120
   ↓ReadQuota [steps.SequenceStep-1791881328841]: 
     sourceSequence: lib_ConvertigoAgentBridge.agent_quota
     ↓handle [variables.StepVariable-1791881328843]: 
+      value: 
+        - ↑ciphered: true
+        - ↑traceable: false
+        - →→: xd8e180806a1c1d83a6255212121ab827
+      visibility: 15
+    ↓provider [variables.StepVariable-1792004329881]: 
       value: 
         - ↑ciphered: true
         - ↑traceable: false
