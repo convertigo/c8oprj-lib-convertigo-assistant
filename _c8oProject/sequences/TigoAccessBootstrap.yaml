@@ -1,0 +1,110 @@
+accessibility: Hidden
+comment: Local Studio WEB_ADMIN only. Read fixed workspace PSC, exchange email + studio.secret over HTTPS, atomically install virtual key in the existing AgentBridge private key file. Never expose any credential to the frontend; preserve manually configured keys.
+includeResponseElement: false
+responseTimeout: 120
+↓ReadStudioProof [steps.SimpleStep-1791831268144]: 
+  expression: |
+    'var engine=com.twinsoft.convertigo.engine.Engine;
+    var role=com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN;
+    if(!engine.isStudioMode()||!engine.authenticatedSessionManager.hasRole(context.httpSession,role)){throw new com.twinsoft.convertigo.engine.EngineException("Authenticated local Studio session required");}
+    function hashLocal(value){return String(com.twinsoft.convertigo.engine.util.HexUtils.toHexString(java.security.MessageDigest.getInstance("SHA-256").digest(new java.lang.String(String(value)).getBytes("UTF-8"))));}
+    var root=java.nio.file.Paths.get(String(engine.USER_WORKSPACE_PATH)).toRealPath();
+    var directory=root.resolve("agents").resolve("convertigo");
+    function safePath(path){var p=path;while(p!=null&&!p.equals(root)){if(java.nio.file.Files.isSymbolicLink(p)){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}p=p.getParent();}if(p==null){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}}
+    var keyPath=directory.resolve("llm-api-key"),metadataPath=directory.resolve("tigo-access.json");safePath(keyPath);safePath(metadataPath);
+    var response={status:"error",code:"authentication_required",error:"Connectez-vous au Studio pour activer Tigo."};
+    
+    var shouldBootstrap=false,email="",secret="",localAccess=null;
+    try{
+     var pscPath=root.resolve("studio").resolve("psc.txt");safePath(pscPath);
+     if(!java.nio.file.Files.isRegularFile(pscPath)||java.nio.file.Files.size(pscPath)>16385){throw new Error("Invalid PSC");}
+     var text=String(new java.lang.String(java.nio.file.Files.readAllBytes(pscPath),"UTF-8")).trim();
+     if(!/^x[0-9a-fA-F]+$/.test(text)||(text.length-1)%32!==0){throw new Error("Invalid PSC");}
+     var digest=java.security.MessageDigest.getInstance("MD5").digest(new java.lang.String("registration").getBytes("UTF-8"));var cipher=javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
+     cipher.init(javax.crypto.Cipher.DECRYPT_MODE,new javax.crypto.spec.SecretKeySpec(digest,"AES"),new javax.crypto.spec.IvParameterSpec(digest));
+     var plain=String(new java.lang.String(cipher.doFinal(com.twinsoft.convertigo.engine.util.HexUtils.fromHexString(text.substring(1))),"UTF-8"));
+     if(plain.indexOf("# PSC file")!==0){throw new Error("Invalid PSC");}var props=new java.util.Properties();props.load(new java.io.StringReader(plain));
+     email=String(props.getProperty("owner.email","")).trim();secret=String(props.getProperty("studio.secret",""));plain=null;props=null;text=null;
+     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||secret.length<8||secret.length>512){throw new Error("Invalid PSC");}
+     var existingKey="",metadata=null;
+     if(java.nio.file.Files.isRegularFile(keyPath)){existingKey=String(new java.lang.String(java.nio.file.Files.readAllBytes(keyPath),"UTF-8")).trim();}
+     if(java.nio.file.Files.isRegularFile(metadataPath)&&java.nio.file.Files.size(metadataPath)<32768){try{metadata=JSON.parse(String(new java.lang.String(java.nio.file.Files.readAllBytes(metadataPath),"UTF-8")));}catch(ignored){}}
+     if(existingKey.length&&(!metadata||metadata.source!=="TigoAccess"||metadata.keyHash!==hashLocal(existingKey))){response={status:"ok",state:"external_key",message:"Une clé configurée manuellement est conservée.",error:""};}
+     else{
+      var cached=context.httpSession.getAttribute("assistant.tigo.access");if(cached!=null){try{localAccess=JSON.parse(String(cached));}catch(ignored){}}
+      if(String(refresh)!=="true"&&localAccess&&localAccess.email===email&&existingKey.length&&localAccess.keyHash===hashLocal(existingKey)){
+       response={status:"ok",state:"ready",account:localAccess.account,quota:localAccess.quota,error:""};
+      }else{shouldBootstrap=true;context.httpSession.removeAttribute("assistant.tigo.access");}
+     }
+    }catch(ignored){response={status:"error",code:"psc_required",error:"Un PSC associé à un compte confirmé est nécessaire."};}
+    if(!shouldBootstrap){secret=null;}
+    '
+↓ExchangeRequired [steps.IfStep-1791831268146]: 
+  condition: shouldBootstrap
+  ↓Exchange [steps.TransactionStep-1791831268148]: 
+    sourceTransaction: lib_ConvertigoAssistant.TigoAccess.Bootstrap
+    ↓email [variables.StepVariable-1791831268150]: 
+      value: 
+        - ↑ciphered: true
+        - ↑traceable: false
+        - →→: x088407dfecf56cb89468315c2dc43cdf
+      visibility: 15
+    ↓secret [variables.StepVariable-1791831268152]: 
+      value: 
+        - ↑ciphered: true
+        - ↑traceable: false
+        - →→: x057a4d344224a9bda4cd9376335305db
+      visibility: 15
+  ↓ExchangeResult [steps.JsonSourceStep-1791831268154]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1791831268148
+          - java.lang.String: 
+            - ↑value: ./document
+    variableName: remoteResult
+  ↓InstallLocalAccess [steps.SimpleStep-1791831268156]: 
+    expression: |
+      'remoteResult=remoteResult&&(remoteResult.document||remoteResult);
+      var info=remoteResult&&remoteResult.HttpInfo&&remoteResult.HttpInfo.status;
+      var httpCode=Number(info&&((info.attr&&info.attr.code)||info.code));var remote=remoteResult&&remoteResult.object&&remoteResult.object.response;
+      response={status:"error",code:"service_unavailable",error:"Le service d’accès Tigo est indisponible."};
+      if(httpCode===200&&remote&&remote.status==="ok"&&remote.account&&remote.account.email===email&&remote.account.subject&&remote.apiKey&&remote.quota){
+       var c={apiKey:remote.apiKey,baseUrl:remote.baseUrl};var validKey=/^sk-[A-Za-z0-9_-]{32,128}$/.test(String(c.apiKey||""));
+       if(validKey&&String(c.baseUrl).replace(/\/$/,"")==="https://llm.convertigo.com/v1"){
+        try{
+         safePath(directory);java.nio.file.Files.createDirectories(directory);safePath(keyPath);safePath(metadataPath);
+         function restrict(path){if(java.nio.file.FileSystems.getDefault().supportedFileAttributeViews().contains("posix")){java.nio.file.Files.setPosixFilePermissions(path,java.nio.file.attribute.PosixFilePermissions.fromString(java.nio.file.Files.isDirectory(path)?"rwx------":"rw-------"));}else{var f=path.toFile();if(!f.setReadable(false,false)||!f.setWritable(false,false)||!f.setReadable(true,true)||!f.setWritable(true,true)){throw new Error("Credential permissions unavailable");}}}
+         restrict(directory);
+         function writePrivate(path,text){var temporary=java.nio.file.Files.createTempFile(directory,"tigo-",".tmp");try{restrict(temporary);java.nio.file.Files.write(temporary,new java.lang.String(text).getBytes("UTF-8"));safePath(path);java.nio.file.Files.move(temporary,path,java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}finally{java.nio.file.Files.deleteIfExists(temporary);}}
+         var publicAccount={subject:remote.account.subject,email:remote.account.email};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
+         var keyHash=hashLocal(c.apiKey);var metadata={version:1,source:"TigoAccess",subject:remote.account.subject,email:remote.account.email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().toISOString()};
+         writePrivate(keyPath,String(c.apiKey)+"\n");writePrivate(metadataPath,JSON.stringify(metadata));
+         context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:email,keyHash:keyHash,account:publicAccount,quota:remote.quota}));
+         response={status:"ok",state:"ready",account:publicAccount,quota:remote.quota,message:"Accès Tigo configuré.",error:""};
+        }catch(ignored){response={status:"error",code:"local_installation_failed",error:"La clé Tigo n’a pas pu être enregistrée dans le workspace."};}
+       }
+      }else if(remote&&remote.status==="error"){response={status:"error",code:String(remote.code||"service_unavailable"),error:"L’accès Tigo n’a pas pu être activé. Vérifiez votre compte ou réessayez."};}
+      secret=null;remoteResult=null;localAccess=null;c=null;
+      '
+↓Response [steps.JsonToXmlStep-1791831268158]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓refresh [variables.RequestableVariable-1791831268140]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15

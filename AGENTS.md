@@ -320,3 +320,29 @@ rediscovering the same context.
   errors are reported in `result.errors`.
 - `AgentSendMessage` receives the entries as `AIFiles`; the sequence prompt
   lists `name=`/`path=` lines so Codex, Vibe, and Claude read the files locally.
+
+## Quota display (8.4.6)
+
+- The native NGX `Page.Header.QuotaIf` bar reads the authenticated `AgentQuota`
+  facade through a `CallSequenceAction` subscriber (`AgentQuotaRefresh`). Keep
+  this visible when the prompt is disabled or agent settings are open.
+- Convertigo uses `TigoAccessStatus` (HTTPS `getQuota(apiKey)`), never the Vibe
+  harness's context usage. The portal link comes from the server-owned
+  `assistant.tigo.portal_url` symbol, with the backend-apps TigoAccess portal as
+  default; no PSC, key, email or session token belongs in the link.
+- Codex/Claude/Vibe quotas come from the private native `agent_quota` sequence.
+  Keep them out of public bridge diagnostics and event buffers. The server-only
+  runtime handle is chosen after checking conversation ownership and provider.
+  Codex and Claude expose reported account limit windows. ACP `usage_update`
+  carries context tokens and optional cost, not a remaining account budget:
+  display those separately and leave account quota unknown.
+- Startup/settings, provider selection, explicit refresh and completed turns
+  refresh quota. Active-turn polling may refresh it at most every 30 seconds,
+  retaining the current snapshot. Never add idle polling, or start a CLI or
+  conversation just to populate the bar.
+  Discard late provider/conversation responses; failures release the pending
+  flag so an explicit retry works. Do not show context from a prior conversation.
+- `tests/assistant_quota.test.cjs` consumes a canonical Page tree exported through
+  MCP, not project descriptors. Set `CONVERTIGO_QUOTA_UI_SNAPSHOT` to that JSON
+  file and run `node tests/assistant_quota.test.cjs` after Mobile Builder has
+  installed TypeScript. Native compilation and backend proof remain required.

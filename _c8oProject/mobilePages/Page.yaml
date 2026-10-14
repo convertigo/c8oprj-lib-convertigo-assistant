@@ -55,7 +55,7 @@ scriptContent:
                     var args = Array.prototype.slice.call(arguments);
                     var requestable = String(args[0] || '''').split(''#'')[0];
                     var resume = requestable === ''lib_ConvertigoAssistant.AgentResumeConversation'';
-                    var protectedCall = /^lib_ConvertigoAssistant\.Agent(ResumeConversation|SendMessageRouter|CreateConversationRouter|CreateConversation|Settings)$/.test(requestable);
+                    var protectedCall = /^lib_ConvertigoAssistant\.Agent(ResumeConversation|SendMessageRouter|CreateConversationRouter|CreateConversation|Settings|Quota)$/.test(requestable);
                     if (!protectedCall) { return original.apply(page, args); }
                     page.local = page.local || {};
                     page.local.AgentOperationError = '''';
@@ -1194,6 +1194,7 @@ scriptContent:
         				this.local.AgentSettingsRefreshRunning = false;
         				this.local.AgentSettingsRefreshDone = true;
         				this.local.AgentRuntimeLoading = false;
+                        this.requestAgentQuota();
         				if (this.setEnableChat) { this.setEnableChat(); }
         				if (this.syncFooterPlaceholder) { this.syncFooterPlaceholder(); }
         				this.tick();
@@ -1589,8 +1590,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.20", tag: "v0.2.20", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.20/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.18", tag: "v0.4.18", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.18/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.43", tag: "v1.4.43", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.43/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.19", tag: "v0.4.19", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.19/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.44", tag: "v1.4.44", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.44/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -2615,6 +2616,7 @@ scriptContent:
                 this.local = {};
             }
             this.local.AgentProvider = this.normalizeAgentProviderValue(provider) || this.getDefaultAgentProvider();
+            this.requestAgentQuota(true);
             this.local.AgentModel = this.getDefaultAgentModel(this.local.AgentProvider);
             this.local.AgentProviderSelectionPending = true;
             this.local.ShowAgentConfigPanel = true;
@@ -3538,7 +3540,80 @@ scriptContent:
         		this.local.ShowConversationPanel = false;
         		this.tick();
         	}
-        	/*End_c8o_PageFunction*/
+        	
+            public requestAgentQuota(force = false) {
+                if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) { return; }
+                this.local = this.local || {};
+                var provider = this.getAgentProvider();
+                var conversation = String(this.local.Conversation || '''');
+                if(!provider){return;}
+                var key = provider + '':'' + conversation;
+                if (this.local.AgentQuotaPendingKey === key) { return; }
+                if (!force && this.local.AgentQuotaRequestKey === key && Date.now() - Number(this.local.AgentQuotaRequestedAt || 0) < 30000) { return; }
+                this.local.AgentQuotaRequestKey = key; this.local.AgentQuotaRequestedAt = Date.now();
+                this.local.AgentQuotaPendingKey = key; this.local.AgentQuotaLoading = true;
+                var keepSnapshot = this.local.AgentQuota && this.local.AgentQuota.provider === provider && this.local.AgentQuotaConversation === conversation;
+                if (!keepSnapshot) {
+                    this.local.AgentQuota = {provider:provider, available:false, windows:[]};
+                    this.local.AgentQuotaContext = '''';
+                    this.local.AgentQuotaMessage = this.quotaLabel(''loading'');
+                }
+                this.events.publish(''AgentQuotaRefresh'', {provider:provider,threadid:conversation,key:key});
+                this.tick();
+            }
+            public quotaLabel(id) {
+                var language = String(this.global && this.global.language || '''').toLowerCase();
+                try { language = String(this.translate.currentLang || language).toLowerCase(); } catch (ignore) {}
+                var fr = language.indexOf(''fr'') === 0;
+                var labels = {
+                    loading:fr ? ''Chargement du quota…'' : ''Loading quota…'',
+                    window:fr ? ''Fenêtre de quota'' : ''Quota window'',
+                    overage:fr ? ''Crédits supplémentaires'' : ''Extra usage'',
+                    days:fr ? ''j'' : ''d'',
+                    reset:fr ? ''Réinitialisation'' : ''Resets'',
+                    unknown:fr ? ''Quota du compte non communiqué'' : ''Account quota not reported'',
+                    error:fr ? ''Quota indisponible'' : ''Quota unavailable'',
+                    refresh:fr ? ''Actualiser le quota'' : ''Refresh quota'',
+                    extend:fr ? ''Demander une extension'' : ''Request an extension'',
+                    remaining:fr ? ''restants'' : ''remaining'', context:fr ? ''Contexte'' : ''Context'',
+                    active:fr ? ''Actif'' : ''Active'', expired:fr ? ''Clé expirée'' : ''Expired key'',
+                    exhausted:fr ? ''Crédit épuisé'' : ''Credit exhausted'', blocked:fr ? ''Accès bloqué'' : ''Access blocked'',
+                    revoked:fr ? ''Clé révoquée'' : ''Revoked key'', rejected:fr ? ''Limite atteinte'' : ''Limit reached'',
+                    allowed_warning:fr ? ''Limite proche'' : ''Approaching limit'', allowed:fr ? ''Disponible'' : ''Available''
+                };
+                return labels[id] || id;
+            }
+            public applyAgentQuotaSnapshot(quota, provider, portalUrl = '''', failed = false) {
+                if (provider !== this.getAgentProvider()) { return; }
+                if (provider === ''convertigo'' && quota && quota.source === ''wrapper'') { return; }
+                this.local = this.local || {};
+                this.local.AgentQuota = quota || {provider:provider, available:false, windows:[]};
+                this.local.AgentQuotaLoading = false;
+                this.local.AgentQuotaMessage = failed ? this.quotaLabel(''error'') : this.quotaLabel(''unknown'');
+                if (quota && quota.available && quota.kind === ''credit'') {
+                    this.local.AgentQuotaMessage = Number(quota.balanceUsd).toFixed(2) + '' $ '' + this.quotaLabel(''remaining'') + '' / '' + Number(quota.budgetUsd).toFixed(2) + '' $ · '' + this.quotaLabel(quota.keyState || ''active'');
+                } else if (quota && quota.available && quota.kind === ''limits'') {
+                    this.local.AgentQuotaMessage = this.getAgentProviderLabel(provider);
+                }
+                this.local.AgentQuotaContext = '''';
+                this.local.AgentQuotaConversation = String(this.local.Conversation || '''');
+                if (quota && quota.context && quota.context.usedTokens != null && quota.context.limitTokens != null) {
+                    this.local.AgentQuotaContext = this.quotaLabel(''context'') + '': '' + quota.context.usedTokens + '' / '' + quota.context.limitTokens + '' tokens'';
+                    if (quota.context.costAmount != null) { this.local.AgentQuotaContext += '' · '' + quota.context.costAmount + '' '' + quota.context.costCurrency; }
+                }
+                if (provider === ''convertigo'' && /^https:\/\/[^?#]+$/.test(String(portalUrl || ''''))) { this.local.AgentQuotaPortalUrl = portalUrl; }
+                else { this.local.AgentQuotaPortalUrl = ''''; }
+                this.tick();
+            }
+            public quotaWindowText(window) {
+                var known = {five_hour:''5 h'',seven_day:''7 ''+this.quotaLabel(''days''),seven_day_opus:''7 ''+this.quotaLabel(''days'')+'' · Opus'',seven_day_sonnet:''7 ''+this.quotaLabel(''days'')+'' · Sonnet'',overage:this.quotaLabel(''overage'')};
+                var title = window.windowDurationMins != null ? (window.windowDurationMins >= 1440 ? (window.windowDurationMins / 1440) + '' ''+this.quotaLabel(''days'') : (window.windowDurationMins / 60) + '' h'') : (known[window.id] || this.quotaLabel(''window''));
+                var text = window.remainingPercent == null ? this.quotaLabel(window.status || ''unknown'') : Math.round(window.remainingPercent) + ''% '' + this.quotaLabel(''remaining'');
+                if (window.resetsAt != null) { text += '' · '' + this.quotaLabel(''reset'') + '' '' + new Date(window.resetsAt * 1000).toLocaleString(); }
+                return title + '' : '' + text;
+            }
+        
+        /*End_c8o_PageFunction*/
         
         
         
@@ -4573,6 +4648,137 @@ title: Tigo
                    "topic": "plain:AgentNoCodeContextReload",
                    "data": "script:{formId: this.local.FormsConversationContext.formId, hostContext: this.local.FormsConversationContext}"
                   }'
+  ↓QuotaIf [ngx.components.UIControlDirective-1791878671371]: 
+    directiveExpression: this.isAgentBridgeMode && this.isAgentBridgeMode()
+    directiveName: If
+    ↓Quota [ngx.components.UIDynamicElement-1791878672631]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1791878672633]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-quota
+      ↓Details [ngx.components.UIDynamicElement-1791878672635]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1791878672637]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-quota-details
+        ↓Message [ngx.components.UIText-1791878672639]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuotaMessage","prefix":"","suffix":"","custom":"","useCustom":false}}
+        ↓Windows [ngx.components.UIControlDirective-1791878672641]: 
+          directiveIndexName: quotaIndex
+          directiveItemName: quotaWindow
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuota?.windows","prefix":"","suffix":"","custom":"","useCustom":false}}
+          ↓Window [ngx.components.UIDynamicElement-1791878672643]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1791878672645]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-quota-window
+            ↓WindowValue [ngx.components.UIText-1791878672647]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.quotaWindowText(quotaWindow)
+        ↓ContextIf [ngx.components.UIControlDirective-1791878672649]: 
+          directiveExpression: local?.AgentQuotaContext && local?.AgentQuotaConversation === (local?.Conversation || '')
+          directiveName: If
+          ↓ContextValue [ngx.components.UIText-1791878672651]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuotaContext","prefix":"","suffix":"","custom":"","useCustom":false}}
+      ↓Actions [ngx.components.UIDynamicElement-1791878672653]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1791878672655]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-quota-actions
+        ↓Refresh [ngx.components.UIDynamicElement-1791878672657]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "Disabled": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.AgentQuotaLoading\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+             "IonFill": "plain:clear"
+            }'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1791878672659]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-quota-refresh
+          ↓Label [ngx.components.UIAttribute-1791878672661]: 
+            attrName: '[attr.aria-label]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.quotaLabel('refresh')
+          ↓RefreshLabel [ngx.components.UIText-1791878672663]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.quotaLabel('refresh')
+          ↓RefreshQuota [ngx.components.UIControlEvent-1791878672665]: 
+            ↓RequestQuota [ngx.components.UICustomAction-1791878673167]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: page.requestAgentQuota(true);resolve();
+        ↓PortalIf [ngx.components.UIControlDirective-1791878673169]: 
+          directiveExpression: this.getAgentProvider()==='convertigo' && local?.AgentQuotaPortalUrl
+          directiveName: If
+          ↓Portal [ngx.components.UIDynamicElement-1791878673171]: 
+            beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+            tagName: ion-button
+            ↓Class [ngx.components.UIAttribute-1791878673173]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-quota-portal
+            ↓Href [ngx.components.UIAttribute-1791878673175]: 
+              attrName: href
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentQuotaPortalUrl","prefix":"","suffix":"","custom":"","useCustom":false}}
+            ↓Target [ngx.components.UIAttribute-1791878673177]: 
+              attrName: target
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:_blank
+            ↓Rel [ngx.components.UIAttribute-1791878673179]: 
+              attrName: rel
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:noopener noreferrer
+            ↓PortalLabel [ngx.components.UIText-1791878673181]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.quotaLabel('extend')
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
   beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
   identifier: content
@@ -6847,6 +7053,7 @@ title: Tigo
                                                 page.local.AgentConfigReturnState = null;
                                                 if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
                                             }
+                                            if(page.requestAgentQuota){page.requestAgentQuota(true);}
                                             page.setEnableChat && page.setEnableChat();
                                             page.tick();
                                             if (page.local.AgentConfigExplicitOpen !== true && page.focusQuestionInput) { page.focusQuestionInput(40); }
@@ -7261,15 +7468,18 @@ title: Tigo
                                                     hydrateAgentSettings(settingsResult.settings);
                                                 }
                                                 completeSetup();
+                                                if(page.requestAgentQuota){page.requestAgentQuota(true);}
                                             }).catch(function(settingsError) {
                                                 try {
                                                     page.c8o.log.warn(''[Assistant] Unable to refresh agent settings after setup: '' + settingsError);
                                                 } catch (e) {}
                                                 completeSetup();
+                                                if(page.requestAgentQuota){page.requestAgentQuota(true);}
                                             });
                                             return;
                                         }
                                         completeSetup();
+                                                if(page.requestAgentQuota){page.requestAgentQuota(true);}
                                     }).catch(function(error) {
                                         try {
                                             page.c8o.log.warn(''[Assistant] Unable to setup agent runtime: '' + error);
@@ -8763,6 +8973,69 @@ title: Tigo
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
         - MobileSmartSourceType: script:this.isEmbeddedNoCodeAgent()
 ↓PageEvent [ngx.components.UIPageEvent-1744269061199]: 
+  ↓InitializeAgentQuota [ngx.components.UIDynamicAction-1791878666597]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuota",
+       "Value": "script:{available:false,windows:[]}"
+      }'
+  ↓InitializeAgentQuotaMessage [ngx.components.UIDynamicAction-1791878667099]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaMessage",
+       "Value": "script:this.quotaLabel(''unknown'')"
+      }'
+  ↓InitializeAgentQuotaContext [ngx.components.UIDynamicAction-1791878667601]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaContext",
+       "Value": "script:''''"
+      }'
+  ↓InitializeAgentQuotaLoading [ngx.components.UIDynamicAction-1791878668103]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaLoading",
+       "Value": "script:false"
+      }'
+  ↓InitializeAgentQuotaPortalUrl [ngx.components.UIDynamicAction-1791878668605]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaPortalUrl",
+       "Value": "script:''''"
+      }'
+  ↓InitializeAgentQuotaPendingKey [ngx.components.UIDynamicAction-1791878669107]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaPendingKey",
+       "Value": "script:''''"
+      }'
+  ↓InitializeAgentQuotaRequestKey [ngx.components.UIDynamicAction-1791878669609]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaRequestKey",
+       "Value": "script:''''"
+      }'
+  ↓InitializeAgentQuotaRequestedAt [ngx.components.UIDynamicAction-1791878670111]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaRequestedAt",
+       "Value": "script:0"
+      }'
+  ↓InitializeAgentQuotaConversation [ngx.components.UIDynamicAction-1791880302931]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:AgentQuotaConversation",
+       "Value": "script:''''"
+      }'
   ↓AuthenticateStudioSession [ngx.components.UICustomAction-1788359083181]: 
     actionValue: 
       - xmlizable: 
@@ -9373,7 +9646,8 @@ title: Tigo
                       page.local.AgentProviderSupportsReasoning = false;
                       page.local.AgentReasoningLevels = [];
                       page.local.ShowAgentConfigPanel = page.shouldShowAgentSettingsPanel ? page.shouldShowAgentSettingsPanel() : true;
-                      resolve();
+                      if(page.requestAgentQuota){page.requestAgentQuota();}
+                  resolve();
                       return;
                   }
                   var models = selectedProvider.models || [];
@@ -9423,6 +9697,7 @@ title: Tigo
                   } else {
                       page.local.ShowAgentConfigPanel = true;
                   }
+                  if(page.requestAgentQuota){page.requestAgentQuota();}
                   resolve();'
         ↓UseDiscoveredAgentModels [ngx.components.UICustomAction-1785253494412]: 
           actionValue: 
@@ -9446,7 +9721,8 @@ title: Tigo
                               page.local.AgentReasoningLevels = [];
                               page.local.AgentReasoningEffort = '''';
                           }
-                          resolve();'
+                          if(page.requestAgentQuota){page.requestAgentQuota();}
+                  resolve();'
         ↓RequireExplicitAgentChoice [ngx.components.UICustomAction-1783431366742]: 
           actionValue: 
             - xmlizable: 
@@ -9689,6 +9965,13 @@ title: Tigo
             		var response = vars.response || {};
             		var aiData = vars.aiData || {};
             		var state = response.state || aiData.state || {};
+                    if(state.quota && page.applyAgentQuotaSnapshot){page.applyAgentQuotaSnapshot(state.quota,state.provider||page.getAgentProvider());}
+                    if(!isCompleted && !isFailed && page.requestAgentQuota){page.requestAgentQuota();}
+                    if(isCompleted||isFailed){
+                        var quotaTurnKey=page.getAgentProvider()+'':''+String(page.local.Conversation||'''')+'':''+String(state.runid||response.id||'''');
+                        if(page.local.AgentQuotaTerminalRun!==quotaTurnKey){page.local.AgentQuotaTerminalRun=quotaTurnKey;page.requestAgentQuota(true);}
+                    }
+            
             		var runid = state.runid != null ? state.runid : response.id;
             		if (runid != null && ("" + runid).length) {
             			page.local.RunID = "" + runid;
@@ -14337,3 +14620,56 @@ title: Tigo
           .forms-integrated .forms-recent-conversations { gap: 8px; }
           .forms-integrated .forms-recent-row { margin: 0; box-shadow: none; }
           '
+↓AgentQuotaRefresh [ngx.components.UIEventSubscriber-1791878665075]: 
+  topic: AgentQuotaRefresh
+  ↓ReadQuota [ngx.components.UIDynamicAction-1791878665577]: 
+    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:lib_ConvertigoAssistant.AgentQuota"}'
+    ↓Failure [ngx.components.UIActionFailureEvent-1791879156127]: 
+      ↓QuotaUnavailable [ngx.components.UICustomAction-1791879156605]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                'var payload=props.stack.root.out||{};var key=String(payload.key||'''');
+                if(page.local.AgentQuotaPendingKey===key){page.local.AgentQuotaPendingKey='''';}
+                if(page.local.AgentQuotaRequestKey===key && String(page.local.Conversation||'''')===String(payload.threadid||'''')){
+                 page.applyAgentQuotaSnapshot(null,payload.provider,page.local.AgentQuotaPortalUrl||'''',true);
+                }resolve();'
+    ↓provider [ngx.components.UIControlVariable-1791878666091]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:stack.root.out.provider
+    ↓threadid [ngx.components.UIControlVariable-1791878666093]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:stack.root.out.threadid
+    ↓ShowQuota [ngx.components.UICustomAction-1791878666095]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              var stack=props.stack;var out=stack["1791878665577"].out;
+              var key=String(stack.root.out.key||'');
+              if(page.local.AgentQuotaPendingKey===key){page.local.AgentQuotaPendingKey='';}
+              if(page.local.AgentQuotaRequestKey!==key || String(page.local.Conversation||'')!==String(stack.root.out.threadid||'')){resolve();return;}
+              var answer=out&&out.response;
+              if(page.applyAgentQuotaSnapshot){page.applyAgentQuotaSnapshot(answer&&answer.quota,stack.root.out.provider,answer&&answer.portalUrl, !answer||answer.status==='error');}
+              resolve();
+↓AgentQuotaStyle [ngx.components.UIStyle-1791878674413]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+           .agent-quota { align-items:center; background:var(--ion-background-color,#fff); border-top:1px solid var(--ion-color-step-150,#e2e8f0); color:var(--ion-text-color,#334155); display:flex; flex-wrap:wrap; gap:4px 12px; padding:6px 12px; font-size:12px; line-height:1.45; }
+          .agent-quota-details { flex:1 1 170px; min-width:0; }
+          .agent-quota-window { color:var(--ion-color-medium,#64748b); overflow-wrap:anywhere; }
+          .agent-quota-actions { display:flex; align-items:center; flex-wrap:wrap; gap:2px; }
+          .agent-quota ion-button { font-size:12px; height:28px; margin:0; --padding-start:5px; --padding-end:5px; }
+          
+          .modern-header.forms-integrated .agent-quota { grid-column:1 / -1; }
+          

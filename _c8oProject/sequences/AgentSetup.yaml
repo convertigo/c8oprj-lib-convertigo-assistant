@@ -1,8 +1,36 @@
 comment: Diagnose, install, or reinstall the selected local agent runtime.
 responseTimeout: 900
+↓PrepareTigoAccess [steps.IfStep-1791831269935]: 
+  condition: com.twinsoft.convertigo.engine.Engine.isStudioMode() && com.twinsoft.convertigo.engine.Engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN) && typeof provider !== "undefined" && String(provider).toLowerCase() === "convertigo"
+  ↓BindActivate [steps.SimpleStep-1791831804814]: 
+    expression: var refresh="false";
+  ↓Activate [steps.SequenceStep-1791831269937]: 
+    sourceSequence: lib_ConvertigoAssistant.TigoAccessBootstrap
+    ↓refresh [variables.StepVariable-1791831269939]: 
+      value: 
+        - ↑ciphered: true
+        - ↑traceable: false
+        - →→: xd8e180806a1c1d83a6255212121ab827
+      visibility: 15
+  ↓ActivationResult [steps.JsonSourceStep-1791831269941]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1791831269937
+          - java.lang.String: 
+            - ↑value: ./document
+    variableName: tigoActivation
 ↓Run [steps.SimpleStep-1781810000101]: 
   expression: |
-    'include("js/agent_bridge_client.js");
+    'var _tigoActivation=typeof tigoActivation!=="undefined"?tigoActivation:null;
+    if(_tigoActivation&&_tigoActivation.document){_tigoActivation=_tigoActivation.document;}
+    var _tigoFailure=_tigoActivation&&(!_tigoActivation.response||_tigoActivation.response.status!=="ok");
+    if(_tigoFailure){
+     result={ok:false,status:"setup_required",provider:"convertigo",setupRequired:true,setup:{ok:false,status:"authentication_required",messages:["L’accès Tigo n’a pas pu être activé. Vérifiez votre PSC ou réessayez."],authentication:{configured:false,status:"missing",action:"tigo_access"}}};
+    }else{
+    include("js/agent_bridge_client.js");
     var _targetProject = typeof targetProject === "undefined" ? "" : targetProject;
     if (!_targetProject && typeof projectName !== "undefined") {
       _targetProject = projectName;
@@ -73,7 +101,12 @@ responseTimeout: 900
       mcpSkillsSourceDir: typeof mcpSkillsSourceDir === "undefined" ? "" : mcpSkillsSourceDir,
       skipSkillsInstall: typeof skipSkillsInstall === "undefined" ? "" : skipSkillsInstall,
       agentRevealMode: typeof agentRevealMode === "undefined" ? "" : agentRevealMode
-    });'
+    });
+    }'
+↓AttachAccessState [steps.SimpleStep-1791831270391]: 
+  expression: |
+    if(typeof tigoActivation!=="undefined"){tigoActivation=tigoActivation&&(tigoActivation.document||tigoActivation);}
+    if(typeof tigoActivation!=="undefined" && tigoActivation && tigoActivation.response){result.tigoAccess=tigoActivation.response;}
 ↓result [steps.JsonToXmlStep-1781810000102]: 
   jsonObject: 
     - xmlizable: 

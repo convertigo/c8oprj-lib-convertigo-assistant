@@ -1,0 +1,69 @@
+accessibility: Hidden
+comment: Local Studio WEB_ADMIN only. Public account status; no key or PSC credentials returned.
+includeResponseElement: false
+responseTimeout: 120
+↓ReadLocalAccess [steps.SimpleStep-1791831268174]: 
+  expression: |
+    'var engine=com.twinsoft.convertigo.engine.Engine;
+    var role=com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN;
+    if(!engine.isStudioMode()||!engine.authenticatedSessionManager.hasRole(context.httpSession,role)){throw new com.twinsoft.convertigo.engine.EngineException("Authenticated local Studio session required");}
+    function hashLocal(value){return String(com.twinsoft.convertigo.engine.util.HexUtils.toHexString(java.security.MessageDigest.getInstance("SHA-256").digest(new java.lang.String(String(value)).getBytes("UTF-8"))));}
+    var root=java.nio.file.Paths.get(String(engine.USER_WORKSPACE_PATH)).toRealPath();
+    var directory=root.resolve("agents").resolve("convertigo");
+    function safePath(path){var p=path;while(p!=null&&!p.equals(root)){if(java.nio.file.Files.isSymbolicLink(p)){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}p=p.getParent();}if(p==null){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}}
+    var keyPath=directory.resolve("llm-api-key"),metadataPath=directory.resolve("tigo-access.json");safePath(keyPath);safePath(metadataPath);
+    var response={status:"error",code:"authentication_required",error:"Connectez-vous au Studio pour activer Tigo."};
+    
+    
+    var apiKey="",canRead=false,localMetadata=null;
+    response={status:"ok",state:"not_connected",message:"Activez Tigo pour consulter votre quota.",error:""};
+    if(java.nio.file.Files.isRegularFile(keyPath)&&java.nio.file.Files.size(keyPath)<512){
+     apiKey=String(new java.lang.String(java.nio.file.Files.readAllBytes(keyPath),"UTF-8")).trim();
+     if(java.nio.file.Files.isRegularFile(metadataPath)&&java.nio.file.Files.size(metadataPath)<32768){try{localMetadata=JSON.parse(String(new java.lang.String(java.nio.file.Files.readAllBytes(metadataPath),"UTF-8")));}catch(ignored){}}
+     if(localMetadata&&localMetadata.source==="TigoAccess"&&localMetadata.keyHash===hashLocal(apiKey)&&/^sk-[A-Za-z0-9_-]{32,128}$/.test(apiKey)){canRead=true;}
+     else{response={status:"ok",state:"external_key",message:"Une clé configurée manuellement est conservée.",error:""};apiKey=null;}
+    }
+    '
+↓Connected [steps.IfStep-1791831268176]: 
+  condition: canRead
+  ↓ReadStatus [steps.TransactionStep-1791831268178]: 
+    sourceTransaction: lib_ConvertigoAssistant.TigoAccess.Status
+    ↓apiKey [variables.StepVariable-1791876493832]: 
+      value: 
+        - ↑ciphered: true
+        - ↑traceable: false
+        - →→: xd8e180806a1c1d83a6255212121ab827
+      visibility: 15
+  ↓StatusResult [steps.JsonSourceStep-1791831268182]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1791831268178
+          - java.lang.String: 
+            - ↑value: ./document
+    variableName: remoteStatus
+  ↓PublicAccessState [steps.SimpleStep-1791831268184]: 
+    expression: |
+      'remoteStatus=remoteStatus&&(remoteStatus.document||remoteStatus);
+      var s=remoteStatus&&remoteStatus.HttpInfo&&remoteStatus.HttpInfo.status;var httpCode=Number(s&&((s.attr&&s.attr.code)||s.code));var remote=remoteStatus&&remoteStatus.object&&remoteStatus.object.response;
+      if(httpCode===200&&remote&&remote.status==="ok"&&remote.quota){
+       var publicAccount={email:localMetadata.email,subject:localMetadata.subject};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
+       response={status:"ok",state:"ready",quota:remote.quota,account:publicAccount,error:""};context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:localMetadata.email,keyHash:localMetadata.keyHash,account:publicAccount,quota:remote.quota}));
+      }else{response={status:"error",code:String(remote&&remote.code||"service_unavailable"),error:"Impossible de consulter le quota Tigo."};}
+      apiKey=null;remoteStatus=null;localMetadata=null;
+      '
+↓Response [steps.JsonToXmlStep-1791831268186]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response

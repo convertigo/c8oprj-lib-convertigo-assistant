@@ -1,0 +1,102 @@
+accessibility: Hidden
+comment: Read-only public quota facade. Studio WEB_ADMIN or authenticated server user; conversation ownership and provider match enforced. Convertigo uses TigoAccessStatus; wrappers use the existing bridge status channel without starting any CLI. No credential returned.
+includeResponseElement: false
+responseTimeout: 120
+↓AuthorizeQuota [steps.SimpleStep-1791878663470]: 
+  expression: |
+    'var studio=com.twinsoft.convertigo.engine.Engine.isStudioMode();
+    var admin=com.twinsoft.convertigo.engine.Engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN);
+    var user=String(context.getAuthenticatedUser()||"");
+    if(!(studio&&admin)&&!(!studio&&user.length)){throw new com.twinsoft.convertigo.engine.EngineException(studio?"A WEB_ADMIN session is required":"Authenticated Assistant session required");}
+    var trustedUserId=studio?"studio":user;
+    provider=String(provider||"").trim().toLowerCase();threadid=String(threadid||"");
+    if(["codex","claude","vibe","convertigo"].indexOf(provider)<0){throw new com.twinsoft.convertigo.engine.EngineException("Unsupported agent provider");}
+    var isConvertigo=provider==="convertigo"&&studio;
+    var response={status:"ok",quota:{provider:provider,source:provider==="convertigo"?"tigoaccess":"wrapper",kind:provider==="convertigo"?"credit":"limits",available:false,windows:[],updatedAt:null},portalUrl:""};
+    if(provider==="convertigo"){
+     var url=com.twinsoft.convertigo.engine.Engine.theApp.databaseObjectsManager.symbolsGetValue("assistant.tigo.portal_url");url=url==null?"https://backend-apps.convertigo.net/convertigo/projects/TigoAccess/DisplayObjects/mobile/home":String(url);
+     try{var uri=new java.net.URI(url);if(String(uri.getScheme())==="https"&&uri.getHost()!=null&&uri.getUserInfo()==null&&uri.getQuery()==null&&uri.getFragment()==null){response.portalUrl=url;}}catch(ignored){}
+    }
+    '
+↓ConvertigoQuota [steps.IfStep-1791878663476]: 
+  condition: isConvertigo
+  ↓ReadTigo [steps.SequenceStep-1791878663488]: 
+    sourceSequence: lib_ConvertigoAssistant.TigoAccessStatus
+  ↓TigoResult [steps.JsonSourceStep-1791878663493]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1791878663488
+          - java.lang.String: 
+            - ↑value: ./document
+    variableName: tigoRead
+  ↓PublicTigoQuota [steps.SimpleStep-1791878663495]: 
+    expression: |
+      tigoRead=tigoRead&&(tigoRead.document||tigoRead);var t=tigoRead&&tigoRead.response;
+      if(t&&t.status==="ok"&&t.quota){var q=t.quota;response.quota={provider:"convertigo",source:"tigoaccess",kind:"credit",available:true,offerAmountUsd:q.offerAmountUsd,budgetUsd:q.budgetUsd,spentUsd:q.spentUsd,balanceUsd:q.balanceUsd,keyState:q.keyState,expiresAt:q.expiresAt||null,extensionMode:"manual",updatedAt:new Date().getTime(),windows:[]};}
+      else{response.status=t&&t.status==="ok"?"ok":"error";response.state=t&&t.state||"unavailable";response.code=String(t&&t.code||"service_unavailable");}
+      tigoRead=null;
+      
+↓WrapperQuota [steps.SimpleStep-1791878663497]: 
+  expression: |
+    'var trustedHandle="",knownWrapper=false;
+    if(provider!=="convertigo"){
+     include("js/agent_bridge_client.js");
+     var scoped=C8O.assistantAgentBridge.quota({provider:provider,threadid:threadid,userId:trustedUserId});
+     response.quota=scoped.quota;trustedHandle=String(scoped.handle||"");knownWrapper=trustedHandle.length>0;scoped=null;
+    }
+    var handle=trustedHandle;
+    '
+↓KnownWrapper [steps.IfStep-1791881328836]: 
+  condition: knownWrapper
+  ↓ReadQuota [steps.SequenceStep-1791881328841]: 
+    sourceSequence: lib_ConvertigoAgentBridge.agent_quota
+    ↓handle [variables.StepVariable-1791881328843]: 
+      value: 
+        - ↑ciphered: true
+        - ↑traceable: false
+        - →→: xd8e180806a1c1d83a6255212121ab827
+      visibility: 15
+  ↓QuotaResult [steps.JsonSourceStep-1791881328850]: 
+    sourceDefinition: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - java.lang.String: 
+            - ↑value: 1791881328841
+          - java.lang.String: 
+            - ↑value: ./document
+    variableName: wrapperRead
+  ↓PublicWrapperQuota [steps.SimpleStep-1791881328854]: 
+    expression: |
+      wrapperRead=wrapperRead&&(wrapperRead.document||wrapperRead);var w=wrapperRead&&wrapperRead.response;
+      if(w&&w.quota&&String(w.quota.provider)===provider&&w.quota.source==="wrapper"){response.quota=w.quota;}
+      else if(!w){response.status="error";response.code="service_unavailable";}
+      handle=null;trustedHandle=null;wrapperRead=null;
+↓Response [steps.JsonToXmlStep-1791878663499]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓provider [variables.RequestableVariable-1791878663466]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓threadid [variables.RequestableVariable-1791878663468]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
