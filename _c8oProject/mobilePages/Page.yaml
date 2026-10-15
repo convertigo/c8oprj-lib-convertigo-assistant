@@ -1578,8 +1578,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.20", tag: "v0.2.20", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.20/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.20", tag: "v0.4.20", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.20/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.45", tag: "v1.4.45", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.45/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.21", tag: "v0.4.21", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.21/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.46", tag: "v1.4.46", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.46/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -3564,6 +3564,9 @@ scriptContent:
                     refresh:fr ? ''Actualiser le quota'' : ''Refresh quota'',
                     extend:fr ? ''Demander une extension'' : ''Request an extension'',
                     remaining:fr ? ''restants'' : ''remaining'', context:fr ? ''Contexte'' : ''Context'',
+                    compaction:fr ? ''Contexte avant compaction'' : ''Context before compaction'',
+                    sessionCost:fr ? ''Coût estimé des tokens de la session'' : ''Estimated session token cost'',
+                    costNote:fr ? ''Valeur indicative : les frais réels dépendent du forfait et de la facturation du fournisseur.'' : ''Indicative value: actual charges depend on your plan and provider billing.'',
                     active:fr ? ''Actif'' : ''Active'', expired:fr ? ''Clé expirée'' : ''Expired key'',
                     exhausted:fr ? ''Crédit épuisé'' : ''Credit exhausted'', blocked:fr ? ''Accès bloqué'' : ''Access blocked'',
                     revoked:fr ? ''Clé révoquée'' : ''Revoked key'', rejected:fr ? ''Limite atteinte'' : ''Limit reached'',
@@ -3586,8 +3589,7 @@ scriptContent:
                 this.local.AgentQuotaContext = '''';
                 this.local.AgentQuotaConversation = String(this.local.Conversation || '''');
                 if (quota && quota.context && quota.context.usedTokens != null && quota.context.limitTokens != null) {
-                    this.local.AgentQuotaContext = this.quotaLabel(''context'') + '': '' + quota.context.usedTokens + '' / '' + quota.context.limitTokens + '' tokens'';
-                    if (quota.context.costAmount != null) { this.local.AgentQuotaContext += '' · '' + quota.context.costAmount + '' '' + quota.context.costCurrency; }
+                    this.local.AgentQuotaContext = this.quotaLabel(provider === ''vibe'' || quota.context.limitKind === ''compaction'' ? ''compaction'' : ''context'') + '': '' + quota.context.usedTokens + '' / '' + quota.context.limitTokens + '' tokens'';
                 }
                 if (provider === ''convertigo'' && /^https:\/\/[^?#]+$/.test(String(portalUrl || ''''))) { this.local.AgentQuotaPortalUrl = portalUrl; }
                 else { this.local.AgentQuotaPortalUrl = ''''; }
@@ -3658,12 +3660,20 @@ scriptContent:
                     }
                     if(percent != null) { summary=''''; }
                 }
+                var cost = '''', costNote = '''';
+                var costAmount = q && q.context && q.context.costAmount;
+                if(costAmount != null && costAmount !== '''' && isFinite(Number(costAmount)) && Number(costAmount) >= 0) {
+                    var language = String(this.global && this.global.language || '''').toLowerCase();
+                    try { language = String(this.translate.currentLang || language).toLowerCase(); } catch(ignore) {}
+                    cost = this.quotaLabel(''sessionCost'') + '' : ≈ '' + Number(costAmount).toLocaleString(language.indexOf(''fr'') === 0 ? ''fr-FR'' : ''en-US'', {minimumFractionDigits:4,maximumFractionDigits:4}) + '' '' + String(q.context.costCurrency || '''');
+                    costNote = this.quotaLabel(''costNote'');
+                }
                 rows.forEach(row => { row.color=this.quotaUsageColor(row.usedPercent,row.state); });
                 var color=this.quotaUsageColor(percent,state);
                 var label=this.quotaLabel(''usage'')+'' · ''+this.getAgentProviderLabel(provider)+'' · ''+(percent == null ? this.quotaLabel(''unknown'') : Math.round(percent)+'' % ''+this.quotaLabel(''used''));
                 return {title:this.quotaLabel(''usage''),provider:this.getAgentProviderLabel(provider),percent:percent,color:color,
                     background:''conic-gradient(from 225deg, ''+color+'' 0deg ''+(percent == null ? 0 : percent*2.7)+''deg, var(--ion-color-step-300, #64748b) ''+(percent == null ? 0 : percent*2.7)+''deg 270deg, transparent 270deg 360deg)'',
-                    label:label,summary:summary,rows:rows,expiry:expiry,context:q && this.local && this.local.AgentQuotaContext || '''',
+                    label:label,summary:summary,rows:rows,expiry:expiry,cost:cost,costNote:costNote,context:q && this.local && this.local.AgentQuotaContext || '''',
                     portalUrl:provider === ''convertigo'' && this.local && this.local.AgentQuotaPortalUrl || '''',
                     refreshLabel:this.quotaLabel(''refresh''),extendLabel:this.quotaLabel(''extend''),closeLabel:this.quotaLabel(''close'')};
             }

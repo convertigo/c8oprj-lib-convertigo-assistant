@@ -350,8 +350,15 @@ rediscovering the same context.
 
 ## Compact quota popup
 
+- Display ACP context as "Context before compaction" and show its session token
+  cost separately as an estimate rounded to four decimals. Explain that actual
+  charges depend on the account plan/provider billing; never imply that a CLI
+  API key means pay-as-you-go. Unknown account quota keeps the arc neutral.
+- Cost can be present without context counters. Missing/invalid costs stay
+  hidden, while an explicitly reported zero remains visible. Translate both
+  labels and the billing explanation in French/English.
 - `Page.getAgentQuotaView()` derives the compact account usage and detail rows. Pick the highest known utilization window; use its actual duration before its primary/secondary id to label it. Unknown account quota stays neutral; Vibe context never fills the account arc.
 - The shared footer uses the native `InlinePopover`, with a stable unique trigger id per component instance. Keep the trigger a button independent from prompt enablement. Ionic handles outside click, Escape and focus return. Refresh emits `QuotaRefresh` to the Page, which keeps the existing authenticated subscriber and API transport.
 - `ensureAgentNativeContextBridge()` installs the Java receiver wrapper during host-context retries too: the native receiver can appear after Page initialization or be replaced on reload. Forward native context exactly once, retain the original delegate and restore it only when the wrapper is still current. Check `tests/assistant_native_context.test.cjs`.
 
-- Release 1.4.45 pairs Bridge 0.4.20 with the clickable quota popup. Both `stack-release.json` and the Page fallback must pin those exact CAR versions. CI honors `[skip deploy]` in the release commit on branch and tag pushes, so publication can happen without server deployment.
+- Release 1.4.46 pairs Bridge 0.4.21 with Mistral reasoning/cache corrections and the clarified usage popup. Both `stack-release.json` and the Page fallback must pin those exact CAR versions. CI honors `[skip deploy]` in the release commit on branch and tag pushes, so publication can happen without server deployment.
