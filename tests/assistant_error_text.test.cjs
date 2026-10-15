@@ -3,6 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
+const { backendParts } = require('./helpers/assistant-source.cjs');
 const src = fs.readFileSync(path.resolve(__dirname, '../js/agent_bridge_client.js'), 'utf8');
 function grab(name) {
   const start = src.indexOf('  function ' + name + '(');
@@ -32,4 +34,47 @@ test('other errors are left as they are, long backend dumps are shortened', () =
   const generic = text('API error from convertigo (model: x): LLM backend error [convertigo]\n status: 503 Service Unavailable\n reason: upstream down\n endpoint: https://x\n body_excerpt: ' + 'y'.repeat(2000));
   assert.match(generic, /503 Service Unavailable/);
   assert.ok(generic.length < 450 && !/body_excerpt/.test(generic));
+});
+
+const errors = {
+  trim: value => String(value == null ? '' : value).trim(),
+  normalizeProvider: value => String(value || '').toLowerCase()
+};
+vm.runInNewContext(backendParts([
+  'lang', 'extractAgentErrorText', 'condenseLlmBackendError',
+  'agentHttpErrorStatus', 'userFacingAgentError'
+], ['TRANSLATIONS']), errors);
+const show = (data, language = 'fr', provider = 'convertigo') =>
+  errors.userFacingAgentError({ provider, language, model: 'mistral-large-4' }, data);
+
+test('Convertigo model denials explain both key and user permissions without leaking the envelope', () => {
+  const denied = { response: { error: {
+    code: -31002, message: 'Invalid API key. Please check your API key and try again.',
+    data: { httpStatus: 403, model: 'mistral/mistral-large-4', authorization: 'NEVER-EXPOSE-THIS' }
+  } } };
+  assert.match(show(denied), /mistral-large-4.*HTTP 403/);
+  assert.match(show(denied), /sur la clé et sur son utilisateur LiteLLM/);
+  assert.doesNotMatch(show(denied), /Invalid API key|NEVER-EXPOSE|jsonrpc/);
+  assert.match(show(denied, 'en'), /both the key and its LiteLLM user/);
+  assert.match(show({ error: { data: { reason: 'http_forbidden' } } }), /HTTP 403/);
+  assert.match(show('user not allowed to access model. Tried to access mistral/mistral-large-4'), /HTTP 403/);
+});
+
+test('a Vibe error without HTTP details stays neutral about key validity', () => {
+  // Current Vibe ACP maps the 403 to ConfigurationError and discards its details.
+  const acp = { response: { error: { code: -31002,
+    message: 'Invalid API key. Please check your API key and try again.' } } };
+  const shown = show(acp);
+  assert.match(shown, /validité de la clé.*sur la clé et sur son utilisateur/);
+  assert.doesNotMatch(shown, /HTTP 401|HTTP 403|Invalid API key/);
+  assert.equal(show(acp, 'fr', 'vibe'), acp.response.error.message);
+  assert.equal(show(acp, 'en', 'codex'), acp.response.error.message);
+});
+
+test('a real 401 remains a credential rejection and unrelated errors keep their cause', () => {
+  assert.match(show({ error: { message: 'Invalid API key', data: { httpStatus: 401 } } }), /clé d'API.*HTTP 401/);
+  assert.doesNotMatch(show({ httpStatus: 401, message: 'Invalid API key' }), /modèles autorisés/);
+  assert.equal(show({ message: 'Parent context stopped' }), 'Parent context stopped');
+  assert.match(show(backend), /^reasoning_effort 'medium' is not supported/);
+  assert.equal(errors.agentHttpErrorStatus(JSON.stringify({ error: { code: '403' } }), 0), 403);
 });

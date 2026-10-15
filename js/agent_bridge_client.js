@@ -3217,6 +3217,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
       codexAuthExpired: "L'authentification du profil local de l'agent a expiré ou est absente. Utilisez le bouton de connexion de la configuration de l'agent pour vous authentifier dans votre navigateur, puis renvoyez la demande.",
+      gatewayModelDenied: "Accès au modèle {model} refusé par LiteLLM (HTTP 403). Vérifiez les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
+      gatewayKeyRejected: "LiteLLM a refusé la clé d'API (HTTP 401). Vérifiez la clé configurée pour l'agent Convertigo.",
+      gatewayAccessRejected: "LiteLLM a refusé l'accès au modèle {model}. Vérifiez la validité de la clé et les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -3250,6 +3253,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeStateRecover: "I am checking that the task is still running.",
       bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
       codexAuthExpired: "The local agent profile authentication has expired or is missing. Use the sign-in button of the agent configuration to authenticate in your browser, then send the request again.",
+      gatewayModelDenied: "LiteLLM denied access to model {model} (HTTP 403). Check the models allowed for both the key and its LiteLLM user.",
+      gatewayKeyRejected: "LiteLLM rejected the API key (HTTP 401). Check the key configured for the Convertigo agent.",
+      gatewayAccessRejected: "LiteLLM refused access to model {model}. Check the key's validity and the models allowed for both the key and its LiteLLM user.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -3323,9 +3329,48 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return head.length > 400 ? head.substring(0, 400) + "..." : head;
   }
 
+  function agentHttpErrorStatus(value, depth) {
+    if (depth > 8 || value === null || typeof value === "undefined") { return 0; }
+    if (typeof value === "object") {
+      var candidates = [value.httpStatus, value.http_status, value.status_code, value.statusCode, value.status, value.code];
+      for (var i = 0; i < candidates.length; i++) {
+        var code = Number(candidates[i]);
+        if (code === 401 || code === 403) { return code; }
+      }
+      if (value.reason === "http_forbidden") { return 403; }
+      if (value.reason === "http_unauthorized") { return 401; }
+      var nested = [value.data, value.details, value.error, value.response, value.acpError, value.result, value.cause];
+      for (var j = 0; j < nested.length; j++) {
+        var status = agentHttpErrorStatus(nested[j], depth + 1);
+        if (status) { return status; }
+      }
+    } else if (typeof value === "string") {
+      var text = trim(value);
+      if (text.charAt(0) === "{") {
+        try { return agentHttpErrorStatus(JSON.parse(text), depth + 1); } catch (_ignoreHttpErrorJson) {}
+      }
+      var match = /(?:\bHTTP(?:\/[0-9.]+)?\s*[:=]?\s*|\bstatus(?:_code)?\s*[:=]\s*)(401|403)\b/i.exec(text);
+      if (match) { return Number(match[1]); }
+    }
+    return 0;
+  }
+
   function userFacingAgentError(state, data) {
     var raw = condenseLlmBackendError(extractAgentErrorText(data, 0));
     var lower = raw.toLowerCase();
+    if (state && normalizeProvider(state.provider) === "convertigo") {
+      var status = agentHttpErrorStatus(data, 0);
+      var model = trim(state.model) || "?";
+      if (status === 403 || (status !== 401 && lower.indexOf("not allowed to access model") !== -1)) {
+        return lang(state).gatewayModelDenied.replace("{model}", model);
+      }
+      if (status === 401) { return lang(state).gatewayKeyRejected; }
+      // Vibe may discard the HTTP status and keep only "Invalid API key", including
+      // for a model permission denial. Do not claim a 401 or an invalid credential.
+      if (lower.indexOf("invalid api key") !== -1) {
+        return lang(state).gatewayAccessRejected.replace("{model}", model);
+      }
+    }
     if (lower.indexOf("refresh token") !== -1 || lower.indexOf("access token could not be refreshed") !== -1 || lower.indexOf("please log out and sign in again") !== -1) {
       return lang(state).codexAuthExpired;
     }

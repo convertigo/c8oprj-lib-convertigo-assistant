@@ -305,6 +305,12 @@ rediscovering the same context.
   process. These offline checks do not replace a Mobile Builder build or a live
   Studio/C8Oforms smoke test.
 - For client JavaScript changes, run `node --check js/agent_bridge_client.js`.
+- Convertigo gateway errors distinguish HTTP 401 (credential rejection) from
+  HTTP 403 (access denied; check model permissions on both the key and its
+  LiteLLM user). Vibe ACP may discard the HTTP status and report only
+  `Invalid API key`; use neutral access guidance in that case instead of
+  asserting that the key is invalid. Cover this with
+  `node --test tests/assistant_error_text.test.cjs`.
 - For Convertigo UI/object changes, use MCP validation such as
   `mobile_builder_open` or the relevant requestable execution instead of manual
   edits to generated files.
@@ -395,6 +401,9 @@ rediscovering the same context.
   copies together, publishing dependency CARs before the public master manifest.
 - Assistant 1.4.48 pairs Bridge 0.4.22 with MCP 0.2.23 (inline ping, setup
   sequences writing `X-Convertigo-No-Log`). Only the manifest copies changed.
+- Assistant 1.4.49 keeps Bridge 0.4.22 and MCP 0.2.23. Convertigo/LiteLLM
+  errors explain key and user model permissions, distinguish HTTP 401/403 when
+  available, and keep neutral guidance when Vibe omits the HTTP status.
 - Windows runtime warnings come from structured Bridge `diagnostics`. Distinguish
   disabled registry settings, failed long-path probes and inconclusive write
   checks. Show the Microsoft documentation through `openAgentExternalUrl`.
