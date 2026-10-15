@@ -24,6 +24,22 @@ carry the same versions, tags and `importUrl`.
 Each `importUrl` points at a release CAR:
 `<project>=https://github.com/convertigo/<repository>/releases/download/v<version>/<project>.car`
 
+## Hosting assistant.convertigo.com on backend-apps
+
+Deploy only `lib_ConvertigoAssistant` on `backend-apps.convertigo.net` to serve
+`assistant.convertigo.com`. Neither `lib_ConvertigoAgentBridge` nor
+`lib_ConvertigoMCP` needs to be installed on that hosting server. Publishing their
+release CARs for the Studio bundle does not mean deploying them on backend-apps.
+
+The three-project bundle remains necessary in the developer's Studio: the Bridge
+executes the local agents and MCP exposes the local Convertigo tools. Verify real
+wrapper quotas in that Studio context. A standalone public Assistant page does
+not provide access to the developer's local harness session.
+
+A separate server/NoCode installation that executes agents needs its own full
+stack on the execution server. This is distinct from backend-apps serving the
+public frontend. TigoAccess remains a separate hosted backend service.
+
 ## Release order
 
 Dependencies first, the Assistant last, because its manifest references the two others.
@@ -79,10 +95,11 @@ comments; document behaviour in the `comment:` of the sequence or variable, not 
 
 - **Studio**: the stack panel compares installed versions with the manifest and the Studio
   host imports the CARs. Projects that are Git checkouts are never replaced.
-- **Server** (No Code Studio, C8Oforms, hosted Assistant): the same button runs the
+- **Agent execution server** (No Code Studio, C8Oforms, explicit server-agent integration): the same button runs the
   `AgentStackInstall` sequence, in the order MCP, Bridge, Assistant, then reloads the page.
   Access is controlled by the global symbol `assistant.stack.selfupdate`
   (`admin` by default, `authenticated`, `true`, `false`); see `readme.md`.
+  This does not apply to backend-apps merely hosting `assistant.convertigo.com`.
 - Only official release CARs of the three repositories are accepted, whatever a client sends.
 
 ## Rolling back

@@ -270,7 +270,7 @@ console.log("Assistant attachment routing OK");
   const clientSource = fs.readFileSync("js/agent_bridge_client.js", "utf8");
   assert.match(clientSource, /function providerLoginAction\(provider\)/);
   assert.doesNotMatch(clientSource, /action: "codex_login"/, "login actions must be derived from the provider");
-  assert.match(clientSource, /var loginRequested = isResidentProvider\(loginProvider\) && boolValue\([\s\S]*?options\.claudeLogin[\s\S]*?options\.vibeLogin/);
+  assert.match(clientSource, /var loginRequested = isResidentProvider\(loginProvider\) && hasProviderLoginRequest\(options\)/);
   const claudeBranch = clientSource.match(/if \(harness === "claude"\) \{\s*var claudeSetupScope[\s\S]*?\n    \}\n/)[0];
   assert.match(claudeBranch, /login: typeof options\.login === "undefined"/);
   assert.match(claudeBranch, /loginStatus: typeof options\.loginStatus === "undefined"/);

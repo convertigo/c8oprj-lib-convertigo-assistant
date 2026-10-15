@@ -3349,6 +3349,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "codex_login";
   }
 
+  function hasProviderLoginRequest(options) {
+    options = options || {};
+    // Convertigo request variables arrive as strings. Parse each flag before
+    // combining them: the truthy string "false" must not hide loginStatus=true.
+    var flags = ["login", "loginStatus", "codexLogin", "codexLoginStatus",
+      "claudeLogin", "claudeLoginStatus", "vibeLogin", "vibeLoginStatus"];
+    for (var i = 0; i < flags.length; i++) {
+      if (boolValue(options[flags[i]], false)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function isCodexAuthenticationError(data) {
     var lower = extractAgentErrorText(data, 0).toLowerCase();
     return lower.indexOf("refresh token") !== -1 ||
@@ -5637,11 +5651,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var providerSetup = stateForRuntimeSetup(stateForExplicitProviderSetup(state, options), options);
     state = providerSetup.state;
     var loginProvider = normalizeProvider(state.provider);
-    var loginRequested = isResidentProvider(loginProvider) && boolValue(
-      options.login || options.loginStatus ||
-      options.codexLogin || options.codexLoginStatus ||
-      options.claudeLogin || options.claudeLoginStatus ||
-      options.vibeLogin || options.vibeLoginStatus, false);
+    var loginRequested = isResidentProvider(loginProvider) && hasProviderLoginRequest(options);
     if (loginRequested) {
       var loginInfo = callAgentSetup(state, options, false);
       var login = loginInfo.result || {};

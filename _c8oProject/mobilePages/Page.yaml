@@ -118,6 +118,18 @@ scriptContent:
         		} catch (e) {}
         		var runtimeTranslations: any = {
         			en: {
+                        Agent_Windows_Diagnostic: "Windows diagnostics",
+                        Agent_Windows_Paths_Disabled: "Windows long paths are disabled. Enabling them may be required to install Python/npm.",
+                        Agent_Windows_Paths_Failed: "Studio cannot create a file on a path longer than 260 characters.",
+                        Agent_Windows_Paths_Restart: "After enabling long paths, close and restart Studio. If necessary, restart Windows, then retry the runtime installation.",
+                        Agent_Windows_Paths_Unknown: "The long path test could not run. Check workspace write permissions; the Windows setting alone does not confirm runtime support.",
+                        Agent_Windows_Path_Ignored: "Unusable paths were skipped while searching for runtimes:",
+                        Agent_Windows_Path_Command: "Command",
+                        Agent_Windows_Path_Invalid: "invalid path syntax",
+                        Agent_Windows_Path_Unusable: "inaccessible or unresolved path",
+                        Agent_Windows_Path_Characters: "characters",
+                        Agent_Windows_Paths_Documentation: "Windows long paths — Microsoft documentation",
+        
                         Agent_Studio_Session_Failed: "The Studio session could not be restored. Close and reopen the Assistant view, then try again.",
                         Agent_Operation_Failed: "The operation failed. Try again; if the problem persists, check the Studio logs.",
                         Agent_Operation_Failed_Server: "The operation failed. Try again; if the problem persists, contact the administrator to check the server logs.",
@@ -191,6 +203,7 @@ scriptContent:
         				Agent_Runtime_Reinstall: "Reinstall runtime",
         				Agent_Runtime_Install_Update: "Install or update",
         				Agent_Runtime_Updating: "Update in progress...",
+                        Agent_Runtime_Signing_In: "Signing in...",
         				Agent_Runtime_Select_Provider: "Choose Vibe, Codex, or Claude before installation.",
         				Agent_Runtime_Installation_Failed: "Installation failed: ",
                                         Agent_Runtime_No_Models: "The runtime did not provide any usable model for the selected provider.",
@@ -200,6 +213,9 @@ scriptContent:
         				Agent_Runtime_Updating_Vibe: "Updating Vibe..."
         			},
         			fr: {
+                        Agent_Windows_Diagnostic: "Diagnostic Windows",
+                        Agent_Windows_Paths_Documentation: "Chemins longs Windows — documentation Microsoft",
+        
                         Agent_Studio_Session_Failed: "La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.",
                         Agent_Operation_Failed: "L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.",
                         Agent_Operation_Failed_Server: "L’opération a échoué. Réessayez ; si le problème persiste, contactez l’administrateur pour consulter les logs du serveur.",
@@ -273,6 +289,7 @@ scriptContent:
         				Agent_Runtime_Reinstall: "Réinstaller le runtime",
         				Agent_Runtime_Install_Update: "Installer ou mettre à jour",
         				Agent_Runtime_Updating: "Mise à jour en cours...",
+                        Agent_Runtime_Signing_In: "Connexion en cours...",
         				Agent_Runtime_Select_Provider: "Choisissez Vibe, Codex ou Claude avant l’installation.",
         				Agent_Runtime_Installation_Failed: "Installation impossible : ",
                                         Agent_Runtime_No_Models: "Le runtime ne fournit aucun modèle utilisable pour le fournisseur sélectionné.",
@@ -282,6 +299,18 @@ scriptContent:
         				Agent_Runtime_Updating_Vibe: "Mise à jour de Vibe en cours..."
         			},
         			it: {
+                        Agent_Windows_Diagnostic: "Diagnostica Windows",
+                        Agent_Windows_Paths_Disabled: "I percorsi lunghi di Windows sono disabilitati. Potrebbero essere necessari per installare Python/npm.",
+                        Agent_Windows_Paths_Failed: "Studio non riesce a creare un file con un percorso di oltre 260 caratteri.",
+                        Agent_Windows_Paths_Restart: "Dopo l’attivazione, chiudi e riavvia Studio. Se necessario, riavvia Windows e riprova a installare il runtime.",
+                        Agent_Windows_Paths_Unknown: "Impossibile eseguire il test dei percorsi lunghi. Controlla i permessi di scrittura del workspace; la sola impostazione Windows non conferma il supporto dei runtime.",
+                        Agent_Windows_Path_Ignored: "Percorsi inutilizzabili ignorati durante la ricerca dei runtime:",
+                        Agent_Windows_Path_Command: "Comando",
+                        Agent_Windows_Path_Invalid: "sintassi del percorso non valida",
+                        Agent_Windows_Path_Unusable: "percorso non accessibile o non risolto",
+                        Agent_Windows_Path_Characters: "caratteri",
+                        Agent_Windows_Paths_Documentation: "Percorsi lunghi Windows — documentazione Microsoft",
+        
                         Agent_Studio_Session_Failed: "Impossibile ripristinare la sessione di Studio. Chiudi e riapri la vista Assistente, poi riprova.",
                         Agent_Operation_Failed: "Operazione non riuscita. Riprova; se il problema persiste, consulta i log di Studio.",
                         Agent_Operation_Failed_Server: "Operazione non riuscita. Riprova; se il problema persiste, contatta l’amministratore per consultare i log del server.",
@@ -355,6 +384,7 @@ scriptContent:
         				Agent_Runtime_Reinstall: "Reinstalla runtime",
         				Agent_Runtime_Install_Update: "Installa o aggiorna",
         				Agent_Runtime_Updating: "Aggiornamento in corso...",
+                        Agent_Runtime_Signing_In: "Accesso in corso...",
         				Agent_Runtime_Select_Provider: "Scegli Vibe, Codex o Claude prima dell’installazione.",
         				Agent_Runtime_Installation_Failed: "Installazione non riuscita: ",
                                         Agent_Runtime_No_Models: "Il runtime non fornisce alcun modello utilizzabile per il provider selezionato.",
@@ -364,6 +394,18 @@ scriptContent:
         				Agent_Runtime_Updating_Vibe: "Aggiornamento di Vibe..."
         			},
         			es: {
+                        Agent_Windows_Diagnostic: "Diagnóstico de Windows",
+                        Agent_Windows_Paths_Disabled: "Las rutas largas de Windows están desactivadas. Pueden ser necesarias para instalar Python/npm.",
+                        Agent_Windows_Paths_Failed: "Studio no puede crear un archivo con una ruta de más de 260 caracteres.",
+                        Agent_Windows_Paths_Restart: "Tras activarlas, cierra y reinicia Studio. Si es necesario, reinicia Windows y vuelve a instalar el runtime.",
+                        Agent_Windows_Paths_Unknown: "No se pudo ejecutar la prueba de rutas largas. Comprueba los permisos de escritura del workspace; el ajuste de Windows por sí solo no confirma la compatibilidad del runtime.",
+                        Agent_Windows_Path_Ignored: "Se omitieron rutas inutilizables al buscar los runtimes:",
+                        Agent_Windows_Path_Command: "Comando",
+                        Agent_Windows_Path_Invalid: "sintaxis de ruta no válida",
+                        Agent_Windows_Path_Unusable: "ruta inaccesible o no resuelta",
+                        Agent_Windows_Path_Characters: "caracteres",
+                        Agent_Windows_Paths_Documentation: "Rutas largas de Windows — documentación Microsoft",
+        
                         Agent_Studio_Session_Failed: "No se pudo restablecer la sesión de Studio. Cierre y vuelva a abrir la vista del Asistente e inténtelo de nuevo.",
                         Agent_Operation_Failed: "La operación falló. Inténtelo de nuevo; si el problema persiste, consulte los registros de Studio.",
                         Agent_Operation_Failed_Server: "La operación falló. Inténtelo de nuevo; si el problema persiste, contacte al administrador para consultar los registros del servidor.",
@@ -437,6 +479,7 @@ scriptContent:
         				Agent_Runtime_Reinstall: "Reinstalar runtime",
         				Agent_Runtime_Install_Update: "Instalar o actualizar",
         				Agent_Runtime_Updating: "Actualización en curso...",
+                        Agent_Runtime_Signing_In: "Iniciando sesión...",
         				Agent_Runtime_Select_Provider: "Elija Vibe, Codex o Claude antes de la instalación.",
         				Agent_Runtime_Installation_Failed: "Error de instalación: ",
                                         Agent_Runtime_No_Models: "El runtime no proporciona ningún modelo utilizable para el proveedor seleccionado.",
@@ -1578,8 +1621,8 @@ scriptContent:
                                 channel: "stable",
         			projects: [
                         { name: "lib_ConvertigoMCP", version: "0.2.20", tag: "v0.2.20", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.20/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.21", tag: "v0.4.21", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.21/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.4.46", tag: "v1.4.46", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.46/lib_ConvertigoAssistant.car" }
+                        { name: "lib_ConvertigoAgentBridge", version: "0.4.22", tag: "v0.4.22", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.22/lib_ConvertigoAgentBridge.car" },
+                        { name: "lib_ConvertigoAssistant", version: "1.4.47", tag: "v1.4.47", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.47/lib_ConvertigoAssistant.car" }
         			]
         		};
         	}
@@ -1872,6 +1915,35 @@ scriptContent:
         		});
         		return true;
         	}
+        
+        
+        public getAgentWindowsDiagnosticText() {
+            var settings: any = this.getAgentSettingsRoot();
+            var diagnostics = settings && settings.diagnostics;
+            if (!diagnostics || diagnostics.platform !== ''windows'') { return ''''; }
+            var lines = [], paths = diagnostics.longPaths || {}, issues = diagnostics.pathIssues || [];
+            if (paths.registryEnabled === false) {
+                lines.push(this.t(''Agent_Windows_Paths_Disabled'', ''Les chemins longs Windows sont désactivés. Leur activation peut être nécessaire pour installer Python/npm.''));
+            }
+            if (paths.fileSystemProbe === ''failed'') {
+                lines.push(this.t(''Agent_Windows_Paths_Failed'', ''Le Studio ne parvient pas à créer un fichier sur un chemin de plus de 260 caractères.''));
+            }
+            if (paths.registryEnabled === false || paths.fileSystemProbe === ''failed'') {
+                lines.push(this.t(''Agent_Windows_Paths_Restart'', ''Après activation, fermez et relancez le Studio. Si nécessaire, redémarrez Windows, puis réessayez l’installation du runtime.''));
+            } else if (paths.fileSystemProbe === ''unknown'') {
+                lines.push(this.t(''Agent_Windows_Paths_Unknown'', ''Le test des chemins longs n’a pas pu être exécuté. Vérifiez les droits d’écriture du workspace ; le réglage Windows ne suffit pas à confirmer le fonctionnement des runtimes.''));
+            }
+            if (issues.length) {
+                lines.push(this.t(''Agent_Windows_Path_Ignored'', ''Des chemins inutilisables ont été ignorés pendant la recherche des runtimes :''));
+                for (var i = 0; i < issues.length; i++) {
+                    var issue = issues[i] || {};
+                    var source = issue.source === ''path'' ? ''PATH'' : (issue.source === ''extra_path'' ? ''PATH runtime'' : this.t(''Agent_Windows_Path_Command'', ''Commande''));
+                    var reason = issue.code === ''invalid_path'' ? this.t(''Agent_Windows_Path_Invalid'', ''syntaxe de chemin invalide'') : this.t(''Agent_Windows_Path_Unusable'', ''chemin inaccessible ou non résolu'');
+                    lines.push(source + '' ['' + Number(issue.index || 0) + ''] · '' + Number(issue.pathLength || 0) + '' '' + this.t(''Agent_Windows_Path_Characters'', ''caractères'') + '' · '' + reason);
+                }
+            }
+            return lines.join(''\n'');
+        }
         
         	public openAgentExternalUrl(url) {
         		try {
@@ -6724,7 +6796,7 @@ title: Tigo
                       textValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeLoading === true) ? this.t(''Agent_Runtime_Updating'', ''Mise à jour en cours...'') : ((this.local && this.local.AgentRuntimeActionText) ? this.local.AgentRuntimeActionText : this.t(''Agent_Runtime_Install_Update'', ''Installer ou mettre à jour''))'
+                          - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeLoading === true) ? (this.local.AgentAuthenticationRequired === true ? this.t(''Agent_Runtime_Signing_In'', ''Connexion en cours...'') : this.t(''Agent_Runtime_Updating'', ''Mise à jour en cours...'')) : ((this.local && this.local.AgentRuntimeActionText) ? this.local.AgentRuntimeActionText : this.t(''Agent_Runtime_Install_Update'', ''Installer ou mettre à jour''))'
                     ↓Event [ngx.components.UIControlEvent-1785253202555]: 
                       ↓InstallOrUpdateRuntime [ngx.components.UICustomAction-1785253204061]: 
                         actionValue: 
@@ -6843,7 +6915,7 @@ title: Tigo
                                                 page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(loginResponse) {
                                                     var loginResult = loginResponse && loginResponse.result ? loginResponse.result : {};
                                                     var login = loginResult.login || {};
-                                                    var verificationUrl = clean(login.verificationUrl);
+                                                    var verificationUrl = clean(login.verificationUrl || login.manualUrl);
                                                     if (verificationUrl.length && verificationUrl !== openedUrl) {
                                                         openedUrl = verificationUrl;
                                                         if (page.openAgentExternalUrl) { page.openAgentExternalUrl(verificationUrl); }
@@ -7014,6 +7086,69 @@ title: Tigo
                                             page.tick();
                                             resolve();
                                         });'
+                  ↓WindowsDiagnosticsIf [ngx.components.UIControlDirective-1792058007258]: 
+                    directiveName: If
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.getAgentWindowsDiagnosticText().length > 0
+                    ↓Diagnostic [ngx.components.UIDynamicElement-1792058011754]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Class [ngx.components.UIAttribute-1792058011756]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-windows-diagnostics
+                      ↓Title [ngx.components.UIDynamicElement-1792058011758]: 
+                        beanData: '{"ionBean":"Paragraph"}'
+                        tagName: p
+                        ↓Class [ngx.components.UIAttribute-1792058011760]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-label
+                        ↓Text [ngx.components.UIText-1792058011762]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.t('Agent_Windows_Diagnostic', 'Diagnostic Windows')
+                      ↓Message [ngx.components.UIDynamicElement-1792058011764]: 
+                        beanData: '{"ionBean":"Paragraph"}'
+                        tagName: p
+                        ↓Class [ngx.components.UIAttribute-1792058011766]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-windows-diagnostic-text
+                        ↓Text [ngx.components.UIText-1792058011768]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.getAgentWindowsDiagnosticText()
+                      ↓Documentation [ngx.components.UIDynamicElement-1792058011770]: 
+                        beanData: |
+                          '{
+                           "ionBean": "Button",
+                           "IonFill": "plain:clear",
+                           "IonSize": "plain:small"
+                          }'
+                        tagName: ion-button
+                        ↓Text [ngx.components.UIText-1792058011772]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.t('Agent_Windows_Paths_Documentation', 'Chemins longs Windows — documentation Microsoft')
+                        ↓Event [ngx.components.UIControlEvent-1792058011774]: 
+                          ↓OpenMicrosoftDocumentation [ngx.components.UICustomAction-1792058013368]: 
+                            actionValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                  →: page.openAgentExternalUrl('https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation'); resolve();
                 ↓ContinueActions [ngx.components.UIDynamicElement-1785315895962]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -9371,7 +9506,8 @@ title: Tigo
                     		if (resumedProvider.length) {
                     			page.local.AgentProvider = resumedProvider.toLowerCase();
                     		}
-                    		if (state.model != null || actionResult.model != null || data.model != null) {
+                    		// An empty startup response must not replace the confirmed provider’s model.
+                    		if (resumedProvider.length && (state.model != null || actionResult.model != null || data.model != null)) {
                     			page.local.AgentModel = trimValue(state.model != null ? state.model : (actionResult.model != null ? actionResult.model : data.model));
                     		}
                     		clearLegacyPollers();
@@ -13917,6 +14053,19 @@ title: Tigo
               border-top-color: rgba(148, 163, 184, 0.24);
             }
           }
+          
+          .agent-windows-diagnostics {
+            grid-column: 1 / -1;
+            border: 1px solid #b7791f;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            color: var(--ion-text-color, inherit);
+            background: rgba(217, 119, 6, 0.09);
+          }
+          .agent-windows-diagnostics p { margin: 0 0 8px; }
+          .agent-windows-diagnostic-text { white-space: pre-line; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; }
+          .agent-windows-diagnostics ion-button { margin: 0; height: auto; white-space: normal; text-transform: none; --padding-start: 0; }
           '
 ↓AgentSettingsActionsStyle [ngx.components.UIStyle-1785315917048]: 
   styleContent: 

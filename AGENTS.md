@@ -22,6 +22,20 @@ rediscovering the same context.
   agent surface.
 - The agent should act on the currently selected Convertigo project through the
   bridge and Convertigo MCP, not only generate component snippets.
+
+## backend-apps deployment boundary
+
+- For `assistant.convertigo.com`, deploy only `lib_ConvertigoAssistant` on
+  `backend-apps.convertigo.net`. Neither `lib_ConvertigoAgentBridge` nor
+  `lib_ConvertigoMCP` is required on this hosting server; do not deploy them there
+  when publishing or updating the Studio bundle.
+- The Studio bundle still contains all three projects. Install the Assistant,
+  Bridge and MCP together in the developer's Studio, where the CLI agents, MCP
+  tools, conversations and wrapper quotas run.
+- A separate server/NoCode installation that actually executes agents has its
+  own full-stack requirements. Do not apply those requirements to backend-apps
+  merely because it hosts the public Assistant frontend. TigoAccess is a
+  separate hosted service and is unaffected by this rule.
 - Existing Figma and LightRAG areas still exist; keep agent-specific changes
   scoped to the agent page/bridge path unless the user asks otherwise.
 - User-facing prompts should instruct the LLM in English, but the agent must
@@ -321,6 +335,18 @@ rediscovering the same context.
 - `AgentSendMessage` receives the entries as `AIFiles`; the sequence prompt
   lists `name=`/`path=` lines so Codex, Vibe, and Claude read the files locally.
 
+## Provider browser sign-in (8.4.6)
+
+- Convertigo request flags are strings: parse each login/loginStatus and provider
+  alias with `boolValue` before combining them. A literal `"false"` must never
+  mask a later true flag or route login polling through normal runtime setup.
+- Keep the `agent.login` response envelope, including verification/manual URLs,
+  until authentication completes. The UI opens a delayed URL once, polls without
+  installing/updating a runtime, and refreshes provider settings after success.
+- Display signing-in and updating as different action labels. Validate with
+  `node --test tests/assistant_login.test.cjs` and a native Studio browser login;
+  the tests cover string-valued flags for Codex, Claude and Vibe.
+
 ## Quota display (8.4.6)
 
 - The native NGX `LightRagFooterComponent` quota arc reads the authenticated `AgentQuota`
@@ -362,3 +388,15 @@ rediscovering the same context.
 - `ensureAgentNativeContextBridge()` installs the Java receiver wrapper during host-context retries too: the native receiver can appear after Page initialization or be replaced on reload. Forward native context exactly once, retain the original delegate and restore it only when the wrapper is still current. Check `tests/assistant_native_context.test.cjs`.
 
 - Release 1.4.46 pairs Bridge 0.4.21 with Mistral reasoning/cache corrections and the clarified usage popup. Both `stack-release.json` and the Page fallback must pin those exact CAR versions. CI honors `[skip deploy]` in the release commit on branch and tag pushes, so publication can happen without server deployment.
+
+## Windows diagnostics and startup model restoration
+
+- Assistant 1.4.47 pairs Bridge 0.4.22 with MCP 0.2.20. Update both manifest
+  copies together, publishing dependency CARs before the public master manifest.
+- Windows runtime warnings come from structured Bridge `diagnostics`. Distinguish
+  disabled registry settings, failed long-path probes and inconclusive write
+  checks. Show the Microsoft documentation through `openAgentExternalUrl`.
+  PATH issue details include source/index/length/category only, never raw paths.
+- A provider-less startup conversation response must not overwrite the model
+  restored from confirmed preferences. A real resumed provider restores its model.
+- Validate with `node --test tests/assistant_windows_diagnostics.test.cjs`.
