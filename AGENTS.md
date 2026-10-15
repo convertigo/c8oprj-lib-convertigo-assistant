@@ -393,6 +393,8 @@ rediscovering the same context.
 
 - Assistant 1.4.47 pairs Bridge 0.4.22 with MCP 0.2.20. Update both manifest
   copies together, publishing dependency CARs before the public master manifest.
+- Assistant 1.4.48 pairs Bridge 0.4.22 with MCP 0.2.23 (inline ping, setup
+  sequences writing `X-Convertigo-No-Log`). Only the manifest copies changed.
 - Windows runtime warnings come from structured Bridge `diagnostics`. Distinguish
   disabled registry settings, failed long-path probes and inconclusive write
   checks. Show the Microsoft documentation through `openAgentExternalUrl`.
