@@ -61,7 +61,8 @@ rediscovering the same context.
   profiles back to the standard Studio profile when that gate is closed.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
-- Keep start templates only on the new conversation screen.
+- Tigo 1.5 favorites can insert prompts into the draft of new or existing
+  conversations, without auto-send. Keep classic How-To suggestions separate.
 - Preserve accumulated progress steps after completion and collapse them by
   default, similar to Codex Desktop.
 - Build the style with light/dark theme variables now, then align it with
@@ -411,3 +412,40 @@ rediscovering the same context.
 - A provider-less startup conversation response must not overwrite the model
   restored from confirmed preferences. A real resumed provider restores its model.
 - Validate with `node --test tests/assistant_windows_diagnostics.test.cjs`.
+
+## Tigo 1.5 resource library
+
+- See `docs/tigo-library.md` for format, ownership and runtime contracts.
+- Assistant 1.5.0 pairs Bridge 0.4.23 and MCP 0.2.24. Update both
+  `stack-release.json` and the Page fallback manifest together.
+- `js/tigo_resources.js` owns the portable resource core and its Java host. The
+  authenticated `AgentResources` facade derives identity, checks conversation
+  ownership and requires a session CSRF token for mutations. A Studio auth
+  failure must remain an EngineException so the existing renewal interceptor
+  can retry once. Never accept a client-selected filesystem path or user.
+- Project resources live in `.tigo/`, protected by `.httpignore`; personal
+  resources/preferences/selections/secrets live under `agents/tigo/users`.
+  Built-ins are read-only, with Studio/NoCode surfaces and EN/FR translations.
+- Page configuration uses native NGX accordions. Footer favorites remain
+  available during a conversation, append to drafts and never auto-send.
+- Skills are injected once per revision/provider session. Track the accepted
+  submission only, and bind a newly returned session ID without reinjection.
+  Disabling cannot erase model history. Missing selections must remain visible
+  with a recovery action; changed active MCP declarations require reapproval.
+- MCP activation uses an opaque private-memory handle and conversation homes;
+  raw secrets never enter browser state, prompts, records or generated configs.
+  Keep the managed Convertigo skill/MCP intact.
+- `tigo-resources` in lib_ConvertigoMCP delegates project-only operations to this
+  core and must independently require a full MCP bearer token. It cannot alter
+  favorites, activation, personal resources or secrets.
+- Run `node --test tests/tigo_resources*.test.cjs` plus the existing Assistant
+  and NoCode checks. Quota tests require a current canonical Page snapshot
+  with the current LightRagFooterComponent tree in `snapshot.footer`.
+- The 8.4.6 release line must keep the module-based NGX legacy template, pinned
+  to `8ca383ae844129df72bd3436a7869bfdc0a69d5c` (8.4.0.18). The floating
+  `mobilebuilder_tpl_8_4_0_ngx` branch is now standalone and causes silent
+  generation exceptions with the official 8.4.6 plugin. Validate log contents,
+  not only Gradle's exit status.
+- New/resumed conversations defer provider startup until the next authenticated
+  send. Optional detached prewarm is disabled in 1.5 because it can race MCP
+  selection and start the shared user home without conversation resources.

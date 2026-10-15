@@ -2,8 +2,10 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 const snapshotPath=process.env.CONVERTIGO_QUOTA_UI_SNAPSHOT;
 assert.ok(snapshotPath,'Export the Page canonical tree through hotfix MCP and set CONVERTIGO_QUOTA_UI_SNAPSHOT');
-const root=JSON.parse(fs.readFileSync(snapshotPath,'utf8')).tree;
-function find(n,name){if(n.name===name)return n;for(const c of n.children||[]){const r=find(c,name);if(r)return r;}return null;}
+const snapshot=JSON.parse(fs.readFileSync(snapshotPath,'utf8'));
+const root=snapshot.tree,footer=snapshot.footer;
+assert.ok(footer,'Include the current LightRagFooterComponent canonical tree as snapshot.footer');
+function find(n,name){if(n.name===name&&(name!=='ReadQuota'||n.className==='ngx.components.UIDynamicAction#CallSequenceAction'))return n;for(const c of n.children||[]){const r=find(c,name);if(r)return r;}return null;}
 const ts=require(require.resolve('typescript',{paths:[process.cwd()+'/_private/ionic']}));
 const source=root.properties.scriptContent;
 const methods=source.slice(source.indexOf('    public requestAgentQuota('),source.indexOf('/*End_c8o_PageFunction*/'));
@@ -12,6 +14,7 @@ const sandbox={Date,console};vm.runInNewContext(code+'\nthis.QuotaPage=QuotaPage
 const page=new sandbox.QuotaPage();let provider='convertigo';const events=[];
 page.local={Conversation:'first'};page.global={language:'fr'};page.translate={currentLang:'fr'};
 page.getAgentProvider=()=>provider;page.getAgentProviderLabel=p=>p;page.isAgentBridgeMode=()=>true;page.tick=()=>{};
+page.requestTigoResources=()=>{}; // Library startup is covered separately; isolate quota events here.
 page.events={publish(topic,data){events.push({topic,data});}};
 page.requestAgentQuota();page.requestAgentQuota();assert.equal(events.length,1);
 const first=events[0].data;
@@ -50,18 +53,18 @@ page.local.AgentQuota.context.costAmount=null;
 assert.equal(page.getAgentQuotaView().cost,'','missing cost is not zero');
 page.local.AgentQuota.context.costAmount=-1;
 assert.equal(page.getAgentQuotaView().cost,'');
-assert.equal(find(root,'CostIf').properties.directiveExpression,'AgentQuotaView?.cost');
+assert.equal(find(footer,'CostIf').properties.directiveExpression,'AgentQuotaView?.cost');
 const failure=find(call,'QuotaUnavailable');const failAction=new Function('page','props','vars','event','resolve','reject',failure.properties.actionValue);
 failAction(page,{stack:{root:{out:events[3].data}}},{},null,()=>{},e=>{throw e;});
 assert.equal(page.local.AgentQuotaPendingKey,'');assert.equal(page.local.AgentQuotaLoading,false);
 page.requestAgentQuota(true);assert.equal(events.length,5,'retry works after failure');
 page.local.Conversation='second';respond(events[4].data,{status:'ok',quota:{provider:'vibe',available:true,kind:'limits',windows:[]}});
 assert.equal(page.local.AgentQuota.available,false,'late conversation response is discarded');
-const quotaBar=find(root,'QuotaIf');assert.ok(quotaBar&&quotaBar.children.length);
-assert.equal(find(root,'PortalIf').properties.directiveExpression,"AgentQuotaView?.portalUrl");
-assert.equal(find(root,'Href').properties.attrValue.mode,'SCRIPT');
-assert.equal(find(root,'Rel').properties.attrValue.value,'noopener noreferrer');
-assert.equal(find(root,'QuotaRows').properties.directiveItemName,'quotaRow');
+const quotaBar=find(footer,'QuotaIf');assert.ok(quotaBar&&quotaBar.children.length);
+const portalNode=find(footer,'PortalIf');assert.equal(portalNode.properties.directiveExpression,"AgentQuotaView?.portalUrl");
+assert.equal(find(portalNode,'Href').properties.attrValue.mode,'SCRIPT');
+assert.equal(find(portalNode,'Rel').properties.attrValue.value,'noopener noreferrer');
+assert.equal(find(footer,'QuotaRows').properties.directiveItemName,'quotaRow');
 assert.equal(find(root,'ReadQuota').properties.requestable.value,'lib_ConvertigoAssistant.AgentQuota');
 assert.ok(!/fetch\(|callJson/.test(methods));
 // The compact indicator uses the limiting account window, never Vibe context capacity.
@@ -74,13 +77,13 @@ provider='convertigo';page.local.AgentQuota={provider,available:true,kind:'credi
 view=page.getAgentQuotaView();assert.equal(view.percent,25);assert.equal(view.color,'#ef4444');assert.equal(view.portalUrl,portal);assert.match(view.summary,/7.50/);
 provider='vibe';page.local.AgentQuota={provider,available:false,kind:'context',context:{usedTokens:999,limitTokens:1000}};page.local.AgentQuotaContext='Contexte: 999 / 1000 tokens';view=page.getAgentQuotaView();assert.equal(view.percent,null);assert.match(view.context,/999/);assert.equal(view.portalUrl,'');
 page.local.Conversation='new-conversation';view=page.getAgentQuotaView();assert.equal(view.percent,null);assert.equal(view.context,'','context from another conversation stays hidden');
-assert.equal(find(root,'QuotaPopover').className,'ngx.components.UIDynamicElement#InlinePopover');
-assert.equal(find(root,'QuotaPopover').properties.Side.value,'top');
-assert.equal(find(root,'QuotaTrigger').properties.ButtonFormType.value,'button');
+assert.equal(find(footer,'QuotaPopover').className,'ngx.components.UIDynamicElement#InlinePopover');
+assert.equal(find(footer,'QuotaPopover').properties.Side.value,'top');
+assert.equal(find(footer,'QuotaTrigger').properties.ButtonFormType.value,'button');
 assert.equal(page.quotaWindowTitle({id:'codex:primary',windowDurationMins:10080}),page.quotaLabel('weekly'));
 assert.match(page.quotaWindowTitle({id:'seven_day_Fable',windowDurationMins:10080}),/Fable/);
-assert.equal(find(root,'QuotaPopover').properties.Trigger.value,'quotaTriggerId');
-assert.equal(find(root,'Id').properties.attrValue.value,'quotaTriggerId');
+assert.equal(find(footer,'QuotaPopover').properties.Trigger.value,'quotaTriggerId');
+assert.equal(find(find(footer,'QuotaTrigger'),'Id').properties.attrValue.value,'quotaTriggerId');
 console.log('Quota arc: limiting window, colors, unknown usage, context isolation and native popup passed');
 console.log('Quota UI: provider isolation, exhausted/expired credit, portal, context distinction, failure and retry passed');
 // Exercise the real server-only handle lookup with a stubbed state store.

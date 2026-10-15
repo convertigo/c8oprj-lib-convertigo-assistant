@@ -154,7 +154,13 @@ test('Forms welcome suggestions follow the selected resource and remain draft pr
     }
   }
   const footer = fs.readFileSync(path.join(root, '_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml'), 'utf8');
-  assert.match(footer, /setSuggestion\(question\)\s*\{\s*this\.setQuestionText\(question, true\);\s*\}/);
+  const content=require('./helpers/assistant-source.cjs').blockWith('_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml','/*Begin_c8o_CompImport*/');
+  const parsed=ts.createSourceFile('footer.ts','class Footer { '+content.slice(content.indexOf('/*Begin_c8o_CompFunction*/'),content.indexOf('/*End_c8o_CompFunction*/'))+' }',ts.ScriptTarget.Latest,true);
+  const method=parsed.statements[0].members.find(member=>member.name?.getText(parsed)==='setSuggestion');
+  const footerSandbox={};vm.runInNewContext(ts.transpileModule('class Footer { '+method.getText(parsed)+' };this.Footer=Footer;',{}).outputText,footerSandbox);
+  const component=new footerSandbox.Footer();let draft='Existing draft';component.getQuestionText=()=>draft;component.setQuestionText=value=>draft=value;
+  component.setSuggestion('Template');assert.equal(draft,'Existing draft\n\nTemplate');
+  draft='';component.setSuggestion('Template');assert.equal(draft,'Template');
 });
 
 test('NoCode uses the deployed bridge library and surfaces engine errors; Studio defaults remain unchanged', () => {

@@ -19,6 +19,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user') 
     gatewayApiKey: 'NEVER-EXPOSE-THIS', setup: {}, messages: [] };
   const calls = [];
   const sandbox = {
+    C8O: {},
     trim: v => String(v ?? '').trim(), normalizeProvider: v => v,
     normalizeSkillProfile: s => s.userId === 'studio' ? 'generalist' : 'nocode',
     optionsWithRequestFallbacks: v => v, enrichNoCodePrompt: v => v, extractUserMessage: v => v,

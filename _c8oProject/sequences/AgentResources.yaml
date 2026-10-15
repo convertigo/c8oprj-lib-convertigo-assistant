@@ -1,0 +1,37 @@
+accessibility: Hidden
+comment: Authenticated Tigo prompt, skill and MCP library. Per-user preferences and secrets; project resources require WEB_ADMIN. No client-supplied user or filesystem paths.
+includeResponseElement: false
+responseTimeout: 30
+↓Run [steps.SimpleStep-1792084008401]: 
+  expression: |
+    'include("js/tigo_resources.js");
+    include("js/agent_bridge_client.js");
+    try {
+        response = C8O.assistantAgentBridge.resources(JSON.parse(String(request || "{}")));
+    } catch (e) {
+        var code = String(e.code || e.message || "resource_error");
+        if (code === "authentication_required" && Packages.com.twinsoft.convertigo.engine.Engine.isStudioMode()) {
+            throw new Packages.com.twinsoft.convertigo.engine.EngineException("WEB_ADMIN authentication is required");
+        }
+        response = {ok:false,error:{code:code}};
+    }'
+↓Response [steps.JsonToXmlStep-1792084008403]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓request [variables.RequestableVariable-1792084008407]: 
+  comment: Resource operation object, without user identity or storage paths.
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15

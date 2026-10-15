@@ -231,7 +231,7 @@ scriptContent:
         		var list = [];
         		try {
         			if (source && source.length != null) {
-        				for (var i = 0; i < source.length && i < 6; i++) {
+        				for (var i = 0; i < source.length; i++) {
         					var fallback = defaults[i] || defaults[0];
         					var item = this.normalizeSuggestionItem(source[i], fallback);
         					if (('''' + item.question).trim().length) {
@@ -435,7 +435,8 @@ scriptContent:
         	}
         	
         	setSuggestion(question) {
-        		this.setQuestionText(question, true);
+        		var draft = this.getQuestionText().trim();
+                this.setQuestionText(draft ? draft + ''\n\n'' + question : question, true);
         	}
         	
         	clearQuestion() {
@@ -1266,318 +1267,69 @@ scriptContent:
     ↓Row [ngx.components.UIDynamicElement-1772100000111]: 
       beanData: '{"ionBean":"DivTag"}'
       tagName: div
-      ↓Class [ngx.components.UIAttribute-1772100000112]: 
-        attrName: class
-        attrValue: 
+      ↓FavoritePrompts [ngx.components.UIControlDirective-1792084655833]: 
+        directiveIndexName: favoritePromptIndex
+        directiveItemName: favoritePrompt
+        directiveSource: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:modern-suggestions-row
-      ↓S1 [ngx.components.UIDynamicElement-1772100000113]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1772100000114]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s1
-        ↓Hidden [ngx.components.UIAttribute-1775800000101]: 
-          attrName: '[hidden]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.hasSuggestion(0)
-        ↓Icon [ngx.components.UIDynamicElement-1772100000241]: 
+            - MobileSmartSourceType: script:this.getSuggestions()
+        ↓Prompt [ngx.components.UIDynamicElement-1792084660361]: 
           beanData: |
             '{
-             "ionBean": "Icon",
-             "IconName": "plain:code-slash-outline",
-             "IconSlot": "plain:start"
+             "ionBean": "Button",
+             "Disabled": "script:this.disabled",
+             "IonFill": "plain:clear"
             }'
-          tagName: ion-icon
-          ↓Name [ngx.components.UIAttribute-1775800000102]: 
-            attrName: '[name]'
-            attrValue: 
+          tagName: ion-button
+          ↓Text [ngx.components.UIText-1792084660363]: 
+            textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.getSuggestionIcon(0)
-          ↓Class [ngx.components.UIAttribute-1772100000242]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-suggestion-icon
-        ↓Text [ngx.components.UIText-1772100000115]: 
-          i18n: true
+                - MobileSmartSourceType: script:favoritePrompt.label
+          ↓Click [ngx.components.UIControlEvent-1792084660365]: 
+            ↓Apply [ngx.components.UICustomAction-1792084661991]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      page.setSuggestion(props.stack.root.scope.favoritePrompt.question);
+                      resolve();
+      ↓AllPrompts [ngx.components.UIDynamicElement-1792084661993]: 
+        beanData: |
+          '{
+           "ionBean": "Button",
+           "Disabled": "script:false",
+           "IonFill": "plain:clear"
+          }'
+        tagName: ion-button
+        ↓Text [ngx.components.UIText-1792084661995]: 
           textValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getSuggestionLabel(0)
-        ↓Event [ngx.components.UIControlEvent-1773600000101]: 
-          ↓SetSuggestion [ngx.components.UICustomAction-1773600000102]: 
+              - MobileSmartSourceType: 'script:(''''+this.translate?.currentLang).toLowerCase().startsWith(''fr'') ? ''Tous les prompts…'' : ''All prompts…'''
+        ↓Click [ngx.components.UIControlEvent-1792084661997]: 
+          ↓Apply [ngx.components.UICustomAction-1792084661999]: 
             actionValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    		page.setSuggestionByIndex(0);
-                    		resolve();
-      ↓S2 [ngx.components.UIDynamicElement-1772100000116]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1772100000117]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s2
-        ↓Hidden [ngx.components.UIAttribute-1775800000103]: 
+                    page.ResourcesOpen.emit();
+                    resolve();
+        ↓HideForClassic [ngx.components.UIAttribute-1792084775721]: 
           attrName: '[hidden]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.hasSuggestion(1)
-        ↓Icon [ngx.components.UIDynamicElement-1772100000243]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IconName": "plain:move-outline",
-             "IconSlot": "plain:start"
-            }'
-          tagName: ion-icon
-          ↓Name [ngx.components.UIAttribute-1775800000104]: 
-            attrName: '[name]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.getSuggestionIcon(1)
-          ↓Class [ngx.components.UIAttribute-1772100000244]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-suggestion-icon
-        ↓Text [ngx.components.UIText-1772100000118]: 
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getSuggestionLabel(1)
-        ↓Event [ngx.components.UIControlEvent-1773600000104]: 
-          ↓SetSuggestion [ngx.components.UICustomAction-1773600000105]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.setSuggestionByIndex(1);
-                    		resolve();
-      ↓S3 [ngx.components.UIDynamicElement-1772100000119]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1772100000120]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s3
-        ↓Hidden [ngx.components.UIAttribute-1775800000105]: 
-          attrName: '[hidden]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.hasSuggestion(2)
-        ↓Icon [ngx.components.UIDynamicElement-1772100000245]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IconName": "plain:git-network-outline",
-             "IconSlot": "plain:start"
-            }'
-          tagName: ion-icon
-          ↓Name [ngx.components.UIAttribute-1775800000106]: 
-            attrName: '[name]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.getSuggestionIcon(2)
-          ↓Class [ngx.components.UIAttribute-1772100000246]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-suggestion-icon
-        ↓Text [ngx.components.UIText-1772100000121]: 
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getSuggestionLabel(2)
-        ↓Event [ngx.components.UIControlEvent-1773600000107]: 
-          ↓SetSuggestion [ngx.components.UICustomAction-1773600000108]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.setSuggestionByIndex(2);
-                    		resolve();
-      ↓S4 [ngx.components.UIDynamicElement-1772100000225]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1772100000226]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s4
-        ↓Hidden [ngx.components.UIAttribute-1775800000107]: 
-          attrName: '[hidden]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.hasSuggestion(3)
-        ↓Icon [ngx.components.UIDynamicElement-1772100000247]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IconName": "plain:server-outline",
-             "IconSlot": "plain:start"
-            }'
-          tagName: ion-icon
-          ↓Name [ngx.components.UIAttribute-1775800000108]: 
-            attrName: '[name]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.getSuggestionIcon(3)
-          ↓Class [ngx.components.UIAttribute-1772100000248]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-suggestion-icon
-        ↓Text [ngx.components.UIText-1772100000227]: 
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getSuggestionLabel(3)
-        ↓Event [ngx.components.UIControlEvent-1773600000110]: 
-          ↓SetSuggestion [ngx.components.UICustomAction-1773600000111]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.setSuggestionByIndex(3);
-                    		resolve();
-      ↓S5 [ngx.components.UIDynamicElement-1772100000228]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1772100000229]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s5
-        ↓Hidden [ngx.components.UIAttribute-1775800000109]: 
-          attrName: '[hidden]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.hasSuggestion(4)
-        ↓Icon [ngx.components.UIDynamicElement-1772100000249]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IconName": "plain:lock-closed-outline",
-             "IconSlot": "plain:start"
-            }'
-          tagName: ion-icon
-          ↓Name [ngx.components.UIAttribute-1775800000110]: 
-            attrName: '[name]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.getSuggestionIcon(4)
-          ↓Class [ngx.components.UIAttribute-1772100000250]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-suggestion-icon
-        ↓Text [ngx.components.UIText-1772100000230]: 
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getSuggestionLabel(4)
-        ↓Event [ngx.components.UIControlEvent-1773600000113]: 
-          ↓SetSuggestion [ngx.components.UICustomAction-1773600000114]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.setSuggestionByIndex(4);
-                    		resolve();
-      ↓S6 [ngx.components.UIDynamicElement-1772100000231]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:outline"}'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1772100000232]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-suggestion-btn modern-suggestion-btn-s6
-        ↓Hidden [ngx.components.UIAttribute-1775800000111]: 
-          attrName: '[hidden]'
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:!this.hasSuggestion(5)
-        ↓Icon [ngx.components.UIDynamicElement-1772100000251]: 
-          beanData: |
-            '{
-             "ionBean": "Icon",
-             "IconName": "plain:phone-portrait-outline",
-             "IconSlot": "plain:start"
-            }'
-          tagName: ion-icon
-          ↓Name [ngx.components.UIAttribute-1775800000112]: 
-            attrName: '[name]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.getSuggestionIcon(5)
-          ↓Class [ngx.components.UIAttribute-1772100000252]: 
-            attrName: class
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:modern-suggestion-icon
-        ↓Text [ngx.components.UIText-1772100000233]: 
-          i18n: true
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getSuggestionLabel(5)
-        ↓Event [ngx.components.UIControlEvent-1773600000116]: 
-          ↓SetSuggestion [ngx.components.UICustomAction-1773600000117]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    		page.setSuggestionByIndex(5);
-                    		resolve();
+              - MobileSmartSourceType: script:!this.EnableResources
   ↓Hidden [ngx.components.UIAttribute-1782760048334]: 
     attrName: '[hidden]'
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:!this.hasSuggestion(0)
+        - MobileSmartSourceType: script:!this.EnableResources && !this.getSuggestions().length
 ↓InputToolBar [ngx.components.UIDynamicElement-1772100000122]: 
   beanData: '{"ionBean":"ToolBar"}'
   tagName: ion-toolbar
@@ -2469,7 +2221,7 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:!(this.AgentProviderLabel && ('' + this.AgentProviderLabel).length > 0)
           ↓Aria [ngx.components.UIAttribute-1789743675353]: 
-            attrName: aria-label
+            attrName: '[attr.aria-label]'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -4425,3 +4177,17 @@ scriptContent:
           .quota-cost { margin-top:10px;font-size:12px; }
           .quota-cost-note { margin-top:6px;color:var(--ion-color-medium,#64748b);font-size:12px;line-height:1.5; }
           
+↓ResourcesOpen [ngx.components.UICompEvent-1792084669219]: 
+  attrName: ResourcesOpen
+↓TigoPromptInsert [ngx.components.UIEventSubscriber-1792084673807]: 
+  topic: TigoPromptInsert
+  ↓InsertPrompt [ngx.components.UICustomAction-1792084675433]: 
+    actionValue: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+          →: |
+            page.setSuggestion(props.stack.root.out.text);page.tick();
+            resolve();
+↓EnableResources [ngx.components.UICompVariable-1792084766637]: 
+  value: false

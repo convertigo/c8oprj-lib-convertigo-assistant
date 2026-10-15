@@ -41,6 +41,7 @@ function fixture({ studio = false, language = 'fr', request } = {}) {
     getAgentHostContextObject: () => ({ localAssistantVersion: '1.4.18', localMcpVersion: '0.2.8', localAgentBridgeVersion: '0.4.10', localAgentStackUpdateAllowed: true }),
     normalizeAgentHostContextValue: v => String(v ?? '').trim(),
     getAgentContextUserId: () => studio ? 'studio' : 'test-user',
+    requestTigoResources() {},
     getC8OformsText: key => key, tick() {}, setEnableChat() {}, syncFooterPlaceholder() {},
     setAgentSettingsUrlState() {}, requestAgentHostContext() {},
     c8o: { log: { warn() {} }, callJsonObject(name, payload) {

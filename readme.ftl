@@ -5,8 +5,8 @@
 
 # Tigo, the Convertigo agent
 
-Tigo brings a local AI agent into Convertigo Studio. It connects OpenAI Codex
-or Mistral Vibe to the current workspace through Convertigo MCP and the
+Tigo brings a local AI agent into Convertigo Studio. It connects OpenAI Codex,
+Claude Code or Mistral Vibe to the current workspace through Convertigo MCP and the
 Convertigo Agent Bridge.
 
 Tigo can inspect and modify Convertigo projects, run backend requests, open NGX
@@ -15,6 +15,8 @@ works.
 
 ## Highlights
 
+- A [prompt, skill and MCP library](docs/tigo-library.md) with personal favorites,
+  shared project resources and English/French built-ins.
 - Project-aware conversations in the Convertigo Assistant view.
 - Workspace-managed OpenAI Codex and Mistral Vibe runtimes.
 - Structured project discovery, editing, and validation through Convertigo MCP.

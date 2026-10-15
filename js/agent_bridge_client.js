@@ -50,7 +50,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var HashMap = Packages.java.util.HashMap;
   var UUID = Packages.java.util.UUID;
   var System = Packages.java.lang.System;
-  var Runnable = Packages.java.lang.Runnable;
   var Thread = Packages.java.lang.Thread;
   var MessageDigest = Packages.java.security.MessageDigest;
   var InternalRequester = Packages.com.twinsoft.convertigo.engine.requesters.InternalRequester;
@@ -1621,6 +1620,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } else if (result.sessionId) {
       state.externalSessionId = String(result.sessionId);
     }
+    if (state.resourceContextEpoch === state.provider + ":" && state.externalSessionId) {
+      state.resourceContextEpoch = state.provider + ":" + state.externalSessionId;
+    }
   }
 
   function providerHomeScope(options, primaryName, secondaryName, defaultValue) {
@@ -1811,54 +1813,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function prewarmCodexAppServer(state, options) {
-    if (!state || !isResidentProvider(state.provider)) {
-      return false;
-    }
-    if (state.status === "deleted" || state.status === "setup_required") {
-      return false;
-    }
-    var bridgeOptions = {
-      bridgeBaseUrl: state.bridgeBaseUrl || (options && options.bridgeBaseUrl) || defaultBridgeUrl(state),
-      workspaceRoot: state.workspaceRoot,
-      primaryProject: state.primaryProject || state.projectId || "",
-      projectId: state.projectId || state.primaryProject || "",
-      userId: state.userId || state.userKey || "",
-      conversationId: state.conversationId || state.threadid || "",
-      threadid: state.threadid || ""
-    };
-    if (state.codexPrewarmStartedAt && now() - Number(state.codexPrewarmStartedAt) < 60000) {
-      try {
-        var status = bridgeCall(bridgeOptions, "agent_status", { handle: state.handle }, 10000);
-        var alive = status && status.state && status.state.alive === true;
-        if (alive) {
-          state.codexPrewarmStatus = "ready";
-          state.updatedAt = now();
-          saveState(state);
-          return true;
-        }
-      } catch (_ignorePrewarmStatus) {}
-    }
-    state.codexPrewarmStartedAt = now();
-    state.codexPrewarmStatus = "starting";
-    state.updatedAt = now();
-    try {
-      saveState(state);
-    } catch (_ignorePrewarmSave) {}
-
-    var prewarmProvider = normalizeProvider(state.provider);
-    var payload = agentStartPayload(state, options || {}, prewarmProvider, false);
-    attachMcpTokenHandle(payload, options || {});
-    var prewarmSequence = providerSequence(prewarmProvider, "start");
-    var thread = new Thread(new Runnable({
-      run: function () {
-        try {
-          bridgeCall(bridgeOptions, prewarmSequence, payload, 90000);
-        } catch (_ignorePrewarmCodexStart) {}
-      }
-    }), "lib_ConvertigoAssistant-codex-prewarm-" + state.threadid);
-    thread.setDaemon(true);
-    thread.start();
-    return true;
+    // A resume restores history only. Starting in a detached prewarm thread can
+    // race a library selection or start a user home without conversation MCPs.
+    // The next authenticated send resolves resources and starts/resumes the
+    // harness with the exact approved configuration before submitting a prompt.
+    return false;
   }
 
   function normalizeThreadId(value) {
@@ -2820,6 +2779,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
       nocodeContext: savedNoCodeContext(state),
+      resourceSkillVersions: state.resourceSkillVersions || {},
+      resourceContextEpoch: state.resourceContextEpoch || "",
+      resourceMcpFingerprint: state.resourceMcpFingerprint || "",
+      resourceConversationHome: state.resourceConversationHome === true,
       language: state.language || "",
       handle: state.handle || state.threadid,
       status: state.status || "created",
@@ -3122,6 +3085,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function removeState(threadid) {
+    var resourceState = readState(threadid);
+    if (resourceState && resourceState.resourceHandle) {
+      try { var resourceStore = sharedStorage(); if (resourceStore && resourceStore.remove) { resourceStore.remove(resourceState.resourceHandle); } } catch (_ignoreResourceCleanup) {}
+    }
     try {
       context.httpSession.removeAttribute(stateKey(threadid));
     } catch (_ignoreRemoveState) {}
@@ -4892,6 +4859,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userId: trim(options.userId),
       title: record ? conversationTitleFromText(record.title) : "",
       externalSessionId: externalSessionId,
+      resourceSkillVersions: record && record.resourceSkillVersions || {},
+      resourceContextEpoch: record && record.resourceContextEpoch || "",
+      resourceMcpFingerprint: record && record.resourceMcpFingerprint || "",
+      resourceConversationHome: record && record.resourceConversationHome === true,
       language: normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage || (record && record.language)) || detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
       status: record && trim(record.status).length ? trim(record.status) : "created",
@@ -6219,6 +6190,45 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return noCodeContextCatalogFromScope(scope);
   };
 
+  function submitTigoPrompt(state, sequence, payload) {
+    if (!C8O.tigoResources) { return bridgeCall(state, sequence, payload, 70000); }
+    var resources = C8O.tigoResources.prepare(state);
+    var enriched = {};
+    Object.keys(payload).forEach(function (k) { enriched[k] = payload[k]; });
+    enriched.prompt = String(payload.prompt || "") + resources.text;
+    var result = bridgeCall(state, sequence, enriched, 70000);
+    if (result.ok !== false) {
+      rememberCodexSessionFromResult(state, result);
+      state.resourceSkillVersions = resources.versions;
+      state.resourceContextEpoch = state.provider + ":" + String(state.externalSessionId || "");
+      state.resourceMcpFingerprint = resources.fingerprint;
+    }
+    return result;
+  }
+
+  C8O.assistantAgentBridge.resources = function (args) {
+    args = args || {};
+    var who = C8O.tigoResources.javaHost(context).identity();
+    var csrfKey = "lib_ConvertigoAssistant.resourcesCsrf";
+    var csrf = String(context.httpSession.getAttribute(csrfKey) || "");
+    if (!csrf) { csrf = String(UUID.randomUUID()); context.httpSession.setAttribute(csrfKey, csrf); }
+    if (["list", "get"].indexOf(String(args.action || "list")) < 0 && args.csrf !== csrf) { throw new Error("csrf_invalid"); }
+    if (args.threadid) {
+      var current = readState(normalizeThreadId(args.threadid));
+      if (current && !who.admin && current.userId !== who.user) { throw new Error("conversation_access_denied"); }
+      if (current && args.action === "select" && current.status === "in_progress") { throw new Error("conversation_busy"); }
+    }
+    var result = C8O.tigoResources.manage(args);
+    if (result.ok && args.action && args.action !== "list" && args.action !== "get") {
+      var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid});
+      catalog.saved = result.item || null;
+      catalog.csrf = csrf;
+      return catalog;
+    }
+    result.csrf = csrf;
+    return result;
+  };
+
   C8O.assistantAgentBridge.sendMessage = function (options) {
     options = optionsWithRequestFallbacks(options || {});
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
@@ -6350,6 +6360,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     try {
       var provider = runProvider;
+      var customResources = C8O.tigoResources ? C8O.tigoResources.prepare(state) : null;
+      if (customResources) {
+        state.resourceHandle = state.resourceHandle || "lib_ConvertigoAssistant.resources." + String(UUID.randomUUID());
+        sharedStorage().set(state.resourceHandle, JSON.stringify({expiresAt:Number(now()) + 7200000, connections:customResources.connections}));
+      }
       var startSequence = providerSequence(provider, "start");
       var promptSequence = providerSequence(provider, "prompt");
       var closeSequence = providerSequence(provider, "close");
@@ -6403,6 +6418,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
 
       var startPayload = agentStartPayload(state, options, provider, installRequested);
+      if (customResources) {
+        startPayload.tigoResourcesHandle = state.resourceHandle;
+        if (customResources.connections.length) { state.resourceConversationHome = true; }
+        if (state.resourceConversationHome) {
+          startPayload.codexHomeScope = "conversation"; startPayload.claudeHomeScope = "conversation";
+          startPayload.vibeHomeScope = "conversation"; startPayload.homeScope = "conversation";
+          startPayload.codexHome = ""; startPayload.claudeHome = ""; startPayload.vibeHome = "";
+        }
+        if (isVibeHarness(provider)) { startPayload.sessionId = state.externalSessionId || ""; }
+        if (state.resourceMcpFingerprint ? state.resourceMcpFingerprint !== customResources.fingerprint : customResources.connections.length > 0) {
+          bridgeCall(state, closeSequence, {handle:state.handle}, 15000);
+        }
+      }
       var promptPayload = provider === "codex" ? {
         handle: state.handle,
         prompt: question,
@@ -6443,6 +6471,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         waitForCompletion: "false"
       });
       var prompt = null;
+      if (customResources) { promptPayload.tigoResourcesHandle = state.resourceHandle; }
       if (isResidentProvider(provider) && trim(state.externalSessionId).length) {
         var ensureStarted = bridgeCall(state, startSequence, startPayload, 90000);
         if (ensureStarted.ok === false) {
@@ -6455,7 +6484,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           promptPayload.sessionId = state.externalSessionId || promptPayload.sessionId;
           promptPayload.claudeSessionId = promptPayload.sessionId;
         }
-        prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
+        prompt = submitTigoPrompt(state, promptSequence, promptPayload);
         if (prompt.ok === false && codexPromptRequiresStart(prompt)) {
           if (isResidentProvider(provider) && existingViewerCdpEndpoint(options).length) {
             clearCodexExternalSession(state);
@@ -6511,7 +6540,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           promptPayload.sessionId = state.externalSessionId || "";
           promptPayload.claudeSessionId = promptPayload.sessionId;
         }
-        prompt = bridgeCall(state, promptSequence, promptPayload, 70000);
+        prompt = submitTigoPrompt(state, promptSequence, promptPayload);
       }
       if (prompt.ok === false) {
         throw new Error(prompt.error || promptSequence + " failed");
@@ -6697,7 +6726,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         var data = event.data || {};
         if (type === "session/update") {
           if (data.threadId || data.sessionId) {
-            state.externalSessionId = String(data.threadId || data.sessionId);
+            rememberCodexSessionFromResult(state, {sessionId: data.threadId || data.sessionId});
           }
         } else if (type === "progress/message" || type === "status/message") {
           appendProgress(state, eventText(data));

@@ -2,6 +2,7 @@ comment: Submit a user prompt to a local agent conversation through lib_Converti
 responseTimeout: 120
 ↓Run [steps.SimpleStep-1781650000201]: 
   expression: |
+    include("js/tigo_resources.js");
     include("js/agent_bridge_client.js");
     result = C8O.assistantAgentBridge.sendMessageFromSequenceScope(this);
 ↓result [steps.JsonToXmlStep-1781650000202]: 
