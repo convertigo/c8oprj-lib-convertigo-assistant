@@ -6,6 +6,11 @@ server: raw.githubusercontent.com
 trustAllServerCertificates: false
 ↓GetManifest [transactions.JsonHttpTransaction]: 
   accessibility: Hidden
-  comment: Returns the current Tigo stack release manifest.
+  comment: Returns only the reviewed stable Tigo stack. Legacy clients keep using stack-release.json, a stable alias.
   responseTimeout: 20
-  subDir: /stack-release.json
+  subDir: /stack-release-stable.json
+↓GetPreviewManifest [transactions.JsonHttpTransaction]: 
+  accessibility: Hidden
+  comment: Explicit preview catalog for testers. Never used by the default stable installation path.
+  responseTimeout: 20
+  subDir: /stack-release-preview.json

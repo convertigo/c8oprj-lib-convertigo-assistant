@@ -1,0 +1,26 @@
+// Use the exact published archive. The workflow excludes the car task and all
+// its build dependencies, so deploying a stable release cannot rebuild master.
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def archivePath = System.getenv('C8O_DEPLOY_CAR')
+    if (!archivePath || !new File(archivePath).isFile()) {
+        throw new GradleException('The verified published CAR is missing')
+    }
+    def settings = ['C8O_SERVER', 'C8O_USER', 'C8O_PASSWORD'].collectEntries { name ->
+        def value = System.getenv(name)
+        if (!value) {
+            throw new GradleException("Missing deployment setting: ${name}")
+        }
+        [(name): value]
+    }
+    if (!settings.C8O_SERVER.startsWith('https://') &&
+            !(settings.C8O_SERVER ==~ /http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/convertigo\/?/)) {
+        throw new GradleException('Deployment requires HTTPS or a local test server')
+    }
+    root.tasks.named('car').get().destinationFile = new File(archivePath)
+    def deploy = root.tasks.named('deploy').get()
+    deploy.server = settings.C8O_SERVER
+    deploy.user = settings.C8O_USER
+    deploy.password = settings.C8O_PASSWORD
+    deploy.trustAllCertificates = false
+}

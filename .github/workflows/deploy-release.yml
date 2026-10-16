@@ -1,0 +1,46 @@
+name: Deploy published Assistant release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to deploy (for example v1.4.49)
+        required: true
+        type: string
+      target:
+        description: Deployment environment
+        required: true
+        type: choice
+        options:
+          - development
+          - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assistant-deployment-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Download and verify the published CAR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          C8O_RELEASE_TAG: ${{ inputs.release_tag }}
+          C8O_DEPLOY_TARGET: ${{ inputs.target }}
+        run: python3 .github/scripts/prepare_deployment.py
+      - name: Deploy the verified CAR without rebuilding
+        env:
+          C8O_SERVER: ${{ inputs.target == 'production' && secrets.C8O_SERVER_PROD || inputs.target == 'development' && secrets.C8O_SERVER || '' }}
+          C8O_USER: ${{ inputs.target == 'production' && secrets.C8O_USER_PROD || inputs.target == 'development' && secrets.C8O_USER || '' }}
+          C8O_PASSWORD: ${{ inputs.target == 'production' && secrets.C8O_PASSWORD_PROD || inputs.target == 'development' && secrets.C8O_PASSWORD || '' }}
+        run: sh gradlew --console=plain --init-script .github/scripts/deploy-published.gradle deploy -x car

@@ -17,6 +17,40 @@ const compiled = ts.transpileModule('class Page {\n' + methods.map(m => m.getTex
 });
 assert.deepEqual(compiled.diagnostics, []);
 const flush = async () => { for (let i = 0; i < 25; i++) await Promise.resolve(); };
+
+test('default manifest alias and offline fallback pin the reviewed stable bundle', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const root = path.resolve(__dirname, '..');
+  const stable = JSON.parse(fs.readFileSync(path.join(root, 'stack-release-stable.json')));
+  const alias = JSON.parse(fs.readFileSync(path.join(root, 'stack-release.json')));
+  const preview = JSON.parse(fs.readFileSync(path.join(root, 'stack-release-preview.json')));
+  assert.deepEqual(alias, stable);
+  assert.equal(stable.channel, 'stable');
+  assert.equal(preview.channel, 'preview');
+  assert.deepEqual(JSON.parse(JSON.stringify(fixture().page.getEmbeddedAgentStackRelease())), stable);
+  assert.deepEqual(stable.projects.map(p => p.version), ['0.2.23', '0.4.22', '1.4.49']);
+  assert.deepEqual(preview.projects.map(p => p.version), ['0.2.24', '0.4.23', '1.5.0']);
+  for (const manifest of [stable, preview]) {
+    assert.equal(new Set(manifest.projects.map(p => p.name)).size, 3);
+    for (const project of manifest.projects) {
+      assert.equal(project.tag, 'v' + project.version);
+      assert.ok(project.importUrl.endsWith('/' + project.tag + '/' + project.name + '.car'));
+    }
+  }
+});
+
+test('the default installation path rejects a preview response and retains stable fallback', async () => {
+  const f = fixture({ request: name => name.endsWith('.GetManifest') ? Promise.resolve({
+    result: { schemaVersion: 1, channel: 'preview', projects: [
+      { name: 'lib_ConvertigoAssistant', version: '1.5.0', importUrl: 'preview.car' }
+    ] }
+  }) : undefined });
+  f.page.refreshAgentStackRelease(true); await flush();
+  assert.equal(f.page.local.AgentStackRelease.channel, 'stable');
+  assert.equal(f.page.local.AgentStackRelease.projects.find(p => p.name === 'lib_ConvertigoAssistant').version, '1.4.49');
+  assert.ok(f.page.local.AgentStackReleaseError);
+  assert.equal(f.calls.some(c => c.name.endsWith('.GetPreviewManifest')), false);
+});
 const status = (overrides = {}) => ({
   surface: 'server', localAgentStackUpdateAllowed: true, localAgentStackUpdatePolicy: 'authenticated',
   localAgentStackUpdateReason: 'authenticated', localAgentStackState: 'missing',

@@ -1,4 +1,7 @@
-# Tigo 1.5: prompts, skills and MCP connections
+# Tigo 1.5 preview: prompts, skills and MCP connections
+
+This library is unfinished and awaits review. Customer installations use the
+1.4.49 stable bundle. See [release channels](release-channels.md).
 
 The configuration panel has five categories: **Agent and model**, **Runtime and
 stack**, **Prompts**, **Skills**, and **MCP connections**. The library combines

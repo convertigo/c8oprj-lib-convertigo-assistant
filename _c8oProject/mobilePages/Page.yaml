@@ -1620,18 +1620,18 @@ scriptContent:
         	}
         
         	public getEmbeddedAgentStackRelease() {
-        		return {
-        			schemaVersion: 1,
-                                channel: "stable",
-        			projects: [
-                        { name: "lib_ConvertigoMCP", version: "0.2.24", tag: "v0.2.24", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.24/lib_ConvertigoMCP.car" },
-                        { name: "lib_ConvertigoAgentBridge", version: "0.4.23", tag: "v0.4.23", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.23/lib_ConvertigoAgentBridge.car" },
-                        { name: "lib_ConvertigoAssistant", version: "1.5.0", tag: "v1.5.0", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.0/lib_ConvertigoAssistant.car" }
-        			]
-        		};
-        	}
+                    return {
+                        schemaVersion: 1,
+                        channel: "stable",
+                        projects: [
+                            { name: "lib_ConvertigoMCP", version: "0.2.23", tag: "v0.2.23", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.23/lib_ConvertigoMCP.car" },
+                            { name: "lib_ConvertigoAgentBridge", version: "0.4.22", tag: "v0.4.22", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.22/lib_ConvertigoAgentBridge.car" },
+                            { name: "lib_ConvertigoAssistant", version: "1.4.49", tag: "v1.4.49", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.4.49/lib_ConvertigoAssistant.car" }
+                        ]
+                    };
+                }
         
-        	public normalizeAgentStackRelease(value) {
+                public normalizeAgentStackRelease(value) {
         		var candidates: any = [];
         		var current: any = value;
         		for (var depth = 0; current && typeof current === "object" && depth < 5; depth++) {
@@ -1679,7 +1679,7 @@ scriptContent:
         		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response) => {
         			var result = response && response.result ? response.result : response;
         			var release = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(result) : null;
-        			if (release && release.projects && release.projects.length) {
+        			if (release && release.channel === "stable" && release.projects && release.projects.length) {
         				this.local.AgentStackRelease = release;
         			} else {
         				this.local.AgentStackReleaseError = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");

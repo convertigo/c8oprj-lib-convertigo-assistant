@@ -394,7 +394,7 @@ rediscovering the same context.
 - The shared footer uses the native `InlinePopover`, with a stable unique trigger id per component instance. Keep the trigger a button independent from prompt enablement. Ionic handles outside click, Escape and focus return. Refresh emits `QuotaRefresh` to the Page, which keeps the existing authenticated subscriber and API transport.
 - `ensureAgentNativeContextBridge()` installs the Java receiver wrapper during host-context retries too: the native receiver can appear after Page initialization or be replaced on reload. Forward native context exactly once, retain the original delegate and restore it only when the wrapper is still current. Check `tests/assistant_native_context.test.cjs`.
 
-- Release 1.4.46 pairs Bridge 0.4.21 with Mistral reasoning/cache corrections and the clarified usage popup. Both `stack-release.json` and the Page fallback must pin those exact CAR versions. CI honors `[skip deploy]` in the release commit on branch and tag pushes, so publication can happen without server deployment.
+- Release 1.4.46 pairs Bridge 0.4.21 with Mistral reasoning/cache corrections and the clarified usage popup. Both `stack-release.json` and the Page fallback must pin those exact CAR versions. CI builds and publishes without deployment. Hosted deployment is a separate manual workflow.
 
 ## Windows diagnostics and startup model restoration
 
@@ -416,8 +416,10 @@ rediscovering the same context.
 ## Tigo 1.5 resource library
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
-- Assistant 1.5.0 pairs Bridge 0.4.23 and MCP 0.2.24. Update both
-  `stack-release.json` and the Page fallback manifest together.
+- Assistant 1.5.0 / Bridge 0.4.23 / MCP 0.2.24 is the preview bundle.
+  Stable remains Assistant 1.4.49 / Bridge 0.4.22 / MCP 0.2.23.
+  `stack-release.json` must equal `stack-release-stable.json`; the Page default
+  fallback pins stable too. Preview uses `stack-release-preview.json` explicitly.
 - `js/tigo_resources.js` owns the portable resource core and its Java host. The
   authenticated `AgentResources` facade derives identity, checks conversation
   ownership and requires a session CSRF token for mutations. A Studio auth
@@ -449,3 +451,13 @@ rediscovering the same context.
 - New/resumed conversations defer provider startup until the next authenticated
   send. Optional detached prewarm is disabled in 1.5 because it can race MCP
   selection and start the shared user home without conversation resources.
+
+## Release policy
+
+- See `docs/release-channels.md`. All newly tagged releases are pre-releases,
+  never Latest automatically. Promote only after review and functional acceptance.
+- Push/tag CI cannot deploy, regardless of commit message. Only the Assistant has
+  a manual `workflow_dispatch` deployment; it verifies and deploys a published CAR
+  without rebuilding master. Production accepts only the reviewed stable tag.
+- Changing channels does not downgrade installed Studios. Preserve existing tags
+  and CAR bytes. Never mix independently selected companion versions.
