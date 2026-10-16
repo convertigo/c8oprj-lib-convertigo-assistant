@@ -21,6 +21,8 @@ const names = [
   "useTigoPrompt",
   "editTigoResource",
   "loadTigoEditorLanguage",
+  "splitTigoSkillDocument",
+  "formatTigoSkillDocument",
   "saveTigoResource",
   "removeTigoResource",
   "saveTigoSecret",
@@ -194,4 +196,44 @@ test("library rows and search use the selected translation without modifying the
   assert.equal(page.local.ResourcePromptItems[0].title, "Explain");
   assert.equal(page.local.ResourcePromptItems[0].body, "English body");
   assert.equal(item.title, "Expliquer");
+});
+
+test("favorite rows follow personal order before alphabetic non-favorites", () => {
+ const {page}=fixture();
+ const prompt=(id,title)=>({...item,key:id,data:{defaultLanguage:'fr',translations:{fr:{title,body:'Instructions'}}}});
+ page.local.ResourceCatalog={favorites:['z','b'],items:[prompt('a','Écran'),prompt('b','Branchement'),prompt('c','Créer'),prompt('z','Zèbre')]};
+ page.filterTigoResources();
+ assert.deepEqual(Array.from(page.local.ResourcePromptItems,x=>x.key),['z','b','c','a']);
+ assert.deepEqual(Array.from(page.local.ResourcePromptItems,x=>x.favorite),[true,true,false,false]);
+ assert.deepEqual(Array.from(page.local.ResourceCatalog.items,x=>x.key),['a','b','c','z'],'sorting cannot mutate the shared catalog');
+ page.local.ResourceCatalog.favorites=['b','z'];page.filterTigoResources();
+ assert.deepEqual(Array.from(page.local.ResourcePromptItems,x=>x.key),['b','z','c','a']);
+});
+test("skill editor hides frontmatter and saves name/description automatically with extra metadata intact", () => {
+ const {page,events}=fixture();
+ const original={...item,key:'workspace::skill:company',id:'company',kind:'skill',readOnly:false,scope:'workspace',data:{schemaVersion:1,id:'company',defaultLanguage:'en',translations:{en:{title:'Company',description:'Original description',body:'---\nname: company\ndescription: |\n  Original description\nallowed-tools: Read\nmetadata:\n  team: Example\n---\n\nRead the reference.'},fr:{title:'Entreprise',description:'Consulter les données',body:'---\nname: company\ndescription: Consulter les données\n---\n\nLire la référence.'}}}};
+ page.editTigoResource(original,'skill');
+ assert.equal(page.local.ResourceEditBody,'Lire la référence.');
+ page.local.ResourceEditDescription='Dire "Oui Chef!" : brièvement';
+ page.local.ResourceEditBody='Répondre brièvement.';
+ page.saveTigoResource();
+ const saved=events[0].payload.request.input;
+ assert.match(saved.translations.fr.body,/name: "company"/);
+ assert.match(saved.translations.fr.body,/description: "Dire \\"Oui Chef!\\" : brièvement"/);
+ assert.equal(page.splitTigoSkillDocument(saved.translations.fr.body).body,'Répondre brièvement.');
+ assert.match(saved.translations.en.body,/allowed-tools: Read\nmetadata:\n  team: Example/);
+ assert.doesNotMatch(saved.translations.en.body,/description: \|/);
+ assert.equal(page.splitTigoSkillDocument(saved.translations.en.body).body,'Read the reference.');
+ assert.match(original.data.translations.en.body,/description: \|/,'the loaded resource must remain untouched until saving');
+});
+test("new skills start with plain instructions and pasting a full SKILL.md does not duplicate the header", () => {
+ const {page,events}=fixture();page.editTigoResource(null,'skill');assert.equal(page.local.ResourceEditBody,'');
+ page.local.ResourceEditTitle='Bonjour';page.local.ResourceEditDescription='Une salutation';
+ page.local.ResourceEditBody='---\nname: pasted-name\ndescription: Previous description\nallowed-tools: Read\n---\n\nDire bonjour.';
+ page.saveTigoResource();const saved=events[0].payload.request.input;
+ assert.match(saved.translations.fr.body,new RegExp('name: "'+saved.id+'"'));
+ assert.match(saved.translations.fr.body,/description: "Une salutation"/);
+ assert.equal(page.splitTigoSkillDocument(saved.translations.fr.body).body,'Dire bonjour.');
+ assert.match(saved.translations.fr.body,/allowed-tools: Read/);
+ assert.equal((saved.translations.fr.body.match(/^---$/gm)||[]).length,2);
 });

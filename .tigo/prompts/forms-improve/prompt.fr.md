@@ -1,3 +1,1 @@
-Read the current application with the No Code tools and propose useful, accessible improvements before applying them.
-
-Réponds en français.
+Lis l’application actuelle avec les outils No Code et propose des améliorations utiles et accessibles avant de les appliquer.

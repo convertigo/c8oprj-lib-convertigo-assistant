@@ -6,7 +6,7 @@ of each companion project.
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
 | Stable | 1.4.49 | 0.4.22 | 0.2.23 |
-| Preview | 1.5.0 | 0.4.23 | 0.2.24 |
+| Preview | 1.5.1 | 0.4.24 | 0.2.24 |
 
 The 1.5 prompt/skill/MCP library is unfinished and awaits functional review.
 Use the stable bundle for customer installations. Both bundles target Convertigo
@@ -46,8 +46,9 @@ Pushes build CARs. Tags publish GitHub pre-releases with `make_latest: false`,
 including tags without a suffix. Neither event deploys to a Convertigo server.
 `[skip deploy]` is no longer needed to prevent deployment.
 
-Use beta and release-candidate tags for future preview iterations, for example
-`v1.5.1-beta.1` and `v1.5.1-rc.1`. Keep the preview manifest's three versions
+The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
+its unsuffixed tag. Use beta and release-candidate tags for future preview
+iterations, for example `v1.5.2-beta.1` and `v1.5.2-rc.1`. Keep the preview manifest's three versions
 coherent with its published CARs.
 
 Stable promotion is an explicit maintainer operation after code review and

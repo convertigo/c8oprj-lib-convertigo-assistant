@@ -1,3 +1,1 @@
-Improve the clarity, layout and usability of this view, preserving its existing behavior. Validate the result visually.
-
-Réponds en français.
+Améliore la clarté, la mise en page et l’ergonomie de cette vue en conservant son comportement. Vérifie le résultat visuellement.

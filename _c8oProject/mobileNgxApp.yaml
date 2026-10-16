@@ -560,21 +560,18 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
                         // Agent navigation starts after Studio sends its context or selection.
                     }
                     window[''sendToHost''] = (message) => {
-                        if (page.global.studio) {
+                        if (window[''java''] && typeof window[''java''].receiveFromJS === ''function'') {
+                            page.global.studio = true;
                             window[''java''].receiveFromJS(JSON.stringify(message));
                         } else if (window.parent && window != window.parent) {
                             window.parent.postMessage(message, ''*'');
                         }
                     };
                     window[''setupMessageListener''] = (callback) => {
-                        if (page.global.studio) {
-                            window[''receiveFromJava''] = function(msg) {
-                                callback(msg);
-                            };
-                        } else {
-                            window.addEventListener(''message'', (event) => {
-                                callback(event.data);
-                            });
+                        // Install before requesting native context, including late Java injection.
+                        window[''receiveFromJava''] = function(msg) { callback(msg); };
+                        if (!page.global.studio) {
+                            window.addEventListener(''message'', (event) => { callback(event.data); });
                         }
                     };
                     window[''setupMessageListener'']((msg) => {

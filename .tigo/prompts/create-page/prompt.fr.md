@@ -1,3 +1,1 @@
-Create a complete, accessible page for the selected project. Use native Convertigo components and validate it in the viewer.
-
-Réponds en français.
+Crée une page complète et accessible pour le projet sélectionné. Utilise les composants natifs Convertigo et vérifie le résultat dans le viewer.

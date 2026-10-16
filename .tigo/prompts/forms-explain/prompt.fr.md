@@ -1,3 +1,1 @@
-Read the current application with the No Code tools and explain its purpose and its main user flows. Keep this read-only.
-
-Réponds en français.
+Lis l’application actuelle avec les outils No Code et explique son objectif et ses principaux parcours utilisateur. Ne modifie rien.

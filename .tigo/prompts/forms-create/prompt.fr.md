@@ -1,3 +1,1 @@
-Create an application using Convertigo No Code Studio. Use the No Code skill and its forms tools; keep this in the current authorized context.
-
-Réponds en français.
+Crée une application avec Convertigo No Code Studio. Utilise le skill No Code et ses outils de formulaires, dans le contexte actuellement autorisé.

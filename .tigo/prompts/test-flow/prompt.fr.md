@@ -1,3 +1,1 @@
-Identify and test the main user flow of this project. Report observed results and concrete issues, without modifying business data without approval.
-
-Réponds en français.
+Identifie et teste le principal parcours utilisateur de ce projet. Présente les résultats observés et les problèmes concrets, sans modifier de données métier sans autorisation.

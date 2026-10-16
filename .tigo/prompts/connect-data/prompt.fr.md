@@ -1,3 +1,1 @@
-Connect this page to a Convertigo backend sequence, with loading, empty and error states. Validate the real response contract.
-
-Réponds en français.
+Relie cette page à une séquence backend Convertigo, avec des états de chargement, de résultat vide et d’erreur. Vérifie le contrat de réponse réel.

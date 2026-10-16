@@ -7,6 +7,8 @@ scriptContent:
         import { HostListener, signal, NgZone } from ''@angular/core'';
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
+            public resourceTab = ''prompts'';
+        
             public quotaTriggerId = ''tigo-quota-'' + Math.random().toString(36).slice(2);
         
         	disabled = false;
@@ -1230,7 +1232,16 @@ scriptContent:
         			this.showSpeechToastForError(e && e.name ? e.name : "unknown");
         		}
         	}
-        	/*End_c8o_CompFunction*/
+        	    public resourceCaption(key: string) {
+                const fr = {prompts:''Prompts'',skills:''Skills'',mcp:''MCP'',manage:''Configurer la bibliothèque'',empty:''Aucune ressource dans cette catégorie.'',enable:''Activer'',disable:''Désactiver'',loading:''Chargement…'',error:''Bibliothèque indisponible. Ouvrez sa configuration pour réessayer.''};
+                const en = {prompts:''Prompts'',skills:''Skills'',mcp:''MCP'',manage:''Manage library'',empty:''No resources in this category.'',enable:''Enable'',disable:''Disable'',loading:''Loading…'',error:''Library unavailable. Open its settings to retry.''};
+                const ownerLanguage = this.owner?.global?.currentLanguage;
+                const language = this.ResourceLanguage || (typeof ownerLanguage === ''function'' ? ownerLanguage() : (ownerLanguage || this.translate?.currentLang || ''en''));
+                return (String(language).startsWith(''fr'') ? fr : en)[key] || key;
+            }
+            public toggleResourceTab(tab: string) { this.resourceTab = this.resourceTab === tab ? '''' : tab; this.tick(); }
+            public quickResources() { return this.resourceTab === ''skills'' ? (this.ResourceSkills || []) : (this.ResourceMcp || []); }
+        /*End_c8o_CompFunction*/
         '
 ↓SuggestionsToolBar [ngx.components.UIDynamicElement-1772100000104]: 
   beanData: '{"ionBean":"ToolBar"}'
@@ -1296,40 +1307,203 @@ scriptContent:
                     →: |
                       page.setSuggestion(props.stack.root.scope.favoritePrompt.question);
                       resolve();
-      ↓AllPrompts [ngx.components.UIDynamicElement-1792084661993]: 
-        beanData: |
-          '{
-           "ionBean": "Button",
-           "Disabled": "script:false",
-           "IonFill": "plain:clear"
-          }'
-        tagName: ion-button
-        ↓Text [ngx.components.UIText-1792084661995]: 
-          textValue: 
+          ↓CompactClass [ngx.components.UIAttribute-1792162953249]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-btn
+      ↓PanelHidden [ngx.components.UIAttribute-1792162962305]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.EnableResources && this.resourceTab !== 'prompts'
+      ↓AllPrompts [ngx.components.UIDynamicElement-1792164118275]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: button
+        ↓Attr [ngx.components.UIAttribute-1792164118277]: 
+          attrName: type
+          attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(''''+this.translate?.currentLang).toLowerCase().startsWith(''fr'') ? ''Tous les prompts…'' : ''All prompts…'''
-        ↓Click [ngx.components.UIControlEvent-1792084661997]: 
-          ↓Apply [ngx.components.UICustomAction-1792084661999]: 
+              - MobileSmartSourceType: plain:button
+        ↓Class [ngx.components.UIAttribute-1792164118279]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:modern-suggestion-btn tigo-manage-button
+        ↓Label [ngx.components.UIAttribute-1792164118281]: 
+          attrName: '[attr.aria-label]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.resourceCaption('manage')
+        ↓Tooltip [ngx.components.UIAttribute-1792164118283]: 
+          attrName: '[attr.title]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.resourceCaption('manage')
+        ↓Icon [ngx.components.UIDynamicElement-1792164118285]: 
+          beanData: '{"ionBean":"Icon","IconName":"plain:ellipsis-horizontal-outline"}'
+          tagName: ion-icon
+        ↓Click [ngx.components.UIControlEvent-1792164118287]: 
+          ↓Apply [ngx.components.UICustomAction-1792164119913]: 
             actionValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    page.ResourcesOpen.emit();
+                    page.ResourcesOpen.emit('prompts');
                     resolve();
-        ↓HideForClassic [ngx.components.UIAttribute-1792084775721]: 
+        ↓HideClassic [ngx.components.UIAttribute-1792164119915]: 
           attrName: '[hidden]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: script:!this.EnableResources
+      ↓PromptRowClass [ngx.components.UIAttribute-1792166443773]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:tigo-prompts-row
+    ↓QuickResources [ngx.components.UIControlDirective-1792162991147]: 
+      directiveName: If
+      directiveSource: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.EnableResources && (this.resourceTab === 'skills' || this.resourceTab === 'mcp')
+      ↓Row [ngx.components.UIDynamicElement-1792162995675]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Attr [ngx.components.UIAttribute-1792162995677]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:tigo-quick-resources
+        ↓Items [ngx.components.UIControlDirective-1792162995679]: 
+          directiveItemName: quickResource
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.quickResources()
+          ↓Resource [ngx.components.UIDynamicElement-1792162995681]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "Disabled": "script:this.ResourceBusy || this.ResourceLoading",
+               "IonFill": "plain:clear"
+              }'
+            tagName: ion-button
+            ↓Label [ngx.components.UIAttribute-1792162995683]: 
+              attrName: '[attr.aria-label]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:(quickResource.enabled ? this.resourceCaption(''disable'') : this.resourceCaption(''enable'')) + '' '' + quickResource.title'
+            ↓Title [ngx.components.UIAttribute-1792162995685]: 
+              attrName: '[attr.title]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:(quickResource.enabled ? this.resourceCaption(''disable'') : this.resourceCaption(''enable'')) + '' '' + quickResource.title'
+            ↓Icon [ngx.components.UIDynamicElement-1792162995687]: 
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IconName": "script:quickResource.enabled ? ''checkmark-circle'' : ''ellipse-outline''",
+                 "IconSlot": "plain:start"
+                }'
+              tagName: ion-icon
+            ↓Click [ngx.components.UIControlEvent-1792162995689]: 
+              ↓Apply [ngx.components.UICustomAction-1792162997315]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        page.ResourceToggle.emit(props.stack.root.scope.quickResource);
+                        resolve();
+            ↓Text [ngx.components.UIText-1792162997317]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:quickResource.title
+            ↓Attr [ngx.components.UIAttribute-1792162997319]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:modern-suggestion-btn
+            ↓Pressed [ngx.components.UIAttribute-1792162997321]: 
+              attrName: '[attr.aria-pressed]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:quickResource.enabled
+        ↓Empty [ngx.components.UIControlDirective-1792162997323]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!this.quickResources().length
+          ↓Hint [ngx.components.UIDynamicElement-1792162997325]: 
+            beanData: '{"ionBean":"SpanTag"}'
+            tagName: span
+            ↓Text [ngx.components.UIText-1792162997327]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:this.resourceCaption(this.ResourceLoading ? ''loading'' : (this.ResourceError ? ''error'' : ''empty''))'
+        ↓Manage [ngx.components.UIDynamicElement-1792164124819]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: button
+          ↓Attr [ngx.components.UIAttribute-1792164124821]: 
+            attrName: type
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:button
+          ↓Class [ngx.components.UIAttribute-1792164124823]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:modern-suggestion-btn tigo-manage-button
+          ↓Label [ngx.components.UIAttribute-1792164124825]: 
+            attrName: '[attr.aria-label]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.resourceCaption('manage')
+          ↓Tooltip [ngx.components.UIAttribute-1792164124827]: 
+            attrName: '[attr.title]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.resourceCaption('manage')
+          ↓Icon [ngx.components.UIDynamicElement-1792164124829]: 
+            beanData: '{"ionBean":"Icon","IconName":"plain:ellipsis-horizontal-outline"}'
+            tagName: ion-icon
+          ↓Click [ngx.components.UIControlEvent-1792164124831]: 
+            ↓Apply [ngx.components.UICustomAction-1792164126457]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      page.ResourcesOpen.emit(page.resourceTab);
+                      resolve();
   ↓Hidden [ngx.components.UIAttribute-1782760048334]: 
     attrName: '[hidden]'
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:!this.EnableResources && !this.getSuggestions().length
+        - MobileSmartSourceType: 'script:this.EnableResources ? !this.resourceTab : !this.getSuggestions().length'
 ↓InputToolBar [ngx.components.UIDynamicElement-1772100000122]: 
   beanData: '{"ionBean":"ToolBar"}'
   tagName: ion-toolbar
@@ -2153,6 +2327,198 @@ scriptContent:
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:!this.isAssetInputEnabled()
+        ↓ResourceTabs [ngx.components.UIControlDirective-1792162980417]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.EnableResources
+          ↓Tabs [ngx.components.UIDynamicElement-1792162984945]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Attr [ngx.components.UIAttribute-1792162984947]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:tigo-quick-tabs
+            ↓Prompts [ngx.components.UIDynamicElement-1792164099389]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: button
+              ↓Attr [ngx.components.UIAttribute-1792164099391]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓Class [ngx.components.UIAttribute-1792164099393]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:tigo-quick-toggle
+              ↓Label [ngx.components.UIAttribute-1792164099395]: 
+                attrName: '[attr.aria-label]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceCaption('prompts')
+              ↓Tooltip [ngx.components.UIAttribute-1792164099397]: 
+                attrName: '[attr.title]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceCaption('prompts')
+              ↓Icon [ngx.components.UIDynamicElement-1792164099399]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:document-text-outline"}'
+                tagName: ion-icon
+              ↓Caption [ngx.components.UIDynamicElement-1792166181684]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: span
+                ↓Class [ngx.components.UIAttribute-1792166181686]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:tigo-quick-caption
+                ↓Text [ngx.components.UIText-1792164101031]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.resourceCaption('prompts')
+              ↓Click [ngx.components.UIControlEvent-1792164099401]: 
+                ↓Apply [ngx.components.UICustomAction-1792164101027]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          page.toggleResourceTab('prompts');
+                          resolve();
+              ↓Pressed [ngx.components.UIAttribute-1792164101029]: 
+                attrName: '[attr.aria-pressed]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceTab === 'prompts'
+            ↓Skills [ngx.components.UIDynamicElement-1792164105559]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: button
+              ↓Attr [ngx.components.UIAttribute-1792164105561]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓Class [ngx.components.UIAttribute-1792164105563]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:tigo-quick-toggle
+              ↓Label [ngx.components.UIAttribute-1792164105565]: 
+                attrName: '[attr.aria-label]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceCaption('skills')
+              ↓Tooltip [ngx.components.UIAttribute-1792164105567]: 
+                attrName: '[attr.title]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceCaption('skills')
+              ↓Icon [ngx.components.UIDynamicElement-1792164105569]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:sparkles-outline"}'
+                tagName: ion-icon
+              ↓Caption [ngx.components.UIDynamicElement-1792166186966]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: span
+                ↓Class [ngx.components.UIAttribute-1792166186968]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:tigo-quick-caption
+                ↓Text [ngx.components.UIText-1792164107201]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.resourceCaption('skills')
+              ↓Click [ngx.components.UIControlEvent-1792164105571]: 
+                ↓Apply [ngx.components.UICustomAction-1792164107197]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          page.toggleResourceTab('skills');
+                          resolve();
+              ↓Pressed [ngx.components.UIAttribute-1792164107199]: 
+                attrName: '[attr.aria-pressed]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceTab === 'skills'
+            ↓Mcp [ngx.components.UIDynamicElement-1792164111729]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: button
+              ↓Attr [ngx.components.UIAttribute-1792164111731]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓Class [ngx.components.UIAttribute-1792164111733]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:tigo-quick-toggle
+              ↓Label [ngx.components.UIAttribute-1792164111735]: 
+                attrName: '[attr.aria-label]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceCaption('mcp')
+              ↓Tooltip [ngx.components.UIAttribute-1792164111737]: 
+                attrName: '[attr.title]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceCaption('mcp')
+              ↓Icon [ngx.components.UIDynamicElement-1792164111739]: 
+                beanData: '{"ionBean":"Icon","IconName":"plain:git-network-outline"}'
+                tagName: ion-icon
+              ↓Caption [ngx.components.UIDynamicElement-1792166192248]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: span
+                ↓Class [ngx.components.UIAttribute-1792166192250]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:tigo-quick-caption
+                ↓Text [ngx.components.UIText-1792164113371]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.resourceCaption('mcp')
+              ↓Click [ngx.components.UIControlEvent-1792164111741]: 
+                ↓Apply [ngx.components.UICustomAction-1792164113367]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          page.toggleResourceTab('mcp');
+                          resolve();
+              ↓Pressed [ngx.components.UIAttribute-1792164113369]: 
+                attrName: '[attr.aria-pressed]'
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.resourceTab === 'mcp'
         ↓AccessMode [ngx.components.UIDynamicElement-1782125437300]: 
           beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
           tagName: ion-button
@@ -3591,51 +3957,6 @@ scriptContent:
             		} catch (e) {}
             		resolve();
             '
-    local_module_ng_imports: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-        - com.twinsoft.convertigo.beans.common.XMLVector: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: IonToolbar
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: IonButton
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: IonButtons
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: IonIcon
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: IonItem
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: IonTextarea
-    local_module_ts_imports: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-        - com.twinsoft.convertigo.beans.common.XMLVector: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
-            - com.twinsoft.convertigo.beans.common.XMLVector: 
-              - java.lang.String: 
-                - ↑value: '{ IonToolbar, IonButton, IonButtons, IonIcon, IonItem, IonTextarea}'
-              - java.lang.String: 
-                - ↑value: '@ionic/angular/standalone'
 ↓StopRequest [ngx.components.UICompEvent-1781872796496]: 
   attrName: StopRequest
 ↓AgentCodexDesktopFooterStyle [ngx.components.UIStyle-1782123558684]: 
@@ -4191,3 +4512,50 @@ scriptContent:
             resolve();
 ↓EnableResources [ngx.components.UICompVariable-1792084766637]: 
   value: false
+↓ResourceSkills [ngx.components.UICompVariable-1792162896851]: 
+  value: '[]'
+↓ResourceMcp [ngx.components.UICompVariable-1792162901439]: 
+  value: '[]'
+↓ResourceBusy [ngx.components.UICompVariable-1792162906027]: 
+  value: false
+↓ResourceLoading [ngx.components.UICompVariable-1792162910615]: 
+  value: false
+↓ResourceError [ngx.components.UICompVariable-1792162915203]: 
+↓ResourceToggle [ngx.components.UICompEvent-1792162919791]: 
+  attrName: ResourceToggle
+↓TigoQuickResourcesStyle [ngx.components.UIStyle-1792163001929]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Native buttons retain live pressed and translated accessible labels. */
+          .tigo-quick-tabs { display:flex; align-items:center; gap:3px; }
+          .tigo-quick-tabs button.tigo-quick-toggle { display:inline-flex; align-items:center; gap:4px; height:26px; min-height:26px; margin:0; padding:0 7px; border:0; border-radius:6px; background:transparent; color:var(--modern-muted); font-size:11px; line-height:1; cursor:pointer; }
+          .tigo-quick-tabs ion-icon { width:13px; height:13px; flex:0 0 13px; }
+          .tigo-quick-tabs button[aria-pressed=true] { color:var(--ion-color-primary,#0891b2); background:color-mix(in srgb,var(--ion-color-primary,#0891b2) 10%,transparent); }
+          .tigo-quick-toggle:focus-visible,.tigo-manage-button:focus-visible { outline:2px solid var(--ion-color-primary,#0891b2); outline-offset:1px; }
+          .tigo-quick-resources { display:flex; gap:5px; align-items:center; overflow-x:auto; scrollbar-width:none; }
+          .tigo-quick-resources span { font-size:11px; color:var(--modern-muted); }
+          .tigo-quick-resources ion-button[aria-pressed=true] { --color:var(--ion-color-primary,#0891b2); }
+          .tigo-quick-resources ion-icon { font-size:13px; margin-right:4px; }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestion-btn { height:25px; min-height:25px; font-size:11px; --padding-start:7px; --padding-end:7px; }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestion-btn::part(native) { padding:0 7px; border-radius:6px; }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap { gap:4px; padding-top:2px; padding-bottom:5px; }
+          .tigo-manage-button { display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--modern-border); border-radius:6px; background:var(--modern-surface); color:var(--modern-muted); padding:0 7px; margin:0; min-width:28px; cursor:pointer; }
+          .tigo-manage-button ion-icon { width:14px; height:14px; margin:0; }
+          
+          /* The three toggles share the attachment row; captions collapse in narrow drawers. */
+          .agent-prompt-controls-left .tigo-quick-tabs { gap:2px; }
+          .agent-prompt-controls-left .tigo-quick-toggle { height:30px; min-height:30px; padding:0 6px; }
+          .agent-prompt-controls-left .tigo-quick-toggle ion-icon { width:15px; height:15px; flex-basis:15px; }
+          .modern-suggestions-row { align-items:center!important; }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-row .modern-suggestion-btn { box-sizing:border-box; align-self:center; margin:0; }
+          :host-context(ion-footer.agent-footer-codex) .tigo-manage-button { height:25px; min-height:25px; line-height:1; flex:0 0 28px; }
+          @media(max-width:700px) { .tigo-quick-caption { display:none; } .agent-prompt-controls-left .tigo-quick-toggle { width:28px; padding:0; justify-content:center; } }
+          
+          .tigo-prompts-row:not([hidden]) { display:flex!important; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none; }
+          .tigo-prompts-row > .modern-suggestion-btn { flex:0 0 auto; align-self:center; vertical-align:middle; }
+          '
+↓ResourceLanguage [ngx.components.UICompVariable-1792163971494]: 
+  value: '''en'''

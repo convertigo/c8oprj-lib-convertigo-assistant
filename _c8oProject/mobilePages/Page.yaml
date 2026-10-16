@@ -1119,6 +1119,7 @@ scriptContent:
         				''runtimePresenceOnly'': forceFullSettings !== true,
         				''checkUpdates'': forceFullSettings === true,
         				''refreshUpdateCheck'': false,
+                        ''refreshModelCatalog'': forceFullSettings === true,
         				''updateCheckCacheMs'': 21600000,
         				''__context'': noCode ? ''agent_nocode_settings'' : ''byside''
         			};
@@ -1446,12 +1447,13 @@ scriptContent:
         	public postAgentHostMessage(message) {
         		try {
         			var w: any = window;
+                    if (w && w[''java''] && typeof w[''java''].receiveFromJS === ''function'') {
+                        if (typeof w[''receiveFromJava''] !== ''function'') { return false; }
+                        w[''java''].receiveFromJS(JSON.stringify(message));
+                        return true;
+                    }
         			if (w && w[''sendToHost''] && typeof w[''sendToHost''] === ''function'') {
         				w[''sendToHost''](message);
-        				return true;
-        			}
-        			if (w && w[''java''] && typeof w[''java''].receiveFromJS === ''function'') {
-        				w[''java''].receiveFromJS(JSON.stringify(message));
         				return true;
         			}
         			if (w && w.parent && w !== w.parent) {
@@ -3774,13 +3776,13 @@ scriptContent:
                 const fr = {
                     prompts:''Prompts'', skills:''Skills'', mcp:''Connexions MCP'', agent:''Agent et modèle'', runtime:''Runtime et stack'',
                     search:''Rechercher dans la bibliothèque'', allSources:''Toutes les provenances'', builtin:''Livré par Convertigo'', workspace:''Workspace personnel'', project:''Projet partagé'',
-                    refresh:''Actualiser'', create:''Nouveau'', edit:''Éditer'', view:''Consulter'', duplicate:''Dupliquer'', use:''Insérer dans le brouillon'', favorite:''Ajouter aux favoris'', unfavorite:''Retirer des favoris'', up:''Monter le favori'',
+                    refresh:''Recharger la bibliothèque'', create:''Nouveau'', edit:''Éditer'', view:''Consulter'', duplicate:''Dupliquer'', use:''Insérer dans le brouillon'', favorite:''Ajouter aux favoris'', unfavorite:''Retirer des favoris'', up:''Monter le favori'', down:''Descendre le favori'', refreshModels:''Actualiser les modèles'',
                     enable:''Activer pour cette conversation'', disable:''Désactiver pour cette conversation'', enabled:''Activé'', empty:''Aucune ressource dans cette catégorie.'', loading:''Chargement de la bibliothèque…'',
                     skillHint:''Les skills activés sont fournis à l’agent au prochain envoi. Les désactiver n’efface pas les instructions déjà présentes dans l’historique.'',
                     mcpHint:''Une connexion s’active explicitement pour cette conversation, au prochain envoi. Tigo peut redémarrer le harnais pour l’appliquer. Les secrets restent personnels.'',
-                    promptHint:''Les favoris sont vos raccourcis personnels. Un clic insère le prompt sans envoyer de message et conserve le brouillon existant.'',
+                    promptHint:''Insérez un favori dans le brouillon, sans l’envoyer.'',
                     title:''Titre'', description:''Description'', body:''Prompt / contenu Markdown'', language:''Langue de cette traduction'', location:''Enregistrer dans'', target:''Projet cible'', save:''Enregistrer'', cancel:''Annuler'', remove:''Retirer'', removeConfirm:''Confirmer le retrait'',
-                    readonly:''Cette ressource est livrée avec Tigo. Dupliquez-la pour la personnaliser.'', draft:''Le prompt a été ajouté au brouillon.'', connection:''Connexion MCP (JSON, références aux secrets uniquement)'', dependencies:''Connexions requises par ce skill'',
+                    readonly:''Cette ressource est livrée avec Tigo. Dupliquez-la pour la personnaliser.'', draft:''Le prompt a été ajouté au brouillon.'', connection:''Connexion MCP (JSON, références aux secrets uniquement)'', dependencies:''Connexions MCP nécessaires (facultatif)'', dependenciesHint:''Cochez les outils externes dont ce skill a besoin. Sans dépendance, laissez tout décoché.'', editorHint:''Enregistrez cette ressource ici avant de quitter l’éditeur.'', skillBody:''Instructions du skill (Markdown)'', promptBody:''Texte du prompt'', skillTemplate:''Décrire le rôle de ce skill'', skillMetadataHint:''Le nom technique et la description du fichier SKILL.md sont générés automatiquement. Saisissez uniquement les instructions ci-dessous.'', saving:''Enregistrement…'',
                     secretName:''Nom du secret (ex. COMPANY_API_KEY)'', secretValue:''Valeur privée'', secretSave:''Enregistrer le secret personnel'', secrets:''Secrets disponibles : '', none:''aucun'', allPrompts:''Tous les prompts…'',
                     failed:''Impossible de charger la bibliothèque. Vous pouvez réessayer.'', revision_conflict:''La ressource a été modifiée depuis son ouverture. Actualisez et rouvrez-la avant d’enregistrer.'', invalid_id:''L’identifiant doit utiliser des lettres minuscules, chiffres et tirets.'',
                     authentication_required:''Reconnectez la session Studio pour accéder à la bibliothèque.'', conversation_busy:''Attendez la fin du tour avant de changer les ressources actives.'',
@@ -3791,9 +3793,9 @@ scriptContent:
                     csrf_invalid:''La session a été renouvelée. Actualisez la bibliothèque puis recommencez.'', origin_forbidden:''Origine de la requête non autorisée.'', review:''Réactiver la connexion modifiée'', mcp_changed_requires_review:''Une connexion MCP a changé. Vérifiez sa déclaration puis réactivez-la avant de continuer.'', secret_admin_required:''La gestion des secrets MCP requiert un administrateur.'', mcp_https_or_loopback_required:''Utilisez une URL HTTPS ou une adresse HTTP locale.'', mcp_url_credentials_forbidden:''Placez les identifiants dans les secrets personnels, jamais dans l’URL.'', invalid_header_prefix:''Le préfixe d’en-tête doit être vide, Bearer ou Basic.'', mcp_arguments_credentials_forbidden:''Passez les identifiants par une variable d’environnement, jamais comme argument de commande.''
                 };
                 const en = {
-                    prompts:''Prompts'', skills:''Skills'', mcp:''MCP connections'', agent:''Agent and model'', runtime:''Runtime and stack'', search:''Search the library'', allSources:''All sources'', builtin:''Built into Tigo'', workspace:''Personal workspace'', project:''Shared project'', refresh:''Refresh'', create:''New'', edit:''Edit'', view:''View'', duplicate:''Duplicate'', use:''Insert into draft'', favorite:''Add to favorites'', unfavorite:''Remove from favorites'', up:''Move favorite up'', enable:''Enable for this conversation'', disable:''Disable for this conversation'', enabled:''Enabled'', empty:''No resources in this category.'', loading:''Loading the library…'',
-                    skillHint:''Enabled skills are supplied on the next message. Disabling them does not erase instructions already present in the conversation history.'', mcpHint:''Explicitly enable a connection for this conversation. Changes apply on the next message and may restart the harness. Secrets remain personal.'', promptHint:''Favorites are personal shortcuts. Clicking inserts the prompt without sending a message and preserves your existing draft.'',
-                    title:''Title'', description:''Description'', body:''Prompt / Markdown content'', language:''Language of this translation'', location:''Save in'', target:''Target project'', save:''Save'', cancel:''Cancel'', remove:''Remove'', removeConfirm:''Confirm removal'', readonly:''This resource ships with Tigo. Duplicate it to customize.'', draft:''The prompt was added to your draft.'', connection:''MCP connection (JSON, secret references only)'', dependencies:''MCP connections required by this skill'', secretName:''Secret name (e.g. COMPANY_API_KEY)'', secretValue:''Private value'', secretSave:''Save personal secret'', secrets:''Available secrets: '', none:''none'', allPrompts:''All prompts…'',
+                    prompts:''Prompts'', skills:''Skills'', mcp:''MCP connections'', agent:''Agent and model'', runtime:''Runtime and stack'', search:''Search the library'', allSources:''All sources'', builtin:''Built into Tigo'', workspace:''Personal workspace'', project:''Shared project'', refresh:''Reload library'', create:''New'', edit:''Edit'', view:''View'', duplicate:''Duplicate'', use:''Insert into draft'', favorite:''Add to favorites'', unfavorite:''Remove from favorites'', up:''Move favorite up'', down:''Move favorite down'', refreshModels:''Refresh models'', enable:''Enable for this conversation'', disable:''Disable for this conversation'', enabled:''Enabled'', empty:''No resources in this category.'', loading:''Loading the library…'',
+                    skillHint:''Enabled skills are supplied on the next message. Disabling them does not erase instructions already present in the conversation history.'', mcpHint:''Explicitly enable a connection for this conversation. Changes apply on the next message and may restart the harness. Secrets remain personal.'', promptHint:''Insert a favorite into your draft without sending it.'',
+                    title:''Title'', description:''Description'', body:''Prompt / Markdown content'', language:''Language of this translation'', location:''Save in'', target:''Target project'', save:''Save'', cancel:''Cancel'', remove:''Remove'', removeConfirm:''Confirm removal'', readonly:''This resource ships with Tigo. Duplicate it to customize.'', draft:''The prompt was added to your draft.'', connection:''MCP connection (JSON, secret references only)'', dependencies:''Required MCP connections (optional)'', dependenciesHint:''Select the external tools this skill needs. Leave everything unchecked if none are required.'', editorHint:''Save this resource here before leaving the editor.'', skillBody:''Skill instructions (Markdown)'', promptBody:''Prompt text'', skillTemplate:''Describe this skill'', skillMetadataHint:''The SKILL.md technical name and description are generated automatically. Enter only the instructions below.'', saving:''Saving…'', secretName:''Secret name (e.g. COMPANY_API_KEY)'', secretValue:''Private value'', secretSave:''Save personal secret'', secrets:''Available secrets: '', none:''none'', allPrompts:''All prompts…'',
                     failed:''Unable to load the library. You can retry.'', revision_conflict:''The resource changed since you opened it. Refresh and reopen it before saving.'', invalid_id:''Use lowercase letters, numbers and hyphens for the identifier.'', authentication_required:''Reconnect your Studio session to access the library.'', conversation_busy:''Wait until the current turn finishes before changing active resources.'', skill_frontmatter_required:''A skill must start with SKILL.md frontmatter containing name and description.'', default_translation_required:''The default language translation must retain a title.'', mcp_secret_missing:''A connection requires a missing personal secret.'', skill_mcp_dependency_missing:''Enable the MCP connections required by the selected skills.'', mcp_activation_admin_required:''An administrator must enable MCP connections.'', invalid_connection:''Check the MCP connection declaration.'', invalid_object:''The declaration must be a valid JSON object.'', title_required:''A title is required.'', invalid_language:''Use a language code such as fr or en.'', selected:''Resources will apply on the next message.'', saved:''Resource saved.'', invalid_support_path:''Support files must stay under references, scripts or assets.'', editor:''Resource editor'', missingSelections:''Some active resources are unavailable. Remove them from this conversation to continue.'', clearMissing:''Remove unavailable selections'', resource_missing:''The resource was removed. Refresh the library.'', catalogWarning:''Some resources could not be read. Correct their format, then refresh.'', csrf_invalid:''The session was renewed. Refresh the library, then retry.'', origin_forbidden:''This request origin is not allowed.'', review:''Re-enable changed connection'', mcp_changed_requires_review:''An MCP connection changed. Review its declaration and re-enable it before continuing.'', secret_admin_required:''An administrator must manage MCP secrets.'', mcp_https_or_loopback_required:''Use HTTPS or a local HTTP address.'', mcp_url_credentials_forbidden:''Store credentials as personal secrets, never in the URL.'', invalid_header_prefix:''Header prefixes must be empty, Bearer or Basic.'', mcp_arguments_credentials_forbidden:''Pass credentials through environment variables, never command arguments.''
                 };
                 return ((String(this.translate?.currentLang || ''en'').toLowerCase().startsWith(''fr'') ? fr : en) as any)[key] || en[key] || this.tigoText(''failed'');
@@ -3822,7 +3824,7 @@ scriptContent:
                 this.local.ResourceCatalog = body;
                 this.local.ResourceLoadedKey = request.key;
                 this.filterTigoResources();
-                if (request.request.action === ''save'' || request.request.action === ''duplicate'' || request.request.action === ''delete'') { this.local.ResourceEditorOpen = false; this.local.ResourceNotice = this.tigoText(''saved''); }
+                if (request.request.action === ''save'' || request.request.action === ''duplicate'' || request.request.action === ''delete'') { this.local.ResourceEditorOpen = false; this.local.ResourceEditorPending = false; this.local.ResourceNotice = this.tigoText(''saved''); }
                 if (request.request.action === ''select'') { this.local.ResourceNotice = this.tigoText(''selected''); }
                 this.local.ResourceSecretValue = '''';
                 this.tick();
@@ -3834,10 +3836,16 @@ scriptContent:
                 const language = String(this.translate?.currentLang || ''en'').toLowerCase().split(/[-_]/)[0];
                 const localized = (catalog.items || []).map(item => {
                     const translated = item.data?.translations?.[language] || item.data?.translations?.[item.data?.defaultLanguage];
-                    return {...item, title:translated?.title || item.title, description:translated?.description ?? item.description, body:translated?.body ?? item.body};
+                    return {...item, favorite:(catalog.favorites || []).includes(item.key), title:translated?.title || item.title, description:translated?.description ?? item.description, body:translated?.body ?? item.body};
                 });
                 const items = localized.filter(item => (origin === ''all'' || item.scope === origin) && (!query || [item.title,item.description,item.project,item.id].join('' '').toLowerCase().includes(query)));
-                this.local.ResourcePromptItems = items.filter(item => item.kind === ''prompt'');
+                const favorites = catalog.favorites || [];
+                this.local.ResourcePromptItems = items.filter(item => item.kind === ''prompt'').sort((a,b) => {
+                    const ai = favorites.indexOf(a.key), bi = favorites.indexOf(b.key);
+                    if (ai >= 0 && bi >= 0) { return ai - bi; }
+                    if (ai >= 0 || bi >= 0) { return ai >= 0 ? -1 : 1; }
+                    return String(a.title || '''').localeCompare(String(b.title || ''''), language, {sensitivity:''base''}) || String(a.key).localeCompare(String(b.key));
+                });
                 this.local.ResourceSkillItems = items.filter(item => item.kind === ''skill'');
                 this.local.ResourceMcpItems = items.filter(item => item.kind === ''mcp'');
                 this.local.ResourceMcpOptions = localized.filter(item => item.kind === ''mcp'');
@@ -3853,15 +3861,17 @@ scriptContent:
                     return {label:translated?.title || item.title,question:translated?.body ?? item.body,icon:''document-text-outline''};
                 });
             }
-            public openTigoLibrary() { this.openAgentSettingsPage(); this.local.ResourceAccordion = ''prompts''; this.requestTigoResources(true); this.tick(); }
+            public openTigoLibrary(category = ''prompts'') { this.openAgentSettingsPage(); this.local.ResourceAccordion = [''prompts'',''skills'',''mcp''].includes(category) ? category : ''prompts''; this.requestTigoResources(true); this.tick(); }
             public toggleTigoFavorite(item: any) {
                 const list = [...(this.local.ResourceCatalog?.favorites || [])]; const index = list.indexOf(item.key);
                 if (index >= 0) { list.splice(index,1); } else { list.push(item.key); }
                 this.requestTigoResources(true, {action:''favorites'',input:{favorites:list}});
             }
-            public moveTigoFavorite(item: any) {
+            public moveTigoFavorite(item: any, direction = -1) {
                 const list = [...(this.local.ResourceCatalog?.favorites || [])]; const index = list.indexOf(item.key);
-                if (index <= 0) { return; } [list[index-1],list[index]] = [list[index],list[index-1]];
+                const target = index + direction;
+                if (index < 0 || target < 0 || target >= list.length) { return; }
+                [list[target],list[index]] = [list[index],list[target]];
                 this.requestTigoResources(true,{action:''favorites'',input:{favorites:list}});
             }
             public toggleTigoResource(item: any) {
@@ -3881,7 +3891,15 @@ scriptContent:
                 const resource = item ? JSON.parse(JSON.stringify(item.data)) : {schemaVersion:1,id:''custom-'' + Date.now().toString(36),defaultLanguage:language,translations:{},requiresMcp:[]};
                 if (duplicate) { resource.id = resource.id.slice(0,45) + ''-copy-'' + Date.now().toString(36); }
                 kind = item?.kind || kind;
-                if(!item && kind === ''skill'') { resource.translations[language] = {title:'''',description:'''',body:''---\nname: ''+resource.id+''\ndescription: Describe this skill\n---\n\n''}; }
+                if(!item && kind === ''skill'') { resource.translations[language] = {title:'''',description:'''',body:''''}; }
+                this.local.ResourceSkillHeaders = {};
+                if (kind === ''skill'') {
+                    Object.keys(resource.translations || {}).forEach(code => {
+                        const document = this.splitTigoSkillDocument(resource.translations[code].body);
+                        this.local.ResourceSkillHeaders[code] = document.header;
+                        resource.translations[code].body = document.body;
+                    });
+                }
                 this.local.ResourceEditor = resource;
                 this.local.ResourceCopySource = duplicate && item?.kind === ''skill'' ? {key:item.key,revision:item.revision} : null;
                 this.local.ResourceEditorKind = kind; this.local.ResourceEditorKey = item && !duplicate ? item.key : '''';
@@ -3893,7 +3911,8 @@ scriptContent:
                 this.local.ResourceEditActiveLanguage = '''';
                 this.local.ResourceEditRequiresMcp = resource.requiresMcp || [];
                 this.local.ResourceEditConnection = JSON.stringify(resource.connection || {transport:''http'',url:''https://example.invalid/mcp'',env:[],headers:{}},null,2);
-                this.loadTigoEditorLanguage(); this.local.ResourceEditorOpen = true; this.local.ResourceDeleteConfirmed = false; this.local.ResourceError = '''';
+                this.local.ResourceAccordion = kind === ''mcp'' ? ''mcp'' : kind + ''s'';
+                this.loadTigoEditorLanguage(); this.local.ResourceEditorPending = true; this.local.ResourceEditorOpen = true; this.local.ResourceDeleteConfirmed = false; this.local.ResourceError = '''';
                 this.tick(); setTimeout(() => document.querySelector(''.tigo-resource-editor'')?.scrollIntoView({block:''nearest'',behavior:''smooth''}),0);
             }
             public loadTigoEditorLanguage() {
@@ -3909,6 +3928,12 @@ scriptContent:
                 this.loadTigoEditorLanguage();
                 const data = JSON.parse(JSON.stringify(this.local.ResourceEditor));
                 data.requiresMcp = this.local.ResourceEditRequiresMcp || [];
+                if (this.local.ResourceEditorKind === ''skill'') {
+                    Object.keys(data.translations || {}).forEach(code => {
+                        const translation = data.translations[code];
+                        translation.body = this.formatTigoSkillDocument(data.id, translation, this.local.ResourceSkillHeaders?.[code] || '''');
+                    });
+                }
                 try { if(this.local.ResourceEditorKind === ''mcp'') { data.connection = JSON.parse(this.local.ResourceEditConnection); } }
                 catch(e) { this.local.ResourceError = this.tigoText(''invalid_object''); this.tick(); return; }
                 this.requestTigoResources(true,{action:''save'',kind:this.local.ResourceEditorKind,scope:this.local.ResourceEditScope,project:this.local.ResourceEditProject,revision:this.local.ResourceEditorRevision,copyFromKey:this.local.ResourceCopySource?.key,copyFromRevision:this.local.ResourceCopySource?.revision,input:data});
@@ -3933,7 +3958,54 @@ scriptContent:
                 // Ionic select/toggle ionChange events bubble through the accordion group.
                 if (String(event?.target?.tagName || '''').toUpperCase() === ''ION-ACCORDION-GROUP'') {
                     this.local.ResourceAccordion = event.detail.value;
+                    const category = this.local.ResourceEditorKind === ''mcp'' ? ''mcp'' : this.local.ResourceEditorKind + ''s'';
+                    this.local.ResourceEditorOpen = !!this.local.ResourceEditorPending && category === event.detail.value;
+                    this.tick();
                 }
+            }
+        
+            public refreshAgentModelCatalog() {
+                if (this.local?.AgentSettingsRefreshRunning) { return; }
+                this.refreshAgentSettingsAfterHostContext(true);
+            }
+            public canMoveTigoFavorite(item: any, direction: number) {
+                const list = this.local.ResourceCatalog?.favorites || [];
+                const index = list.indexOf(item.key), target = index + direction;
+                return index >= 0 && target >= 0 && target < list.length;
+            }
+        
+            public cancelTigoResourceEditor() {
+                this.local.ResourceEditorOpen = false;
+                this.local.ResourceEditorPending = false;
+                this.local.ResourceError = '''';
+                this.tick();
+            }
+            public toggleTigoEditorMcp(key: string) {
+                if (this.local.ResourceEditorReadonly) { return; }
+                const selected = [...(this.local.ResourceEditRequiresMcp || [])];
+                const index = selected.indexOf(key);
+                if (index < 0) { selected.push(key); } else { selected.splice(index, 1); }
+                this.local.ResourceEditRequiresMcp = selected;
+                this.tick();
+            }
+        
+            public splitTigoSkillDocument(value: any) {
+                const text = String(value || '''').replace(/^\uFEFF/, '''');
+                const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+                if (!match || !/^name:\s*[^\r\n]+/m.test(match[1]) || !/^description:\s*[^\r\n]+/m.test(match[1])) { return {header:'''',body:text}; }
+                return {header:match[1],body:text.slice(match[0].length).replace(/^\r?\n/, '''')};
+            }
+            public formatTigoSkillDocument(id: string, translation: any, storedHeader = '''') {
+                const document = this.splitTigoSkillDocument(translation.body);
+                let skip = false;
+                const extra = (document.header || storedHeader).split(/\r?\n/).filter(line => {
+                    if (/^(name|description):/.test(line)) { skip = true; return false; }
+                    if (skip && (!line.trim() || /^\s/.test(line))) { return false; }
+                    skip = false;
+                    return true;
+                }).join(''\n'').trim();
+                const header = ''name: '' + JSON.stringify(id) + ''\ndescription: '' + JSON.stringify(String(translation.description || translation.title || '''').trim());
+                return ''---\n'' + header + (extra ? ''\n'' + extra : '''') + ''\n---\n\n'' + document.body;
             }
         
         /*End_c8o_PageFunction*/
@@ -5703,6 +5775,7 @@ title: Tigo
                         - MobileSmartSourceType: plain:tigo-resource-toolbar
                   ↓LibrarySearchField [ngx.components.UIDynamicElement-1792084623541]: 
                     beanData: '{"ionBean":"DivTag"}'
+                    isEnabled: false
                     tagName: div
                     ↓Attr [ngx.components.UIAttribute-1792084623543]: 
                       attrName: class
@@ -5741,6 +5814,7 @@ title: Tigo
                        "Interface": "plain:popover",
                        "Label": "script:this.tigoText(''allSources'')"
                       }'
+                    isEnabled: false
                     tagName: ion-select
                     ↓All [ngx.components.UIDynamicElement-1792084625145]: 
                       beanData: '{"ionBean":"SelectOption","Value":"plain:all"}'
@@ -5807,6 +5881,32 @@ title: Tigo
                               →: |
                                 page.requestTigoResources(true);
                                 resolve();
+                    ↓Icon [ngx.components.UIDynamicElement-1792162707921]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Icon",
+                         "IconName": "plain:refresh-outline",
+                         "IconSlot": "plain:start"
+                        }'
+                      tagName: ion-icon
+                    ↓AccessibleLabel [ngx.components.UIAttribute-1792162712417]: 
+                      attrName: '[attr.aria-label]'
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.tigoText('refresh')
+                    ↓Tooltip [ngx.components.UIAttribute-1792162716913]: 
+                      attrName: '[attr.title]'
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.tigoText('refresh')
+                    ↓LibraryOnly [ngx.components.UIAttribute-1792166151790]: 
+                      attrName: '[hidden]'
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:!['prompts','skills','mcp'].includes(local.ResourceAccordion)
                   ↓Loading [ngx.components.UIControlDirective-1792084625173]: 
                     directiveName: If
                     directiveSource: 
@@ -6191,18 +6291,6 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: plain:agent-provider-check
-                      ↓RevealSettings [ngx.components.UIDynamicElement-1789580000040]: 
-                        beanData: '{"ionBean":"DivTag"}'
-                        tagName: div
-                        ↓Class [ngx.components.UIAttribute-1789580000042]: 
-                          attrName: class
-                          attrValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-reveal-setting
-                        ↓RevealLabel [ngx.components.UIDynamicElement-1789580000044]: 
-                          beanData: '{"ionBean":"Paragraph"}'
-                          tagName: p
                           ↓VibeButton [ngx.components.UIDynamicElement-1781700500017]: 
                             beanData: |
                               '{
@@ -6764,6 +6852,19 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: plain:agent-provider-check
+                      ↓RevealSettings [ngx.components.UIDynamicElement-1789580000040]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        isEnabled: false
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1789580000042]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-reveal-setting
+                        ↓RevealLabel [ngx.components.UIDynamicElement-1789580000044]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
                       ↓RevealSettings1 [ngx.components.UIDynamicElement-1782955202301]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -6974,6 +7075,49 @@ title: Tigo
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                       - MobileSmartSourceType: 'script:agentModel && (agentModel.description || agentModel.summary) ? (agentModel.description || agentModel.summary) : '''''
+                        ↓RefreshModels [ngx.components.UIDynamicElement-1792162722705]: 
+                          beanData: |
+                            '{
+                             "ionBean": "Button",
+                             "Disabled": "script:local.AgentSettingsRefreshRunning || local.IsAgentWorking === true",
+                             "IonFill": "plain:clear"
+                            }'
+                          tagName: ion-button
+                          ↓Label [ngx.components.UIAttribute-1792162722707]: 
+                            attrName: '[attr.aria-label]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('refreshModels')
+                          ↓Title [ngx.components.UIAttribute-1792162722709]: 
+                            attrName: '[attr.title]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('refreshModels')
+                          ↓Icon [ngx.components.UIDynamicElement-1792162722711]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Icon",
+                               "IconName": "plain:refresh-outline",
+                               "IconSlot": "plain:icon-only"
+                              }'
+                            tagName: ion-icon
+                          ↓Click [ngx.components.UIControlEvent-1792162722713]: 
+                            ↓Apply [ngx.components.UICustomAction-1792162724307]: 
+                              actionValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                    →: |
+                                      page.refreshAgentModelCatalog();
+                                      resolve();
+                          ↓Attr [ngx.components.UIAttribute-1792162724309]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-model-refresh
                       ↓ReasoningIf [ngx.components.UIControlDirective-1785253202523]: 
                         directiveName: If
                         directiveSource: 
@@ -7651,7 +7795,8 @@ title: Tigo
                           '{
                            "ionBean": "Button",
                            "Disabled": "script:local.ResourceLoading",
-                           "IonFill": "plain:clear"
+                           "IonFill": "plain:outline",
+                           "IonSize": "plain:small"
                           }'
                         tagName: ion-button
                         ↓Text [ngx.components.UIText-1792084635837]: 
@@ -7668,6 +7813,20 @@ title: Tigo
                                   →: |
                                     page.editTigoResource(null, 'prompt');
                                     resolve();
+                        ↓Icon [ngx.components.UIDynamicElement-1792167542041]: 
+                          beanData: |
+                            '{
+                             "ionBean": "Icon",
+                             "IconName": "plain:add-outline",
+                             "IconSlot": "plain:start"
+                            }'
+                          tagName: ion-icon
+                        ↓CreateClass [ngx.components.UIAttribute-1792167546537]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-resource-create
                       ↓Items [ngx.components.UIControlDirective-1792084635843]: 
                         directiveIndexName: promptItemIndex
                         directiveItemName: promptItem
@@ -7709,6 +7868,12 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: script:promptItem.description
+                              ↓HideBuiltInDescription [ngx.components.UIAttribute-1792163851948]: 
+                                attrName: '[hidden]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:promptItem.scope === 'builtin'
                             ↓Source [ngx.components.UIDynamicElement-1792084640355]: 
                               beanData: '{"ionBean":"Paragraph"}'
                               tagName: p
@@ -7735,6 +7900,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640365]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -7748,28 +7914,118 @@ title: Tigo
                                         →: |
                                           page.toggleTigoFavorite(props.stack.root.scope.promptItem);
                                           resolve();
-                            ↓Up [ngx.components.UIDynamicElement-1792084640371]: 
-                              beanData: |
-                                '{
-                                 "ionBean": "Button",
-                                 "Disabled": "script:local.ResourceLoading || !promptItem.favorite",
-                                 "IonFill": "plain:clear"
-                                }'
-                              tagName: ion-button
-                              ↓Text [ngx.components.UIText-1792084640373]: 
-                                textValue: 
+                              ↓Icon [ngx.components.UIDynamicElement-1792162728805]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:promptItem.favorite ? ''star'' : ''star-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162733301]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: script:this.tigoText('up')
-                              ↓Click [ngx.components.UIControlEvent-1792084640375]: 
-                                ↓Apply [ngx.components.UICustomAction-1792084640377]: 
-                                  actionValue: 
+                                    - MobileSmartSourceType: 'script:promptItem.favorite ? this.tigoText(''unfavorite'') : this.tigoText(''favorite'')'
+                              ↓Tooltip [ngx.components.UIAttribute-1792162737797]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:promptItem.favorite ? this.tigoText(''unfavorite'') : this.tigoText(''favorite'')'
+                              ↓Pressed [ngx.components.UIAttribute-1792162742293]: 
+                                attrName: '[attr.aria-pressed]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:promptItem.favorite
+                            ↓FavoriteOrder [ngx.components.UIControlDirective-1792167569017]: 
+                              directiveName: If
+                              directiveSource: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:promptItem.favorite
+                              ↓Up [ngx.components.UIDynamicElement-1792084640371]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Button",
+                                   "Disabled": "script:local.ResourceLoading || !this.canMoveTigoFavorite(promptItem, -1)",
+                                   "IonFill": "plain:clear"
+                                  }'
+                                tagName: ion-button
+                                ↓Text [ngx.components.UIText-1792084640373]: 
+                                  isEnabled: false
+                                  textValue: 
                                     - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                        →: |
-                                          page.moveTigoFavorite(props.stack.root.scope.promptItem);
-                                          resolve();
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.tigoText('up')
+                                ↓Click [ngx.components.UIControlEvent-1792084640375]: 
+                                  ↓Apply [ngx.components.UICustomAction-1792084640377]: 
+                                    actionValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                          →: |
+                                            page.moveTigoFavorite(props.stack.root.scope.promptItem);
+                                            resolve();
+                                ↓Icon [ngx.components.UIDynamicElement-1792162746789]: 
+                                  beanData: |
+                                    '{
+                                     "ionBean": "Icon",
+                                     "IconName": "script:''arrow-up-outline''",
+                                     "IconSlot": "plain:icon-only"
+                                    }'
+                                  tagName: ion-icon
+                                ↓AccessibleLabel [ngx.components.UIAttribute-1792162751285]: 
+                                  attrName: '[attr.aria-label]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.tigoText('up')
+                                ↓Tooltip [ngx.components.UIAttribute-1792162755781]: 
+                                  attrName: '[attr.title]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.tigoText('up')
+                              ↓Down [ngx.components.UIDynamicElement-1792162800741]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Button",
+                                   "Disabled": "script:local.ResourceLoading || !this.canMoveTigoFavorite(promptItem, 1)",
+                                   "IonFill": "plain:clear"
+                                  }'
+                                tagName: ion-button
+                                ↓Label [ngx.components.UIAttribute-1792162800743]: 
+                                  attrName: '[attr.aria-label]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.tigoText('down')
+                                ↓Title [ngx.components.UIAttribute-1792162800745]: 
+                                  attrName: '[attr.title]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.tigoText('down')
+                                ↓Icon [ngx.components.UIDynamicElement-1792162800747]: 
+                                  beanData: |
+                                    '{
+                                     "ionBean": "Icon",
+                                     "IconName": "plain:arrow-down-outline",
+                                     "IconSlot": "plain:icon-only"
+                                    }'
+                                  tagName: ion-icon
+                                ↓Click [ngx.components.UIControlEvent-1792162800749]: 
+                                  ↓Apply [ngx.components.UICustomAction-1792162802343]: 
+                                    actionValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                          →: |
+                                            page.moveTigoFavorite(props.stack.root.scope.promptItem, 1);
+                                            resolve();
                             ↓Use [ngx.components.UIDynamicElement-1792084640379]: 
                               beanData: |
                                 '{
@@ -7779,6 +8035,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640381]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -7792,6 +8049,26 @@ title: Tigo
                                         →: |
                                           page.useTigoPrompt(props.stack.root.scope.promptItem);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162760277]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:''add-circle-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162764773]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('use')
+                              ↓Tooltip [ngx.components.UIAttribute-1792162769269]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('use')
                             ↓Inspect [ngx.components.UIDynamicElement-1792084640387]: 
                               beanData: |
                                 '{
@@ -7801,6 +8078,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640389]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -7814,6 +8092,26 @@ title: Tigo
                                         →: |
                                           page.editTigoResource(props.stack.root.scope.promptItem);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162773765]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:promptItem.readOnly ? ''eye-outline'' : ''create-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162778261]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:promptItem.readOnly ? this.tigoText(''view'') : this.tigoText(''edit'')'
+                              ↓Tooltip [ngx.components.UIAttribute-1792162782757]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:promptItem.readOnly ? this.tigoText(''view'') : this.tigoText(''edit'')'
                             ↓Duplicate [ngx.components.UIDynamicElement-1792084640395]: 
                               beanData: |
                                 '{
@@ -7823,6 +8121,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640397]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -7836,6 +8135,26 @@ title: Tigo
                                         →: |
                                           page.editTigoResource(props.stack.root.scope.promptItem, props.stack.root.scope.promptItem.kind, true);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162787253]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:''copy-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162791749]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('duplicate')
+                              ↓Tooltip [ngx.components.UIAttribute-1792162796245]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('duplicate')
                       ↓Empty [ngx.components.UIControlDirective-1792084640403]: 
                         directiveName: If
                         directiveSource: 
@@ -7895,7 +8214,8 @@ title: Tigo
                           '{
                            "ionBean": "Button",
                            "Disabled": "script:local.ResourceLoading",
-                           "IonFill": "plain:clear"
+                           "IonFill": "plain:outline",
+                           "IonSize": "plain:small"
                           }'
                         tagName: ion-button
                         ↓Text [ngx.components.UIText-1792084640429]: 
@@ -7912,6 +8232,20 @@ title: Tigo
                                   →: |
                                     page.editTigoResource(null, 'skill');
                                     resolve();
+                        ↓Icon [ngx.components.UIDynamicElement-1792167551033]: 
+                          beanData: |
+                            '{
+                             "ionBean": "Icon",
+                             "IconName": "plain:add-outline",
+                             "IconSlot": "plain:start"
+                            }'
+                          tagName: ion-icon
+                        ↓CreateClass [ngx.components.UIAttribute-1792167555529]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-resource-create
                       ↓Items [ngx.components.UIControlDirective-1792084640435]: 
                         directiveIndexName: skillItemIndex
                         directiveItemName: skillItem
@@ -7979,6 +8313,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640463]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -7992,6 +8327,32 @@ title: Tigo
                                         →: |
                                           page.toggleTigoResource(props.stack.root.scope.skillItem);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162806839]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:skillItem.requiresReview ? ''alert-circle-outline'' : (skillItem.enabled ? ''checkmark-circle'' : ''ellipse-outline'')",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162811335]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:skillItem.enabled ? this.tigoText(''disable'') : this.tigoText(''enable'')'
+                              ↓Tooltip [ngx.components.UIAttribute-1792162815831]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:skillItem.enabled ? this.tigoText(''disable'') : this.tigoText(''enable'')'
+                              ↓Pressed [ngx.components.UIAttribute-1792162820327]: 
+                                attrName: '[attr.aria-pressed]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:skillItem.enabled
                             ↓Inspect [ngx.components.UIDynamicElement-1792084640469]: 
                               beanData: |
                                 '{
@@ -8001,6 +8362,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640471]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -8014,6 +8376,26 @@ title: Tigo
                                         →: |
                                           page.editTigoResource(props.stack.root.scope.skillItem);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162824823]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:skillItem.readOnly ? ''eye-outline'' : ''create-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162829319]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:skillItem.readOnly ? this.tigoText(''view'') : this.tigoText(''edit'')'
+                              ↓Tooltip [ngx.components.UIAttribute-1792162833815]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:skillItem.readOnly ? this.tigoText(''view'') : this.tigoText(''edit'')'
                             ↓Duplicate [ngx.components.UIDynamicElement-1792084640477]: 
                               beanData: |
                                 '{
@@ -8023,6 +8405,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640479]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -8036,6 +8419,26 @@ title: Tigo
                                         →: |
                                           page.editTigoResource(props.stack.root.scope.skillItem, props.stack.root.scope.skillItem.kind, true);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162838311]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:''copy-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162842807]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('duplicate')
+                              ↓Tooltip [ngx.components.UIAttribute-1792162847303]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('duplicate')
                       ↓Empty [ngx.components.UIControlDirective-1792084640485]: 
                         directiveName: If
                         directiveSource: 
@@ -8095,7 +8498,8 @@ title: Tigo
                           '{
                            "ionBean": "Button",
                            "Disabled": "script:local.ResourceLoading",
-                           "IonFill": "plain:clear"
+                           "IonFill": "plain:outline",
+                           "IonSize": "plain:small"
                           }'
                         tagName: ion-button
                         ↓Text [ngx.components.UIText-1792084640511]: 
@@ -8112,6 +8516,20 @@ title: Tigo
                                   →: |
                                     page.editTigoResource(null, 'mcp');
                                     resolve();
+                        ↓Icon [ngx.components.UIDynamicElement-1792167560025]: 
+                          beanData: |
+                            '{
+                             "ionBean": "Icon",
+                             "IconName": "plain:add-outline",
+                             "IconSlot": "plain:start"
+                            }'
+                          tagName: ion-icon
+                        ↓CreateClass [ngx.components.UIAttribute-1792167564521]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-resource-create
                       ↓Items [ngx.components.UIControlDirective-1792084640517]: 
                         directiveIndexName: mcpItemIndex
                         directiveItemName: mcpItem
@@ -8179,6 +8597,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640545]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -8192,6 +8611,32 @@ title: Tigo
                                         →: |
                                           page.toggleTigoResource(props.stack.root.scope.mcpItem);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162851799]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:mcpItem.requiresReview ? ''alert-circle-outline'' : (mcpItem.enabled ? ''checkmark-circle'' : ''ellipse-outline'')",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162856295]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:mcpItem.requiresReview ? this.tigoText(''review'') : (mcpItem.enabled ? this.tigoText(''disable'') : this.tigoText(''enable''))'
+                              ↓Tooltip [ngx.components.UIAttribute-1792162860791]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:mcpItem.requiresReview ? this.tigoText(''review'') : (mcpItem.enabled ? this.tigoText(''disable'') : this.tigoText(''enable''))'
+                              ↓Pressed [ngx.components.UIAttribute-1792162865287]: 
+                                attrName: '[attr.aria-pressed]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:mcpItem.enabled
                             ↓Inspect [ngx.components.UIDynamicElement-1792084640551]: 
                               beanData: |
                                 '{
@@ -8201,6 +8646,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640553]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -8214,6 +8660,26 @@ title: Tigo
                                         →: |
                                           page.editTigoResource(props.stack.root.scope.mcpItem);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162869783]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:mcpItem.readOnly ? ''eye-outline'' : ''create-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162874279]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:mcpItem.readOnly ? this.tigoText(''view'') : this.tigoText(''edit'')'
+                              ↓Tooltip [ngx.components.UIAttribute-1792162878775]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:mcpItem.readOnly ? this.tigoText(''view'') : this.tigoText(''edit'')'
                             ↓Duplicate [ngx.components.UIDynamicElement-1792084640559]: 
                               beanData: |
                                 '{
@@ -8223,6 +8689,7 @@ title: Tigo
                                 }'
                               tagName: ion-button
                               ↓Text [ngx.components.UIText-1792084640561]: 
+                                isEnabled: false
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
@@ -8236,6 +8703,26 @@ title: Tigo
                                         →: |
                                           page.editTigoResource(props.stack.root.scope.mcpItem, props.stack.root.scope.mcpItem.kind, true);
                                           resolve();
+                              ↓Icon [ngx.components.UIDynamicElement-1792162883271]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Icon",
+                                   "IconName": "script:''copy-outline''",
+                                   "IconSlot": "plain:icon-only"
+                                  }'
+                                tagName: ion-icon
+                              ↓AccessibleLabel [ngx.components.UIAttribute-1792162887767]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('duplicate')
+                              ↓Tooltip [ngx.components.UIAttribute-1792162892263]: 
+                                attrName: '[attr.title]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.tigoText('duplicate')
                       ↓Empty [ngx.components.UIControlDirective-1792084640567]: 
                         directiveName: If
                         directiveSource: 
@@ -8380,6 +8867,26 @@ title: Tigo
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: script:this.tigoText('editor')
+                    ↓Help [ngx.components.UIDynamicElement-1792166113016]: 
+                      beanData: '{"ionBean":"Paragraph"}'
+                      tagName: p
+                      ↓Class [ngx.components.UIAttribute-1792166113018]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:tigo-editor-hint
+                      ↓Text [ngx.components.UIText-1792166113020]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.tigoText('editorHint')
+                      ↓Readonly [ngx.components.UIAttribute-1792166401855]: 
+                        attrName: '[hidden]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:local.ResourceEditorReadonly
                     ↓ReadOnly [ngx.components.UIControlDirective-1792084649605]: 
                       directiveName: If
                       directiveSource: 
@@ -8394,6 +8901,20 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: script:this.tigoText('readonly')
+                    ↓FieldLabel [ngx.components.UIDynamicElement-1792166090530]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: label
+                      ↓Class [ngx.components.UIAttribute-1792166090532]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:tigo-editor-label
+                      ↓Text [ngx.components.UIText-1792166090534]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.tigoText('location')
                     ↓SaveLocation [ngx.components.UIDynamicElement-1792084649611]: 
                       beanData: |
                         '{
@@ -8401,8 +8922,7 @@ title: Tigo
                          "ControlName": "plain:name1792084649611",
                          "Disabled": "script:local.ResourceEditorReadonly || !!local.ResourceEditorKey",
                          "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditScope\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                         "Interface": "plain:popover",
-                         "Label": "script:this.tigoText(''location'')"
+                         "Interface": "plain:popover"
                         }'
                       tagName: ion-select
                       ↓Workspace [ngx.components.UIDynamicElement-1792084649613]: 
@@ -8421,12 +8941,32 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: script:this.tigoText('project')
+                      ↓EditorLabel [ngx.components.UIAttribute-1792166095030]: 
+                        attrName: '[attr.aria-label]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.tigoText('location')
                     ↓TargetProject [ngx.components.UIControlDirective-1792084649621]: 
                       directiveName: If
                       directiveSource: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: script:local.ResourceEditScope === 'project'
+                      ↓FieldLabel [ngx.components.UIDynamicElement-1792166099526]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: label
+                        ↓Class [ngx.components.UIAttribute-1792166104022]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-label
+                        ↓Text [ngx.components.UIText-1792166104024]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('target')
                       ↓ProjectName [ngx.components.UIDynamicElement-1792084649623]: 
                         beanData: |
                           '{
@@ -8434,8 +8974,7 @@ title: Tigo
                            "ControlName": "plain:name1792084649623",
                            "Disabled": "script:local.ResourceEditorReadonly || !!local.ResourceEditorKey",
                            "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                           "Interface": "plain:popover",
-                           "Label": "script:this.tigoText(''target'')"
+                           "Interface": "plain:popover"
                           }'
                         tagName: ion-select
                         ↓Projects [ngx.components.UIControlDirective-1792084649625]: 
@@ -8453,9 +8992,29 @@ title: Tigo
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: script:targetProject
+                        ↓EditorLabel [ngx.components.UIAttribute-1792166108520]: 
+                          attrName: '[attr.aria-label]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('target')
                     ↓LanguageField [ngx.components.UIDynamicElement-1792084649637]: 
                       beanData: '{"ionBean":"DivTag"}'
                       tagName: div
+                      ↓FieldLabel [ngx.components.UIDynamicElement-1792166045550]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: label
+                        ↓Class [ngx.components.UIAttribute-1792166045552]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-label
+                        ↓Text [ngx.components.UIText-1792166045554]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('language')
                       ↓Attr [ngx.components.UIAttribute-1792084649639]: 
                         attrName: class
                         attrValue: 
@@ -8468,8 +9027,7 @@ title: Tigo
                            "ionBean": "Input",
                            "ControlName": "plain:name1792084649641",
                            "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditLanguage\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                           "Disabled": "script:false",
-                           "Label": "script:this.tigoText(''language'')"
+                           "Disabled": "script:false"
                           }'
                         tagName: ion-input
                         ↓LanguageChanged [ngx.components.UIControlEvent-1792084649643]: 
@@ -8483,9 +9041,29 @@ title: Tigo
                                   →: |
                                     page.loadTigoEditorLanguage();
                                     resolve();
+                        ↓EditorLabel [ngx.components.UIAttribute-1792166050050]: 
+                          attrName: '[attr.aria-label]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('language')
                     ↓ResourceTitleField [ngx.components.UIDynamicElement-1792084651239]: 
                       beanData: '{"ionBean":"DivTag"}'
                       tagName: div
+                      ↓FieldLabel [ngx.components.UIDynamicElement-1792166054546]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: label
+                        ↓Class [ngx.components.UIAttribute-1792166054548]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-label
+                        ↓Text [ngx.components.UIText-1792166054550]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('title')
                       ↓Attr [ngx.components.UIAttribute-1792084651241]: 
                         attrName: class
                         attrValue: 
@@ -8498,13 +9076,32 @@ title: Tigo
                            "ionBean": "Input",
                            "ControlName": "plain:name1792084651243",
                            "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditTitle\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                           "Disabled": "script:local.ResourceEditorReadonly",
-                           "Label": "script:this.tigoText(''title'')"
+                           "Disabled": "script:local.ResourceEditorReadonly"
                           }'
                         tagName: ion-input
+                        ↓EditorLabel [ngx.components.UIAttribute-1792166059046]: 
+                          attrName: '[attr.aria-label]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('title')
                     ↓DescriptionField [ngx.components.UIDynamicElement-1792084651245]: 
                       beanData: '{"ionBean":"DivTag"}'
                       tagName: div
+                      ↓FieldLabel [ngx.components.UIDynamicElement-1792166063542]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: label
+                        ↓Class [ngx.components.UIAttribute-1792166063544]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-label
+                        ↓Text [ngx.components.UIText-1792166063546]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('description')
                       ↓Attr [ngx.components.UIAttribute-1792084651247]: 
                         attrName: class
                         attrValue: 
@@ -8517,19 +9114,58 @@ title: Tigo
                            "ionBean": "Input",
                            "ControlName": "plain:name1792084651249",
                            "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditDescription\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                           "Disabled": "script:local.ResourceEditorReadonly",
-                           "Label": "script:this.tigoText(''description'')"
+                           "Disabled": "script:local.ResourceEditorReadonly"
                           }'
                         tagName: ion-input
+                        ↓EditorLabel [ngx.components.UIAttribute-1792166068042]: 
+                          attrName: '[attr.aria-label]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('description')
                     ↓Body [ngx.components.UIControlDirective-1792084651251]: 
                       directiveName: If
                       directiveSource: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: script:local.ResourceEditorKind !== 'mcp'
+                      ↓SkillMetadataHint [ngx.components.UIControlDirective-1792167574377]: 
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:local.ResourceEditorKind === 'skill'
+                        ↓Help [ngx.components.UIDynamicElement-1792167574379]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792167578875]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-editor-hint
+                          ↓Text [ngx.components.UIText-1792167578877]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('skillMetadataHint')
                       ↓MarkdownField [ngx.components.UIDynamicElement-1792084651253]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
+                        ↓FieldLabel [ngx.components.UIDynamicElement-1792166072538]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: label
+                          ↓Class [ngx.components.UIAttribute-1792166072540]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-editor-label
+                          ↓Text [ngx.components.UIText-1792166072542]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.tigoText(local.ResourceEditorKind === ''skill'' ? ''skillBody'' : ''promptBody'')'
                         ↓Attr [ngx.components.UIAttribute-1792084651255]: 
                           attrName: class
                           attrValue: 
@@ -8544,42 +9180,114 @@ title: Tigo
                              "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditBody\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
                              "Disabled": "script:local.ResourceEditorReadonly",
                              "AutoGrow": "plain:true",
-                             "Label": "script:this.tigoText(''body'')",
                              "Rows": "plain:7"
                             }'
                           tagName: ion-textarea
+                          ↓EditorLabel [ngx.components.UIAttribute-1792166077038]: 
+                            attrName: '[attr.aria-label]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:this.tigoText(local.ResourceEditorKind === ''skill'' ? ''skillBody'' : ''promptBody'')'
                     ↓Dependencies [ngx.components.UIControlDirective-1792084651259]: 
                       directiveName: If
                       directiveSource: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:local.ResourceEditorKind === 'skill'
-                      ↓RequiredMcp [ngx.components.UIDynamicElement-1792084651261]: 
-                        beanData: |
-                          '{
-                           "ionBean": "Select",
-                           "ControlName": "plain:name1792084651261",
-                           "Disabled": "script:local.ResourceEditorReadonly",
-                           "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditRequiresMcp\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
-                           "Label": "script:this.tigoText(''dependencies'')",
-                           "Multiple": "plain:true"
-                          }'
-                        tagName: ion-select
-                        ↓Connections [ngx.components.UIControlDirective-1792084651263]: 
-                          directiveIndexName: connectionOptionIndex
+                          - MobileSmartSourceType: script:local.ResourceEditorKind === 'skill' && (local.ResourceMcpOptions?.length || 0) > 0
+                      ↓RequiredConnections [ngx.components.UIDynamicElement-1792166117732]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1792166122228]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-dependencies
+                        ↓Label [ngx.components.UIDynamicElement-1792166122230]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792166122232]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-editor-label
+                          ↓Text [ngx.components.UIText-1792166122234]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('dependencies')
+                        ↓Help [ngx.components.UIDynamicElement-1792166122236]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792166122238]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-editor-hint
+                          ↓Text [ngx.components.UIText-1792166122240]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('dependenciesHint')
+                        ↓Connections [ngx.components.UIControlDirective-1792166122242]: 
                           directiveItemName: connectionOption
                           directiveSource: 
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.ResourceMcpOptions","prefix":"","suffix":"","custom":"","useCustom":false}}
-                          ↓Option [ngx.components.UIDynamicElement-1792084651265]: 
-                            beanData: '{"ionBean":"SelectOption","Value":"script:connectionOption.key"}'
-                            tagName: ion-select-option
-                            ↓Text [ngx.components.UIText-1792084651267]: 
+                              - MobileSmartSourceType: script:local.ResourceMcpOptions || []
+                          ↓Option [ngx.components.UIDynamicElement-1792166391255]: 
+                            beanData: '{"ionBean":"DivTag"}'
+                            tagName: button
+                            ↓Type [ngx.components.UIAttribute-1792166395751]: 
+                              attrName: type
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:button
+                            ↓Role [ngx.components.UIAttribute-1792166395753]: 
+                              attrName: role
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:checkbox
+                            ↓Class [ngx.components.UIAttribute-1792166395755]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:tigo-editor-checkbox
+                            ↓Checked [ngx.components.UIAttribute-1792166395757]: 
+                              attrName: '[attr.aria-checked]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:(local.ResourceEditRequiresMcp || []).includes(connectionOption.key)
+                            ↓Disabled [ngx.components.UIAttribute-1792166395759]: 
+                              attrName: '[disabled]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:local.ResourceEditorReadonly
+                            ↓Icon [ngx.components.UIDynamicElement-1792166395761]: 
+                              beanData: '{"ionBean":"Icon","IconName":"script:(local.ResourceEditRequiresMcp || []).includes(connectionOption.key) ? ''checkbox-outline'' : ''square-outline''"}'
+                              tagName: ion-icon
+                            ↓Text [ngx.components.UIText-1792166395763]: 
                               textValue: 
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: script:connectionOption.title
+                            ↓Click [ngx.components.UIControlEvent-1792166395765]: 
+                              ↓Apply [ngx.components.UICustomAction-1792166397359]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        page.toggleTigoEditorMcp(props.stack.root.scope.connectionOption.key);
+                                        resolve();
                     ↓Connection [ngx.components.UIControlDirective-1792084651269]: 
                       directiveName: If
                       directiveSource: 
@@ -8589,6 +9297,20 @@ title: Tigo
                       ↓ConnectionJsonField [ngx.components.UIDynamicElement-1792084651271]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
+                        ↓FieldLabel [ngx.components.UIDynamicElement-1792166081534]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: label
+                          ↓Class [ngx.components.UIAttribute-1792166081536]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-editor-label
+                          ↓Text [ngx.components.UIText-1792166081538]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('connection')
                         ↓Attr [ngx.components.UIAttribute-1792084651273]: 
                           attrName: class
                           attrValue: 
@@ -8603,10 +9325,15 @@ title: Tigo
                              "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.ResourceEditConnection\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
                              "Disabled": "script:local.ResourceEditorReadonly",
                              "AutoGrow": "plain:true",
-                             "Label": "script:this.tigoText(''connection'')",
                              "Rows": "plain:7"
                             }'
                           tagName: ion-textarea
+                          ↓EditorLabel [ngx.components.UIAttribute-1792166086034]: 
+                            attrName: '[attr.aria-label]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('connection')
                     ↓EditorActions [ngx.components.UIDynamicElement-1792084651277]: 
                       beanData: '{"ionBean":"DivTag"}'
                       tagName: div
@@ -8615,72 +9342,41 @@ title: Tigo
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: plain:tigo-resource-actions
-                      ↓Save [ngx.components.UIDynamicElement-1792084651281]: 
-                        beanData: |
-                          '{
-                           "ionBean": "Button",
-                           "Disabled": "script:local.ResourceLoading || local.ResourceEditorReadonly",
-                           "IonFill": "plain:clear"
-                          }'
-                        tagName: ion-button
-                        ↓Text [ngx.components.UIText-1792084651283]: 
-                          textValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: script:this.tigoText('save')
-                        ↓Click [ngx.components.UIControlEvent-1792084651285]: 
-                          ↓Apply [ngx.components.UICustomAction-1792084651287]: 
-                            actionValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                  →: |
-                                    page.saveTigoResource();
-                                    resolve();
-                      ↓Cancel [ngx.components.UIDynamicElement-1792084651289]: 
-                        beanData: |
-                          '{
-                           "ionBean": "Button",
-                           "Disabled": "script:local.ResourceLoading",
-                           "IonFill": "plain:clear"
-                          }'
-                        tagName: ion-button
-                        ↓Text [ngx.components.UIText-1792084651291]: 
-                          textValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: script:this.tigoText('cancel')
-                        ↓Click [ngx.components.UIControlEvent-1792084651293]: 
-                          ↓Apply [ngx.components.UICustomAction-1792084651295]: 
-                            actionValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                  →: |
-                                    page.local.ResourceEditorOpen=false;page.tick();
-                                    resolve();
+                            - MobileSmartSourceType: plain:tigo-editor-actions
                       ↓Delete [ngx.components.UIControlDirective-1792084651297]: 
                         directiveName: If
                         directiveSource: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: script:!!local.ResourceEditorKey && !local.ResourceEditorReadonly
-                        ↓DeleteResource [ngx.components.UIDynamicElement-1792084651299]: 
-                          beanData: |
-                            '{
-                             "ionBean": "Button",
-                             "Disabled": "script:local.ResourceLoading",
-                             "IonFill": "plain:clear"
-                            }'
-                          tagName: ion-button
-                          ↓Text [ngx.components.UIText-1792084651301]: 
+                        ↓DeleteResource [ngx.components.UIDynamicElement-1792166141196]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: button
+                          ↓Type [ngx.components.UIAttribute-1792166145692]: 
+                            attrName: type
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:button
+                          ↓Class [ngx.components.UIAttribute-1792166145694]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-editor-delete
+                          ↓Disabled [ngx.components.UIAttribute-1792166145696]: 
+                            attrName: '[disabled]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:local.ResourceLoading
+                          ↓Text [ngx.components.UIText-1792166145698]: 
                             textValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:local.ResourceDeleteConfirmed ? this.tigoText(''removeConfirm'') : this.tigoText(''remove'')'
-                          ↓Click [ngx.components.UIControlEvent-1792084651303]: 
-                            ↓Apply [ngx.components.UICustomAction-1792084651305]: 
+                          ↓Click [ngx.components.UIControlEvent-1792166145700]: 
+                            ↓Apply [ngx.components.UICustomAction-1792166147294]: 
                               actionValue: 
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
@@ -8688,6 +9384,76 @@ title: Tigo
                                     →: |
                                       page.removeTigoResource();
                                       resolve();
+                      ↓Save [ngx.components.UIDynamicElement-1792166128564]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: button
+                        ↓Type [ngx.components.UIAttribute-1792166128566]: 
+                          attrName: type
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:button
+                        ↓Class [ngx.components.UIAttribute-1792166128568]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-save
+                        ↓Disabled [ngx.components.UIAttribute-1792166128570]: 
+                          attrName: '[disabled]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:local.ResourceLoading || local.ResourceEditorReadonly
+                        ↓Text [ngx.components.UIText-1792166128572]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: 'script:this.tigoText(local.ResourceLoading ? ''saving'' : ''save'')'
+                        ↓Click [ngx.components.UIControlEvent-1792166128574]: 
+                          ↓Apply [ngx.components.UICustomAction-1792166130168]: 
+                            actionValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                  →: |
+                                    page.saveTigoResource();
+                                    resolve();
+                      ↓Cancel [ngx.components.UIDynamicElement-1792166134880]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: button
+                        ↓Type [ngx.components.UIAttribute-1792166134882]: 
+                          attrName: type
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:button
+                        ↓Class [ngx.components.UIAttribute-1792166134884]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-editor-cancel
+                        ↓Disabled [ngx.components.UIAttribute-1792166134886]: 
+                          attrName: '[disabled]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:local.ResourceLoading
+                        ↓Text [ngx.components.UIText-1792166134888]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.tigoText('cancel')
+                        ↓Click [ngx.components.UIControlEvent-1792166134890]: 
+                          ↓Apply [ngx.components.UICustomAction-1792166136484]: 
+                            actionValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                  →: |
+                                    page.cancelTigoResourceEditor();
+                                    resolve();
                 ↓ContinueActions [ngx.components.UIDynamicElement-1785315895962]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -13636,13 +14402,54 @@ title: Tigo
             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
             - com.twinsoft.convertigo.beans.common.FormatedContent: 
               →: |
-                page.openTigoLibrary();
+                page.openTigoLibrary(event || 'prompts');
                 resolve();
     ↓EnableResources [ngx.components.UIUseVariable-1792084771193]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:this.isAgentBridgeMode()
+    ↓ResourceSkills [ngx.components.UIUseVariable-1792162924347]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.local.ResourceSkillItems || []
+    ↓ResourceMcp [ngx.components.UIUseVariable-1792162928903]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.local.ResourceMcpItems || []
+    ↓ResourceBusy [ngx.components.UIUseVariable-1792162933459]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.local.IsAgentWorking === true
+    ↓ResourceLoading [ngx.components.UIUseVariable-1792162938015]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.local.ResourceLoading
+    ↓ResourceError [ngx.components.UIUseVariable-1792162942571]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.local.ResourceError
+    ↓ResourceToggle [ngx.components.UIControlEvent-1792162947127]: 
+      attrName: (ResourceToggle)
+      eventName: ResourceToggle
+      ↓Apply [ngx.components.UICustomAction-1792162948721]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                page.toggleTigoResource(event);
+                resolve();
+    ↓ResourceLanguage [ngx.components.UIUseVariable-1792163976050]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.translate?.currentLang || 'en'
   ↓Class [ngx.components.UIAttribute-1782123550292]: 
     attrName: class
     attrValue: 
@@ -16571,27 +17378,68 @@ title: Tigo
       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
       - com.twinsoft.convertigo.beans.common.FormatedContent: 
         →: |
-          /* Resource library layout for the 8.4.6 NGX module template. */
-          
+          /* Compact library and native Ionic inputs follow the Assistant theme. */
           .tigo-settings-categories { width:100%; background:transparent; }
-          .tigo-settings-categories ion-accordion { background:transparent; border-bottom:1px solid var(--ion-color-step-200,#334155); }
-          .tigo-settings-categories ion-item[slot=header] { --background:transparent; --color:var(--ion-text-color,#e2e8f0); font-weight:600; }
-          .tigo-accordion-body { padding:16px 20px; }
-          .tigo-resource-toolbar { padding:14px 20px 4px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-          .tigo-resource-toolbar .tigo-resource-field { flex:1 1 200px; }
-          .tigo-resource-toolbar ion-select { min-width:180px; }
-          .tigo-resource-row { border:1px solid var(--ion-color-step-200,#334155); border-radius:12px; padding:12px 14px; margin:12px 0; }
-          .tigo-resource-info p { margin:4px 0; overflow-wrap:anywhere; }
-          .tigo-resource-info p:first-child { font-weight:600; }
-          .tigo-resource-info p:not(:first-child) { font-size:.85rem; opacity:.75; }
+          .tigo-settings-categories ion-accordion { background:transparent; border-bottom:1px solid var(--modern-border); }
+          .tigo-settings-categories ion-item[slot=header] { --background:transparent; --color:var(--modern-text); font-weight:600; }
+          .tigo-accordion-body { padding:12px 16px; }
+          .tigo-resource-toolbar { padding:4px 12px; display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:4px; }
+          .tigo-resource-toolbar ion-button { height:28px; margin:0; }
+          .tigo-resource-toolbar p { margin:4px 0; }
+          .tigo-resource-row { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; border:1px solid var(--modern-border); border-radius:8px; padding:9px 10px; margin:7px 0; color:var(--modern-text); }
+          .tigo-resource-info { flex:1 1 220px; min-width:0; }
+          .tigo-resource-info p { margin:2px 0; overflow-wrap:anywhere; line-height:1.35; }
+          .tigo-resource-info p:first-child { font-size:13px; font-weight:600; }
+          .tigo-resource-info p:not(:first-child) { color:var(--modern-muted); font-size:11px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
           .tigo-resource-actions { display:flex; flex-wrap:wrap; gap:2px; align-items:center; }
-          .tigo-resource-actions ion-button { font-size:.76rem; height:auto; min-height:32px; white-space:normal; }
+          .tigo-resource-actions ion-button { --color:var(--modern-muted); --padding-start:6px; --padding-end:6px; height:30px; width:30px; min-height:30px; margin:0; }
+          .tigo-resource-actions ion-button[aria-pressed=true] { --color:var(--ion-color-primary,#0891b2); }
+          .tigo-resource-actions ion-icon { font-size:17px; }
           .tigo-resource-field { margin:10px 0; width:100%; }
-          .tigo-resource-field ion-input,.tigo-resource-field ion-textarea { --background:var(--ion-color-step-50,#101a2b); border:1px solid var(--ion-color-step-200,#334155); border-radius:8px; padding:8px 10px!important; --color:var(--ion-text-color,#e2e8f0); }
-          .tigo-resource-editor { border:1px solid var(--ion-color-primary,#0891b2); border-radius:12px; margin:16px; padding:16px; }
+          .tigo-resource-field ion-input,.tigo-resource-field ion-textarea { --background:var(--modern-surface); background:var(--modern-surface); --color:var(--modern-text); color:var(--modern-text); --placeholder-color:var(--modern-muted); --placeholder-opacity:.8; border:1px solid var(--modern-border); border-radius:8px; padding:8px 10px!important; }
+          .tigo-resource-editor { color:var(--modern-text); border:1px solid var(--ion-color-primary,#0891b2); border-radius:8px; margin:12px; padding:12px; }
           .tigo-resource-editor ion-textarea { font-family:ui-monospace,monospace; font-size:.88rem; }
-          .tigo-resource-editor ion-select { width:100%; padding:10px 0; }
+          .tigo-resource-editor ion-select { --background:var(--modern-surface); --color:var(--modern-text); color:var(--modern-text); width:100%; padding:10px 0; }
           .tigo-resource-error { color:var(--ion-color-danger,#ef4444); width:100%; }
           .tigo-resource-notice { color:var(--ion-color-success,#22c55e); width:100%; }
-          .tigo-resource-secrets { border-top:1px solid var(--ion-color-step-200,#334155); margin-top:18px; padding-top:12px; }
+          .tigo-resource-secrets { border-top:1px solid var(--modern-border); margin-top:12px; padding-top:8px; }
+          .agent-config-page .agent-provider-options { grid-template-columns:1fr!important; gap:6px!important; }
+          .agent-config-page .agent-provider-option { height:74px!important; }
+          .agent-model-setting { position:relative; }
+          .agent-model-refresh { position:absolute; top:10px; right:8px; height:30px; width:30px; --padding-start:5px; --padding-end:5px; --color:var(--modern-muted); }
+          .agent-model-setting > .agent-setting-description { padding-right:28px; }
+          
+          .tigo-resource-actions ion-button { min-width:30px; flex:0 0 30px; }
+          .tigo-resource-actions ion-button::part(native) { padding:0!important; min-width:30px; }
+          .tigo-resource-actions ion-icon { width:18px; height:18px; flex:0 0 18px; margin:0!important; }
+          
+          /* Labels sit above fields; editor actions must never inherit compact list sizing. */
+          .tigo-resource-editor .tigo-editor-label { display:block; color:var(--modern-text); font-size:12px; font-weight:600; margin:14px 0 6px; }
+          .tigo-resource-editor .tigo-editor-hint { font-size:12px; line-height:1.5; color:var(--modern-muted); margin:4px 0 12px; }
+          .tigo-resource-editor > p:first-child { font-size:15px; font-weight:600; margin:0 0 6px; }
+          .tigo-resource-editor .tigo-resource-field { margin:0 0 12px; }
+          .tigo-resource-editor ion-input,.tigo-resource-editor ion-textarea { font-size:14px; --padding-start:12px; --padding-end:12px; --highlight-height:1px; }
+          .tigo-resource-editor ion-input { min-height:42px; }
+          .tigo-resource-editor ion-textarea { font-family:ui-monospace,monospace; line-height:1.55; }
+          .tigo-resource-editor ion-select { padding:10px 12px; background:var(--modern-surface); border:1px solid var(--modern-border); border-radius:8px; font-size:14px; min-height:44px; }
+          .tigo-resource-editor ion-select::part(text) { white-space:normal; }
+          .tigo-editor-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:18px; padding-top:14px; border-top:1px solid var(--modern-border); }
+          .tigo-editor-actions button { display:inline-flex; align-items:center; justify-content:center; min-width:100px; min-height:38px; padding:8px 16px; border:1px solid var(--modern-border); border-radius:7px; background:var(--modern-surface); color:var(--modern-text); font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; line-height:1.3; }
+          .tigo-editor-actions button.tigo-editor-save { background:var(--ion-color-primary,#0891b2); color:var(--ion-color-primary-contrast,#fff); border-color:var(--ion-color-primary,#0891b2); }
+          .tigo-editor-actions button.tigo-editor-delete { color:var(--ion-color-danger,#ef4444); }
+          .tigo-editor-actions button:disabled { opacity:.5; cursor:default; }
+          .tigo-editor-actions button:focus-visible { outline:2px solid var(--ion-color-primary,#0891b2); outline-offset:3px; }
+          .tigo-editor-checkbox { display:flex; align-items:center; gap:8px; font-size:13px; padding:7px 0; }
+          .tigo-editor-checkbox input { width:16px; height:16px; accent-color:var(--ion-color-primary,#0891b2); }
+          
+          .tigo-editor-checkbox { width:100%; margin:0; border:0; border-radius:5px; background:transparent; color:var(--modern-text); font-family:inherit; text-align:left; cursor:pointer; }
+          .tigo-editor-checkbox ion-icon { width:18px; height:18px; flex:0 0 18px; color:var(--modern-muted); }
+          .tigo-editor-checkbox[aria-checked=true] ion-icon { color:var(--ion-color-primary,#0891b2); }
+          .tigo-editor-checkbox:focus-visible { outline:2px solid var(--ion-color-primary,#0891b2); outline-offset:2px; }
+          .tigo-editor-actions .tigo-editor-save { order:1; }
+          .tigo-editor-actions .tigo-editor-cancel { order:2; }
+          .tigo-editor-actions .tigo-editor-delete { order:3; margin-left:auto; }
+          
+          .tigo-resource-create { height:32px; margin:6px 0 10px; --border-width:1px; --border-radius:7px; --padding-start:10px; --padding-end:12px; font-size:12px; }
+          .tigo-resource-create ion-icon { width:16px; height:16px; margin-right:5px; }
           

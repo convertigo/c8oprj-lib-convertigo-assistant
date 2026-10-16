@@ -1,3 +1,1 @@
-Inspect the visible screen, identify the issue, fix its source objects and validate the result.
-
-Réponds en français.
+Examine l’écran visible, identifie le problème, corrige ses objets sources et vérifie le résultat.

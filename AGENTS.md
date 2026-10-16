@@ -38,8 +38,9 @@ rediscovering the same context.
   separate hosted service and is unaffected by this rule.
 - Existing Figma and LightRAG areas still exist; keep agent-specific changes
   scoped to the agent page/bridge path unless the user asks otherwise.
-- User-facing prompts should instruct the LLM in English, but the agent must
-  answer the user in the user's language.
+- Built-in prompt titles and bodies must use the selected UI language (English
+  and French). Do not append a French response instruction to an English body.
+  Source comments and repository documentation remain in English.
 
 ## Current 1.2.0 Roadmap
 
@@ -416,7 +417,7 @@ rediscovering the same context.
 ## Tigo 1.5 resource library
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
-- Assistant 1.5.0 / Bridge 0.4.23 / MCP 0.2.24 is the preview bundle.
+- Assistant 1.5.1 / Bridge 0.4.24 / MCP 0.2.24 is the preview bundle.
   Stable remains Assistant 1.4.49 / Bridge 0.4.22 / MCP 0.2.23.
   `stack-release.json` must equal `stack-release-stable.json`; the Page default
   fallback pins stable too. Preview uses `stack-release-preview.json` explicitly.
@@ -461,3 +462,49 @@ rediscovering the same context.
   without rebuilding master. Production accepts only the reviewed stable tag.
 - Changing channels does not downgrade installed Studios. Preserve existing tags
   and CAR bytes. Never mix independently selected companion versions.
+
+## Tigo 1.5 review refinements
+
+- The composer exposes compact, mutually exclusive Prompts, Skills and MCP panels.
+  Clicking the active panel closes it. Prompt insertion preserves the draft and
+  never sends a message; resource activation remains owned by the authenticated
+  Page facade and is disabled while a turn is running.
+- Library list actions use accessible icon buttons with translated tooltips.
+  Favorites can move up or down. Search/provenance filters are disabled for the
+  initial small catalog; retain source labels on each resource.
+- Native library inputs use the paired `--modern-surface` / `--modern-text`
+  theme variables, including the actual input background. All four provider
+  choices live in the same container to keep their widths identical.
+- Opening agent settings or clicking Refresh models explicitly refreshes provider
+  metadata via `refreshModelCatalog`; this must never install/update a runtime.
+  Presence-only startup remains cached. Forward the flag through AgentSettings
+  and its client, independently from package version checks.
+- Keep Ionic standalone component imports out of shared actions in this 8.4.6
+  module template. Its IonicModule already provides those components; importing
+  both forms causes Angular NG0300 at runtime.
+- Validate `tests/tigo_compact_resources.test.cjs` with the existing resource,
+  host-theme, login and NoCode checks. Keep these changes in preview until review.
+
+- Resource toggles belong beside attachments inside the composer control row.
+  Keep captions optional in narrow drawers and accessible names/tooltips intact.
+- Resource editor labels sit above fields, separate from their input background.
+  Save/Cancel use full-size editor actions, never the 30px library card style.
+  Switching accordion categories hides the editor and preserves its unsaved draft
+  until the category is reopened; explicit Cancel or successful Save clears it.
+- Skill MCP requirements are optional inline checkboxes, shown only when there
+  are available connections. Never open an empty dependency selector.
+- Reload library refreshes project/workspace resource files, not models or runtime.
+
+- Page native messages must wait until `window.receiveFromJava` is a function.
+  AppEvent.HandlePostMessage installs that receiver independently of initial Java
+  detection, so late bridge injection is supported. Preserve bounded context
+  retries and the original delegate; no placeholder receiver may swallow init,
+  select, capture or authentication messages. Cover startup ordering and late
+  injection in `tests/assistant_native_context.test.cjs`.
+- Prompt configuration lists favorites first in personal order, then non-favorites
+  alphabetically in the current language. Show up/down only for favorites, next
+  to the star. All three resource categories use outlined `+ New` buttons.
+- Skill editors show instructions only. Saving generates SKILL.md `name` from
+  the stable resource id and `description` from its translated description (title
+  fallback). Preserve other frontmatter keys and untranslated bodies. Accept
+  pasted full SKILL.md documents without adding a second header.

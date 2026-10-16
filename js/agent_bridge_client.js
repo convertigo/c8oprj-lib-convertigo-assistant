@@ -118,7 +118,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "contextTargetKind", "baserowWorkspaceId", "baserowWorkspaceName",
       "baserowDatabaseId", "baserowDatabaseName", "baserowTableId", "baserowTableName",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
-      "settingsTimeoutMs", "checkUpdates", "refreshUpdateCheck", "updateCheckTimeoutMs",
+      "settingsTimeoutMs", "checkUpdates", "refreshUpdateCheck", "refreshModelCatalog", "updateCheckTimeoutMs",
       "updateCheckCacheMs", "runtimePresenceOnly", "updateRuntime", "forceRuntimeUpdate",
       "model", "reasoningEffort", "reasoningLevel", "serviceTier", "savePreferences",
       "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
@@ -5277,6 +5277,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       settingsTimeoutMs: trim(options.settingsTimeoutMs),
       checkUpdates: typeof options.checkUpdates === "undefined" ? "" : options.checkUpdates,
       refreshUpdateCheck: typeof options.refreshUpdateCheck === "undefined" ? "" : options.refreshUpdateCheck,
+      refreshModelCatalog: typeof options.refreshModelCatalog === "undefined" ? "" : options.refreshModelCatalog,
       updateCheckTimeoutMs: trim(options.updateCheckTimeoutMs),
       updateCheckCacheMs: trim(options.updateCheckCacheMs),
       runtimePresenceOnly: typeof options.runtimePresenceOnly === "undefined" ? "" : options.runtimePresenceOnly

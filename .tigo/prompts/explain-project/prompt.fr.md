@@ -1,3 +1,1 @@
-Inspect the selected project and explain its purpose, main pages, backend sequences and data sources. Keep this read-only.
-
-Réponds en français.
+Examine le projet sélectionné et explique son objectif, ses principales pages, ses séquences backend et ses sources de données. Ne modifie rien.

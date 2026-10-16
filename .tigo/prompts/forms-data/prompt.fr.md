@@ -1,3 +1,1 @@
-Help me connect data to this No Code application. Discover authorized Baserow bases and tables through the No Code catalog first.
-
-Réponds en français.
+Aide-moi à connecter des données à cette application No Code. Commence par découvrir les bases et tables Baserow autorisées à l’aide du catalogue No Code.

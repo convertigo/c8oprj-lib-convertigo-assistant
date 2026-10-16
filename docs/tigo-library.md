@@ -6,26 +6,52 @@ This library is unfinished and awaits review. Customer installations use the
 The configuration panel has five categories: **Agent and model**, **Runtime and
 stack**, **Prompts**, **Skills**, and **MCP connections**. The library combines
 built-in resources, your personal workspace, and all loaded Studio projects.
-Search and provenance filters apply to each category.
+Each row retains its source label. Search and provenance filters are hidden for the initial small catalog.
 
 ## Prompts and favorites
 
-Built-in prompts ship in English and French and are read-only. Duplicate one to
+Built-in prompts ship in English and French and are read-only. Both titles and
+prompt bodies use the selected language; French bodies are written in French. Duplicate one to
 customize it, or create a prompt and choose **Personal workspace** or a named
 **Shared project**. Editing one translation preserves the others. The requested
 language falls back to the resource's `defaultLanguage`.
 
-Favorites and their order belong to the current user. They never modify shared
+Favorites and their order belong to the current user. Configuration lists them
+first in that same order, followed by non-favorites alphabetically in the selected
+language. Reorder arrows appear only beside the stars of favorite rows. Star icons toggle favorites; up/down arrows reorder them. View/edit, duplicate and insert actions use labeled icon buttons. They never modify shared
 project files. They appear below the composer, including during an existing
-conversation. **All prompts…** opens the library. Clicking a favorite or
+conversation. Three compact, mutually exclusive **Prompts**, **Skills** and **MCP**
+buttons sit beside the attachment button inside the composer. They switch the
+panel below the composer; clicking the active button closes it. In narrow drawers,
+the buttons show icons with translated accessible labels and tooltips. The options icon opens the matching library category. Clicking a favorite or
 **Insert into draft** appends its text to the draft; it never sends a message.
 Studio and NoCode have separate built-in suggestions, selected by `surfaces`.
+
+## Resource editor
+
+Outlined **+ New** buttons create resources. Labels sit above the fields. Choose a personal workspace or a shared project,
+fill the title and contents, then use the editor's **Save** button. **Use these
+settings and continue** closes configuration; it is not a resource save action.
+The editor's **Cancel** button closes the draft. Switching accordion categories
+hides an unsaved editor and retains its draft until that category is reopened.
+
+**Reload library** rereads resource files from the workspace and loaded projects,
+including edits made through MCP or Git. It appears only in library categories
+and does not update models, install a runtime or send a prompt.
 
 ## Skills and conversation state
 
 Skills use `SKILL.md`, with YAML frontmatter containing `name` and `description`.
+The editor shows only the instructions. On save, Tigo generates the technical
+`name` from the stable resource id and the `description` from the translated
+description field (or title if empty). Other existing frontmatter metadata is
+preserved. Pasting a complete SKILL.md also works without duplicating its header.
+There is no need to enter the same description twice.
 A standard skill folder works without a Tigo manifest. Optional `skill.json`
-adds translated titles/content and MCP dependencies. Supporting files remain in
+adds translated titles/content and MCP dependencies. The optional requirements
+are listed as inline checkboxes only when MCP connections exist. A requirement
+means that the corresponding connection must also be enabled for the conversation;
+a skill with no external tools needs no connection. Supporting files remain in
 `references/`, `scripts/`, and `assets/`; duplicating a skill copies those files.
 
 Enable a skill for the current conversation, or before its first message.
@@ -184,7 +210,7 @@ full bearer token rather than relying on sequence visibility.
 
 ## Version and hosting
 
-The 1.5.0 stack pairs Assistant **1.5.0**, Bridge **0.4.23**, and MCP **0.2.24**.
+The 1.5.1 preview stack pairs Assistant **1.5.1**, Bridge **0.4.24**, and MCP **0.2.24**.
 It uses the 8.4.6 build plugin and existing 8.4.6 NGX components and Java APIs.
 The Assistant and MCP NGX references are pinned to the module-based 8.4.0.18 legacy template
 (commit `8ca383ae844129df72bd3436a7869bfdc0a69d5c`); the floating 8.4 branch
