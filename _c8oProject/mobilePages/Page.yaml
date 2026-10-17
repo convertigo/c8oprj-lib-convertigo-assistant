@@ -2208,7 +2208,7 @@ scriptContent:
         			return project.length ? (this.t("Agent_Local_Activation_Title_Project", "Activer l''agent local pour le projet") + " " + project) : this.t("Agent_Local_Activation_Title", "Activer l''agent local");
         		}
         		if (this.isAgentBridgeMode()) {
-        			return project.length ? (this.t("Agent_New_Title_Project", "Que devrions-nous construire pour le projet") + " " + project + " ?") : this.t("Agent_New_Title", "Que devrions-nous construire ?");
+        			return project.length ? this.t("Agent_New_Title_Project", "Que devrions-nous construire pour le projet {project} ?").replace("{project}", project) : this.t("Agent_New_Title", "Que devrions-nous construire ?");
         		}
         		return this.t("Welcome_to_Convertigo_AI_Assistant", "Bienvenue dans l''assistant IA de composants Convertigo");
         	}
