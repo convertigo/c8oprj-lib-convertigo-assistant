@@ -1211,7 +1211,7 @@ scriptContent:
         							if (preferredReasoning.length && clean(this.local.AgentReasoningLevels[rl] && this.local.AgentReasoningLevels[rl].id) === preferredReasoning) { reasoningOffered = true; break; }
         						}
         						if (!reasoningOffered) { preferredReasoning = clean(selectedModel && selectedModel.defaultReasoning); }
-        						this.local.AgentReasoningEffort = this.local.AgentProviderSupportsReasoning === true ? preferredReasoning : '''';
+        						this.local.AgentReasoningEffort = this.resolveAgentReasoning([preferredReasoning], true);
                                                         this.local.AgentServiceTier = clean(preserveSelection ? this.local.AgentServiceTier : (preferencesConfirmed ? preferences.serviceTier : (this.local.AgentServiceTier || storedServiceTier)));
         						var runtime = selectedProvider && selectedProvider.runtime ? selectedProvider.runtime : {};
         						var authentication = selectedProvider && selectedProvider.authentication ? selectedProvider.authentication : {};
@@ -3737,6 +3737,58 @@ scriptContent:
         		var stale = !!(plan.runid && runid && String(plan.runid) !== String(runid));
         		var title = writing === true && !stale ? this.agentUiText("plan") + " · " + done + "/" + entries.length : this.agentUiText("planTasks").replace("{done}", "" + done).replace("{total}", "" + entries.length);
         		return { entries: entries, done: done, total: entries.length, stale: stale, title: title, note: stale ? this.agentUiText("planStale") : "" };
+        	}
+        	public resolveAgentReasoning(candidates, usePreference = true) {
+        		// Reasoning level of the composer: the first level the selected model accepts among the given ones (the resumed
+        		// conversation''s, or the current one on a provider or model change), then the saved preference, the model default
+        		// and the provider''s global default.
+        		if (!this.local || this.local.AgentProviderSupportsReasoning !== true) {
+        			return "";
+        		}
+        		var clean = (value: any) => ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+        		var levels = this.local.AgentReasoningLevels || [];
+        		var accepted = (value: any) => {
+        			var id = clean(value);
+        			if (!id.length) {
+        				return false;
+        			}
+        			if (!levels.length) {
+        				return true;
+        			}
+        			for (var i = 0; i < levels.length; i++) {
+        				if (clean(levels[i] && levels[i].id) === id) {
+        					return true;
+        				}
+        			}
+        			return false;
+        		};
+        		var settings: any = this.getAgentSettingsRoot ? this.getAgentSettingsRoot() : {};
+        		var provider = clean(this.local.AgentProvider).toLowerCase();
+        		var sameProvider = (value: any) => clean(value).toLowerCase() === provider;
+        		var preferences = settings.preferences || {};
+        		var defaults = settings.defaults || {};
+        		var model = null;
+        		var models = this.local.AgentModels || [];
+        		for (var m = 0; m < models.length; m++) {
+        			if (clean(models[m] && models[m].id) === clean(this.local.AgentModel)) {
+        				model = models[m];
+        				break;
+        			}
+        		}
+        		var list = [].concat(candidates || []);
+        		if (usePreference && preferences.confirmed === true && sameProvider(preferences.provider)) {
+        			list.push(preferences.reasoning);
+        		}
+        		list.push(model && model.defaultReasoning);
+        		if (sameProvider(defaults.provider)) {
+        			list.push(defaults.reasoning);
+        		}
+        		for (var c = 0; c < list.length; c++) {
+        			if (accepted(list[c])) {
+        				return clean(list[c]);
+        			}
+        		}
+        		return levels.length ? clean(levels[0] && levels[0].id) : "";
         	}
         	public agentUiLanguage() {
         		try {
@@ -6618,7 +6670,7 @@ title: Tigo
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
-                                                page.local.AgentReasoningEffort = reasoning;
+                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
                                                 var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
                                                 page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                                                 try {
@@ -6805,7 +6857,7 @@ title: Tigo
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
-                                                page.local.AgentReasoningEffort = reasoning;
+                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
                                                 var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
                                                 page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                                                 try {
@@ -6992,7 +7044,7 @@ title: Tigo
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
-                                                page.local.AgentReasoningEffort = reasoning;
+                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
                                                 var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
                                                 page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                                                 try {
@@ -7179,7 +7231,7 @@ title: Tigo
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
-                                                page.local.AgentReasoningEffort = reasoning;
+                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
                                                 var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
                                                 page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                                                 try {
@@ -7477,7 +7529,7 @@ title: Tigo
                                                 page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && agentModel && agentModel.reasoningLevels ? agentModel.reasoningLevels : [];
                                                 var reasoning = clean(agentModel && agentModel.defaultReasoning);
                                                 if (page.local.AgentProviderSupportsReasoning !== true) { reasoning = ''''; }
-                                                page.local.AgentReasoningEffort = reasoning;
+                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
                                                 var tiers = agentModel && agentModel.serviceTiers ? agentModel.serviceTiers : [];
                                                 var currentTier = clean(page.local.AgentServiceTier);
                                                 var tierOk = !currentTier.length;
@@ -10222,7 +10274,7 @@ title: Tigo
                                         page.local.AgentProvider = setupResult.provider || provider;
                                         page.local.AgentProviderChoiceConfirmed = true;
                                         page.local.AgentModel = setupResult.model || model || '''';
-                                        page.local.AgentReasoningEffort = setupResult.reasoningEffort || reasoningEffort || '''';
+                                        page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([setupResult.reasoningEffort, reasoningEffort], true) : (setupResult.reasoningEffort || reasoningEffort || '''');
                                         page.local.AgentServiceTier = setupResult.serviceTier || serviceTier || '''';
                                         var setupOk = setupResult && setupResult.ok === true;
                                         var hydrateAgentSettings = function(settingsRoot) {
@@ -10280,7 +10332,7 @@ title: Tigo
                                             if (!reasoningCandidate.length && page.local.AgentProviderSupportsReasoning === true) {
                                                 reasoningCandidate = clean(selectedModel && selectedModel.defaultReasoning);
                                             }
-                                            page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoningCandidate : '''';
+                                            page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([reasoningCandidate], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoningCandidate : '''');
                                             var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
                                             var currentTier = clean(page.local.AgentServiceTier);
                                             var tierOk = false;
@@ -12934,7 +12986,7 @@ title: Tigo
                   if (!reasoningOffered && page.local.AgentProviderSupportsReasoning === true) {
                       reasoning = clean(selectedModel && selectedModel.defaultReasoning);
                   }
-                  page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : '''';
+                  page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([preserveSelection ? page.local.AgentReasoningEffort : '''', state.reasoningEffort, result.reasoningEffort, reasoning], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoning : '''');
                   page.local.AgentServiceTier = clean(preserveSelection ? page.local.AgentServiceTier : (preferencesConfirmed ? preferences.serviceTier : (state.serviceTier || result.serviceTier || page.local.AgentServiceTier || storedServiceTier)));
                   var providerReady = false;
                   try {
@@ -13022,7 +13074,7 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentReasoningEffort",
-             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return state.reasoningEffort || ''''; })(out)"
+             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return c8oPage.resolveAgentReasoning ? c8oPage.resolveAgentReasoning([state.reasoningEffort, c8oPage.local && c8oPage.local.AgentReasoningEffort], true) : (state.reasoningEffort || ''''); })(out)"
             }'
         ↓SetAgentServiceTier [ngx.components.UIDynamicAction-1782120505136]: 
           beanData: |
@@ -15410,7 +15462,7 @@ title: Tigo
                 		if (page.local.AgentProviderSupportsReasoning !== true) {
                 			reasoning = '''';
                 		}
-                		page.local.AgentReasoningEffort = reasoning;
+                		page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
                 		var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
                 		page.local.AgentServiceTier = tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''';
                 		page.tick();
@@ -15683,7 +15735,7 @@ title: Tigo
                           }
                           var reasoning = clean(state.reasoningEffort || result.reasoningEffort || data.reasoningEffort || page.local.AgentReasoningEffort);
                           if (!reasoning.length && page.local.AgentProviderSupportsReasoning === true) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
-                          page.local.AgentReasoningEffort = page.local.AgentProviderSupportsReasoning === true ? reasoning : "";
+                          page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([reasoning], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoning : "");
                           page.local.AgentServiceTier = clean(state.serviceTier || result.serviceTier || data.serviceTier || page.local.AgentServiceTier);
                           var status = clean(state.status == null ? data.status : state.status).toLowerCase();
                           var runid = clean(state.runid == null ? data.runid : state.runid);
