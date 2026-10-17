@@ -3930,7 +3930,8 @@ scriptContent:
             }
             public getTigoFavoriteSuggestions() {
                 const catalog = this.local.ResourceCatalog;
-                if (!catalog) { return this.getDefaultFooterSuggestions(); }
+                // Wait for the library instead of showing the built-in list and swapping it for the favorites.
+                if (!catalog) { return this.local.ResourceError ? this.getDefaultFooterSuggestions() : []; }
                 const language=String(this.translate?.currentLang || ''en'').toLowerCase().split(/[-_]/)[0];
                 return (catalog.favorites || []).map(key => (catalog.items || []).find(item => item.key === key && item.kind === ''prompt'')).filter(Boolean).map(item => {
                     const translated=item.data?.translations?.[language] || item.data?.translations?.[item.data?.defaultLanguage];

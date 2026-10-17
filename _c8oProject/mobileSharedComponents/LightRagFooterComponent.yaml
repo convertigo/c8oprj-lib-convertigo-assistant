@@ -12,6 +12,8 @@ scriptContent:
             public quotaTriggerId = ''tigo-quota-'' + Math.random().toString(36).slice(2);
         
         	disabled = false;
+        	suggestionsCache: any = null;
+        	suggestionsSignature = '''';
         	questionInputEl = null;
         	questionInputKeydownHandler = null;
         	imageInputEl = null;
@@ -228,6 +230,22 @@ scriptContent:
         	}
         	
         	getSuggestions() {
+        		// The template iterates this list on every change detection: keep the same array
+        		// while its content is unchanged so Angular does not recreate (and flash) the chips.
+        		var list = this.buildSuggestions();
+        		var signature = '''';
+        		try {
+        			signature = JSON.stringify(list);
+        		} catch (e) {}
+        		if (this.suggestionsCache && signature.length && signature === this.suggestionsSignature) {
+        			return this.suggestionsCache;
+        		}
+        		this.suggestionsCache = list;
+        		this.suggestionsSignature = signature;
+        		return list;
+        	}
+        	
+        	buildSuggestions() {
         		var defaults = this.getDefaultSuggestions();
         		var source = this.Suggestions;
         		var list = [];
