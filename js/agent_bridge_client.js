@@ -3836,6 +3836,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       used: number(update.used),
       size: number(update.size),
       threshold: number(data && data.autoCompactThreshold),
+      window: number(data && data.contextWindow),
       costAmount: update.cost ? number(update.cost.amount) : null,
       costCurrency: update.cost && update.cost.currency ? String(update.cost.currency) : "",
       steps: number(meta.steps),

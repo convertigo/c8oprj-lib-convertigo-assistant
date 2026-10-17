@@ -24,15 +24,17 @@ test('a Vibe plan update becomes the task list of the run', () => {
 
 test('a usage update keeps the context, the threshold and the session totals', () => {
   const s = load(), state = {};
-  s.rememberAgentUsage(state, { autoCompactThreshold: 200000, update: { used: 51200, size: 262144, cost: { amount: 0.42, currency: 'USD' },
+  s.rememberAgentUsage(state, { autoCompactThreshold: 200000, contextWindow: 1000000, update: { used: 51200, size: 262144, cost: { amount: 0.42, currency: 'USD' },
     _meta: { steps: 12, promptTokens: 900000, completionTokens: 12000, cachedTokens: 600000, totalTokens: 912000, tokensPerSecond: 38.5, lastTurnDuration: 95.2, lastTurnTotalTokens: 51000 } } });
   assert.equal(state.usage.used, 51200);
   assert.equal(state.usage.threshold, 200000);
+  assert.equal(state.usage.window, 1000000);
   assert.equal(state.usage.costAmount, 0.42);
   assert.equal(state.usage.cachedTokens, 600000);
   assert.equal(state.usage.lastTurnDuration, 95.2);
   s.rememberAgentUsage(state, { update: { used: 10 } });
   assert.equal(state.usage.threshold, null);
+  assert.equal(state.usage.window, null);
   assert.equal(state.usage.costAmount, null);
 });
 
