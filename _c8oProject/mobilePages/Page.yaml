@@ -13223,7 +13223,6 @@ title: Tigo
             				}
             			}
             		}
-            		var progressText = trimText(currentProgress);
             		var looksIncomplete = function(value) {
             			var text = trimText(value).replace(/\s+/g, " ");
             			if (!text.length) {
@@ -13236,10 +13235,7 @@ title: Tigo
             			if (text.indexOf("Sending data to the AI assistant") === 0 || text.indexOf("\"JsonResponse\"") !== -1 || text.indexOf("<tool_error>") !== -1) {
             				return true;
             			}
-            			if (!progressText.length) {
-            				return false;
-            			}
-            			return text.length < 24 && text.split(/\s+/).length <= 3;
+            			return false;
             		};
             		if (isCompleted && looksIncomplete(finalMessage)) {
             			finalMessage = "L''agent a terminé, mais sa réponse finale est incomplète.";
