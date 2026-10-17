@@ -3567,8 +3567,47 @@ scriptContent:
         		} catch (e) {}
         		return item && item.progressTitle ? item.progressTitle : this.t("Agent_Progress_Done_Short", "A travaillé");
         	}
+        	public compactToolTitle(value) {
+        		// One readable line per tool call; the full command stays in the call details.
+        		var text = this.worklogTrim(value);
+        		var kind = "";
+        		var match = /^(bash|shell|sh|zsh|exec_command|run_command|command)\s*:\s*/i.exec(text);
+        		if (match) {
+        			kind = match[1].toLowerCase();
+        			text = text.substring(match[0].length);
+        		}
+        		var lines = text.split(/\r?\n/);
+        		var first = "";
+        		var more = 0;
+        		for (var i = 0; i < lines.length; i++) {
+        			var line = this.worklogTrim(lines[i]);
+        			if (!line.length) {
+        				continue;
+        			}
+        			if (!first.length) {
+        				first = line;
+        			} else if (/^cd\s+\S+$/.test(first)) {
+        				// A bare "cd <dir>" says little: show the command that follows it.
+        				first = line;
+        			} else {
+        				more++;
+        			}
+        		}
+        		text = first.replace(/^cd\s+("[^"]*"|''[^'']*''|[^\s;&]+)\s*(&&|;)\s*/, "");
+        		text = text.replace(/(^|[\s"''=(])(\/[^\s"''`|;&<>(){}]+)/g, function(all: any, lead: any, path: any) {
+        			var parts = path.split("/").filter(function(part: any) { return part.length > 0; });
+        			return lead + (parts.length > 2 ? "…/" + parts.slice(-2).join("/") : path);
+        		});
+        		text = text.replace(/\s+/g, " ");
+        		if (text.length > 140) {
+        			text = text.substring(0, 139) + "…";
+        		} else if (more > 0) {
+        			text += " …";
+        		}
+        		return kind.length ? kind + ": " + text : text;
+        	}
         	public getProgressToolSummary(step) {
-        		var title = this.worklogTrim(step && (step.title || step.text)) || this.t("Agent_Progress_Tool", "Outil");
+        		var title = this.compactToolTitle(step && (step.title || step.text)) || this.t("Agent_Progress_Tool", "Outil");
         		var status = this.worklogTrim(step && step.status).toLowerCase();
         		var count = Number(step && (step.callCount || (step.calls && step.calls.length) || 0));
         		var countLabel = count > 1 ? this.t("Agent_Progress_Calls", "{count} appels").replace("{count}", "" + count) : "";
@@ -3580,12 +3619,14 @@ scriptContent:
         		} else if (status === "completed" || status === "complete" || status === "success" || status === "succeeded") {
         			label = this.t("Agent_Progress_Status_Done", "terminé");
         		}
-        		var parts = [title];
+        		// Completed is the normal case: only a failure or a running call is called out, first so it is never cut off.
+        		var parts = [];
+        		if (label.length && status !== "completed" && status !== "complete" && status !== "success" && status !== "succeeded") {
+        			parts.push(label);
+        		}
+        		parts.push(title);
         		if (countLabel.length) {
         			parts.push(countLabel);
-        		}
-        		if (label.length) {
-        			parts.push(label);
         		}
         		return parts.join(" · ");
         	}
@@ -12851,6 +12892,29 @@ title: Tigo
             			}
             			return detail;
             		};
+            		var formatToolOutput = function(value) {
+            			var text = trimText(value);
+            			if (text.indexOf("\x60\x60\x60") !== -1) {
+            				return text;
+            			}
+            			try {
+            				var parsed = JSON.parse(text);
+            				if (parsed && typeof parsed === "object") {
+            					var streams = [];
+            					if (parsed.stdout != null && trimText(parsed.stdout).length) {
+            						streams.push(trimText(parsed.stdout));
+            					}
+            					if (parsed.stderr != null && trimText(parsed.stderr).length) {
+            						streams.push(trimText(parsed.stderr));
+            					}
+            					text = streams.length ? streams.join("\n\n") : JSON.stringify(parsed, null, 2);
+            				}
+            			} catch (e) {}
+            			if (text.length > 4000) {
+            				text = text.substring(0, 4000) + "\n…";
+            			}
+            			return "\x60\x60\x60text\n" + text.replace(/\x60\x60\x60/g, "''''''") + "\n\x60\x60\x60";
+            		};
             		var upsertToolCall = function(group, call) {
             			if (!group.calls) {
             				group.calls = [];
@@ -12879,7 +12943,7 @@ title: Tigo
             				group.status = call.status;
             				return;
             			}
-            			if (!group.current && (call.status === "completed" || call.status === "complete" || call.status === "success" || call.status === "succeeded")) {
+            			if (!group.current && group.status !== "failed" && group.status !== "error" && (call.status === "completed" || call.status === "complete" || call.status === "success" || call.status === "succeeded")) {
             				group.status = "completed";
             			}
             		};
@@ -12926,6 +12990,13 @@ title: Tigo
             						};
             						items.push(group);
             						seen["tool:" + groupKey] = group;
+            					}
+            					// Details show the full shell command, then its output as preformatted text.
+            					var shellCommand = /^(?:bash|shell|sh|zsh|exec_command|run_command|command)\s*:\s*([\s\S]+)$/i.exec(rawTitle);
+            					if (shellCommand) {
+            						detail = "\x60\x60\x60sh\n" + trimText(shellCommand[1]).replace(/\x60\x60\x60/g, "''''''") + "\n\x60\x60\x60" + (detail.length ? "\n\n" + formatToolOutput(detail) : "");
+            					} else if (detail.length) {
+            						detail = formatToolOutput(detail);
             					}
             					var call = {
             						callId: trimText(eventItem.callId || eventItem.key || ""),
@@ -17488,3 +17559,24 @@ title: Tigo
           .tigo-resource-create { height:32px; margin:6px 0 10px; --border-width:1px; --border-radius:7px; --padding-start:10px; --padding-end:12px; font-size:12px; }
           .tigo-resource-create ion-icon { width:16px; height:16px; margin-right:5px; }
           
+↓TigoUiAuditStyle [ngx.components.UIStyle-1792244532694]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Tigo UI audit (run 3): one compact line per tool call, so the narration stays the main text. */
+          .agent-worklog-tool,
+          .agent-worklog-tool-line { max-width: 100%; min-width: 0; }
+          .agent-worklog-tool-summary { display: flex; flex-wrap: nowrap; gap: 6px; max-width: 100%; min-width: 0; min-height: 20px; }
+          .agent-worklog-tool-summary > span { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 20px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .agent-worklog-tool-summary::before,
+          .agent-worklog-tool-summary ion-icon { flex: 0 0 auto; }
+          .agent-worklog-tool-summary ion-icon { font-size: 14px; }
+          .agent-worklog-step-narrative { margin-top: 8px; }
+          .agent-worklog-step-narrative:first-child { margin-top: 0; }
+          .agent-worklog-step-tool + .agent-worklog-step-narrative { margin-top: 10px; }
+          .agent-worklog-tool-body { max-height: 360px; }
+          :host ::ng-deep .agent-worklog-call-body markdown pre { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 12%, transparent 88%); border-radius: 6px; margin: 4px 0 8px; padding: 6px 8px; }
+          :host ::ng-deep .agent-worklog-call-body markdown pre code { background: transparent; font-size: 11.5px; line-height: 17px; }
+          '
