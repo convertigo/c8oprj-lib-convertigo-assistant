@@ -971,7 +971,8 @@ scriptContent:
         			this.ensureC8OformsEmbeddedStyles();
         			this.applyC8OformsHostLanguage(next);
         			this.applyC8OformsHostTheme(next);
-        			try { if (this.events && this.events.publish) { this.events.publish("AgentNoCodeContextChanged", next); } } catch (eCatalogEvent) {}
+        			// Only the embedded C8Oforms surface uses the No Code resource catalog.
+        			try { if (this.events && this.events.publish && this.isEmbeddedInC8Oforms()) { this.events.publish("AgentNoCodeContextChanged", next); } } catch (eCatalogEvent) {}
         			this.scheduleAgentSettingsRefreshAfterHostContext();
         			this.syncFooterPlaceholder();
         			if (this.tick) { this.tick(); }
