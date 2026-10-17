@@ -12979,7 +12979,9 @@ title: Tigo
             				var text = localizeProgress(eventItem.text || rawTitle || "");
             				var detail = normalizeToolDetail(eventItem.detail || "");
             				var status = trimText(eventItem.status || "").toLowerCase();
-            				var type = rawType === "tool" ? "tool" : (rawType === "activity" ? "activity" : (isProgressActivity(text) ? "activity" : "narrative"));
+            				// Only short status lines ("J''utilise le MCP Convertigo.") are activity; the agent''s own narration
+            				// often starts with "I am ..." too, and must keep the narration style.
+            				var type = rawType === "tool" ? "tool" : (rawType === "activity" ? "activity" : (isProgressActivity(text) && text.length <= 80 ? "activity" : "narrative"));
             				var commandLine = text || rawTitle;
             				if (type !== "tool" && isShellCommandLine(commandLine)) {
             					eventItem.toolName = "exec_command";
