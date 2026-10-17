@@ -61,6 +61,7 @@ test('every model of the session is kept with its cost source, agent first', () 
   s.rememberAgentUsage(state, { journalUsage: { requests: 3, inputTokens: 4000, cachedTokens: 2700, outputTokens: 300, cacheRate: 0.675, costAmount: 0.056, costCurrency: 'USD',
     sessionTokens: { inputTokens: 6500, cachedTokens: 2700, outputTokens: 600 },
     models: {
+      'subagent:verifier|mistral/mistral-large-4': { model: 'mistral/mistral-large-4', kind: 'subagent', profile: 'verifier', runs: 1, calls: 20, requests: 20, inputTokens: 140000, cachedTokens: 0, outputTokens: 6600, reasoningTokens: 0, costAmount: 0.104, costSource: 'gateway' },
       'mistral/mistral-large-4': { model: 'mistral/mistral-large-4', kind: 'vision', calls: 2, requests: 2, inputTokens: 2500, cachedTokens: 0, outputTokens: 300, reasoningTokens: 0, costAmount: 0.006, costSource: 'gateway' },
       'glm-5-3': { model: 'glm-5-3', kind: 'agent', requests: 3, inputTokens: 4000, cachedTokens: 2700, outputTokens: 300, costAmount: 0.05, costSource: 'journal' } } },
     update: { used: 10, cost: { amount: 0.09, currency: 'USD' } } });
@@ -68,8 +69,9 @@ test('every model of the session is kept with its cost source, agent first', () 
   assert.equal(state.usage.costAmount, 0.056, 'the session cost of the Bridge, every model included');
   assert.equal(state.usage.costSource, 'journal');
   assert.deepEqual(JSON.parse(JSON.stringify(state.usage.models)), [
-    { model: 'glm-5-3', kind: 'agent', calls: null, requests: 3, inputTokens: 4000, cachedTokens: 2700, outputTokens: 300, costAmount: 0.05, costSource: 'journal' },
-    { model: 'mistral/mistral-large-4', kind: 'vision', calls: 2, requests: 2, inputTokens: 2500, cachedTokens: 0, outputTokens: 300, costAmount: 0.006, costSource: 'gateway' }]);
+    { model: 'glm-5-3', kind: 'agent', profile: '', runs: null, calls: null, requests: 3, inputTokens: 4000, cachedTokens: 2700, outputTokens: 300, costAmount: 0.05, costSource: 'journal' },
+    { model: 'mistral/mistral-large-4', kind: 'vision', profile: '', runs: null, calls: 2, requests: 2, inputTokens: 2500, cachedTokens: 0, outputTokens: 300, costAmount: 0.006, costSource: 'gateway' },
+    { model: 'mistral/mistral-large-4', kind: 'subagent', profile: 'verifier', runs: 1, calls: 20, requests: 20, inputTokens: 140000, cachedTokens: 0, outputTokens: 6600, costAmount: 0.104, costSource: 'gateway' }], 'agent, vision, then sub-agent rows');
   assert.deepEqual(JSON.parse(JSON.stringify(state.usage.sessionTokens)), { inputTokens: 6500, cachedTokens: 2700, outputTokens: 600 });
   s.rememberAgentUsage(state, { journalUsage: { models: { 'vision:x': { kind: 'vision', calls: 1, costAmount: null, costSource: '' } } }, update: { used: 10 } });
   assert.equal(state.usage.models[0].model, 'x', 'the key prefix is not shown as a model name');

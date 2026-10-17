@@ -3830,8 +3830,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.plan = { entries: plan, runid: String(state.runid || ""), updatedAt: now() };
   }
 
-  // One row per model of the session from the Bridge journal totals: the agent's models (cost valued from the journal)
-  // and the vision models of the image-describe MCP tool (cost charged by the gateway). Agent models first.
+  // One row per model of the session from the Bridge journal totals: the agent's models (cost valued from the journal),
+  // the vision models of image-describe and the sub-agents, one row per profile and model with their runs (cost charged
+  // by the gateway). Agent models first, then vision, then sub-agents.
   function agentUsageModels(journal, number) {
     var models = journal && journal.models && typeof journal.models === "object" ? journal.models : null;
     if (!models) {
@@ -3839,15 +3840,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var rows = [];
     for (var key in models) {
-      if (!Object.prototype.hasOwnProperty.call(models, key) || !models[key] || rows.length >= 10) {
+      if (!Object.prototype.hasOwnProperty.call(models, key) || !models[key] || rows.length >= 12) {
         continue;
       }
       var row = models[key];
-      var kind = row.kind === "vision" ? "vision" : "agent";
+      var kind = row.kind === "vision" || row.kind === "subagent" ? row.kind : "agent";
       rows.push({
-        model: trim(row.model) || trim(key).replace(/^vision:/, "") || "?",
+        model: trim(row.model) || trim(key).replace(/^vision:/, "").replace(/^subagent:[^|]*\|/, "") || "?",
         kind: kind,
-        calls: kind === "vision" ? number(row.calls) : null,
+        profile: kind === "subagent" ? trim(row.profile) : "",
+        runs: kind === "subagent" ? number(row.runs) : null,
+        calls: kind === "agent" ? null : number(row.calls),
         requests: number(row.requests),
         inputTokens: number(row.inputTokens) || 0,
         cachedTokens: number(row.cachedTokens) || 0,
@@ -3856,7 +3859,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         costSource: row.costSource === "gateway" || row.costSource === "journal" ? row.costSource : ""
       });
     }
-    rows.sort(function (x, y) { return (x.kind === "agent" ? 0 : 1) - (y.kind === "agent" ? 0 : 1); });
+    var order = { agent: 0, vision: 1, subagent: 2 };
+    rows.sort(function (x, y) { return order[x.kind] - order[y.kind]; });
     return rows;
   }
 
@@ -4300,6 +4304,139 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     markSuccessfulNoCodeFormMutation(state, event, data, type);
     state.lastStatusText = label;
   }
+
+  // Sub-agent runs of the Convertigo MCP (subagent-run, browser-verify) live in <user workspace>/subagents/<runId>/ and
+  // name the conversation that started them (X-Convertigo-Conversation-Id). Each run of the current turn becomes one
+  // progress event of type "subagent": profile, model, task, latest steps, report and cost, shown as its own block in
+  // the turn and kept in the turn history. Read from the run folders, not from the tool events: Vibe calls MCP tools
+  // from its code, so the tool stream does not always show the sub-agent call.
+  var SUBAGENT_LABELS = {
+    fr: { verifier: "Vérificateur", constructor: "Constructeur" },
+    en: { verifier: "Verifier", constructor: "Builder" }
+  };
+
+  function subagentProfileLabel(state, profile) {
+    var labels = SUBAGENT_LABELS[state && state.language === "fr" ? "fr" : "en"];
+    return labels[profile] || profile || "Sub-agent";
+  }
+
+  function subagentEventDetail(run) {
+    var report = (run.output && run.output.report) || {};
+    var usage = (run.output && run.output.usage) || {};
+    var cost = usage.cost === null || usage.cost === undefined || !isFinite(Number(usage.cost)) ? null : Number(usage.cost);
+    return JSON.stringify({
+      runId: run.runId,
+      profile: run.profile,
+      model: run.model,
+      task: trim(run.task).substring(0, 400),
+      status: run.status,
+      startedAt: run.startedAt,
+      durationMs: Number(run.output && run.output.durationMs) || Math.max(0, now() - Number(run.startedAt || now())),
+      activity: (run.activity || []).slice(-6).map(function (a) { return trim(a && a.text).substring(0, 140); }),
+      verdict: trim(report.verdict),
+      summary: trim(report.summary).substring(0, 900),
+      // A constructor reports the objects it created and modified (QNames) and what is left open.
+      created: (report.created || []).slice(0, 12).map(function (q) { return trim(q).substring(0, 160); }),
+      modified: (report.modified || []).slice(0, 12).map(function (q) { return trim(q).substring(0, 160); }),
+      openIssues: (report.openIssues || []).slice(0, 4).map(function (q) { return trim(q).substring(0, 200); }),
+      error: trim(run.output && run.output.error).substring(0, 300),
+      stopReason: trim(run.output && run.output.stopReason),
+      modelCalls: Number(usage.requests) || 0,
+      cost: cost
+    });
+  }
+
+  function syncSubagentRuns(state) {
+    if (!state || !trim(state.threadid).length) {
+      return;
+    }
+    var turnStart = Number(String(state.runid || "").split("-")[0]) || 0;
+    var runs = [];
+    try {
+      runs = C8O.assistantAgentBridge.readSubagentRuns(trim(state.threadid), turnStart - 5000);
+    } catch (_ignoreSubagentRuns) {
+      return;
+    }
+    for (var i = 0; i < runs.length; i++) {
+      var run = runs[i];
+      var title = subagentProfileLabel(state, run.profile) + " · " + trim(run.model).replace(/^.*\//, "");
+      pushProgressEvent(state, {
+        key: "subagent:" + run.runId,
+        type: "subagent",
+        text: trim(run.task).substring(0, 160) || title,
+        title: title,
+        status: run.status,
+        detail: subagentEventDetail(run),
+        provider: state.provider || "",
+        callId: run.runId,
+        toolName: "subagent-run",
+        groupKey: "subagent:" + run.runId,
+        current: run.status === "running"
+      });
+    }
+  }
+
+  // The run folders of a conversation started since `since` (ms), oldest first.
+  C8O.assistantAgentBridge.readSubagentRuns = C8O.assistantAgentBridge.readSubagentRuns || function (conversationId, since) {
+    var Engine = Packages.com.twinsoft.convertigo.engine.Engine;
+    var File = java.io.File;
+    var Files = java.nio.file.Files;
+    var root = new File(new File(String(Engine.USER_WORKSPACE_PATH)), "subagents");
+    var dirs = root.isDirectory() ? root.listFiles() : null;
+    var read = function (file) { return String(new java.lang.String(Files.readAllBytes(file.toPath()), "UTF-8")); };
+    var runs = [];
+    for (var i = 0; dirs !== null && i < dirs.length; i++) {
+      var dir = dirs[i];
+      var runFile = new File(dir, "run.json");
+      if (!dir.isDirectory() || Number(dir.lastModified()) < since || !runFile.isFile()) {
+        continue;
+      }
+      var meta;
+      try {
+        meta = JSON.parse(read(runFile));
+      } catch (_badRun) {
+        continue;
+      }
+      if (trim(meta.conversationId) !== conversationId || Number(meta.startedAt || 0) < since) {
+        continue;
+      }
+      var output = null;
+      var outFile = new File(dir, "agent-output.json");
+      if (outFile.isFile()) {
+        var lines = read(outFile).split(/\r?\n/);
+        for (var l = lines.length - 1; l >= 0 && output === null; l--) {
+          if (trim(lines[l]).charAt(0) === "{") {
+            try { output = JSON.parse(lines[l]); } catch (_partial) {}
+          }
+        }
+      }
+      var alive = false;
+      try {
+        var handle = java.lang.ProcessHandle.of(Number(meta.pid || 0));
+        alive = handle.isPresent() && handle.get().isAlive();
+      } catch (_noHandle) {}
+      var activity = [];
+      var activityFile = new File(dir, "activity.jsonl");
+      if (activityFile.isFile()) {
+        var entries = read(activityFile).split(/\r?\n/);
+        for (var a = Math.max(0, entries.length - 8); a < entries.length; a++) {
+          try { if (trim(entries[a]).length) { activity.push(JSON.parse(entries[a])); } } catch (_partialLine) {}
+        }
+      }
+      runs.push({
+        runId: String(dir.getName()),
+        profile: trim(meta.profile),
+        model: trim(meta.model),
+        task: trim(meta.task),
+        startedAt: Number(meta.startedAt || 0),
+        status: output !== null ? (output.ok === true ? "completed" : "failed") : (alive ? "running" : "failed"),
+        output: output,
+        activity: activity
+      });
+    }
+    runs.sort(function (x, y) { return x.startedAt - y.startedAt; });
+    return runs;
+  };
 
   function compactLine(value) {
     var text = trim(String(value || "").replace(/\s+/g, " "));
@@ -7198,6 +7335,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Number(events.nextCursor) : state.cursor;
+      syncSubagentRuns(state);
       var bridgeState = events.state || {};
       var bridgeStatus = trim(bridgeState.status).toLowerCase();
       if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled" && !list.length && bridgeState.alive !== true && (bridgeStatus === "exited" || bridgeStatus === "closed" || bridgeStatus === "error")) {

@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { ts, pageClass } = require('./helpers/assistant-source.cjs');
 
-const METHODS = ['getAgentUsageView', 'getAgentMetricsView', 'agentMetricsText', 'formatToolDuration', 'agentUiText', 'agentUiLanguage', 'formatAgentNumber', 'formatAgentTokens', 'formatAgentCost', 'formatAgentDuration'];
+const METHODS = ['getAgentUsageView', 'getAgentMetricsView', 'agentMetricsText', 'formatToolDuration', 'subagentProfileLabel', 'agentUiText', 'agentUiLanguage', 'formatAgentNumber', 'formatAgentTokens', 'formatAgentCost', 'formatAgentDuration'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter((m) => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map((m) => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -51,4 +51,19 @@ test('an unknown cost is said, never summed as zero', () => {
   assert.equal(en['Vision · mistral/mistral-large-4'], '1 call · 2.5 k sent · 300 generated · 0.0010 USD · charged by the gateway');
   assert.match(en['Agent · glm-5-3'], /not provided$/);
   assert.match(en['Session total (all models)'], /not provided$/);
+});
+
+test('a sub-agent row names its profile and counts its runs before its model calls', () => {
+  const verifierRow = { model: 'mistral/mistral-large-4', kind: 'subagent', profile: 'verifier', runs: 2, calls: 31, requests: 31, inputTokens: 290000, cachedTokens: 0, outputTokens: 13000, costAmount: 0.22, costSource: 'gateway' };
+  const builderRow = { model: 'glm-5-3', kind: 'subagent', profile: 'constructor', runs: 1, calls: 1, requests: 1, inputTokens: 9000, cachedTokens: 0, outputTokens: 400, costAmount: 0.01, costSource: 'gateway' };
+  const usage = Object.assign({}, base, { costAmount: 0.286, models: [agentRow, visionRow, verifierRow, builderRow], sessionTokens: { inputTokens: 341500, cachedTokens: 30000, outputTokens: 14900 } });
+  const fr = rows(view('fr', usage));
+  assert.equal(fr['Sous-agent vérificateur · mistral/mistral-large-4'], '2 lancements · 31 appels · 290 k envoyés · 13 k générés · 0,22 USD · facturé par la passerelle');
+  assert.equal(fr['Sous-agent constructeur · glm-5-3'], '1 lancement · 1 appel · 9 k envoyés · 400 générés · 0,01 USD · facturé par la passerelle');
+  assert.equal(fr['Vision · mistral/mistral-large-4'], '2 appels · 2,5 k envoyés · 300 générés · 0,0060 USD · facturé par la passerelle', 'image-describe keeps its vision row');
+  assert.equal(fr['Agent · glm-5-3'], '40 k envoyés · 1,2 k générés · 0,05 USD · estimé depuis le journal', 'the agent row of the same model stays apart');
+  const en = rows(view('en', usage));
+  assert.match(en['Sub-agent verifier · mistral/mistral-large-4'], /^2 runs · 31 calls · /);
+  assert.match(rows(view('it', usage))['Sotto-agente verificatore · mistral/mistral-large-4'], /^2 avvii · 31 chiamate · /);
+  assert.match(rows(view('es', usage))['Subagente constructor · glm-5-3'], /^1 ejecución · 1 llamada · /);
 });
