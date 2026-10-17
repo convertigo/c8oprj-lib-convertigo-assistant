@@ -1031,6 +1031,43 @@ scriptContent:
         		} catch (e) {}
         	}
         	
+        	getSlashCommandMatches() {
+        		// "/" menu: the agent''s commands that match what is typed, while the message is a bare "/name".
+        		// The same array is returned while nothing changes, so the menu rows are not rebuilt.
+        		var text = '''' + this.getQuestionText();
+        		var commands = this.AgentCommands && this.AgentCommands.length ? this.AgentCommands : [];
+        		var key = text + ''|'' + commands.length;
+        		if (this[''_slashKey''] === key) {
+        			return this[''_slashMatches''];
+        		}
+        		var matches = [];
+        		var typed = /^\/([A-Za-z0-9_-]*)$/.exec(text.trim());
+        		if (typed && text.indexOf(''\n'') === -1) {
+        			var prefix = typed[1].toLowerCase();
+        			for (var i = 0; i < commands.length; i++) {
+        				if (commands[i] && ('''' + commands[i].name).toLowerCase().indexOf(prefix) === 0) {
+        					matches.push(commands[i]);
+        				}
+        			}
+        		}
+        		this[''_slashKey''] = key;
+        		this[''_slashMatches''] = matches;
+        		return matches;
+        	}
+        	commandMenuTitle() {
+        		try {
+        			var owner: any = this.owner;
+        			if (owner && owner.agentUiText) {
+        				return owner.agentUiText(''commands'');
+        			}
+        		} catch (e) {}
+        		return ''Commands'';
+        	}
+        	pickSlashCommand(command) {
+        		if (command && command.name) {
+        			this.setQuestionText(''/'' + command.name + '' '', true);
+        		}
+        	}
         	submitQuestionFromUI(event) {
         		try {
         			if (event && event.preventDefault) {
@@ -2006,6 +2043,93 @@ scriptContent:
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:'Agent_Add_DropPaste_Note' | translate
+    ↓CommandMenu [ngx.components.UIDynamicElement-1792250489624]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1792250490702]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:codex-add-panel tigo-command-menu
+      ↓Hidden [ngx.components.UIAttribute-1792250490704]: 
+        attrName: '[hidden]'
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:!this.getSlashCommandMatches || !this.getSlashCommandMatches().length
+      ↓Title [ngx.components.UIDynamicElement-1792250490706]: 
+        beanData: '{"ionBean":"Paragraph"}'
+        tagName: p
+        ↓Class [ngx.components.UIAttribute-1792250490708]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:codex-add-title
+        ↓Text [ngx.components.UIText-1792250490710]: 
+          textValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.commandMenuTitle()
+      ↓Commands [ngx.components.UIControlDirective-1792250490712]: 
+        directiveIndexName: commandIndex
+        directiveItemName: command
+        directiveSource: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getSlashCommandMatches()
+        ↓Option [ngx.components.UIDynamicElement-1792250491790]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "IonFill": "plain:clear",
+             "IonSize": "plain:small"
+            }'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1792250491792]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:tigo-command-option
+          ↓Name [ngx.components.UIDynamicElement-1792250491794]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: span
+            ↓Class [ngx.components.UIAttribute-1792250491796]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:tigo-command-name
+            ↓Text [ngx.components.UIText-1792250491798]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'/' + command.name
+          ↓Description [ngx.components.UIDynamicElement-1792250491800]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: span
+            ↓Class [ngx.components.UIAttribute-1792250491802]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:tigo-command-description
+            ↓Text [ngx.components.UIText-1792250491804]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: 'script:command.hint ? command.description + '' — '' + command.hint : command.description'
+          ↓Event [ngx.components.UIControlEvent-1792250491806]: 
+            ↓Pick [ngx.components.UICustomAction-1792250492268]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      		page.pickSlashCommand(props.stack.root.scope.command);
+                      		resolve();
     ↓InputItem [ngx.components.UIDynamicElement-1772100000125]: 
       beanData: '{"ionBean":"FormItem"}'
       tagName: ion-item
@@ -4623,3 +4747,21 @@ scriptContent:
           '
 ↓ResourceLanguage [ngx.components.UICompVariable-1792163971494]: 
   value: '''en'''
+↓AgentCommands [ngx.components.UICompVariable-1792250487448]: 
+  comment: Slash commands advertised by the agent harness, for the "/" menu.
+  value: '[]'
+↓TigoCommandMenuStyle [ngx.components.UIStyle-1792250493382]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* "/" menu of the agent''s commands, above the composer input. */
+          .tigo-command-menu { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto; }
+          .tigo-command-option { --padding-start: 8px; --padding-end: 8px; height: auto; margin: 0; min-height: 34px; text-align: left; text-transform: none; }
+          .tigo-command-option::part(native) { justify-content: flex-start; }
+          .tigo-command-name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; font-weight: 600; margin-right: 10px; white-space: nowrap; }
+          .tigo-command-description { flex: 1 1 auto; font-size: 12px; min-width: 0; opacity: 0.75; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+          .tigo-command-option { width: 100%; }
+          .tigo-command-name { flex: 0 0 auto; }
+          '
