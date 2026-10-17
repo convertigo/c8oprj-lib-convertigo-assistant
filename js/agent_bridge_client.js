@@ -3181,6 +3181,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       toolRetry: "Une tentative d'outil a \u00e9chou\u00e9, je cherche une autre piste.",
       closedAfterAnswer: "La r\u00e9ponse est termin\u00e9e.",
       closedEarly: "Le traitement s'est arr\u00eat\u00e9 avant d'avoir termin\u00e9.",
+      compactDone: "Contexte compact\u00e9 : un r\u00e9sum\u00e9 remplace d\u00e9sormais l'historique de la conversation.",
+      commandDone: "Commande /{name} ex\u00e9cut\u00e9e.",
       completedNoAnswer: "Le traitement est termin\u00e9, mais aucun r\u00e9sum\u00e9 final d\u00e9taill\u00e9 n'a \u00e9t\u00e9 transmis.",
       completedIncomplete: "Le traitement est termin\u00e9, mais la r\u00e9ponse finale est incompl\u00e8te.",
       lastObservedAction: "Derni\u00e8re action observ\u00e9e : ",
@@ -3217,6 +3219,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       toolRetry: "A tool attempt failed, I am trying another path.",
       closedAfterAnswer: "The response is complete.",
       closedEarly: "The task stopped before completion.",
+      compactDone: "Context compacted: a summary now replaces the conversation history.",
+      commandDone: "Command /{name} done.",
       completedNoAnswer: "The task is complete, but no detailed final summary was sent.",
       completedIncomplete: "The task is complete, but the final answer is incomplete.",
       lastObservedAction: "Last observed action: ",
@@ -4420,6 +4424,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function completedFallbackAnswer(state) {
+    if (state && trim(state.slashCommand).length) {
+      // A harness command such as /compact ends without an agent message: say what it did. Vibe resets
+      // its context count after a compaction and only reports it again on the next turn.
+      var commandTexts = lang(state);
+      if (state.slashCommand === "compact" && state.usage) {
+        state.usage.used = 0;
+      }
+      return state.slashCommand === "compact" ? commandTexts.compactDone : commandTexts.commandDone.replace("{name}", state.slashCommand);
+    }
     var finalFromProgress = finalAnswerFromProgress(state);
     if (finalFromProgress.length) {
       return finalFromProgress;
@@ -6449,7 +6462,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
       options.Question = question;
     }
-    if (agentSlashCommandName(state, rawUserQuestion).length) {
+    state.slashCommand = agentSlashCommandName(state, rawUserQuestion);
+    if (state.slashCommand.length) {
       // The harness runs "/compact <instructions>" only when the prompt starts with it: no Studio preamble.
       question = rawUserQuestion;
       options.Question = question;
