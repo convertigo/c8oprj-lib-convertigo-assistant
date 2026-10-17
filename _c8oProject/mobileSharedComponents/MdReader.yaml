@@ -292,4 +292,29 @@
             border-color: rgba(148, 163, 184, 0.45);
             color: #475569;
           }
+          /* The system light theme (no forced class) also gets light code blocks, not dark slate with dark text. */
+          @media (prefers-color-scheme: light) {
+          :host-context(html:not(.force-dark)) ::ng-deep markdown code,
+          :host-context(html:not(.force-dark)) ::ng-deep markdown pre {
+          background: rgba(226, 232, 240, 0.8);
+          border-color: rgba(148, 163, 184, 0.4);
+          }
+          :host-context(html:not(.force-dark)) ::ng-deep markdown pre[class*="language-"],
+          :host-context(html:not(.force-dark)) ::ng-deep markdown code[class*="language-"] {
+          background: rgba(226, 232, 240, 0.8) !important;
+          border-color: rgba(148, 163, 184, 0.4) !important;
+          }
+          :host-context(html:not(.force-dark)) ::ng-deep markdown pre code,
+          :host-context(html:not(.force-dark)) ::ng-deep markdown pre[class*="language-"] code[class*="language-"] {
+          background: transparent !important;
+          border: 0 !important;
+          }
+          :host-context(html:not(.force-dark)) ::ng-deep markdown button.clipboard,
+          :host-context(html:not(.force-dark)) ::ng-deep markdown .clipboard,
+          :host-context(html:not(.force-dark)) ::ng-deep markdown .copy-to-clipboard-button {
+          background: rgba(248, 250, 252, 0.92);
+          border-color: rgba(148, 163, 184, 0.45);
+          color: #475569;
+          }
+          }
           '

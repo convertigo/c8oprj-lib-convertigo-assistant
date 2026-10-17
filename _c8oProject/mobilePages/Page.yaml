@@ -17653,4 +17653,9 @@ title: Tigo
           .agent-worklog-tool-body { max-height: 360px; }
           :host ::ng-deep .agent-worklog-call-body markdown pre { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 12%, transparent 88%); border-radius: 6px; margin: 4px 0 8px; padding: 6px 8px; }
           :host ::ng-deep .agent-worklog-call-body markdown pre code { background: transparent; font-size: 11.5px; line-height: 17px; }
+          /* The header Reveal pill follows the system dark theme too, not only a forced one. */
+          @media (prefers-color-scheme: dark) {
+          :host-context(html:not(.force-light)) ion-header.modern-header ion-button.toolbar-reveal-button { --background: rgba(15, 23, 42, 0.88); --background-activated: rgba(14, 165, 233, 0.28); --background-hover: rgba(14, 165, 233, 0.2); --border-color: rgba(148, 163, 184, 0.28); --color: #cbd5e1; color: #cbd5e1; }
+          :host-context(html:not(.force-light)) ion-header.modern-header ion-button.toolbar-reveal-button.active { --background: rgba(14, 165, 233, 0.22); --border-color: rgba(56, 189, 248, 0.48); --color: #e0f2fe; color: #e0f2fe; }
+          }
           '
