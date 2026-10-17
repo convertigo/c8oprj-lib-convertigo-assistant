@@ -3143,6 +3143,26 @@ scriptContent:
         					stopFollowing();
         				}
         			});
+        			// Content that grows after a scroll (Markdown rendering, a new row) must not leave a
+        			// following view a few lines above the bottom with the "back to latest" button shown.
+        			try {
+        				var host: any = el.getRootNode ? (el.getRootNode() as any).host : null;
+        				var main = host && host.querySelector ? host.querySelector(''.modern-main'') : null;
+        				if (main && typeof (window as any).ResizeObserver === ''function'') {
+        					var observer = new (window as any).ResizeObserver(function() {
+        						if (!self.local || self.local.AutoScrollEnabled === false || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
+        							return;
+        						}
+        						if (el.scrollHeight - el.scrollTop - el.clientHeight > 1) {
+        							el.scrollTop = el.scrollHeight;
+        							if (self.refreshScrollButtons) {
+        								self.refreshScrollButtons(0);
+        							}
+        						}
+        					});
+        					observer.observe(main);
+        				}
+        			} catch (eResize) {}
         		};
         		try {
         			var result = self.content.getScrollElement();
@@ -17685,4 +17705,6 @@ title: Tigo
           /* A conversation uses the window width up to a readable 980px, instead of a 720px strip in the middle. */
           .agent-desktop-center:has(.agent-worklog, lib_convertigoassistant-usermessagecomponent) { max-width: min(100%, 980px); }
           .agent-worklog { max-width: 100%; }
+          /* "Back to the latest messages" sits right of the text column (bottom-right corner when narrow), not over the text. */
+          .modern-scroll-bottom-btn { bottom: 14px !important; left: auto !important; opacity: 1; right: max(14px, calc((100% - 980px) / 2 - 52px)) !important; transform: none; }
           '
