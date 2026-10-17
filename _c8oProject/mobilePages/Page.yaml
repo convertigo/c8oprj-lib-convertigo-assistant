@@ -17682,4 +17682,7 @@ title: Tigo
           :host ::ng-deep .agent-worklog-step-activity.is-current markdown p { color: var(--modern-text, #0f172a); font-size: 14px; font-style: italic; }
           @keyframes tigo-live-dot { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
           @media (prefers-reduced-motion: reduce) { .agent-worklog-header.is-current::after, .agent-worklog-step-activity.is-current::before { animation: none; } }
+          /* A conversation uses the window width up to a readable 980px, instead of a 720px strip in the middle. */
+          .agent-desktop-center:has(.agent-worklog, lib_convertigoassistant-usermessagecomponent) { max-width: min(100%, 980px); }
+          .agent-worklog { max-width: 100%; }
           '
