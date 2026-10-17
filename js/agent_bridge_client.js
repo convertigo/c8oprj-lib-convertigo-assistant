@@ -6775,7 +6775,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "turn/end") {
           markProgressEventsIdle(state);
-          if (state.status !== "failed" && state.status !== "cancelled") {
+          if (state.status !== "failed" && state.status !== "cancelled" && cancellationRequested(state.threadid)) {
+            // A turn ended by the Stop button is not a completed task.
+            state.status = "cancelled";
+            state.error = "";
+            state.answer = lang(state).closedEarly;
+            state.answerIsFinal = true;
+            if (state.answerTranscriptRunid !== state.runid) {
+              appendTranscript(state, "assistant", state.answer);
+              state.answerTranscriptRunid = state.runid;
+            }
+          } else if (state.status !== "failed" && state.status !== "cancelled") {
             state.status = "completed";
             state.error = "";
             if (!trim(state.answer).length) {
@@ -6827,7 +6837,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.cursor = typeof events.nextCursor !== "undefined" ? Number(events.nextCursor) : state.cursor;
       var bridgeState = events.state || {};
       var bridgeStatus = trim(bridgeState.status).toLowerCase();
-      if (state.status !== "completed" && state.status !== "failed" && !list.length && bridgeState.alive !== true && (bridgeStatus === "exited" || bridgeStatus === "closed" || bridgeStatus === "error")) {
+      if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled" && !list.length && bridgeState.alive !== true && (bridgeStatus === "exited" || bridgeStatus === "closed" || bridgeStatus === "error")) {
         if (trim(state.answer).length) {
           state.status = "completed";
           state.answerIsFinal = true;
@@ -6843,7 +6853,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           state.answerTranscriptRunid = state.runid;
         }
       }
-      if (state.status !== "completed" && state.status !== "failed") {
+      if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled") {
         state.status = "in_progress";
       }
       state.updatedAt = now();
