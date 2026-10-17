@@ -6853,6 +6853,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           state.answerTranscriptRunid = state.runid;
         }
       }
+      // The turn can end without this client reading its turn/end (page reloaded during the run,
+      // events dropped from the bridge buffer...): a live harness reporting no active turn and no
+      // new event on two consecutive reads means the run is over.
+      if (state.status === "in_progress" && !list.length && bridgeState.alive === true && bridgeState.turnActive === false) {
+        state.idleReads = Number(state.idleReads || 0) + 1;
+      } else {
+        state.idleReads = 0;
+      }
+      if (state.idleReads >= 2) {
+        state.idleReads = 0;
+        markProgressEventsIdle(state);
+        state.error = "";
+        if (cancellationRequested(state.threadid)) {
+          state.status = "cancelled";
+          state.answer = lang(state).closedEarly;
+        } else {
+          state.status = "completed";
+          if (!trim(state.answer).length) {
+            state.answer = completedFallbackAnswer(state);
+          }
+        }
+        state.answerIsFinal = true;
+        if (state.answerTranscriptRunid !== state.runid) {
+          appendTranscript(state, "assistant", state.answer);
+          state.answerTranscriptRunid = state.runid;
+        }
+      }
       if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled") {
         state.status = "in_progress";
       }
