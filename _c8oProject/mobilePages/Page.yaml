@@ -3933,10 +3933,10 @@ scriptContent:
         	}
         	public agentMetricsText(key) {
         		var texts: any = {
-        			fr: { title: "Mesures de la session", active: "Temps actif", wall: "{value} au total", requests: "Requêtes au modèle", toolCalls: "Appels d''outils", failures: "{n} échecs", builder: "Attente du builder", sleeps: "Pauses (sleep)", compactions: "Compactions", tools: "Outils les plus appelés" },
-        			en: { title: "Session measures", active: "Active time", wall: "{value} overall", requests: "Model requests", toolCalls: "Tool calls", failures: "{n} failures", builder: "Builder waits", sleeps: "Sleeps", compactions: "Compactions", tools: "Most called tools" },
-        			it: { title: "Misure della sessione", active: "Tempo attivo", wall: "{value} in totale", requests: "Richieste al modello", toolCalls: "Chiamate di strumenti", failures: "{n} errori", builder: "Attesa del builder", sleeps: "Pause (sleep)", compactions: "Compattazioni", tools: "Strumenti più chiamati" },
-        			es: { title: "Medidas de la sesión", active: "Tiempo activo", wall: "{value} en total", requests: "Solicitudes al modelo", toolCalls: "Llamadas a herramientas", failures: "{n} errores", builder: "Espera del builder", sleeps: "Pausas (sleep)", compactions: "Compactaciones", tools: "Herramientas más llamadas" }
+        			fr: { title: "Mesures de la session", active: "Temps actif", wall: "{value} au total", requests: "Requêtes au modèle", toolCalls: "Appels d''outils", failures: "{n} échecs", builder: "Attente du builder", sleeps: "Pauses (sleep)", compactions: "Compactions", tools: "Outils les plus appelés", help: "Affiche les mesures de la session (temps, requêtes, outils, coût) ; « tour » pour le dernier tour", turnHint: "tour", turnTitle: "Mesures du dernier tour", loading: "Lecture des mesures…", error: "Les mesures ne sont pas disponibles", noConversation: "Aucune conversation ouverte", noTurn: "Aucun tour mesuré dans cette conversation", duration: "Durée", cache: "Jetons en cache", cost: "Coût de la session", models: "Par modèle", copy: "Copier en JSON", copied: "Copié" },
+        			en: { title: "Session measures", active: "Active time", wall: "{value} overall", requests: "Model requests", toolCalls: "Tool calls", failures: "{n} failures", builder: "Builder waits", sleeps: "Sleeps", compactions: "Compactions", tools: "Most called tools", help: "Shows the session measures (time, requests, tools, cost); \"turn\" for the last turn", turnHint: "turn", turnTitle: "Last turn measures", loading: "Reading the measures…", error: "The measures are not available", noConversation: "No conversation is open", noTurn: "No measured turn in this conversation", duration: "Duration", cache: "Cached tokens", cost: "Session cost", models: "Per model", copy: "Copy as JSON", copied: "Copied" },
+        			it: { title: "Misure della sessione", active: "Tempo attivo", wall: "{value} in totale", requests: "Richieste al modello", toolCalls: "Chiamate di strumenti", failures: "{n} errori", builder: "Attesa del builder", sleeps: "Pause (sleep)", compactions: "Compattazioni", tools: "Strumenti più chiamati", help: "Mostra le misure della sessione (tempo, richieste, strumenti, costo); «turno» per l''ultimo turno", turnHint: "turno", turnTitle: "Misure dell''ultimo turno", loading: "Lettura delle misure…", error: "Le misure non sono disponibili", noConversation: "Nessuna conversazione aperta", noTurn: "Nessun turno misurato in questa conversazione", duration: "Durata", cache: "Token in cache", cost: "Costo della sessione", models: "Per modello", copy: "Copia in JSON", copied: "Copiato" },
+        			es: { title: "Medidas de la sesión", active: "Tiempo activo", wall: "{value} en total", requests: "Solicitudes al modelo", toolCalls: "Llamadas a herramientas", failures: "{n} errores", builder: "Espera del builder", sleeps: "Pausas (sleep)", compactions: "Compactaciones", tools: "Herramientas más llamadas", help: "Muestra las medidas de la sesión (tiempo, solicitudes, herramientas, coste); «turno» para el último turno", turnHint: "turno", turnTitle: "Medidas del último turno", loading: "Leyendo las medidas…", error: "Las medidas no están disponibles", noConversation: "No hay ninguna conversación abierta", noTurn: "Ningún turno medido en esta conversación", duration: "Duración", cache: "Tokens en caché", cost: "Coste de la sesión", models: "Por modelo", copy: "Copiar en JSON", copied: "Copiado" }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -4416,6 +4416,156 @@ scriptContent:
         			});
         		}
         		return media;
+        	}
+        	public localSlashCommands() {
+        		// Commands of the Assistant itself, listed first in the "/" menu; they never reach the agent.
+        		var language = this.agentUiLanguage();
+        		var self: any = this;
+        		if (self.localSlashCommandsCache && self.localSlashCommandsLanguage === language) {
+        			return self.localSlashCommandsCache;
+        		}
+        		var help = this.agentMetricsText("help");
+        		self.localSlashCommandsCache = [
+        			{ name: "mesures", description: help, hint: this.agentMetricsText("turnHint"), local: true },
+        			{ name: "metrics", description: help, hint: this.agentMetricsText("turnHint"), local: true }
+        		];
+        		self.localSlashCommandsLanguage = language;
+        		return self.localSlashCommandsCache;
+        	}
+        	public runLocalCommand(text) {
+        		var match = /^\/(mesures|metrics)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
+        		if (!match) {
+        			return false;
+        		}
+        		this.showSessionMetrics(!!match[2] && /^(tour|turn|turno|dernier|last)$/i.test(match[2]));
+        		return true;
+        	}
+        	public showSessionMetrics(turnOnly) {
+        		// A local card of the thread with the measures of the open conversation, read with agent_session_metrics.
+        		if (!this.local) {
+        			return;
+        		}
+        		var now = new Date();
+        		var card: any = {
+        			type: "metrics",
+        			time: ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2),
+        			title: this.agentMetricsText(turnOnly ? "turnTitle" : "title"),
+        			state: "loading",
+        			message: this.agentMetricsText("loading"),
+        			rows: [],
+        			tools: [],
+        			models: [],
+        			json: ""
+        		};
+        		this.local.Messages = this.local.Messages || [];
+        		this.local.Messages.push(card);
+        		var threadid = ("" + (this.local.Conversation || "")).trim();
+        		if (!threadid.length) {
+        			card.state = "error";
+        			card.message = this.agentMetricsText("noConversation");
+        			this.tick();
+        			this.scrollChatBottom(0, true);
+        			return;
+        		}
+        		this.tick();
+        		this.scrollChatBottom(0, true);
+        		this.c8o.callJsonObject("lib_ConvertigoAgentBridge.agent_session_metrics", { threadid: threadid }).async().then((response: any) => {
+        			var result = response && response.response ? response.response : response;
+        			if (!result || result.ok !== true) {
+        				card.state = "error";
+        				card.message = this.agentMetricsText("error") + (result && result.error ? " (" + (result.error.code || result.error) + ")" : "");
+        			} else {
+        				this.fillMetricsCard(card, result, turnOnly);
+        			}
+        			this.tick();
+        			this.scrollChatBottom(0, true);
+        		}).catch(() => {
+        			card.state = "error";
+        			card.message = this.agentMetricsText("error");
+        			this.tick();
+        		});
+        	}
+        	public fillMetricsCard(card, result, turnOnly) {
+        		var t = (key: any) => this.agentMetricsText(key);
+        		var duration = (ms: any) => this.formatAgentDuration(Number(ms || 0));
+        		var metrics = result.metrics || {};
+        		var usage = result.usage || {};
+        		var row = (label: any, value: any) => ({ label: label, value: value });
+        		var toolRows = (tools: any) => (tools || []).slice(0, 8).map((tool: any) => row(("" + tool.name).replace(/^mcp_Convertigo\./, "Convertigo · ").replace(/^mcp_playwright\./, "Playwright · ").replace(/^file_system\./, ""), tool.calls + (tool.failures ? " · " + t("failures").replace("{n}", "" + tool.failures) : "") + (tool.durationMs ? " · " + this.formatToolDuration(tool.durationMs) : "")));
+        		var data: any = { threadid: result.threadid, sessionId: result.sessionId, model: result.model };
+        		if (turnOnly) {
+        			var turns = metrics.turns || [];
+        			var turn = turns.length ? turns[turns.length - 1] : null;
+        			if (!turn) {
+        				card.state = "error";
+        				card.message = t("noTurn");
+        				return;
+        			}
+        			card.rows = [
+        				row(t("duration"), turn.firstAt && turn.lastAt ? duration(turn.lastAt - turn.firstAt) : this.agentUiText("notProvided")),
+        				row(t("requests"), "" + turn.requests),
+        				row(t("toolCalls"), turn.toolCalls + (turn.toolFailures ? " · " + t("failures").replace("{n}", "" + turn.toolFailures) : "")),
+        				row(t("builder"), turn.builderWaitMs ? duration(turn.builderWaitMs) : "0"),
+        				row(t("sleeps"), "" + (turn.sleeps || 0))
+        			];
+        			card.tools = toolRows(turn.tools);
+        			data.turn = turn;
+        		} else {
+        			var builder = metrics.builderWaits || { count: 0, durationMs: 0 };
+        			var sleeps = metrics.sleeps || { count: 0, durationMs: 0 };
+        			card.rows = [
+        				row(t("active"), duration(metrics.activeMs) + (metrics.wallMs ? " · " + t("wall").replace("{value}", duration(metrics.wallMs)) : "")),
+        				row(t("requests"), "" + (metrics.requests || 0)),
+        				row(t("toolCalls"), (metrics.toolCalls || 0) + (metrics.toolFailures ? " · " + t("failures").replace("{n}", "" + metrics.toolFailures) : "")),
+        				row(t("builder"), builder.count ? builder.count + " · " + duration(builder.durationMs) : "0"),
+        				row(t("sleeps"), sleeps.count ? sleeps.count + " · " + duration(sleeps.durationMs) : "0"),
+        				row(t("compactions"), metrics.compactions != null ? "" + metrics.compactions : this.agentUiText("notProvided")),
+        				row(t("cache"), usage.cachedTokens != null && usage.inputTokens ? this.formatAgentTokens(usage.cachedTokens) + " / " + this.formatAgentTokens(usage.inputTokens) + " (" + this.formatAgentNumber(Number(usage.cachedTokens) / Number(usage.inputTokens) * 100, 1) + " %)" : this.agentUiText("notProvided")),
+        				row(t("cost"), usage.costAmount != null ? this.formatAgentCost(usage.costAmount, usage.costCurrency || "USD") : this.agentUiText("notProvided"))
+        			];
+        			card.tools = toolRows(metrics.tools);
+        			var models = usage.models || {};
+        			card.models = Object.keys(models).map((name: any) => {
+        				var item = models[name] || {};
+        				var source = item.costSource === "gateway" ? this.agentUiText("usageCostGateway") : (item.costSource === "journal" ? this.agentUiText("usageCostJournal") : "");
+        				return row((item.kind === "vision" ? "Vision · " : "Agent · ") + (item.model || name), (item.kind === "vision" && item.calls != null ? item.calls + " · " : (item.requests != null ? item.requests + " · " : "")) + this.formatAgentTokens(item.inputTokens) + " / " + this.formatAgentTokens(item.outputTokens) + " · " + (item.costAmount != null ? this.formatAgentCost(item.costAmount, "USD") + (source ? " · " + source : "") : this.agentUiText("notProvided")));
+        			});
+        			data.usage = usage;
+        			data.metrics = metrics;
+        		}
+        		card.json = JSON.stringify(data, null, 2);
+        		card.state = "ready";
+        		card.message = "";
+        	}
+        	public copyMetricsJson(card) {
+        		if (!card || !card.json) {
+        			return;
+        		}
+        		var done = () => {
+        			card.copied = true;
+        			this.tick();
+        			setTimeout(() => { card.copied = false; this.tick(); }, 2000);
+        		};
+        		var fallback = () => {
+        			try {
+        				var area = document.createElement("textarea");
+        				area.value = card.json;
+        				area.style.position = "fixed";
+        				area.style.opacity = "0";
+        				document.body.appendChild(area);
+        				area.select();
+        				document.execCommand("copy");
+        				document.body.removeChild(area);
+        				done();
+        			} catch (e) {}
+        		};
+        		try {
+        			if (navigator.clipboard && navigator.clipboard.writeText) {
+        				navigator.clipboard.writeText(card.json).then(done).catch(fallback);
+        				return;
+        			}
+        		} catch (e) {}
+        		fallback();
         	}
         	public compactAgentConversation(mode) {
         		// Sends "/compact [instructions]" through the composer, like a message the user typed.
@@ -12888,6 +13038,312 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:true
+          ↓IsMetrics [ngx.components.UIControlDirective-1792267235603]: 
+            directiveName: If
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:item && item.type == 'metrics'
+            ↓MetricsCard [ngx.components.UIDynamicElement-1792267235605]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792267236667]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-metrics-card
+              ↓CardHead [ngx.components.UIDynamicElement-1792267236669]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1792267236671]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-metrics-card-head
+                ↓CardTitle [ngx.components.UIDynamicElement-1792267236673]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: span
+                  ↓Class [ngx.components.UIAttribute-1792267236675]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-card-title
+                  ↓Text [ngx.components.UIText-1792267236677]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.title
+                ↓CardTime [ngx.components.UIDynamicElement-1792267236679]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: span
+                  ↓Class [ngx.components.UIAttribute-1792267236681]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-card-time
+                  ↓Text [ngx.components.UIText-1792267236683]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.time
+              ↓CardMessageIf [ngx.components.UIControlDirective-1792267236685]: 
+                directiveName: If
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:item.state !== 'ready'
+                ↓CardMessage [ngx.components.UIDynamicElement-1792267236687]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1792267236689]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:'agent-metrics-card-message is-' + item.state
+                  ↓Text [ngx.components.UIText-1792267236691]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.message
+              ↓CardReady [ngx.components.UIControlDirective-1792267236693]: 
+                directiveName: If
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:item.state === 'ready'
+                ↓CardRows [ngx.components.UIDynamicElement-1792267236695]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792267236697]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-context-rows
+                  ↓CardRowsLoop [ngx.components.UIControlDirective-1792267236699]: 
+                    directiveIndexName: metricIndex
+                    directiveItemName: metric
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.rows
+                    ↓Row [ngx.components.UIDynamicElement-1792267236701]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Class [ngx.components.UIAttribute-1792267236703]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-context-row
+                      ↓Key [ngx.components.UIDynamicElement-1792267236705]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: span
+                        ↓Class [ngx.components.UIAttribute-1792267236707]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-key
+                        ↓Text [ngx.components.UIText-1792267236709]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:metric.label
+                      ↓Value [ngx.components.UIDynamicElement-1792267236711]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: span
+                        ↓Class [ngx.components.UIAttribute-1792267236713]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-value
+                        ↓Text [ngx.components.UIText-1792267236715]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:metric.value
+                ↓HasCardTools [ngx.components.UIControlDirective-1792267236717]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.tools && item.tools.length
+                  ↓ToolsTitle [ngx.components.UIDynamicElement-1792267236719]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1792267236721]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-metrics-tools-title
+                    ↓Text [ngx.components.UIText-1792267236723]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.agentMetricsText('tools')
+                  ↓CardTools [ngx.components.UIDynamicElement-1792267236725]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1792267236727]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-context-rows
+                    ↓CardToolsLoop [ngx.components.UIControlDirective-1792267236729]: 
+                      directiveIndexName: toolIndex
+                      directiveItemName: tool
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:item.tools
+                      ↓Row [ngx.components.UIDynamicElement-1792267236731]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1792267236733]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-row
+                        ↓Key [ngx.components.UIDynamicElement-1792267236735]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792267236737]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-context-key
+                          ↓Text [ngx.components.UIText-1792267236739]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:tool.label
+                        ↓Value [ngx.components.UIDynamicElement-1792267236741]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792267236743]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-context-value
+                          ↓Text [ngx.components.UIText-1792267236745]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:tool.value
+                ↓HasCardModels [ngx.components.UIControlDirective-1792267236747]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.models && item.models.length
+                  ↓ModelsTitle [ngx.components.UIDynamicElement-1792267236749]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1792267236751]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-metrics-tools-title
+                    ↓Text [ngx.components.UIText-1792267236753]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.agentMetricsText('models')
+                  ↓CardModels [ngx.components.UIDynamicElement-1792267236755]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1792267236757]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-context-rows
+                    ↓CardModelsLoop [ngx.components.UIControlDirective-1792267236759]: 
+                      directiveIndexName: modelIndex
+                      directiveItemName: model
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:item.models
+                      ↓Row [ngx.components.UIDynamicElement-1792267236761]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1792267236763]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-row
+                        ↓Key [ngx.components.UIDynamicElement-1792267236765]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792267236767]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-context-key
+                          ↓Text [ngx.components.UIText-1792267236769]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:model.label
+                        ↓Value [ngx.components.UIDynamicElement-1792267236771]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792267236773]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-context-value
+                          ↓Text [ngx.components.UIText-1792267236775]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:model.value
+                ↓CopyJson [ngx.components.UIDynamicElement-1792267236777]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: button
+                  ↓Class [ngx.components.UIAttribute-1792267236779]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-copy
+                  ↓Type [ngx.components.UIAttribute-1792267236781]: 
+                    attrName: type
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:button
+                  ↓Text [ngx.components.UIText-1792267236783]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:item.copied ? this.agentMetricsText(''copied'') : this.agentMetricsText(''copy'')'
+                  ↓Event [ngx.components.UIControlEvent-1792267236785]: 
+                    ↓Copy [ngx.components.UICustomAction-1792267237231]: 
+                      actionValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                            →: |
+                              		page.copyMetricsJson(props.stack.root.scope.item);
+                              		resolve();
         ↓SpinnerWrap [ngx.components.UIDynamicElement-1773100000015]: 
           beanData: '{"ionBean":"DivTag"}'
           tagName: div
@@ -20767,4 +21223,14 @@ title: Tigo
           .agent-metrics[open] > .agent-metrics-summary::before { transform: rotate(90deg); }
           .agent-metrics > .agent-context-rows { margin-top: 8px; }
           .agent-metrics-tools-title { color: var(--modern-muted, #94a3b8); font-size: 12px; margin: 10px 0 0; }
+          /* Local card of the "/mesures" command. */
+          .agent-metrics-card { background: color-mix(in srgb, var(--modern-surface, #ffffff) 70%, var(--modern-bg, #f8fafc) 30%); border: 1px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 40%, transparent 60%); border-radius: 12px; margin: 10px 0; max-width: 720px; padding: 12px 16px; }
+          .agent-metrics-card-head { align-items: baseline; display: flex; justify-content: space-between; margin: 0 0 8px; }
+          .agent-metrics-card-title { color: var(--modern-text, #0f172a); font-size: 14px; font-weight: 600; }
+          .agent-metrics-card-time { color: var(--modern-muted, #94a3b8); font-size: 12px; }
+          .agent-metrics-card-message { color: var(--modern-muted, #94a3b8); font-size: 13px; margin: 0; }
+          .agent-metrics-card-message.is-error { color: #d97706; }
+          .agent-metrics-card .agent-context-rows { grid-template-columns: 1fr; }
+          .agent-metrics-copy { background: transparent; border: 1px solid var(--modern-border, #cbd5e1); border-radius: 8px; color: var(--modern-text, #0f172a); cursor: pointer; font: inherit; font-size: 12.5px; margin-top: 10px; padding: 5px 12px; }
+          .agent-metrics-copy:hover { border-color: var(--modern-cyan, #06b6d4); }
           '

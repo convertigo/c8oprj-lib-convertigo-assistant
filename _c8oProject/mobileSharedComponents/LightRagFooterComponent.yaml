@@ -1035,7 +1035,9 @@ scriptContent:
         		// "/" menu: the agent''s commands that match what is typed, while the message is a bare "/name".
         		// The same array is returned while nothing changes, so the menu rows are not rebuilt.
         		var text = '''' + this.getQuestionText();
-        		var commands = this.AgentCommands && this.AgentCommands.length ? this.AgentCommands : [];
+        		var owner: any = this.owner;
+        		var local = owner && owner.localSlashCommands ? owner.localSlashCommands() : [];
+        		var commands = local.concat(this.AgentCommands && this.AgentCommands.length ? this.AgentCommands : []);
         		var key = text + ''|'' + commands.length;
         		if (this[''_slashKey''] === key) {
         			return this[''_slashMatches''];
@@ -1073,7 +1075,18 @@ scriptContent:
         			if (event && event.preventDefault) {
         				event.preventDefault();
         			}
-        			if (this.EnableChat === false || this.IsProcessing === true) {
+        			if (this.EnableChat === false) {
+        				return;
+        			}
+        			// Commands of the Assistant itself ("/mesures", "/metrics"): run in the page, never sent to the agent, also during a turn.
+        			var typed = ('''' + this.getQuestionText()).trim();
+        			var owner: any = this.owner;
+        			if (owner && owner.runLocalCommand && owner.runLocalCommand(typed)) {
+        				this.Question = '''';
+        				this.setQuestionText('''', false);
+        				return;
+        			}
+        			if (this.IsProcessing === true) {
         				return;
         			}
         			var message = ('''' + this.getQuestionText()).trim();
