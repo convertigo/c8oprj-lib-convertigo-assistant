@@ -3917,7 +3917,7 @@ scriptContent:
             }
             public revealTigoResourceEditor(attempt = 0) {
                 // The editor is rendered below every library category: bring it into view once Angular has rendered it.
-                const editor: any = document.querySelector(''.tigo-resource-editor'');
+                const editor: any = typeof document !== ''undefined'' ? document.querySelector(''.tigo-resource-editor'') : null;
                 if (editor) { editor.scrollIntoView({block:''start'',behavior:''smooth''}); return; }
                 if (attempt < 20) { setTimeout(() => this.revealTigoResourceEditor(attempt + 1), 50); }
             }

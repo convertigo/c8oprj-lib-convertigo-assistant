@@ -20,6 +20,7 @@ const names = [
   "toggleTigoResource",
   "useTigoPrompt",
   "editTigoResource",
+  "revealTigoResourceEditor",
   "loadTigoEditorLanguage",
   "splitTigoSkillDocument",
   "formatTigoSkillDocument",
