@@ -2144,7 +2144,8 @@ scriptContent:
           '{
            "ionBean": "TextArea",
            "ControlName": "plain:question",
-           "AutoGrow": "plain:true"
+           "AutoGrow": "plain:true",
+           "Rows": "plain:1"
           }'
         identifier: questionInput
         tagName: ion-textarea
@@ -4764,4 +4765,17 @@ scriptContent:
           .tigo-command-description { flex: 1 1 auto; font-size: 12px; min-width: 0; opacity: 0.75; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
           .tigo-command-option { width: 100%; }
           .tigo-command-name { flex: 0 0 auto; }
+          '
+↓TigoComposerCompactStyle [ngx.components.UIStyle-1792255750836]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Compact composer: a one-line input that grows while typing, a tighter form and shortcut row, more room for the thread. */
+          :host-context(ion-footer.agent-footer-codex) .modern-input-form { gap: 2px !important; margin: 4px 18px 3px !important; padding: 8px 14px 6px !important; }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-item, :host-context(ion-footer.agent-footer-codex) .modern-input-item::part(native) { --min-height: 28px; min-height: 28px !important; }
+          :host-context(ion-footer.agent-footer-codex) .modern-input-field { min-height: 26px !important; }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls { margin-top: 2px !important; }
+          :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap { padding: 0 10px 4px !important; }
           '

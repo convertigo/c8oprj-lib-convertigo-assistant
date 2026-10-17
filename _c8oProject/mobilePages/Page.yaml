@@ -20071,7 +20071,7 @@ title: Tigo
           .agent-side .agent-context-rows { grid-template-columns: 1fr; }
           @media (min-width: 1280px) {
             .modern-content:has(.agent-side) .modern-center.agent-desktop-center { max-width: min(100%, 1580px); padding-right: 432px; }
-            .agent-side { bottom: 2px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; position: absolute; right: calc(max(0px, (100% - 1580px) / 2) + 20px); scrollbar-width: thin; top: 2px; width: 380px; z-index: 5; }
+            .agent-side { bottom: 0; padding: 12px 0 2px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; position: absolute; right: calc(max(0px, (100% - 1580px) / 2) + 20px); scrollbar-width: thin; top: 0; width: 380px; z-index: 5; }
             .agent-side > * { flex: 0 0 auto; }
             :host ::ng-deep .modern-content:has(.agent-side) .agent-worklog-step-narrative markdown p { font-size: 16px; }
             .agent-dock { display: none !important; }
@@ -20097,7 +20097,7 @@ title: Tigo
           @media (max-width: 520px) { .agent-dock-plan { display: none; } }
           .agent-worklog-step.is-current, .agent-worklog-step-tool.is-current .agent-worklog-tool-summary, .agent-worklog-header.is-current .agent-worklog-title { animation: none; }
           /* In a conversation the page keeps a thin top and bottom margin: no welcome title, no 50 px paddings. */
-          .modern-main:has(lib_convertigoassistant-usermessagecomponent) { min-height: 0; padding-bottom: 0; padding-top: 0; }
-          .modern-center.agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) { padding-bottom: 2px; padding-top: 2px; }
+          .modern-main:has(lib_convertigoassistant-usermessagecomponent) { min-height: 0; padding-bottom: 0; padding-top: 6px; }
+          .modern-center.agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) { padding-bottom: 2px; padding-top: 8px; }
           .agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) > .agent-desktop-hero { display: none; }
           '
