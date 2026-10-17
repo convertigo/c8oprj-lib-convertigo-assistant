@@ -3724,9 +3724,15 @@ scriptContent:
         	}
         	public getAgentPlanView(plan, runid, writing) {
         		// The agent''s todo list (Vibe plan updates): task rows, "Plan · 3/7" while it works, "5/7 tasks" once done.
-        		var entries = plan && plan.entries && plan.entries.length ? plan.entries : [];
-        		if (!entries.length) {
+        		var source = plan && plan.entries && plan.entries.length ? plan.entries : [];
+        		if (!source.length) {
         			return null;
+        		}
+        		// Outside a running turn nothing is in progress: a task left "in progress" was stopped with its turn.
+        		var entries = [];
+        		for (var e = 0; e < source.length; e++) {
+        			var task = source[e] || {};
+        			entries.push(writing === true || task.status !== "in_progress" ? task : { content: task.content, status: "interrupted", priority: task.priority });
         		}
         		var done = 0;
         		for (var i = 0; i < entries.length; i++) {
@@ -3884,10 +3890,10 @@ scriptContent:
         	public agentLayoutText(key) {
         		// Labels of the turn line, the live banner, the side column and the status dock, in the four Assistant languages.
         		var texts: any = {
-        			fr: { turn: "Tour de {time}", running: "en cours depuis {duration}", steps: "{count} étapes", oneStep: "1 étape", now: "En cours", thinking: "Réflexion", executing: "Exécution", liveThinking: "Tigo réfléchit à l''étape suivante", liveRunning: "Tigo exécute : {label}", lastAction: "Dernière action : {label}", planStep: "Étape du plan : {label}", after: "après « {title} »", duration: "durée du tour", stepsLabel: "étapes", failures: "échecs", failure: "échec", plan: "Plan", context: "Contexte", done: "Terminé", toggle: "Afficher le plan et le contexte" },
-        			en: { turn: "Turn at {time}", running: "running for {duration}", steps: "{count} steps", oneStep: "1 step", now: "Now", thinking: "Thinking", executing: "Running", liveThinking: "Tigo is thinking about the next step", liveRunning: "Tigo is running: {label}", lastAction: "Last action: {label}", planStep: "Plan step: {label}", after: "after \"{title}\"", duration: "turn duration", stepsLabel: "steps", failures: "failures", failure: "failure", plan: "Plan", context: "Context", done: "Done", toggle: "Show the plan and the context" },
-        			it: { turn: "Turno delle {time}", running: "in corso da {duration}", steps: "{count} passi", oneStep: "1 passo", now: "In corso", thinking: "Riflessione", executing: "Esecuzione", liveThinking: "Tigo riflette sul passo successivo", liveRunning: "Tigo esegue: {label}", lastAction: "Ultima azione: {label}", planStep: "Passo del piano: {label}", after: "dopo «{title}»", duration: "durata del turno", stepsLabel: "passi", failures: "errori", failure: "errore", plan: "Piano", context: "Contesto", done: "Terminato", toggle: "Mostra il piano e il contesto" },
-        			es: { turn: "Turno de las {time}", running: "en curso desde hace {duration}", steps: "{count} pasos", oneStep: "1 paso", now: "En curso", thinking: "Reflexión", executing: "Ejecución", liveThinking: "Tigo piensa en el siguiente paso", liveRunning: "Tigo ejecuta: {label}", lastAction: "Última acción: {label}", planStep: "Paso del plan: {label}", after: "después de «{title}»", duration: "duración del turno", stepsLabel: "pasos", failures: "errores", failure: "error", plan: "Plan", context: "Contexto", done: "Terminado", toggle: "Mostrar el plan y el contexto" }
+        			fr: { turn: "Tour de {time}", running: "en cours depuis {duration}", steps: "{count} étapes", oneStep: "1 étape", now: "En cours", thinking: "Réflexion", executing: "Exécution", liveThinking: "Tigo réfléchit à l''étape suivante", liveRunning: "Tigo exécute : {label}", lastAction: "Dernière action : {label}", planStep: "Étape du plan : {label}", after: "après « {title} »", duration: "durée du tour", stepsLabel: "étapes", failures: "échecs", failure: "échec", plan: "Plan", context: "Contexte", done: "Terminé", toggle: "Afficher le plan et le contexte", interrupted: "interrompu" },
+        			en: { turn: "Turn at {time}", running: "running for {duration}", steps: "{count} steps", oneStep: "1 step", now: "Now", thinking: "Thinking", executing: "Running", liveThinking: "Tigo is thinking about the next step", liveRunning: "Tigo is running: {label}", lastAction: "Last action: {label}", planStep: "Plan step: {label}", after: "after \"{title}\"", duration: "turn duration", stepsLabel: "steps", failures: "failures", failure: "failure", plan: "Plan", context: "Context", done: "Done", toggle: "Show the plan and the context", interrupted: "interrupted" },
+        			it: { turn: "Turno delle {time}", running: "in corso da {duration}", steps: "{count} passi", oneStep: "1 passo", now: "In corso", thinking: "Riflessione", executing: "Esecuzione", liveThinking: "Tigo riflette sul passo successivo", liveRunning: "Tigo esegue: {label}", lastAction: "Ultima azione: {label}", planStep: "Passo del piano: {label}", after: "dopo «{title}»", duration: "durata del turno", stepsLabel: "passi", failures: "errori", failure: "errore", plan: "Piano", context: "Contesto", done: "Terminato", toggle: "Mostra il piano e il contesto", interrupted: "interrotto" },
+        			es: { turn: "Turno de las {time}", running: "en curso desde hace {duration}", steps: "{count} pasos", oneStep: "1 paso", now: "En curso", thinking: "Reflexión", executing: "Ejecución", liveThinking: "Tigo piensa en el siguiente paso", liveRunning: "Tigo ejecuta: {label}", lastAction: "Última acción: {label}", planStep: "Paso del plan: {label}", after: "después de «{title}»", duration: "duración del turno", stepsLabel: "pasos", failures: "errores", failure: "error", plan: "Plan", context: "Contexto", done: "Terminado", toggle: "Mostrar el plan y el contexto", interrupted: "interrumpido" }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -4061,7 +4067,7 @@ scriptContent:
         		var current = null;
         		var entries = plan && plan.entries ? plan.entries : [];
         		for (var e = 0; e < entries.length && !current; e++) {
-        			if (entries[e] && entries[e].status === "in_progress") {
+        			if (entries[e] && (entries[e].status === "in_progress" || entries[e].status === "interrupted")) {
         				current = entries[e];
         			}
         		}
@@ -4097,7 +4103,7 @@ scriptContent:
         			planCount: planCount,
         			planRatio: plan && plan.total ? plan.done / plan.total : 0,
         			planCurrent: current ? current.content : "",
-        			planLine: plan ? this.agentLayoutText("plan") + " " + planCount + (current ? " · " + current.content : "") : "",
+        			planLine: plan ? this.agentLayoutText("plan") + " " + planCount + (current ? " · " + (current.status === "interrupted" ? this.agentLayoutText("interrupted") + " : " : "") + current.content : "") : "",
         			usage: usage,
         			contextShort: usage ? usage.label : ""
         		};
@@ -20102,4 +20108,7 @@ title: Tigo
           .modern-main:has(lib_convertigoassistant-usermessagecomponent) { min-height: 0; padding-bottom: 6px; padding-top: 6px; }
           .modern-center.agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) { padding-bottom: 8px; padding-top: 8px; }
           .agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) > .agent-desktop-hero { display: none; }
+          /* A task left "in progress" by a stopped turn: amber pause mark, not a spinner. */
+          .agent-plan-task.is-interrupted { color: #d97706; }
+          .agent-plan-task.is-interrupted::before { animation: none !important; background: linear-gradient(90deg, transparent 32%, #f59e0b 32% 44%, transparent 44% 56%, #f59e0b 56% 68%, transparent 68%) center / 9px 7px no-repeat; border: 1.5px solid #f59e0b; }
           '
