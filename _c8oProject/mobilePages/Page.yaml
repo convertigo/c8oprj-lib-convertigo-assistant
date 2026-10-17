@@ -11806,12 +11806,6 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: plain:agent-worklog-tool
-                        ↓Open [ngx.components.UIAttribute-1782245569898]: 
-                          attrName: '[open]'
-                          attrValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: script:step && step.current === true
                         ↓Summary [ngx.components.UIDynamicElement-1782245569900]: 
                           beanData: '{"ionBean":"DivTag"}'
                           tagName: summary
@@ -12007,12 +12001,6 @@ title: Tigo
                                       - xmlizable: 
                                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                         - MobileSmartSourceType: plain:agent-worklog-call-details
-                                  ↓Open [ngx.components.UIAttribute-1782246849861]: 
-                                    attrName: '[open]'
-                                    attrValue: 
-                                      - xmlizable: 
-                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                        - MobileSmartSourceType: script:call && call.current === true
                                   ↓Summary [ngx.components.UIDynamicElement-1782246849863]: 
                                     beanData: '{"ionBean":"DivTag"}'
                                     tagName: summary
@@ -14973,7 +14961,20 @@ title: Tigo
             					calls.push(next[n]);
             				}
             			}
-            			return calls;
+            			// The state keeps only its last events: calls of a long group that fell out of it stay at the head of the
+            			// group, so the list keeps its length and its scroll position instead of sliding at every read.
+            			var seen = {};
+            			for (var s = 0; s < next.length; s++) {
+            				seen[trimText(next[s] && next[s].callId)] = true;
+            			}
+            			var dropped = [];
+            			for (var d = 0; d < previous.length; d++) {
+            				var droppedId = trimText(previous[d] && previous[d].callId);
+            				if (droppedId.length && !seen[droppedId]) {
+            					dropped.push(previous[d]);
+            				}
+            			}
+            			return dropped.length && calls.length && trimText(calls[0] && calls[0].callId).length ? dropped.concat(calls) : calls;
             		};
             		var reuseProgressItems = function(previous, next) {
             			if (!previous || !previous.length || !next || !next.length) {
@@ -14987,11 +14988,41 @@ title: Tigo
             				}
             				pool[previousKey].push(previous[p]);
             			}
+            			// A group of tool calls keeps its object while it shares a call with the previous read: the state keeps only
+            			// its last events, so the first call of a long group changes from one read to the next. A new object would be
+            			// re-rendered, closing the group and scrolling its list back to the top.
+            			var callOwners = {};
+            			for (var o = 0; o < previous.length; o++) {
+            				var ownerCalls = previous[o] && previous[o].type === "tool" && previous[o].calls ? previous[o].calls : [];
+            				for (var oc = 0; oc < ownerCalls.length; oc++) {
+            					var ownerId = trimText(ownerCalls[oc] && ownerCalls[oc].callId);
+            					if (ownerId.length && !callOwners[ownerId]) {
+            						callOwners[ownerId] = previous[o];
+            					}
+            				}
+            			}
+            			var used = [];
             			var items = [];
             			for (var n = 0; n < next.length; n++) {
             				var fresh = next[n];
-            				var bucket = pool[progressItemKey(fresh)];
-            				var kept = bucket && bucket.length ? bucket.shift() : null;
+            				var kept = null;
+            				var freshCalls = fresh && fresh.type === "tool" && fresh.calls ? fresh.calls : [];
+            				for (var fc = 0; fc < freshCalls.length && !kept; fc++) {
+            					var owner = callOwners[trimText(freshCalls[fc] && freshCalls[fc].callId)];
+            					if (owner && used.indexOf(owner) === -1) {
+            						kept = owner;
+            					}
+            				}
+            				if (!kept) {
+            					var bucket = pool[progressItemKey(fresh)];
+            					while (bucket && bucket.length && !kept) {
+            						var candidate = bucket.shift();
+            						kept = used.indexOf(candidate) === -1 ? candidate : null;
+            					}
+            				}
+            				if (kept) {
+            					used.push(kept);
+            				}
             				if (!kept || typeof kept !== "object" || !fresh || typeof fresh !== "object") {
             					items.push(fresh);
             					continue;
@@ -15004,6 +15035,7 @@ title: Tigo
             				}
             				if (fresh.calls) {
             					kept.calls = reuseToolCalls(keptCalls, fresh.calls);
+            					kept.callCount = kept.calls.length;
             				}
             				items.push(kept);
             			}
