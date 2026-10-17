@@ -2949,6 +2949,10 @@ scriptContent:
         		var wait = delay == null ? 0 : delay;
         		var self = this;
         		self.watchChatContentSize();
+        		// Open tool groups follow their own newest call, also when the turn ends.
+        		if (typeof window !== "undefined" && window.requestAnimationFrame) {
+        			window.requestAnimationFrame(() => self.followToolLists());
+        		}
         		setTimeout(function() {
         			try {
         				if (!self.local) {
@@ -3919,10 +3923,10 @@ scriptContent:
         	public agentLayoutText(key) {
         		// Labels of the turn line, the live banner, the side column and the status dock, in the four Assistant languages.
         		var texts: any = {
-        			fr: { turn: "Tour de {time}", running: "en cours depuis {duration}", steps: "{count} étapes", oneStep: "1 étape", now: "En cours", thinking: "Réflexion", executing: "Exécution", liveThinking: "Tigo réfléchit à l''étape suivante", liveRunning: "Tigo exécute : {label}", lastAction: "Dernière action : {label}", planStep: "Étape du plan : {label}", after: "après « {title} »", duration: "durée du tour", stepsLabel: "étapes", failures: "échecs", failure: "échec", plan: "Plan", context: "Contexte", done: "Terminé", toggle: "Afficher le plan et le contexte", interrupted: "interrompu" },
-        			en: { turn: "Turn at {time}", running: "running for {duration}", steps: "{count} steps", oneStep: "1 step", now: "Now", thinking: "Thinking", executing: "Running", liveThinking: "Tigo is thinking about the next step", liveRunning: "Tigo is running: {label}", lastAction: "Last action: {label}", planStep: "Plan step: {label}", after: "after \"{title}\"", duration: "turn duration", stepsLabel: "steps", failures: "failures", failure: "failure", plan: "Plan", context: "Context", done: "Done", toggle: "Show the plan and the context", interrupted: "interrupted" },
-        			it: { turn: "Turno delle {time}", running: "in corso da {duration}", steps: "{count} passi", oneStep: "1 passo", now: "In corso", thinking: "Riflessione", executing: "Esecuzione", liveThinking: "Tigo riflette sul passo successivo", liveRunning: "Tigo esegue: {label}", lastAction: "Ultima azione: {label}", planStep: "Passo del piano: {label}", after: "dopo «{title}»", duration: "durata del turno", stepsLabel: "passi", failures: "errori", failure: "errore", plan: "Piano", context: "Contesto", done: "Terminato", toggle: "Mostra il piano e il contesto", interrupted: "interrotto" },
-        			es: { turn: "Turno de las {time}", running: "en curso desde hace {duration}", steps: "{count} pasos", oneStep: "1 paso", now: "En curso", thinking: "Reflexión", executing: "Ejecución", liveThinking: "Tigo piensa en el siguiente paso", liveRunning: "Tigo ejecuta: {label}", lastAction: "Última acción: {label}", planStep: "Paso del plan: {label}", after: "después de «{title}»", duration: "duración del turno", stepsLabel: "pasos", failures: "errores", failure: "error", plan: "Plan", context: "Contexto", done: "Terminado", toggle: "Mostrar el plan y el contexto", interrupted: "interrumpido" }
+        			fr: { turn: "Tour de {time}", running: "en cours depuis {duration}", steps: "{count} étapes", oneStep: "1 étape", now: "En cours", thinking: "Réflexion", executing: "Exécution", liveThinking: "Tigo réfléchit à l''étape suivante", liveRunning: "Tigo exécute : {label}", lastAction: "Dernière action : {label}", planStep: "Étape du plan : {label}", after: "après « {title} »", duration: "durée du tour", stepsLabel: "étapes", failures: "échecs", failure: "échec", plan: "Plan", context: "Contexte", done: "Terminé", toggle: "Afficher le plan et le contexte", interrupted: "interrompu", latestCalls: "derniers appels" },
+        			en: { turn: "Turn at {time}", running: "running for {duration}", steps: "{count} steps", oneStep: "1 step", now: "Now", thinking: "Thinking", executing: "Running", liveThinking: "Tigo is thinking about the next step", liveRunning: "Tigo is running: {label}", lastAction: "Last action: {label}", planStep: "Plan step: {label}", after: "after \"{title}\"", duration: "turn duration", stepsLabel: "steps", failures: "failures", failure: "failure", plan: "Plan", context: "Context", done: "Done", toggle: "Show the plan and the context", interrupted: "interrupted", latestCalls: "latest calls" },
+        			it: { turn: "Turno delle {time}", running: "in corso da {duration}", steps: "{count} passi", oneStep: "1 passo", now: "In corso", thinking: "Riflessione", executing: "Esecuzione", liveThinking: "Tigo riflette sul passo successivo", liveRunning: "Tigo esegue: {label}", lastAction: "Ultima azione: {label}", planStep: "Passo del piano: {label}", after: "dopo «{title}»", duration: "durata del turno", stepsLabel: "passi", failures: "errori", failure: "errore", plan: "Piano", context: "Contesto", done: "Terminato", toggle: "Mostra il piano e il contesto", interrupted: "interrotto", latestCalls: "ultime chiamate" },
+        			es: { turn: "Turno de las {time}", running: "en curso desde hace {duration}", steps: "{count} pasos", oneStep: "1 paso", now: "En curso", thinking: "Reflexión", executing: "Ejecución", liveThinking: "Tigo piensa en el siguiente paso", liveRunning: "Tigo ejecuta: {label}", lastAction: "Última acción: {label}", planStep: "Paso del plan: {label}", after: "después de «{title}»", duration: "duración del turno", stepsLabel: "pasos", failures: "errores", failure: "error", plan: "Plan", context: "Contexto", done: "Terminado", toggle: "Mostrar el plan y el contexto", interrupted: "interrumpido", latestCalls: "últimas llamadas" }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -4165,6 +4169,67 @@ scriptContent:
         			return "plan";
         		}
         		return tab;
+        	}
+        	public followToolLists() {
+        		// An open tool group follows its newest call while its list is at the bottom (within 24 px), like a terminal. Once
+        		// the user scrolls up it stays in place and offers "latest calls" until the user is back at the bottom. Each list
+        		// keeps its own state: it never moves the thread, and the thread never moves it.
+        		var bodies: any = typeof document !== "undefined" ? document.querySelectorAll(".agent-worklog-tool-body") : [];
+        		for (var i = 0; i < bodies.length; i++) {
+        			this.followToolList(bodies[i]);
+        		}
+        	}
+        	public followToolList(body: any) {
+        		var details: any = body && body.parentElement;
+        		if (!body || !details) {
+        			return;
+        		}
+        		var atBottom = () => body.scrollHeight - body.scrollTop - body.clientHeight <= 24;
+        		var state: any = body.__tigoFollow;
+        		if (!state) {
+        			state = body.__tigoFollow = { stuck: true, count: 0, lastTop: 0 };
+        			body.addEventListener("scroll", () => {
+        				if (body.clientHeight <= 0) {
+        					return;
+        				}
+        				// Only a move up is the user leaving the bottom: the scroll event of an automatic move can arrive after
+        				// new calls were added, when the list is no longer at its bottom.
+        				if (atBottom()) {
+        					state.stuck = true;
+        					details.classList.remove("has-new-calls");
+        				} else if (body.scrollTop < state.lastTop - 2) {
+        					state.stuck = false;
+        				}
+        				state.lastTop = body.scrollTop;
+        			}, { passive: true });
+        			details.addEventListener("toggle", () => {
+        				if (details.open && state.stuck) {
+        					body.scrollTop = body.scrollHeight;
+        				}
+        			});
+        		}
+        		var count = body.querySelectorAll(".agent-worklog-call").length;
+        		if (count > state.count && details.open) {
+        			if (state.stuck) {
+        				body.scrollTop = body.scrollHeight;
+        			} else if (state.count > 0) {
+        				details.classList.add("has-new-calls");
+        			}
+        		}
+        		state.count = count;
+        	}
+        	public scrollToolListBottom(event: any) {
+        		var target: any = event && event.target ? event.target : null;
+        		var body: any = target && target.closest ? target.closest(".agent-worklog-tool-body") : null;
+        		if (body) {
+        			body.scrollTop = body.scrollHeight;
+        			if (body.__tigoFollow) {
+        				body.__tigoFollow.stuck = true;
+        			}
+        			if (body.parentElement) {
+        				body.parentElement.classList.remove("has-new-calls");
+        			}
+        		}
         	}
         	public compactAgentConversation(mode) {
         		// Sends "/compact [instructions]" through the composer, like a message the user typed.
@@ -12057,6 +12122,35 @@ title: Tigo
                                         - xmlizable: 
                                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                           - MobileSmartSourceType: 'script:this.getProgressToolCallSummary ? this.getProgressToolCallSummary(call, callIndex) : (''Appel '' + ((callIndex || 0) + 1))'
+                          ↓LatestCalls [ngx.components.UIDynamicElement-1792264009626]: 
+                            beanData: '{"ionBean":"DivTag"}'
+                            tagName: button
+                            ↓Class [ngx.components.UIAttribute-1792264009628]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-tool-latest
+                            ↓Type [ngx.components.UIAttribute-1792264009630]: 
+                              attrName: type
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:button
+                            ↓Text [ngx.components.UIText-1792264009632]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:'↓ ' + this.agentLayoutText('latestCalls')
+                            ↓Event [ngx.components.UIControlEvent-1792264009634]: 
+                              ↓Act [ngx.components.UICustomAction-1792264010080]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        		page.scrollToolListBottom(event);
+                                        		resolve();
                     ↓IsText [ngx.components.UIControlDirective-1782245574152]: 
                       directiveName: If
                       directiveSource: 
@@ -15160,6 +15254,7 @@ title: Tigo
             			page.local.IsProcessing = true;
             			page.local.Buffer = { progress: currentProgress || active.target.msg, phase: currentPhase || active.target.status };
             			page.tick();
+            			window.requestAnimationFrame(() => page.followToolLists());
             			page.scrollChatBottom(0);
             			resolve();
             			return;
@@ -20172,4 +20267,8 @@ title: Tigo
           /* A task left "in progress" by a stopped turn: amber pause mark, not a spinner. */
           .agent-plan-task.is-interrupted { color: #d97706; }
           .agent-plan-task.is-interrupted::before { animation: none !important; background: linear-gradient(90deg, transparent 32%, #f59e0b 32% 44%, transparent 44% 56%, #f59e0b 56% 68%, transparent 68%) center / 9px 7px no-repeat; border: 1.5px solid #f59e0b; }
+          /* Tool lists scroll on their own (no chaining into the thread); "latest calls" appears when the user scrolled up and new calls arrived. */
+          .agent-worklog-tool-body { overscroll-behavior: contain; position: relative; }
+          .agent-tool-latest { display: none; }
+          .agent-worklog-tool.has-new-calls .agent-tool-latest { align-items: center; background: var(--modern-cyan, #06b6d4); border: 0; border-radius: 12px; bottom: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); color: #ffffff; cursor: pointer; display: inline-flex; float: right; font: inherit; font-size: 12px; font-weight: 600; gap: 4px; margin-right: 4px; padding: 3px 10px; position: sticky; z-index: 2; }
           '
