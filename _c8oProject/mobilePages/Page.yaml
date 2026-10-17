@@ -3707,6 +3707,104 @@ scriptContent:
         		}
         		return false;
         	}
+        	public agentUiText(key) {
+        		// Labels of the plan, context gauge and compaction panel, in the four Assistant languages.
+        		var texts: any = {
+        			fr: { plan: "Plan", planTasks: "{done}/{total} tâches", planStale: "Plan établi avant votre dernier message", context: "Contexte", tokens: "jetons", usageContext: "Contexte utilisé / seuil de compaction", usageWindow: "fenêtre", usagePrompt: "Jetons envoyés (session)", usageCompletion: "Jetons générés (session)", usageCached: "Jetons en cache (session)", usageCost: "Coût estimé de la session", usageSteps: "Étapes", usageSpeed: "Vitesse", usageSpeedUnit: "jetons/s", usageLastTurn: "Dernier tour", compactTitle: "Compacter le contexte", compactHelp: "Le résumé remplace l''historique de la conversation pour libérer le contexte.", compactConvertigo: "Résumé Convertigo", compactGeneric: "Résumé Vibe par défaut", compactCustomLabel: "Consignes pour le résumé", compactCustom: "Compacter avec ces consignes", commands: "Commandes" },
+        			en: { plan: "Plan", planTasks: "{done}/{total} tasks", planStale: "Plan made before your last message", context: "Context", tokens: "tokens", usageContext: "Context used / compaction threshold", usageWindow: "window", usagePrompt: "Prompt tokens (session)", usageCompletion: "Completion tokens (session)", usageCached: "Cached tokens (session)", usageCost: "Estimated session cost", usageSteps: "Steps", usageSpeed: "Speed", usageSpeedUnit: "tokens/s", usageLastTurn: "Last turn", compactTitle: "Compact the context", compactHelp: "The summary replaces the conversation history to free the context.", compactConvertigo: "Convertigo summary", compactGeneric: "Default Vibe summary", compactCustomLabel: "Summary instructions", compactCustom: "Compact with these instructions", commands: "Commands" },
+        			it: { plan: "Piano", planTasks: "{done}/{total} attività", planStale: "Piano stabilito prima del tuo ultimo messaggio", context: "Contesto", tokens: "token", usageContext: "Contesto usato / soglia di compattazione", usageWindow: "finestra", usagePrompt: "Token inviati (sessione)", usageCompletion: "Token generati (sessione)", usageCached: "Token in cache (sessione)", usageCost: "Costo stimato della sessione", usageSteps: "Passi", usageSpeed: "Velocità", usageSpeedUnit: "token/s", usageLastTurn: "Ultimo turno", compactTitle: "Compatta il contesto", compactHelp: "Il riepilogo sostituisce la cronologia della conversazione per liberare il contesto.", compactConvertigo: "Riepilogo Convertigo", compactGeneric: "Riepilogo Vibe predefinito", compactCustomLabel: "Istruzioni per il riepilogo", compactCustom: "Compatta con queste istruzioni", commands: "Comandi" },
+        			es: { plan: "Plan", planTasks: "{done}/{total} tareas", planStale: "Plan establecido antes de tu último mensaje", context: "Contexto", tokens: "tokens", usageContext: "Contexto usado / umbral de compactación", usageWindow: "ventana", usagePrompt: "Tokens enviados (sesión)", usageCompletion: "Tokens generados (sesión)", usageCached: "Tokens en caché (sesión)", usageCost: "Coste estimado de la sesión", usageSteps: "Pasos", usageSpeed: "Velocidad", usageSpeedUnit: "tokens/s", usageLastTurn: "Último turno", compactTitle: "Compactar el contexto", compactHelp: "El resumen sustituye el historial de la conversación para liberar el contexto.", compactConvertigo: "Resumen Convertigo", compactGeneric: "Resumen Vibe predeterminado", compactCustomLabel: "Instrucciones para el resumen", compactCustom: "Compactar con estas instrucciones", commands: "Comandos" }
+        		};
+        		var language = "en";
+        		try {
+        			language = ("" + (this.global && this.global.currentLanguage ? this.global.currentLanguage() : (this.translate && this.translate.currentLang ? this.translate.currentLang : "en"))).substring(0, 2).toLowerCase();
+        		} catch (e) {}
+        		var table = texts[language] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        	}
+        	public getAgentPlanView(plan, runid, writing) {
+        		// The agent''s todo list (Vibe plan updates): task rows, "Plan · 3/7" while it works, "5/7 tasks" once done.
+        		var entries = plan && plan.entries && plan.entries.length ? plan.entries : [];
+        		if (!entries.length) {
+        			return null;
+        		}
+        		var done = 0;
+        		for (var i = 0; i < entries.length; i++) {
+        			if (entries[i] && entries[i].status === "completed") {
+        				done++;
+        			}
+        		}
+        		var stale = !!(plan.runid && runid && String(plan.runid) !== String(runid));
+        		var title = writing === true && !stale ? this.agentUiText("plan") + " · " + done + "/" + entries.length : this.agentUiText("planTasks").replace("{done}", "" + done).replace("{total}", "" + entries.length);
+        		return { entries: entries, done: done, total: entries.length, stale: stale, title: title, note: stale ? this.agentUiText("planStale") : "" };
+        	}
+        	public formatAgentTokens(value) {
+        		var n = Number(value || 0);
+        		if (n >= 1000000) {
+        			return (Math.round(n / 100000) / 10) + " M";
+        		}
+        		if (n >= 10000) {
+        			return Math.round(n / 1000) + " k";
+        		}
+        		if (n >= 1000) {
+        			return (Math.round(n / 100) / 10) + " k";
+        		}
+        		return "" + Math.round(n);
+        	}
+        	public getAgentUsageView(usage) {
+        		// Context gauge (used / compaction threshold) and session usage detail from the Vibe usage updates.
+        		if (!usage || usage.used === null || usage.used === undefined || isNaN(Number(usage.used))) {
+        			return null;
+        		}
+        		var used = Number(usage.used);
+        		var size = Number(usage.size || 0);
+        		var threshold = Number(usage.threshold || 0);
+        		var limit = threshold > 0 ? (size > 0 ? Math.min(threshold, size) : threshold) : size;
+        		var ratio = limit > 0 ? Math.max(0, Math.min(1, used / limit)) : 0;
+        		var percent = Math.round(ratio * 100);
+        		var tokens = this.agentUiText("tokens");
+        		var rows = [];
+        		var add = (label: any, value: any) => {
+        			if (value !== null && value !== undefined && ("" + value).length) {
+        				rows.push({ label: label, value: value });
+        			}
+        		};
+        		add(this.agentUiText("usageContext"), this.formatAgentTokens(used) + " / " + this.formatAgentTokens(limit) + " " + tokens + (size > 0 && size !== limit ? " (" + this.agentUiText("usageWindow") + " " + this.formatAgentTokens(size) + ")" : ""));
+        		add(this.agentUiText("usagePrompt"), usage.promptTokens != null ? this.formatAgentTokens(usage.promptTokens) : null);
+        		add(this.agentUiText("usageCompletion"), usage.completionTokens != null ? this.formatAgentTokens(usage.completionTokens) : null);
+        		add(this.agentUiText("usageCached"), usage.cachedTokens != null ? this.formatAgentTokens(usage.cachedTokens) : null);
+        		add(this.agentUiText("usageCost"), usage.costAmount != null ? Number(usage.costAmount).toFixed(2) + " " + (usage.costCurrency || "USD") : null);
+        		add(this.agentUiText("usageSteps"), usage.steps != null ? "" + usage.steps : null);
+        		add(this.agentUiText("usageSpeed"), usage.tokensPerSecond != null ? Number(usage.tokensPerSecond).toFixed(1) + " " + this.agentUiText("usageSpeedUnit") : null);
+        		add(this.agentUiText("usageLastTurn"), usage.lastTurnDuration != null ? this.formatAgentDuration(Number(usage.lastTurnDuration) * 1000) + (usage.lastTurnTotalTokens != null ? " · " + this.formatAgentTokens(usage.lastTurnTotalTokens) + " " + tokens : "") : null);
+        		return {
+        			ratio: ratio,
+        			percent: percent,
+        			level: percent >= 90 ? "high" : (percent >= 70 ? "mid" : "low"),
+        			label: this.agentUiText("context") + " " + percent + " %",
+        			numbers: this.formatAgentTokens(used) + " / " + this.formatAgentTokens(limit) + " " + tokens,
+        			rows: rows
+        		};
+        	}
+        	public compactAgentConversation(mode) {
+        		// Sends "/compact [instructions]" through the composer, like a message the user typed.
+        		if (!this.local || this.local.IsProcessing === true || !this.chatfooter) {
+        			return;
+        		}
+        		// Vibe''s runtime compacts with its own built-in prompt; "/compact <instructions>" adds instructions to it.
+        		var instructions = "";
+        		if (mode === "convertigo") {
+        			instructions = "Convertigo handoff. Keep: the Studio (workspace, port, browser URL) and the target project; the exact inventory of created or changed objects (connectors, transactions, sequences, pages, shared components, actions, styles, JS files) with their exact names and state; the rules and decisions learned, with what failed and the pattern that works; the state of each batch and test with its proof; the demo data identifiers; the open problems and the exact next step. Never paraphrase a name, path, QName or identifier. On resume, re-read docs/generated/PROGRESS.md in the project and run databaseobject-tree-get on it before any change.";
+        		} else if (mode === "custom") {
+        			instructions = ("" + (this.local.AgentCompactInstructions || "")).replace(/\s+/g, " ").trim();
+        			if (!instructions.length) {
+        				return;
+        			}
+        		}
+        		this.local.AgentCompactInstructions = "";
+        		this.chatfooter.setQuestionText("/compact" + (instructions.length ? " " + instructions : ""), false);
+        		this.chatfooter.submitQuestionFromUI(null);
+        	}
         	public progressToolWord(kind, count) {
         		// Labels of the grouped tool rows, in the four Assistant languages.
         		var words: any = {
@@ -11502,6 +11600,91 @@ title: Tigo
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:this.getProgressToolSummary ? this.getProgressToolSummary(step) : (step && (step.title || step.text) ? (step.title || step.text) : ''Outil'')'
+            ↓HasPlan [ngx.components.UIControlDirective-1792250175132]: 
+              directiveName: If
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:item && item.planView && item.planView.entries && item.planView.entries.length
+              ↓Plan [ngx.components.UIDynamicElement-1792250175134]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: details
+                ↓Class [ngx.components.UIAttribute-1792250176196]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:''agent-plan'' + (item.writing === true ? '' is-current'' : '''') + (item.planView.stale ? '' is-stale'' : '''')'
+                ↓Open [ngx.components.UIAttribute-1792250176198]: 
+                  attrName: '[open]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.writing === true
+                ↓Header [ngx.components.UIDynamicElement-1792250176200]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: summary
+                  ↓Class [ngx.components.UIAttribute-1792250176202]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-plan-header
+                  ↓Title [ngx.components.UIText-1792250176204]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.planView.title
+                ↓IsStale [ngx.components.UIControlDirective-1792250176206]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.planView.stale
+                  ↓Note [ngx.components.UIDynamicElement-1792250176208]: 
+                    beanData: '{"ionBean":"Paragraph"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1792250176210]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-plan-note
+                    ↓Text [ngx.components.UIText-1792250176212]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:item.planView.note
+                ↓List [ngx.components.UIDynamicElement-1792250176214]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: ul
+                  ↓Class [ngx.components.UIAttribute-1792250176216]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-plan-list
+                  ↓Tasks [ngx.components.UIControlDirective-1792250176218]: 
+                    directiveIndexName: taskIndex
+                    directiveItemName: task
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.planView.entries
+                    ↓Task [ngx.components.UIDynamicElement-1792250176220]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: li
+                      ↓Class [ngx.components.UIAttribute-1792250176222]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:'agent-plan-task is-' + task.status
+                      ↓Text [ngx.components.UIText-1792250176224]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:task.content
           ↓IsAssistant [ngx.components.UIControlDirective-1773100000007]: 
             directiveName: If
             directiveSource: 
@@ -11595,6 +11778,283 @@ title: Tigo
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:!(this.local && this.local.spinner === true && this.local.IsProcessing !== true)
+      ↓HasUsage [ngx.components.UIControlDirective-1792250177286]: 
+        directiveName: If
+        directiveSource: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.local && this.local.AgentUsageView && this.local.Conversation && this.isAgentBridgeMode()
+        ↓Context [ngx.components.UIDynamicElement-1792250178348]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: details
+          ↓Class [ngx.components.UIAttribute-1792250178350]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:'agent-context is-' + this.local.AgentUsageView.level
+          ↓Summary [ngx.components.UIDynamicElement-1792250178352]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: summary
+            ↓Class [ngx.components.UIAttribute-1792250178354]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-context-summary
+            ↓Label [ngx.components.UIDynamicElement-1792250178356]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: span
+              ↓Class [ngx.components.UIAttribute-1792250178358]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-label
+              ↓Text [ngx.components.UIText-1792250178360]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.local.AgentUsageView.label
+            ↓Gauge [ngx.components.UIDynamicElement-1792250178362]: 
+              beanData: '{"ionBean":"ProgressBar","Value":"script:this.local.AgentUsageView.ratio"}'
+              tagName: ion-progress-bar
+              ↓Class [ngx.components.UIAttribute-1792250178364]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-gauge
+            ↓Numbers [ngx.components.UIDynamicElement-1792250178366]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: span
+              ↓Class [ngx.components.UIAttribute-1792250178368]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-numbers
+              ↓Text [ngx.components.UIText-1792250178370]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.local.AgentUsageView.numbers
+          ↓Body [ngx.components.UIDynamicElement-1792250178372]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1792250178374]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-context-body
+            ↓Rows [ngx.components.UIDynamicElement-1792250178376]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792250178378]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-rows
+              ↓UsageRows [ngx.components.UIControlDirective-1792250178380]: 
+                directiveIndexName: rowIndex
+                directiveItemName: row
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.local.AgentUsageView.rows
+                ↓Row [ngx.components.UIDynamicElement-1792250178382]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792250178384]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-context-row
+                  ↓Key [ngx.components.UIDynamicElement-1792250178386]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: span
+                    ↓Class [ngx.components.UIAttribute-1792250178388]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-context-key
+                    ↓Text [ngx.components.UIText-1792250178390]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:row.label
+                  ↓Value [ngx.components.UIDynamicElement-1792250178392]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: span
+                    ↓Class [ngx.components.UIAttribute-1792250178394]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-context-value
+                    ↓Text [ngx.components.UIText-1792250178396]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:row.value
+            ↓CompactTitle [ngx.components.UIDynamicElement-1792250178398]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1792250178400]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-compact-title
+              ↓Text [ngx.components.UIText-1792250178402]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.agentUiText('compactTitle')
+            ↓CompactHelp [ngx.components.UIDynamicElement-1792250178404]: 
+              beanData: '{"ionBean":"Paragraph"}'
+              tagName: p
+              ↓Class [ngx.components.UIAttribute-1792250178406]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-help
+              ↓Text [ngx.components.UIText-1792250178408]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.agentUiText('compactHelp')
+            ↓Actions [ngx.components.UIDynamicElement-1792250178410]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792250178412]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-actions
+              ↓CompactConvertigo [ngx.components.UIDynamicElement-1792250178414]: 
+                beanData: |
+                  '{
+                   "ionBean": "Button",
+                   "Disabled": "script:this.local.IsProcessing === true",
+                   "IonFill": "plain:outline",
+                   "IonSize": "plain:small"
+                  }'
+                tagName: ion-button
+                ↓Class [ngx.components.UIAttribute-1792250178416]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-context-button
+                ↓Label [ngx.components.UIText-1792250178418]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.agentUiText('compactConvertigo')
+                ↓Event [ngx.components.UIControlEvent-1792250178420]: 
+                  ↓Compact [ngx.components.UICustomAction-1792250178866]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.compactAgentConversation('convertigo');
+                            		resolve();
+              ↓CompactGeneric [ngx.components.UIDynamicElement-1792250178868]: 
+                beanData: |
+                  '{
+                   "ionBean": "Button",
+                   "Disabled": "script:this.local.IsProcessing === true",
+                   "IonFill": "plain:outline",
+                   "IonSize": "plain:small"
+                  }'
+                tagName: ion-button
+                ↓Class [ngx.components.UIAttribute-1792250178870]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-context-button
+                ↓Label [ngx.components.UIText-1792250178872]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.agentUiText('compactGeneric')
+                ↓Event [ngx.components.UIControlEvent-1792250178874]: 
+                  ↓Compact [ngx.components.UICustomAction-1792250178876]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.compactAgentConversation('generic');
+                            		resolve();
+            ↓InstructionsItem [ngx.components.UIDynamicElement-1792250178878]: 
+              beanData: '{"ionBean":"FormItem"}'
+              tagName: ion-item
+              ↓Class [ngx.components.UIAttribute-1792250178880]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-instructions
+              ↓Instructions [ngx.components.UIDynamicElement-1792250178882]: 
+                beanData: |
+                  '{
+                   "ionBean": "TextArea",
+                   "ControlName": "plain:name1792250178882",
+                   "DoubleBinding": "source:{\"filter\":\"Local\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"localObject\":\"local\"}],\"path\":\"?.AgentCompactInstructions\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}",
+                   "AutoGrow": "plain:true",
+                   "Label": "script:this.agentUiText(''compactCustomLabel'')",
+                   "LabelPlacement": "plain:stacked",
+                   "Rows": "plain:2"
+                  }'
+                tagName: ion-textarea
+            ↓CustomActions [ngx.components.UIDynamicElement-1792250178884]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792250178886]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-context-actions
+              ↓CompactCustom [ngx.components.UIDynamicElement-1792250178888]: 
+                beanData: |
+                  '{
+                   "ionBean": "Button",
+                   "Disabled": "script:this.local.IsProcessing === true || !this.local.AgentCompactInstructions",
+                   "IonFill": "plain:outline",
+                   "IonSize": "plain:small"
+                  }'
+                tagName: ion-button
+                ↓Class [ngx.components.UIAttribute-1792250178890]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-context-button
+                ↓Label [ngx.components.UIText-1792250178892]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.agentUiText('compactCustom')
+                ↓Event [ngx.components.UIControlEvent-1792250178894]: 
+                  ↓Compact [ngx.components.UICustomAction-1792250178896]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.compactAgentConversation('custom');
+                            		resolve();
   ↓IfScrollBottomButton [ngx.components.UIControlDirective-1773900000010]: 
     directiveName: If
     directiveSource: 
@@ -12842,6 +13302,11 @@ title: Tigo
             		var response = vars.response || {};
             		var aiData = vars.aiData || {};
             		var state = response.state || aiData.state || {};
+            		// Context gauge and "/" menu follow the conversation that answered (reset when it has no usage yet).
+            		if (page.getAgentUsageView && state.threadid) {
+            			page.local.AgentUsageView = page.getAgentUsageView(state.usage);
+            			page.local.AgentCommands = state.commands && state.commands.length ? state.commands : (page.local.AgentCommands || []);
+            		}
                     if(state.quota && page.applyAgentQuotaSnapshot){page.applyAgentQuotaSnapshot(state.quota,state.provider||page.getAgentProvider());}
                     if(!isCompleted && !isFailed && page.requestAgentQuota){page.requestAgentQuota();}
                     if(isCompleted||isFailed){
@@ -13158,7 +13623,7 @@ title: Tigo
             					status = status || "completed";
             					type = "tool";
             				}
-            				if (type === "tool" && /^context compacted/i.test(rawTitle)) {
+            				if (type === "tool" && /^(context compacted|compact(ed|ing) conversation history|conversation context compacted)/i.test(rawTitle)) {
             					// A compaction is a landmark of the conversation, not a tool call.
             					var compactedLabel = page.progressToolWord ? page.progressToolWord("compacted", 1) : "Context compacted";
             					items.push({ text: compactedLabel, title: compactedLabel, detail: "", status: "completed", type: "compaction", current: false });
@@ -13557,6 +14022,9 @@ title: Tigo
             			}
             			active.target.progressTitle = progressTitle(false);
             			active.target.progressNow = progressNow;
+            			if (page.getAgentPlanView) {
+            				active.target.planView = page.getAgentPlanView(state.plan, progressRunKey, true);
+            			}
             			active.target.progressCollapsed = true;
             			active.target.id = runid != null ? runid : active.target.id;
             			page.local.StreamingIndex = active.index;
@@ -13637,6 +14105,9 @@ title: Tigo
                         target.progressSummary = "";
                         target.progressDetails = "";
                         target.progressItems = reuseProgressItems(target.progressItems, view.items || []);
+                        if (page.getAgentPlanView) {
+                            target.planView = page.getAgentPlanView(state.plan, progressRunKey, false);
+                        }
                         target.progressCollapsed = true;
                         target.progressStartedAt = page.local.AgentProgressStartedAt;
                         target.progressEndedAt = page.local.AgentProgressFinishedAt;
@@ -14933,6 +15404,11 @@ title: Tigo
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:this.translate?.currentLang || 'en'
+    ↓AgentCommands [ngx.components.UIUseVariable-1792250488546]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.local.AgentCommands || []
   ↓Class [ngx.components.UIAttribute-1782123550292]: 
     attrName: class
     attrValue: 
@@ -17972,4 +18448,45 @@ title: Tigo
           .agent-worklog-step-compaction::after { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 40%, transparent 60%); content: ''''; flex: 1 1 auto; height: 1px; }
           .agent-worklog-step-compaction lib_convertigoassistant-mdreader { flex: 0 0 auto; width: auto !important; }
           :host ::ng-deep .agent-worklog-step-compaction markdown p { color: color-mix(in srgb, var(--modern-muted, #94a3b8) 90%, var(--modern-text, #0f172a) 10%); font-size: 12px; letter-spacing: 0.02em; line-height: 18px; white-space: nowrap; }
+          /* Agent plan: the run''s todo list, updated in place, collapsed to "5/7 tasks" once the run is over. */
+          .agent-plan { border: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 32%, transparent 68%); border-radius: 10px; margin: 2px 0 14px; padding: 8px 12px; }
+          .agent-plan-header { color: var(--modern-text, #0f172a); cursor: pointer; font-size: 13px; font-weight: 600; line-height: 20px; list-style: none; }
+          .agent-plan-header::-webkit-details-marker { display: none; }
+          .agent-plan-header::before { content: ''›''; display: inline-block; margin-right: 7px; transition: transform 160ms ease; }
+          .agent-plan[open] > .agent-plan-header::before { transform: rotate(90deg); }
+          .agent-plan-note { color: color-mix(in srgb, var(--modern-muted, #94a3b8) 90%, var(--modern-text, #0f172a) 10%); font-size: 12px; font-style: italic; margin: 6px 0 0; }
+          .agent-plan-list { display: flex; flex-direction: column; gap: 5px; list-style: none; margin: 8px 0 2px; padding: 0; }
+          .agent-plan-task { align-items: flex-start; color: var(--modern-text, #0f172a); display: flex; font-size: 13.5px; gap: 9px; line-height: 19px; }
+          .agent-plan-task::before { border-radius: 50%; box-sizing: border-box; color: #ffffff; content: ''''; flex: 0 0 15px; font-size: 10px; font-weight: 700; height: 15px; line-height: 15px; margin-top: 2px; text-align: center; }
+          .agent-plan-task.is-pending::before { border: 1.5px dashed color-mix(in srgb, var(--modern-muted, #94a3b8) 85%, transparent 15%); }
+          .agent-plan-task.is-in_progress { font-weight: 600; }
+          .agent-plan-task.is-in_progress::before { background: conic-gradient(var(--modern-cyan, #06b6d4) 0 50%, transparent 50% 100%); border: 2px solid var(--modern-cyan, #06b6d4); }
+          .agent-plan.is-current .agent-plan-task.is-in_progress::before { animation: tigo-plan-spin 1.6s linear infinite; }
+          .agent-plan-task.is-completed { color: color-mix(in srgb, var(--modern-muted, #94a3b8) 92%, var(--modern-text, #0f172a) 8%); }
+          .agent-plan-task.is-completed::before { background: #10b981; content: ''✓''; }
+          .agent-plan.is-stale { opacity: 0.75; }
+          @keyframes tigo-plan-spin { to { transform: rotate(360deg); } }
+          @media (prefers-reduced-motion: reduce) { .agent-plan.is-current .agent-plan-task.is-in_progress::before { animation: none; } }
+          /* Context gauge (used / compaction threshold), usage detail and compaction options, kept at the bottom of the conversation. */
+          .agent-context { background: var(--modern-bg, #f8fafc); border-top: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 26%, transparent 74%); bottom: 0; margin: 8px 0 0; padding: 7px 2px 8px; position: sticky; z-index: 7; }
+          .agent-context-summary { align-items: center; color: color-mix(in srgb, var(--modern-muted, #94a3b8) 92%, var(--modern-text, #0f172a) 8%); cursor: pointer; display: flex; font-size: 12.5px; gap: 10px; line-height: 18px; list-style: none; }
+          .agent-context-summary::-webkit-details-marker { display: none; }
+          .agent-context-summary::before { content: ''›''; display: inline-block; transition: transform 160ms ease; }
+          .agent-context[open] > .agent-context-summary::before { transform: rotate(90deg); }
+          .agent-context-label { color: var(--modern-text, #0f172a); font-weight: 600; white-space: nowrap; }
+          .agent-context-gauge { --background: color-mix(in srgb, var(--modern-muted, #94a3b8) 24%, transparent 76%); --progress-background: var(--modern-cyan, #06b6d4); border-radius: 3px; flex: 0 1 180px; height: 6px; }
+          .agent-context.is-mid .agent-context-gauge { --progress-background: #f59e0b; }
+          .agent-context.is-high .agent-context-gauge { --progress-background: #ef4444; }
+          .agent-context-numbers { font-variant-numeric: tabular-nums; white-space: nowrap; }
+          .agent-context-body { padding: 10px 0 4px; }
+          .agent-context-rows { display: grid; gap: 4px 18px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+          .agent-context-row { border-bottom: 1px dotted color-mix(in srgb, var(--modern-muted, #94a3b8) 30%, transparent 70%); display: flex; font-size: 12.5px; gap: 10px; justify-content: space-between; line-height: 18px; padding: 3px 0; }
+          .agent-context-key { color: color-mix(in srgb, var(--modern-muted, #94a3b8) 92%, var(--modern-text, #0f172a) 8%); }
+          .agent-context-value { color: var(--modern-text, #0f172a); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+          .agent-context-compact-title { color: var(--modern-text, #0f172a); font-size: 13px; font-weight: 600; margin: 14px 0 2px; }
+          .agent-context-help { color: color-mix(in srgb, var(--modern-muted, #94a3b8) 92%, var(--modern-text, #0f172a) 8%); font-size: 12px; margin: 0 0 8px; }
+          .agent-context-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+          .agent-context-button { --border-radius: 8px; font-size: 12.5px; margin: 0; text-transform: none; }
+          .agent-context-instructions { --background: transparent; --padding-start: 0; margin: 0 0 8px; }
+          @media (max-width: 640px) { .agent-context-gauge { flex-basis: 90px; } .agent-context-rows { grid-template-columns: 1fr; } }
           '
