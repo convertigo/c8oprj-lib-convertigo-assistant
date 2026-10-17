@@ -3480,29 +3480,38 @@ scriptContent:
         		var rest = seconds % 60;
         		return minutes + " min" + (rest ? " " + rest + " s" : "");
         	}
+        	public isFrenchUi() {
+        		var language = "";
+        		try {
+        			language = "" + (this.global && this.global.currentLanguage ? this.global.currentLanguage() : (this.translate && this.translate.currentLang ? this.translate.currentLang : ""));
+        		} catch (e) {}
+        		return language.toLowerCase().indexOf("fr") === 0;
+        	}
         	public getProgressTitle(item) {
         		try {
         			var count = item && item.progressItems && item.progressItems.length ? item.progressItems.length : 0;
         			var start = Number(item && item.progressStartedAt ? item.progressStartedAt : 0);
-        			var end = item && item.writing === true ? (new Date()).getTime() : Number(item && item.progressEndedAt ? item.progressEndedAt : 0);
+        			var writing = item && item.writing === true;
+        			var end = writing ? (new Date()).getTime() : Number(item && item.progressEndedAt ? item.progressEndedAt : 0);
         			var duration = start ? this.formatAgentDuration((end || (new Date()).getTime()) - start) : "0 s";
-        			var suffix = count ? (" en " + count + " étape" + (count > 1 ? "s" : "")) : "";
-        			return "A travaillé pendant " + duration + suffix;
+        			var title = writing ? this.t("Agent_Progress_Running", "Traitement en cours depuis {duration}") : this.t("Agent_Progress_Done", "A travaillé pendant {duration}");
+        			var suffix = count ? (" " + (count > 1 ? this.t("Agent_Progress_Steps", "en {count} étapes") : this.t("Agent_Progress_One_Step", "en 1 étape")).replace("{count}", "" + count)) : "";
+        			return title.replace("{duration}", duration) + suffix;
         		} catch (e) {}
-        		return item && item.progressTitle ? item.progressTitle : "A travaillé";
+        		return item && item.progressTitle ? item.progressTitle : this.t("Agent_Progress_Done_Short", "A travaillé");
         	}
         	public getProgressToolSummary(step) {
-        		var title = this.worklogTrim(step && (step.title || step.text)) || "Outil";
+        		var title = this.worklogTrim(step && (step.title || step.text)) || this.t("Agent_Progress_Tool", "Outil");
         		var status = this.worklogTrim(step && step.status).toLowerCase();
         		var count = Number(step && (step.callCount || (step.calls && step.calls.length) || 0));
-        		var countLabel = count > 1 ? (count + " appels") : "";
+        		var countLabel = count > 1 ? this.t("Agent_Progress_Calls", "{count} appels").replace("{count}", "" + count) : "";
         		var label = "";
         		if (status === "running" || status === "in_progress") {
-        			label = "en cours";
+        			label = this.t("Agent_Progress_Status_Running", "en cours");
         		} else if (status === "failed" || status === "error") {
-        			label = "échec";
+        			label = this.t("Agent_Progress_Status_Failed", "échec");
         		} else if (status === "completed" || status === "complete" || status === "success" || status === "succeeded") {
-        			label = "terminé";
+        			label = this.t("Agent_Progress_Status_Done", "terminé");
         		}
         		var parts = [title];
         		if (countLabel.length) {
@@ -3541,13 +3550,13 @@ scriptContent:
         		var status = this.worklogTrim(call && call.status).toLowerCase();
         		var label = "";
         		if (status === "running" || status === "in_progress") {
-        			label = "en cours";
+        			label = this.t("Agent_Progress_Status_Running", "en cours");
         		} else if (status === "failed" || status === "error") {
-        			label = "échec";
+        			label = this.t("Agent_Progress_Status_Failed", "échec");
         		} else if (status === "completed" || status === "complete" || status === "success" || status === "succeeded") {
-        			label = "terminé";
+        			label = this.t("Agent_Progress_Status_Done", "terminé");
         		}
-        		var title = "Appel " + (Number(index || 0) + 1);
+        		var title = this.t("Agent_Progress_Call", "Appel {index}").replace("{index}", "" + (Number(index || 0) + 1));
         		return label.length ? (title + " · " + label) : title;
         	}
         	public getProgressToolDetail(step) {
@@ -10211,7 +10220,7 @@ title: Tigo
                                     				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                                     				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
                                     			};
-                                    			return map[line.toLowerCase()] || line;
+                                    			return (page.isFrenchUi && !page.isFrenchUi()) ? line : (map[line.toLowerCase()] || line);
                                     		};
                                     		var isGeneric = function(value) {
                                     			var text = clean(value).toLowerCase();
@@ -10895,7 +10904,7 @@ title: Tigo
                     textValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:(item && item.time ? item.time + '' - '' : '''') + (item && item.writing === true && this.getProgressTitle ? this.getProgressTitle(item).replace(''A travaillé pendant '', ''Traitement en cours depuis '') : (item && item.progressTitle ? item.progressTitle : (this.getProgressTitle ? this.getProgressTitle(item) : (item && item.writing === true ? ''Traitement en cours'' : ''A travaillé''))))'
+                        - MobileSmartSourceType: 'script:(item && item.time ? item.time + '' - '' : '''') + (item && item.writing === true && this.getProgressTitle ? this.getProgressTitle(item) : (item && item.progressTitle ? item.progressTitle : (this.getProgressTitle ? this.getProgressTitle(item) : (item && item.writing === true ? this.t(''Agent_Progress_Running_Short'', ''Traitement en cours'') : this.t(''Agent_Progress_Done_Short'', ''A travaillé'')))))'
               ↓Narrative [ngx.components.UIDynamicElement-1782143276091]: 
                 beanData: '{"ionBean":"DivTag"}'
                 isEnabled: false
@@ -10942,7 +10951,7 @@ title: Tigo
                     textValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: 'script:item && item.progressSummary ? ('''' + item.progressSummary).split(''\n'')[0] : ''Étapes et appels MCP'''
+                        - MobileSmartSourceType: 'script:item && item.progressSummary ? ('''' + item.progressSummary).split(''\n'')[0] : this.t(''Agent_Progress_Summary_Short'', ''Étapes et appels MCP'')'
                 ↓Body [ngx.components.UIDynamicElement-1782137363069]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -10973,7 +10982,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:item && item.writing === true ? ((item.status && ('''' + item.status).length < 90) ? item.status : ''En réflexion'') : '''''
+                      - MobileSmartSourceType: 'script:item && item.writing === true ? ((item.status && ('''' + item.status).length < 90) ? item.status : this.t(''Agent_Thinking'', ''En réflexion'')) : '''''
               ↓Open [ngx.components.UIAttribute-1782146112299]: 
                 attrName: '[open]'
                 attrValue: 
@@ -11254,7 +11263,7 @@ title: Tigo
                 varValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:item && item.writing === true ? (item.status || ''En réflexion'') : '''''
+                    - MobileSmartSourceType: 'script:item && item.writing === true ? (item.status || this.t(''Agent_Thinking'', ''En réflexion'')) : '''''
               ↓rawStreamTicker [ngx.components.UIUseVariable-1772200844904]: 
                 varValue: 
                   - xmlizable: 
@@ -11269,6 +11278,12 @@ title: Tigo
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:modern-chat-spinner
+          ↓ThinkingLabel [ngx.components.UIAttribute-1792300000001]: 
+            attrName: '[attr.data-thinking-label]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:this.t(''Agent_Thinking'', ''En réflexion'')'
           ↓If [ngx.components.UIControlDirective-1773100000017]: 
             directiveName: If
             directiveSource: 
@@ -11814,7 +11829,7 @@ title: Tigo
                     				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
                     				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
                     			};
-                    			return map[line.toLowerCase()] || line;
+                    			return (page.isFrenchUi && !page.isFrenchUi()) ? line : (map[line.toLowerCase()] || line);
                     		};
                     		var isGeneric = function(value) {
                     			var text = clean(value).toLowerCase();
@@ -12639,7 +12654,7 @@ title: Tigo
             				"i am searching code.": "Je recherche dans le code.",
             				"i am writing.": "J''écris la réponse."
             			};
-            			return map[key] || line;
+            			return (page.isFrenchUi && !page.isFrenchUi()) ? line : (map[key] || line);
             		};
             		var isGenericProgress = function(value) {
             			var text = trimText(value).toLowerCase();
@@ -12732,6 +12747,8 @@ title: Tigo
             				lower.indexOf("j''exécute") === 0 ||
             				lower.indexOf("je lis ") === 0 ||
             				lower.indexOf("je recherche") === 0 ||
+            				lower.indexOf("i am ") === 0 ||
+            				lower === "thinking" ||
             				lower.indexOf("loaded ") === 0 ||
             				lower.indexOf("read ") === 0 ||
             				lower.indexOf("searched ") === 0 ||
@@ -12880,7 +12897,7 @@ title: Tigo
             					var group = seen["tool:" + groupKey];
             					if (!group) {
             						group = {
-            							text: localizeProgress(eventItem.text || "J''utilise le MCP Convertigo."),
+            							text: localizeProgress(eventItem.text || "I am using a Convertigo tool."),
             							title: title,
             							detail: "",
             							status: status || "running",
@@ -12985,8 +13002,8 @@ title: Tigo
             					}
             				}
             				if (!statusLine.length) {
-            					items.push({ text: "En réflexion", title: "En réflexion", detail: "", status: "running", type: "activity", current: true });
-            					statusLine = "En réflexion";
+            					items.push({ text: page.t("Agent_Thinking", "En réflexion"), title: page.t("Agent_Thinking", "En réflexion"), detail: "", status: "running", type: "activity", current: true });
+            					statusLine = page.t("Agent_Thinking", "En réflexion");
             				}
             			} else {
             				for (var k = 0; k < items.length; k++) {
@@ -13000,14 +13017,14 @@ title: Tigo
             				narrativeText: "",
             				detailsText: details.join("\n\n"),
             				items: items,
-            				status: statusLine || "En réflexion",
+            				status: statusLine || page.t("Agent_Thinking", "En réflexion"),
             				count: items.length,
             				hasLines: items.length > 0,
-            				summary: "Étapes et appels MCP (" + items.length + ")"
+            				summary: page.t("Agent_Progress_Summary", "Étapes et appels MCP ({count})").replace("{count}", "" + items.length)
             			};
             		};
             		var progressItemsForWriting = function(view) {
-            			return view && view.items ? view.items : [{ text: "En réflexion", title: "En réflexion", type: "activity", status: "running", current: true }];
+            			return view && view.items ? view.items : [{ text: page.t("Agent_Thinking", "En réflexion"), title: page.t("Agent_Thinking", "En réflexion"), type: "activity", status: "running", current: true }];
             		};
             		var applyProgressView = function(snapshot, events, writing) {
             			var lines = snapshot && snapshot.text ? ("" + snapshot.text).split(/\n\s*\n/) : [];
@@ -13036,7 +13053,7 @@ title: Tigo
             			return formatDuration(end - Number(page.local.AgentProgressStartedAt || end));
             		};
             		var progressTitle = function(done) {
-            			return done ? ("A travaillé pendant " + progressElapsedLabel(true)) : ("Traitement en cours depuis " + progressElapsedLabel(false));
+            			return done ? page.t("Agent_Progress_Done", "A travaillé pendant {duration}").replace("{duration}", progressElapsedLabel(true)) : page.t("Agent_Progress_Running", "Traitement en cours depuis {duration}").replace("{duration}", progressElapsedLabel(false));
             		};
             		var currentSnapshot = applyProgressView(appendProgressSnapshot(progressSnapshot(currentProgress, currentPhase), runid), rawProgressEvents, !isCompleted && !isFailed);
             		var findTarget = function() {
@@ -13088,14 +13105,14 @@ title: Tigo
             				active.target.progressDetails = "";
             				active.target.progressSummary = "";
             				active.target.progressItems = progressItemsForWriting(currentSnapshot);
-            				active.target.status = currentSnapshot.status || "En réflexion";
+            				active.target.status = currentSnapshot.status || page.t("Agent_Thinking", "En réflexion");
             			} else if (!trimText(active.target.msg).length && !trimText(active.target.status).length) {
             				active.target.msg = "";
             				active.target.progressNarrative = "";
             				active.target.progressDetails = "";
             				active.target.progressSummary = "";
-            				active.target.progressItems = [{ text: "En réflexion", type: "activity", current: true }];
-            				active.target.status = "En réflexion";
+            				active.target.progressItems = [{ text: page.t("Agent_Thinking", "En réflexion"), type: "activity", current: true }];
+            				active.target.status = page.t("Agent_Thinking", "En réflexion");
             			}
             			active.target.writing = true;
             			active.target.type = "worklog";
@@ -13160,7 +13177,7 @@ title: Tigo
                         var view = progressView(lines, rawProgressEvents, false);
                         page.local.AgentProgressFinishedAt = (new Date()).getTime();
                         var title = progressTitle(true);
-                        var summary = view.summary || ("Étapes et appels MCP (" + lines.length + ")");
+                        var summary = view.summary || page.t("Agent_Progress_Summary", "Étapes et appels MCP ({count})").replace("{count}", "" + lines.length);
                         var found = findTarget();
                         var target = found.target;
                         if (!target) {
@@ -13184,7 +13201,7 @@ title: Tigo
                         target.progressCollapsed = true;
                         target.progressStartedAt = page.local.AgentProgressStartedAt;
                         target.progressEndedAt = page.local.AgentProgressFinishedAt;
-                        target.progressTitle = title + " en " + view.count + " étape" + (view.count > 1 ? "s" : "");
+                        target.progressTitle = title + " " + (view.count > 1 ? page.t("Agent_Progress_Steps", "en {count} étapes") : page.t("Agent_Progress_One_Step", "en 1 étape")).replace("{count}", "" + view.count);
                         target.type = "worklog";
                         target.author = target.author || "Assistant";
                         target.id = key + "-steps";
@@ -13269,12 +13286,12 @@ title: Tigo
             			return false;
             		};
             		if (isCompleted && looksIncomplete(finalMessage)) {
-            			finalMessage = "L''agent a terminé, mais sa réponse finale est incomplète.";
+            			finalMessage = page.t("Agent_Final_Incomplete", "L''agent a terminé, mais sa réponse finale est incomplète.");
             			if (trimText(currentPhase).length) {
-            				finalMessage += "\n\nDernière action observée : " + localizeProgress(currentPhase);
+            				finalMessage += "\n\n" + page.t("Agent_Last_Observed_Action", "Dernière action observée :") + " " + localizeProgress(currentPhase);
             			}
             			if (aiData.warnings && aiData.warnings.length) {
-            				finalMessage += "\n\nUne tentative d''outil a échoué pendant le traitement.";
+            				finalMessage += "\n\n" + page.t("Agent_Tool_Attempt_Failed", "Une tentative d''outil a échoué pendant le traitement.");
             			}
             		}
             		if (!finalMessage.length) {
@@ -13290,7 +13307,7 @@ title: Tigo
             			}
             		}
             		if (!finalMessage.length && isFailed) {
-            			finalMessage = "La demande de l''assistant a échoué (" + (status.length ? status : "unknown") + "). Vous pouvez réessayer.";
+            			finalMessage = page.t("Agent_Request_Failed", "La demande de l''assistant a échoué ({status}). Vous pouvez réessayer.").replace("{status}", status.length ? status : "unknown");
             		}
             		if (finalMessage.length) {
             			target.msg = finalMessage;
@@ -13759,7 +13776,7 @@ title: Tigo
                         			tag1: "How-To",
                         			tag2: "Convertigo",
                         			tag3: "Guide",
-                        			status: "En réflexion",
+                        			status: page.t("Agent_Thinking", "En réflexion"),
                         			progressStartedAt: startedAt,
                         			writing: true
                         		});
@@ -15218,7 +15235,7 @@ title: Tigo
             display: none !important;
           }
           .modern-chat-spinner::before {
-            content: ''En réflexion'';
+            content: attr(data-thinking-label);
             color: color-mix(in srgb, var(--modern-muted, #94a3b8) 80%, transparent 20%);
             font-size: 13px;
             line-height: 18px;
