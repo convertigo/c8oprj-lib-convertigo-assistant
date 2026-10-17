@@ -79,3 +79,13 @@ test('the client turns the runs of the conversation into subagent events of the 
   sandbox.syncSubagentRuns({ threadid: '', runid: '1-1' });
   assert.equal(pushed.length, 0, 'no conversation, no runs');
 });
+
+test('a constructor run lists the objects it created and modified, and what is left open', () => {
+  const built = { runId: 'build-1', profile: 'constructor', model: 'glm-5-3', task: 'Créer la séquence poste_stats et la page Stats', status: 'completed',
+    durationMs: 240000, activity: [], verdict: 'done', summary: 'Séquence et page créées, prouvées.', modelCalls: 18, cost: 0.12,
+    created: ['VerifyDemo.sq:poste_stats', 'VerifyDemo.Application.NgxApp.pg:Stats'], modified: [], openIssues: ['Libellés anglais du kit CRUD'] };
+  const v = view('fr', { type: 'subagent', status: 'completed', detail: JSON.stringify(built) });
+  assert.equal(v.badge, 'Sous-agent · constructeur');
+  assert.equal(v.report, 'Terminé — Séquence et page créées, prouvées.\nCréés : VerifyDemo.sq:poste_stats, VerifyDemo.Application.NgxApp.pg:Stats\nReste : Libellés anglais du kit CRUD');
+  assert.equal(v.failed, false);
+});

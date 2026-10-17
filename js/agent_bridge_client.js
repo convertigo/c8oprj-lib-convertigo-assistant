@@ -4230,6 +4230,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       activity: (run.activity || []).slice(-6).map(function (a) { return trim(a && a.text).substring(0, 140); }),
       verdict: trim(report.verdict),
       summary: trim(report.summary).substring(0, 900),
+      // A constructor reports the objects it created and modified (QNames) and what is left open.
+      created: (report.created || []).slice(0, 12).map(function (q) { return trim(q).substring(0, 160); }),
+      modified: (report.modified || []).slice(0, 12).map(function (q) { return trim(q).substring(0, 160); }),
+      openIssues: (report.openIssues || []).slice(0, 4).map(function (q) { return trim(q).substring(0, 200); }),
       error: trim(run.output && run.output.error).substring(0, 300),
       stopReason: trim(run.output && run.output.stopReason),
       modelCalls: Number(usage.requests) || 0,
