@@ -2907,9 +2907,48 @@ scriptContent:
                 this.local.EnableVisionForPage = false;
                 if (this.isEmbeddedNoCodeAgent()) { this.scheduleAgentSettingsRefreshAfterHostContext(); }
             }
+        	watchChatContentSize() {
+        		// Content that grows after a scroll (Markdown rendering, a new row) must not leave a following
+        		// view a few lines above the bottom. The content may not be rendered yet when the scroll element
+        		// is bound, so the observer is attached (or moved) whenever the conversation scrolls.
+        		var self = this;
+        		try {
+        			var el: any = self.chatScrollElement;
+        			var host: any = el && el.getRootNode ? (el.getRootNode() as any).host : null;
+        			var main: any = host && host.querySelector ? host.querySelector(''.modern-main'') : null;
+        			if (!main || typeof (window as any).ResizeObserver !== ''function'' || self[''_chatResizeTarget''] === main) {
+        				return;
+        			}
+        			if (self[''_chatResizeObserver'']) {
+        				self[''_chatResizeObserver''].disconnect();
+        			}
+        			var stickToBottom = function() {
+        				if (!self.local || self.local.AutoScrollEnabled === false || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
+        					return;
+        				}
+        				if (el.scrollHeight - el.scrollTop - el.clientHeight > 1) {
+        					// Lock like other programmatic scrolls, so an animation pulling back is not read as the user scrolling up
+        					// (wheel, touch and keys still stop following at once).
+        					self.local.AutoScrollLockUntil = Math.max(Number(self.local.AutoScrollLockUntil || 0), Date.now() + 600);
+        					el.scrollTop = el.scrollHeight;
+        					if (self.refreshScrollButtons) {
+        						self.refreshScrollButtons(0);
+        					}
+        				}
+        			};
+        			self[''_chatResizeObserver''] = new (window as any).ResizeObserver(function() {
+        				stickToBottom();
+        				// An animated scrollToBottom started before the growth (180 + 120 ms) aims at the old bottom: correct after it.
+        				setTimeout(stickToBottom, 340);
+        			});
+        			self[''_chatResizeObserver''].observe(main);
+        			self[''_chatResizeTarget''] = main;
+        		} catch (eResize) {}
+        	}
         	scrollChatBottom(delay, force = false) {
         		var wait = delay == null ? 0 : delay;
         		var self = this;
+        		self.watchChatContentSize();
         		setTimeout(function() {
         			try {
         				if (!self.local) {
@@ -3086,7 +3125,10 @@ scriptContent:
         				}
         			}
         			var isGoingUp = scrollTop < (previousTop - 1);
-        			if (this.local.AutoScrollEnabled !== false && isGoingUp && Date.now() >= lockUntil) {
+        			// Wheel, touch and keys stop following explicitly (bindChatScrollIntent). An upward move without them comes
+        			// from a re-render, a shrinking row or a scroll animation, and must not drop the bottom of a running conversation;
+        			// only a scrollbar drag (pointer held on the scroll area) counts as the user scrolling up.
+        			if (this.local.AutoScrollEnabled !== false && isGoingUp && this[''_chatPointerDown''] === true && Date.now() >= lockUntil) {
         				this.local.AutoScrollEnabled = false;
         				changed = true;
         			}
@@ -3143,26 +3185,15 @@ scriptContent:
         					stopFollowing();
         				}
         			});
-        			// Content that grows after a scroll (Markdown rendering, a new row) must not leave a
-        			// following view a few lines above the bottom with the "back to latest" button shown.
-        			try {
-        				var host: any = el.getRootNode ? (el.getRootNode() as any).host : null;
-        				var main = host && host.querySelector ? host.querySelector(''.modern-main'') : null;
-        				if (main && typeof (window as any).ResizeObserver === ''function'') {
-        					var observer = new (window as any).ResizeObserver(function() {
-        						if (!self.local || self.local.AutoScrollEnabled === false || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
-        							return;
-        						}
-        						if (el.scrollHeight - el.scrollTop - el.clientHeight > 1) {
-        							el.scrollTop = el.scrollHeight;
-        							if (self.refreshScrollButtons) {
-        								self.refreshScrollButtons(0);
-        							}
-        						}
-        					});
-        					observer.observe(main);
-        				}
-        			} catch (eResize) {}
+        			el.addEventListener(''pointerdown'', function() {
+        				self[''_chatPointerDown''] = true;
+        			}, { passive: true });
+        			var pointerReleased = function() {
+        				self[''_chatPointerDown''] = false;
+        			};
+        			window.addEventListener(''pointerup'', pointerReleased, { passive: true });
+        			window.addEventListener(''pointercancel'', pointerReleased, { passive: true });
+        			self.watchChatContentSize();
         		};
         		try {
         			var result = self.content.getScrollElement();
