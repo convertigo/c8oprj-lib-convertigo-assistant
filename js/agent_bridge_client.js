@@ -3938,6 +3938,43 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  // The arguments of a tool call (the question of image-describe, a screenshot file name...), for its row in the work
+  // log. Inline images (base64 or data URLs) are left out; the text is bounded.
+  function toolInputPreview(data) {
+    var candidates = [
+      data && data.update && (data.update.rawInput || data.update.raw_input),
+      data && (data.rawInput || data.raw_input),
+      data && data.item && data.item.arguments,
+      data && data.arguments,
+      data && data.input
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      var value = candidates[i];
+      if (value == null || value === "") {
+        continue;
+      }
+      if (typeof value === "string") {
+        try {
+          value = JSON.parse(value);
+        } catch (_notJsonInput) {}
+      }
+      var text = "";
+      try {
+        text = JSON.stringify(value, function (key, item) {
+          return typeof item === "string" && (/^(base64|data|image|content)$/i.test(key) && item.length > 200 || /^data:[^;]+;base64,/.test(item)) ? "[…]" : item;
+        });
+      } catch (_ignoreInputStringify) {
+        text = String(value);
+      }
+      text = trim(text);
+      if (!text.length || text === "{}" || text === "null") {
+        continue;
+      }
+      return text.length > 1500 ? text.substring(0, 1497) + "..." : text;
+    }
+    return "";
+  }
+
   // Every progress event of a run is also appended to runs/<runid>.ndjson next to the conversation, since the live state
   // keeps only its last 80 events: a reopened conversation shows each past turn with its steps and tool calls, not only
   // its final answer. A line per update; the last line of a key wins when the file is read.
@@ -3975,6 +4012,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title: event.title || "",
       status: event.status || "",
       detail: detail.length > RUN_DETAIL_MAX_DETAIL ? detail.substring(0, RUN_DETAIL_MAX_DETAIL) + "\n…" : detail,
+      input: event.input || "",
       callId: event.callId || "",
       toolName: event.toolName || "",
       groupKey: event.groupKey || "",
@@ -4041,6 +4079,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         existing.title = title || existing.title || "";
         existing.status = trim(item.status || existing.status || "");
         existing.detail = trim(item.detail || existing.detail || "");
+        existing.input = trim(item.input || existing.input || "");
         existing.toolName = trim(item.toolName || existing.toolName || "");
         existing.groupKey = trim(item.groupKey || existing.groupKey || "");
         existing.current = item.current === true;
@@ -4060,6 +4099,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title: title,
       status: trim(item.status || ""),
       detail: trim(item.detail || ""),
+      input: trim(item.input || ""),
       provider: trim(item.provider || state.provider || ""),
       callId: trim(item.callId || ""),
       toolName: trim(item.toolName || ""),
@@ -4186,6 +4226,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title: title,
       status: status || "running",
       detail: preview,
+      input: toolInputPreview(data),
       provider: state.provider || "",
       callId: toolCallId(data),
       toolName: shellCommand.length ? "exec_command" : toolNameFromData(data),

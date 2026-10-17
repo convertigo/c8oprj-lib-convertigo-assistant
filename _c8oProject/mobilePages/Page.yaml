@@ -4275,6 +4275,7 @@ scriptContent:
         					title: event.title,
         					rawTitle: event.title,
         					groupKey: event.groupKey || "",
+        					input: event.input || "",
         					detail: detail.length && detail.indexOf("\x60\x60\x60") !== 0 ? "\x60\x60\x60\n" + detail.replace(/\x60\x60\x60/g, "''''''") + "\n\x60\x60\x60" : detail,
         					status: event.status || "completed",
         					startedAt: at,
@@ -4295,7 +4296,8 @@ scriptContent:
         			finish(batch);
         			batch = null;
         			var text = this.worklogTrim(event.text || event.title);
-        			if (text.length) {
+        			var previous = items.length ? items[items.length - 1] : null;
+        			if (text.length && !(previous && previous.type !== "tool" && previous.text === text)) {
         				items.push({ text: text, title: event.title || text, type: event.type || "narrative", status: event.status || "", current: false });
         			}
         		}
@@ -4312,6 +4314,69 @@ scriptContent:
         		}
         		item.historyEvents = item.runEvents;
         		return true;
+        	}
+        	public toolCallMedia(call) {
+        		// The image an image-describe call analysed (with its question and description) or a Playwright screenshot file,
+        		// shown as a thumbnail in the call row. Parsed once per call; the image is loaded once, through
+        		// AgentWorkspaceImage, which only serves images of the Studio workspace.
+        		if (!call) {
+        			return null;
+        		}
+        		var signature = (call.status || "") + ":" + ("" + (call.detail || "")).length + ":" + ("" + (call.input || "")).length;
+        		if (call.mediaKey === signature) {
+        			return call.media;
+        		}
+        		call.mediaKey = signature;
+        		var name = ("" + (call.rawTitle || call.title || "")).toLowerCase();
+        		var unescape = (text: any) => {
+        			var value = "" + (text == null ? "" : text);
+        			for (var u = 0; u < 3 && value.indexOf(''\\"'') !== -1; u++) {
+        				value = value.replace(/\\\\/g, "\\").replace(/\\"/g, ''"'');
+        			}
+        			return value;
+        		};
+        		var field = (text: any, key: any) => {
+        			var match = new RegExp(''"'' + key + ''"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'').exec(text);
+        			return match ? match[1].replace(/\\n/g, "\n").replace(/\\(.)/g, "$1") : "";
+        		};
+        		var detail = unescape(call.detail);
+        		var input = unescape(call.input);
+        		var media: any = null;
+        		if (/image[_-]describe/.test(name)) {
+        			var imagePart = detail.indexOf(''"image"'') !== -1 ? detail.substring(detail.indexOf(''"image"'')) : "";
+        			var path = field(imagePart, "path") || field(input, "path");
+        			if (path.length) {
+        				media = { path: path, question: field(input, "question") || field(input, "prompt"), description: field(detail, "description").replace(/\*\*|__/g, "") };
+        			}
+        		} else if (/take_screenshot/.test(name)) {
+        			var file = field(input, "filename");
+        			if (file.length && /\.(png|jpe?g|webp)$/i.test(file)) {
+        				media = { path: file.indexOf("/") === 0 || file.indexOf(".playwright-mcp/") === 0 ? file : ".playwright-mcp/" + file, question: "", description: "" };
+        			}
+        		}
+        		if (media && call.media && call.media.path === media.path) {
+        			media.src = call.media.src;
+        			media.state = call.media.state;
+        			media.zoom = call.media.zoom;
+        		}
+        		call.media = media;
+        		if (media && !media.state && call.status !== "running" && call.status !== "in_progress") {
+        			media.state = "loading";
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWorkspaceImage", { path: media.path }).async().then((response: any) => {
+        				var result = response && response.response ? response.response : response;
+        				if (result && result.ok === true && result.data) {
+        					media.src = "data:" + result.mimeType + ";base64," + result.data;
+        					media.state = "ready";
+        				} else {
+        					media.state = "missing";
+        				}
+        				this.tick();
+        			}).catch(() => {
+        				media.state = "missing";
+        				this.tick();
+        			});
+        		}
+        		return media;
         	}
         	public compactAgentConversation(mode) {
         		// Sends "/compact [instructions]" through the composer, like a message the user typed.
@@ -12204,6 +12269,148 @@ title: Tigo
                                         - xmlizable: 
                                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                           - MobileSmartSourceType: 'script:this.getProgressToolCallSummary ? this.getProgressToolCallSummary(call, callIndex) : (''Appel '' + ((callIndex || 0) + 1))'
+                              ↓HasMedia [ngx.components.UIControlDirective-1792265891318]: 
+                                directiveName: If
+                                directiveSource: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.toolCallMedia(call)
+                                ↓Media [ngx.components.UIDynamicElement-1792265892380]: 
+                                  beanData: '{"ionBean":"DivTag"}'
+                                  tagName: div
+                                  ↓Class [ngx.components.UIAttribute-1792265892382]: 
+                                    attrName: class
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: 'script:''agent-call-media'' + (this.toolCallMedia(call).zoom ? '' is-zoomed'' : '''')'
+                                  ↓HasImage [ngx.components.UIControlDirective-1792265892384]: 
+                                    directiveName: If
+                                    directiveSource: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:this.toolCallMedia(call).src
+                                    ↓Thumb [ngx.components.UIDynamicElement-1792265892386]: 
+                                      beanData: '{"ionBean":"DivTag"}'
+                                      selfClose: true
+                                      tagName: img
+                                      ↓Class [ngx.components.UIAttribute-1792265892388]: 
+                                        attrName: class
+                                        attrValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: plain:agent-call-thumb
+                                      ↓Src [ngx.components.UIAttribute-1792265892390]: 
+                                        attrName: '[src]'
+                                        attrValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: script:this.toolCallMedia(call).src
+                                      ↓Alt [ngx.components.UIAttribute-1792265892392]: 
+                                        attrName: alt
+                                        attrValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: script:this.toolCallMedia(call).path
+                                      ↓Title [ngx.components.UIAttribute-1792265892394]: 
+                                        attrName: title
+                                        attrValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: script:this.toolCallMedia(call).path
+                                      ↓Event [ngx.components.UIControlEvent-1792265892396]: 
+                                        ↓Zoom [ngx.components.UICustomAction-1792265892842]: 
+                                          actionValue: 
+                                            - xmlizable: 
+                                              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                                →: |
+                                                  		var media = page.toolCallMedia(props.stack.root.scope.call);
+                                                  		if (media) { media.zoom = media.zoom !== true; }
+                                                  		resolve();
+                                  ↓NoImage [ngx.components.UIControlDirective-1792265892844]: 
+                                    directiveName: If
+                                    directiveSource: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:!this.toolCallMedia(call).src
+                                    ↓Placeholder [ngx.components.UIDynamicElement-1792265892846]: 
+                                      beanData: '{"ionBean":"DivTag"}'
+                                      tagName: div
+                                      ↓Class [ngx.components.UIAttribute-1792265892848]: 
+                                        attrName: class
+                                        attrValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: plain:agent-call-thumb is-placeholder
+                                      ↓Text [ngx.components.UIText-1792265892850]: 
+                                        textValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: 'script:this.toolCallMedia(call).state === ''missing'' ? ''∅'' : ''…'''
+                                  ↓MediaText [ngx.components.UIDynamicElement-1792265892852]: 
+                                    beanData: '{"ionBean":"DivTag"}'
+                                    tagName: div
+                                    ↓Class [ngx.components.UIAttribute-1792265892854]: 
+                                      attrName: class
+                                      attrValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                          - MobileSmartSourceType: plain:agent-call-media-text
+                                    ↓HasQuestion [ngx.components.UIControlDirective-1792265892856]: 
+                                      directiveName: If
+                                      directiveSource: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                          - MobileSmartSourceType: script:this.toolCallMedia(call).question
+                                      ↓Question [ngx.components.UIDynamicElement-1792265892858]: 
+                                        beanData: '{"ionBean":"DivTag"}'
+                                        tagName: div
+                                        ↓Class [ngx.components.UIAttribute-1792265892860]: 
+                                          attrName: class
+                                          attrValue: 
+                                            - xmlizable: 
+                                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                              - MobileSmartSourceType: plain:agent-call-question
+                                        ↓Text [ngx.components.UIText-1792265892862]: 
+                                          textValue: 
+                                            - xmlizable: 
+                                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                              - MobileSmartSourceType: script:'« ' + this.toolCallMedia(call).question + ' »'
+                                    ↓HasDescription [ngx.components.UIControlDirective-1792265892864]: 
+                                      directiveName: If
+                                      directiveSource: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                          - MobileSmartSourceType: script:this.toolCallMedia(call).description
+                                      ↓Description [ngx.components.UIDynamicElement-1792265892866]: 
+                                        beanData: '{"ionBean":"DivTag"}'
+                                        tagName: div
+                                        ↓Class [ngx.components.UIAttribute-1792265892868]: 
+                                          attrName: class
+                                          attrValue: 
+                                            - xmlizable: 
+                                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                              - MobileSmartSourceType: plain:agent-call-description
+                                        ↓Text [ngx.components.UIText-1792265892870]: 
+                                          textValue: 
+                                            - xmlizable: 
+                                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                              - MobileSmartSourceType: script:this.toolCallMedia(call).description
+                                    ↓Path [ngx.components.UIDynamicElement-1792265892872]: 
+                                      beanData: '{"ionBean":"DivTag"}'
+                                      tagName: div
+                                      ↓Class [ngx.components.UIAttribute-1792265892874]: 
+                                        attrName: class
+                                        attrValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: plain:agent-call-path
+                                      ↓Text [ngx.components.UIText-1792265892876]: 
+                                        textValue: 
+                                          - xmlizable: 
+                                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                            - MobileSmartSourceType: script:this.toolCallMedia(call).path
                           ↓LatestCalls [ngx.components.UIDynamicElement-1792264009626]: 
                             beanData: '{"ionBean":"DivTag"}'
                             tagName: button
@@ -14929,6 +15136,7 @@ title: Tigo
             						startedAt: Number(eventItem.at || 0),
             						completedAt: Number(eventItem.completedAt || 0),
             						detail: detail,
+            						input: trimText(eventItem.input || ""),
             						status: status,
             						current: writing === true && (eventItem.current === true || status === "running" || status === "in_progress")
             					};
@@ -20353,4 +20561,14 @@ title: Tigo
           .agent-worklog-tool-body { overscroll-behavior: contain; position: relative; }
           .agent-tool-latest { display: none; }
           .agent-worklog-tool.has-new-calls .agent-tool-latest { align-items: center; background: var(--modern-cyan, #06b6d4); border: 0; border-radius: 12px; bottom: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); color: #ffffff; cursor: pointer; display: inline-flex; float: right; font: inherit; font-size: 12px; font-weight: 600; gap: 4px; margin-right: 4px; padding: 3px 10px; position: sticky; z-index: 2; }
+          /* Image analysed or captured by a tool call: thumbnail (click to enlarge), question and description. */
+          .agent-call-media { align-items: flex-start; display: flex; gap: 12px; margin: 6px 0 10px 18px; }
+          .agent-call-thumb { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 14%, transparent 86%); border: 1px solid var(--modern-border, #cbd5e1); border-radius: 8px; cursor: zoom-in; flex: 0 0 auto; height: 90px; object-fit: cover; object-position: top; width: 150px; }
+          .agent-call-thumb.is-placeholder { color: var(--modern-muted, #94a3b8); cursor: default; display: grid; place-items: center; }
+          .agent-call-media.is-zoomed { flex-direction: column; }
+          .agent-call-media.is-zoomed .agent-call-thumb { cursor: zoom-out; height: auto; max-height: 70vh; max-width: 100%; object-fit: contain; width: auto; }
+          .agent-call-media-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+          .agent-call-question { color: var(--modern-text, #0f172a); font-size: 13px; font-style: italic; }
+          .agent-call-description { color: var(--modern-text, #0f172a); font-size: 13px; line-height: 19px; }
+          .agent-call-path { color: var(--modern-muted, #94a3b8); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; overflow-wrap: anywhere; }
           '
