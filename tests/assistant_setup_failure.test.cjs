@@ -27,7 +27,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user') 
     clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null,
     normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {},
     shouldInstallForRun: () => install, shouldShowAgentPreparingProgress: () => false,
-    isResidentProvider: () => false, providerSequence: (p, action) => 'agent_vibe_' + action,
+    isResidentProvider: () => false, isVibeHarness: () => true, providerSequence: (p, action) => 'agent_vibe_' + action,
     callAgentSetup: () => { calls.push('setup'); return { result: report, sequence: 'agent_vibe_setup' }; },
     isConvertigoMode: p => p === 'convertigo', providerLabel: v => v,
     lang: () => ({ starting: 'Analyse', setupRequired: 'Configuration requise', setupCanInstall: 'Installer', startFailed: 'Échec' }),
@@ -38,7 +38,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user') 
     cancellationRequested: () => false, recoverableBridgeError: () => false,
     bridgeCall: () => { calls.push('unexpected-agent-start'); throw new Error('must not start'); }
   };
-  vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport']) + '\nvar sendMessage = ' + send + ';', sandbox);
+  vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName']) + '\nvar sendMessage = ' + send + ';', sandbox);
   return { response: sandbox.sendMessage({ threadid: state.threadid, Question: 'Bonjour' }), calls };
 }
 

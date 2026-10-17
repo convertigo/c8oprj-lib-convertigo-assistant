@@ -5,7 +5,7 @@ const { backendParts } = require('./helpers/assistant-source.cjs');
 
 function load() {
   const sandbox = { trim: v => String(v ?? '').trim(), now: () => 42, isVibeHarness: p => p === 'convertigo' || p === 'vibe' };
-  vm.runInNewContext(backendParts(['rememberAgentPlan', 'rememberAgentUsage', 'rememberAgentCommands']), sandbox);
+  vm.runInNewContext(backendParts(['rememberAgentPlan', 'rememberAgentUsage', 'rememberAgentCommands', 'agentSlashCommandName']), sandbox);
   return sandbox;
 }
 
@@ -36,11 +36,17 @@ test('a usage update keeps the context, the threshold and the session totals', (
   assert.equal(state.usage.costAmount, null);
 });
 
-test('the commands Vibe advertised are kept for the page', () => {
+test('slash commands are recognised from the commands Vibe advertised', () => {
   const s = load(), state = { provider: 'convertigo' };
   s.rememberAgentCommands(state, { update: { availableCommands: [
     { name: 'compact', description: 'Compact conversation history', input: { hint: 'Optional instructions' } },
     { name: 'bad name' }, { name: 'help', description: 'Help' }] } });
   assert.deepEqual(JSON.parse(JSON.stringify(state.commands.map(c => c.name))), ['compact', 'help']);
   assert.equal(state.commands[0].hint, 'Optional instructions');
+  assert.equal(s.agentSlashCommandName(state, '/compact keep the demo accounts'), 'compact');
+  assert.equal(s.agentSlashCommandName(state, '/HELP'), 'help');
+  assert.equal(s.agentSlashCommandName(state, '/reload'), '');
+  assert.equal(s.agentSlashCommandName(state, 'compact /compact'), '');
+  assert.equal(s.agentSlashCommandName({ provider: 'codex', commands: state.commands }, '/compact'), '');
+  assert.equal(s.agentSlashCommandName({ provider: 'vibe' }, '/compact now'), 'compact');
 });

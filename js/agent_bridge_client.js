@@ -3865,6 +3865,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.commands = commands;
   }
 
+  // "/compact keep the demo accounts": a slash command of the agent harness, sent as typed.
+  function agentSlashCommandName(state, text) {
+    var match = /^\/([A-Za-z0-9_-]+)(\s|$)/.exec(trim(text));
+    if (!match || !state || !isVibeHarness(state.provider)) {
+      return "";
+    }
+    var name = match[1].toLowerCase();
+    var known = state.commands && state.commands.length ? state.commands : [{ name: "compact" }, { name: "help" }, { name: "reload" }];
+    for (var i = 0; i < known.length; i++) {
+      if (String(known[i].name).toLowerCase() === name) {
+        return name;
+      }
+    }
+    return "";
+  }
+
   function pushProgressEvent(state, item) {
     if (!state) {
       return null;
@@ -6276,7 +6292,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   function submitTigoPrompt(state, sequence, payload) {
-    if (!C8O.tigoResources) { return bridgeCall(state, sequence, payload, 70000); }
+    if (!C8O.tigoResources || agentSlashCommandName(state, payload.prompt).length) { return bridgeCall(state, sequence, payload, 70000); }
     var resources = C8O.tigoResources.prepare(state);
     var enriched = {};
     Object.keys(payload).forEach(function (k) { enriched[k] = payload[k]; });
@@ -6431,6 +6447,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     enrichViewerDebugOptions(options, state);
     if (trim(options.rawUserQuestion).length) {
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
+      options.Question = question;
+    }
+    if (agentSlashCommandName(state, rawUserQuestion).length) {
+      // The harness runs "/compact <instructions>" only when the prompt starts with it: no Studio preamble.
+      question = rawUserQuestion;
       options.Question = question;
     }
     var runProvider = normalizeProvider(state.provider);
