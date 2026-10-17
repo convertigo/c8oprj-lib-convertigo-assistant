@@ -3822,6 +3822,36 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.plan = { entries: plan, runid: String(state.runid || ""), updatedAt: now() };
   }
 
+  // One row per model of the session from the Bridge journal totals: the agent's models (cost valued from the journal)
+  // and the vision models of the image-describe MCP tool (cost charged by the gateway). Agent models first.
+  function agentUsageModels(journal, number) {
+    var models = journal && journal.models && typeof journal.models === "object" ? journal.models : null;
+    if (!models) {
+      return [];
+    }
+    var rows = [];
+    for (var key in models) {
+      if (!Object.prototype.hasOwnProperty.call(models, key) || !models[key] || rows.length >= 10) {
+        continue;
+      }
+      var row = models[key];
+      var kind = row.kind === "vision" ? "vision" : "agent";
+      rows.push({
+        model: trim(row.model) || trim(key).replace(/^vision:/, "") || "?",
+        kind: kind,
+        calls: kind === "vision" ? number(row.calls) : null,
+        requests: number(row.requests),
+        inputTokens: number(row.inputTokens) || 0,
+        cachedTokens: number(row.cachedTokens) || 0,
+        outputTokens: number(row.outputTokens) || 0,
+        costAmount: number(row.costAmount),
+        costSource: row.costSource === "gateway" || row.costSource === "journal" ? row.costSource : ""
+      });
+    }
+    rows.sort(function (x, y) { return (x.kind === "agent" ? 0 : 1) - (y.kind === "agent" ? 0 : 1); });
+    return rows;
+  }
+
   function rememberAgentUsage(state, data) {
     var update = (data && data.update) || {};
     var meta = update._meta || update.field_meta || {};
@@ -3853,6 +3883,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       inputTokens: journal ? number(journal.inputTokens) : null,
       cacheRate: journal ? number(journal.cacheRate) : null,
       requests: journal ? number(journal.requests) : null,
+      outputTokens: journal ? number(journal.outputTokens) : null,
+      model: String(state.model || ""),
+      models: agentUsageModels(journal, number),
+      sessionTokens: journal && journal.sessionTokens ? { inputTokens: number(journal.sessionTokens.inputTokens), cachedTokens: number(journal.sessionTokens.cachedTokens), outputTokens: number(journal.sessionTokens.outputTokens) } : null,
       totalTokens: number(meta.totalTokens),
       tokensPerSecond: number(meta.tokensPerSecond),
       lastTurnDuration: number(meta.lastTurnDuration),
