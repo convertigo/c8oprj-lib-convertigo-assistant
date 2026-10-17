@@ -17708,4 +17708,6 @@ title: Tigo
           .agent-worklog { max-width: 100%; }
           /* "Back to the latest messages" sits right of the text column (bottom-right corner when narrow), not over the text. */
           .modern-scroll-bottom-btn { bottom: 14px !important; left: auto !important; opacity: 1; right: max(14px, calc((100% - 980px) / 2 - 52px)) !important; transform: none; }
+          /* A long request (a whole specification) no longer fills several screens: the bubble scrolls past ~12 lines. */
+          :host ::ng-deep .chat-user-text { max-height: min(45vh, 312px); overflow-y: auto; scrollbar-width: thin; }
           '
