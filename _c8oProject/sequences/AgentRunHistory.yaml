@@ -1,0 +1,32 @@
+accessibility: Hidden
+comment: WEB_ADMIN only. Every progress event of a turn of a conversation (runs/<runid>.ndjson), so that a page opened during a long turn shows it from its start.
+includeResponseElement: false
+↓Run [steps.SimpleStep-1792277357091]: 
+  expression: |
+    'if (!Packages.com.twinsoft.convertigo.engine.Engine.authenticatedSessionManager.hasRole(context.httpSession, Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN)) {
+        response = {ok:false,error:{code:"authentication_required"}};
+    } else {
+        include("js/agent_bridge_client.js");
+        try {
+            response = C8O.assistantAgentBridge.runHistory({threadid: String(threadid || ""), runid: String(runid || "")});
+        } catch (e) {
+            response = {ok:false,error:{code:"read_error"}};
+        }
+    }'
+↓Response [steps.JsonToXmlStep-1792277357093]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓threadid [variables.RequestableVariable-1792277357095]: 
+  comment: Agent conversation id.
+↓runid [variables.RequestableVariable-1792277357097]: 
+  comment: Run id; the latest run of the conversation when empty.

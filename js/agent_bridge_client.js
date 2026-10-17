@@ -7132,6 +7132,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   };
 
+  // Every event of a turn, read from runs/<runid>.ndjson: a page opened during a long turn shows the turn from its start,
+  // not only the last 80 events the state keeps. Long details are shortened for this one-time read.
+  C8O.assistantAgentBridge.runHistory = function (options) {
+    options = options || {};
+    var threadid = normalizeThreadId(options.threadid);
+    if (!threadid.length) {
+      return { ok: false, error: { code: "unknown_conversation" } };
+    }
+    var state = readState(threadid);
+    if (state === null) {
+      var record = readConversationRecord(resolveWorkspaceRoot(options), normalizeUserKey(options.userId), threadid, options.provider);
+      if (!record || !record.conversationDir) {
+        return { ok: false, error: { code: "unknown_conversation" } };
+      }
+      state = { conversationFile: String(new File(String(record.conversationDir), "conversation.json").getPath()), runid: record.lastRunId || "" };
+    }
+    var runid = trim(options.runid) || trim(state.runid);
+    var details = runid.length ? readRunDetails(state, runid) : null;
+    var events = details ? details.events : [];
+    for (var i = 0; i < events.length; i++) {
+      if (events[i] && events[i].detail && events[i].detail.length > 2000) {
+        events[i].detail = events[i].detail.substring(0, 2000) + "\n…";
+      }
+    }
+    return { ok: true, threadid: threadid, runid: runid, events: events, plan: details ? details.plan : null };
+  };
+
   C8O.assistantAgentBridge.readResponse = function (options) {
     options = options || {};
     var threadid = normalizeThreadId(options.threadid);

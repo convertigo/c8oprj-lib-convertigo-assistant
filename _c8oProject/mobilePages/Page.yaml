@@ -16261,7 +16261,26 @@ title: Tigo
             				}
             				items.push(kept);
             			}
-            			return items;
+            			// The state keeps only the last events of the run: the steps that fell out of it (narration, whole groups) stay
+            			// at the head of the turn, so a long turn is never erased from the top as it goes. Status lines ("thinking",
+            			// the current activity) are transient and are not kept.
+            			var usedSet = new Set(used);
+            			var firstKept = previous.length;
+            			for (var u = 0; u < previous.length; u++) {
+            				if (usedSet.has(previous[u])) {
+            					firstKept = u;
+            					break;
+            				}
+            			}
+            			var head = [];
+            			for (var h = 0; h < firstKept; h++) {
+            				var old = previous[h];
+            				if (old && typeof old === "object" && !usedSet.has(old) && old.type !== "activity") {
+            					old.current = false;
+            					head.push(old);
+            				}
+            			}
+            			return head.length ? head.concat(items) : items;
             		};
             		var progressItemsForWriting = function(view) {
             			return view && view.items ? view.items : [{ text: page.t("Agent_Thinking", "En réflexion"), title: page.t("Agent_Thinking", "En réflexion"), type: "activity", status: "running", current: true }];
@@ -16353,6 +16372,31 @@ title: Tigo
             				active.target.progressDetails = "";
             				active.target.progressSummary = "";
             				active.target.progressItems = reuseProgressItems(active.target.progressItems, progressItemsForWriting(currentSnapshot));
+            				// A page opened during a long turn only gets the last events of the state: the whole turn is read once from
+            				// its saved events (AgentRunHistory) and joined in front of what the reads bring.
+            				var historyKey = (page.local.Conversation || "") + ":" + progressRunKey;
+            				if (progressRunKey !== "pending" && page.local.Conversation && page.local.AgentRunHistoryKey !== historyKey) {
+            					page.local.AgentRunHistoryKey = historyKey;
+            					page.local.AgentRunHistoryItems = null;
+            					page.c8o.callJsonObject("lib_ConvertigoAssistant.AgentRunHistory", { threadid: page.local.Conversation, runid: progressRunKey }).async().then(function(historyResponse) {
+            						var history = historyResponse && historyResponse.response ? historyResponse.response : historyResponse;
+            						var holder: any = { runEvents: history && history.ok === true ? history.events : null };
+            						if (page.local.AgentRunHistoryKey === historyKey && holder.runEvents && holder.runEvents.length && page.historyWorklog(holder)) {
+            							// Joined at once: the next read may come only when the agent produces something new.
+            							var running = findTarget().target;
+            							if (running && running.writing === true) {
+            								running.progressItems = reuseProgressItems(holder.progressItems, running.progressItems || []);
+            								page.tick();
+            							} else {
+            								page.local.AgentRunHistoryItems = holder.progressItems;
+            							}
+            						}
+            					}).catch(function() {});
+            				}
+            				if (page.local.AgentRunHistoryItems && page.local.AgentRunHistoryKey === historyKey) {
+            					active.target.progressItems = reuseProgressItems(page.local.AgentRunHistoryItems, active.target.progressItems);
+            					page.local.AgentRunHistoryItems = null;
+            				}
             				active.target.status = currentSnapshot.status || page.t("Agent_Thinking", "En réflexion");
             			} else if (!trimText(active.target.msg).length && !trimText(active.target.status).length) {
             				active.target.msg = "";
