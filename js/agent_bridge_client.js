@@ -3831,7 +3831,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // One row per model of the session from the Bridge journal totals: the agent's models (cost valued from the journal)
-  // and the vision models of the image-describe MCP tool (cost charged by the gateway). Agent models first.
+  // and the vision models of the image-describe and browser-verify MCP tools (cost charged by the gateway), with the
+  // number of browser verifications among their calls. Agent models first.
   function agentUsageModels(journal, number) {
     var models = journal && journal.models && typeof journal.models === "object" ? journal.models : null;
     if (!models) {
@@ -3848,6 +3849,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         model: trim(row.model) || trim(key).replace(/^vision:/, "") || "?",
         kind: kind,
         calls: kind === "vision" ? number(row.calls) : null,
+        verifications: kind === "vision" ? number(row.verifications) : null,
         requests: number(row.requests),
         inputTokens: number(row.inputTokens) || 0,
         cachedTokens: number(row.cachedTokens) || 0,

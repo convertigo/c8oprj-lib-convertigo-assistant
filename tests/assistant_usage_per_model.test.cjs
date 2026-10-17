@@ -52,3 +52,14 @@ test('an unknown cost is said, never summed as zero', () => {
   assert.match(en['Agent · glm-5-3'], /not provided$/);
   assert.match(en['Session total (all models)'], /not provided$/);
 });
+
+test('a vision row says how many browser verifications made its calls', () => {
+  const verifyRow = Object.assign({}, visionRow, { calls: 11, requests: 11, verifications: 2, inputTokens: 38500, outputTokens: 1700, costAmount: 0.0293 });
+  const usage = Object.assign({}, base, { costAmount: 0.0793, models: [agentRow, verifyRow], sessionTokens: { inputTokens: 78500, cachedTokens: 30000, outputTokens: 2900 } });
+  assert.equal(rows(view('en', usage))['Vision · mistral/mistral-large-4'], '11 calls (including 2 browser verifications) · 39 k sent · 1.7 k generated · 0.03 USD · charged by the gateway');
+  assert.equal(rows(view('fr', usage))['Vision · mistral/mistral-large-4'], '11 appels (dont 2 vérifications navigateur) · 39 k envoyés · 1,7 k générés · 0,03 USD · facturé par la passerelle');
+  const one = Object.assign({}, usage, { models: [agentRow, Object.assign({}, verifyRow, { verifications: 1 })] });
+  assert.match(rows(view('it', one))['Visione · mistral/mistral-large-4'], /^11 chiamate \(di cui 1 verifica nel browser\) · /);
+  assert.match(rows(view('es', usage))['Visión · mistral/mistral-large-4'], /^11 llamadas \(incluidas 2 verificaciones en el navegador\) · /);
+  assert.equal(rows(view('en', Object.assign({}, usage, { models: [agentRow, visionRow] })))['Vision · mistral/mistral-large-4'].indexOf('including'), -1, 'image-describe alone: no verification count');
+});
