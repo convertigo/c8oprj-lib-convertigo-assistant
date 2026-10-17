@@ -3850,7 +3850,9 @@ scriptContent:
         		add(this.agentUiText("usageUsedRow"), this.formatAgentTokens(used) + " " + tokens + " (" + percent + " %)");
         		add(this.agentUiText("usageWindowRow"), windowSize > 0 ? this.formatAgentTokens(windowSize) + " " + tokens : null);
         		add(this.agentUiText("usageAutoCompact"), compactAt > 0 ? this.formatAgentTokens(compactAt) + " " + tokens : null);
-        		add(this.agentUiText("usagePrompt"), usage.promptTokens != null ? this.formatAgentTokens(usage.promptTokens) : null);
+        		// The Vibe journal counts every input token of the session; Vibe''s own usage update undercounts them.
+        		var promptTokens = usage.inputTokens != null ? usage.inputTokens : usage.promptTokens;
+        		add(this.agentUiText("usagePrompt"), promptTokens != null ? this.formatAgentTokens(promptTokens) : null);
         		add(this.agentUiText("usageCompletion"), usage.completionTokens != null ? this.formatAgentTokens(usage.completionTokens) : null);
         		// Cached tokens and cache rate come from the Vibe journal; an unknown value says so instead of showing 0.
         		var cachedKnown = usage.cachedTokens != null && (Number(usage.cachedTokens) > 0 || usage.inputTokens != null);
