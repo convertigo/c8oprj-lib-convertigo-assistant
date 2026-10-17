@@ -3615,10 +3615,7 @@ scriptContent:
         			}
         		}
         		text = first.replace(/^cd\s+("[^"]*"|''[^'']*''|[^\s;&]+)\s*(&&|;)\s*/, "");
-        		text = text.replace(/(^|[\s"''=(])(\/[^\s"''`|;&<>(){}]+)/g, function(all: any, lead: any, path: any) {
-        			var parts = path.split("/").filter(function(part: any) { return part.length > 0; });
-        			return lead + (parts.length > 2 ? "…/" + parts.slice(-2).join("/") : path);
-        		});
+        		text = text.replace(/(^|[\s"''=(])(\/[^\s"''`|;&<>(){}]+)/g, (all: any, lead: any, path: any) => lead + this.shortenAgentPath(path));
         		text = text.replace(/\s+/g, " ");
         		if (text.length > 140) {
         			text = text.substring(0, 139) + "…";
@@ -3628,6 +3625,9 @@ scriptContent:
         		return kind.length ? kind + ": " + text : text;
         	}
         	public getProgressToolSummary(step) {
+        		if (step && step.batch === true && this.worklogTrim(step.title).length) {
+        			return this.worklogTrim(step.title);
+        		}
         		var title = this.compactToolTitle(step && (step.title || step.text)) || this.t("Agent_Progress_Tool", "Outil");
         		var status = this.worklogTrim(step && step.status).toLowerCase();
         		var count = Number(step && (step.callCount || (step.calls && step.calls.length) || 0));
@@ -3675,6 +3675,126 @@ scriptContent:
         		}
         		return false;
         	}
+        	public progressToolWord(kind, count) {
+        		// Labels of the grouped tool rows, in the four Assistant languages.
+        		var words: any = {
+        			fr: { command: ["commande", "commandes"], read: ["lecture", "lectures"], edit: ["modification", "modifications"], convertigo: ["appel Convertigo", "appels Convertigo"], browser: ["action navigateur", "actions navigateur"], search: ["recherche", "recherches"], plan: ["mise à jour du plan", "mises à jour du plan"], skill: ["skill chargé", "skills chargés"], other: ["autre outil", "autres outils"], failed: ["échec", "échecs"], compacted: ["Contexte compacté", "Contexte compacté"] },
+        			en: { command: ["command", "commands"], read: ["file read", "file reads"], edit: ["edit", "edits"], convertigo: ["Convertigo call", "Convertigo calls"], browser: ["browser action", "browser actions"], search: ["search", "searches"], plan: ["plan update", "plan updates"], skill: ["skill loaded", "skills loaded"], other: ["other tool", "other tools"], failed: ["failure", "failures"], compacted: ["Context compacted", "Context compacted"] },
+        			it: { command: ["comando", "comandi"], read: ["lettura", "letture"], edit: ["modifica", "modifiche"], convertigo: ["chiamata Convertigo", "chiamate Convertigo"], browser: ["azione browser", "azioni browser"], search: ["ricerca", "ricerche"], plan: ["aggiornamento del piano", "aggiornamenti del piano"], skill: ["skill caricata", "skill caricate"], other: ["altro strumento", "altri strumenti"], failed: ["errore", "errori"], compacted: ["Contesto compattato", "Contesto compattato"] },
+        			es: { command: ["comando", "comandos"], read: ["lectura", "lecturas"], edit: ["modificación", "modificaciones"], convertigo: ["llamada Convertigo", "llamadas Convertigo"], browser: ["acción del navegador", "acciones del navegador"], search: ["búsqueda", "búsquedas"], plan: ["actualización del plan", "actualizaciones del plan"], skill: ["skill cargado", "skills cargados"], other: ["otra herramienta", "otras herramientas"], failed: ["error", "errores"], compacted: ["Contexto compactado", "Contexto compactado"] }
+        		};
+        		var language = "en";
+        		try {
+        			language = ("" + (this.global && this.global.currentLanguage ? this.global.currentLanguage() : (this.translate && this.translate.currentLang ? this.translate.currentLang : "en"))).substring(0, 2).toLowerCase();
+        		} catch (e) {}
+        		var table = words[language] || words.en;
+        		var pair = table[kind] || table.other;
+        		var plural = Number(count) > 1;
+        		return kind === "compacted" ? pair[0] : (count + " " + (plural ? pair[1] : pair[0]));
+        	}
+        	public shortenAgentPath(path) {
+        		// Workspace paths become relative (PcaUpdateTracker/js/pca.js); other long paths keep their last two segments.
+        		var text = "" + (path == null ? "" : path);
+        		var root = this.worklogTrim(this.local && this.local.AgentWorkspaceDir);
+        		if (root.length && text.indexOf(root + "/") === 0 && text.charAt(root.length + 1) !== ".") {
+        			return text.substring(root.length + 1);
+        		}
+        		var parts = text.split("/").filter(function(part: any) { return part.length > 0; });
+        		return parts.length > 2 ? "…/" + parts.slice(-2).join("/") : text;
+        	}
+        	public progressToolKeyArgument(detail) {
+        		// The object a Convertigo tool worked on, read from its result (the bridge does not forward the input).
+        		var text = ("" + (detail == null ? "" : detail)).replace(/\\"/g, ''"'');
+        		var keys = ["qname", "targetQName", "target", "requestable", "project", "projectName"];
+        		for (var i = 0; i < keys.length; i++) {
+        			var match = new RegExp(''"'' + keys[i] + ''"\\s*:\\s*"([^"]{1,160})"'').exec(text);
+        			if (match) {
+        				var value = match[1];
+        				return value.length > 70 ? "…" + value.substring(value.length - 69) : value;
+        			}
+        		}
+        		return "";
+        	}
+        	public describeProgressToolCall(call) {
+        		var title = this.worklogTrim(call && (call.rawTitle || call.title || call.text));
+        		var lower = title.toLowerCase();
+        		var kind = "other";
+        		var label = "";
+        		if (/^(bash|shell|sh|zsh|exec_command|run_command|command)\s*:/.test(lower) || (call && call.groupKey === "exec_command")) {
+        			kind = "command";
+        			label = "$ " + this.compactToolTitle(title).replace(/^(bash|shell|sh|zsh|exec_command|run_command|command): /, "");
+        		} else if (/^mcp_convertigo[._]/.test(lower)) {
+        			kind = "convertigo";
+        			var key = this.progressToolKeyArgument(call && call.detail);
+        			label = title.replace(/^mcp_convertigo[._]/i, "Convertigo · ") + (key.length ? "  " + key : "");
+        		} else if (/playwright|browser_/.test(lower)) {
+        			kind = "browser";
+        			label = title.replace(/^mcp_[a-z0-9-]+[._]/i, "");
+        		} else if (/^writing \d+ todos?|^todo|update_todo/.test(lower)) {
+        			kind = "plan";
+        			label = title;
+        		} else if (/^(read_file|read|reading|view|viewing|cat)\b/.test(lower)) {
+        			kind = "read";
+        			label = this.compactToolTitle(title);
+        		} else if (/^(editing|edit|write_file|writing|search_replace|create|creating|patch|apply_patch)\b/.test(lower)) {
+        			kind = "edit";
+        			label = this.compactToolTitle(title);
+        		} else if (/^(searching|search|grep|glob|find)\b/.test(lower)) {
+        			kind = "search";
+        			label = this.compactToolTitle(title);
+        		} else if (/^loading skill/.test(lower)) {
+        			kind = "skill";
+        			label = title;
+        		} else {
+        			label = this.compactToolTitle(title);
+        		}
+        		return { kind: kind, label: label || title };
+        	}
+        	public getProgressBatchTitle(batch) {
+        		// "5 commands, 3 file reads, 2 Convertigo calls": one line for consecutive tool calls; failures and running calls first.
+        		var calls = this.getProgressToolCalls(batch);
+        		if (calls.length === 1) {
+        			return this.getProgressToolCallSummary(calls[0], 0);
+        		}
+        		var order = [];
+        		var counts: any = {};
+        		var failed = 0;
+        		var running = false;
+        		for (var i = 0; i < calls.length; i++) {
+        			var kind = (calls[i] && calls[i].kind) || "other";
+        			if (!counts[kind]) {
+        				counts[kind] = 0;
+        				order.push(kind);
+        			}
+        			counts[kind]++;
+        			var status = this.worklogTrim(calls[i] && calls[i].status).toLowerCase();
+        			if (status === "failed" || status === "error") {
+        				failed++;
+        			}
+        			if (calls[i] && calls[i].current === true) {
+        				running = true;
+        			}
+        		}
+        		var parts = [];
+        		for (var k = 0; k < order.length; k++) {
+        			parts.push(this.progressToolWord(order[k], counts[order[k]]));
+        		}
+        		var prefix = [];
+        		if (running) {
+        			prefix.push(this.t("Agent_Progress_Status_Running", "en cours"));
+        		}
+        		if (failed) {
+        			prefix.push(this.progressToolWord("failed", failed));
+        		}
+        		return (prefix.length ? prefix.join(" · ") + " · " : "") + parts.join(", ");
+        	}
+        	public formatToolDuration(ms) {
+        		var value = Number(ms || 0);
+        		if (!(value > 0)) {
+        			return "";
+        		}
+        		return value < 1000 ? "<1 s" : this.formatAgentDuration(value);
+        	}
         	public getProgressToolCallSummary(call, index) {
         		var status = this.worklogTrim(call && call.status).toLowerCase();
         		var label = "";
@@ -3684,6 +3804,19 @@ scriptContent:
         			label = this.t("Agent_Progress_Status_Failed", "échec");
         		} else if (status === "completed" || status === "complete" || status === "success" || status === "succeeded") {
         			label = this.t("Agent_Progress_Status_Done", "terminé");
+        		}
+        		if (call && call.label) {
+        			// One line per call: status only when it is not the normal "done", then the short label and the duration.
+        			var parts = [];
+        			if (status === "running" || status === "in_progress" || status === "failed" || status === "error") {
+        				parts.push(label);
+        			}
+        			parts.push(call.label);
+        			var duration = this.formatToolDuration(call.durationMs);
+        			if (duration.length) {
+        				parts.push(duration);
+        			}
+        			return parts.join(" · ");
         		}
         		var title = this.t("Agent_Progress_Call", "Appel {index}").replace("{index}", "" + (Number(index || 0) + 1));
         		return label.length ? (title + " · " + label) : title;
@@ -11174,7 +11307,7 @@ title: Tigo
                             attrValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-worklog-tool-summary
+                                - MobileSmartSourceType: 'script:''agent-worklog-tool-summary'' + (step && (step.status === ''failed'' || step.status === ''error'') ? '' is-failed'' : '''') + (step && step.current === true ? '' is-running'' : '''')'
                           ↓Icon [ngx.components.UIDynamicElement-1782245569904]: 
                             beanData: |
                               '{
@@ -11245,7 +11378,7 @@ title: Tigo
                                       attrValue: 
                                         - xmlizable: 
                                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                          - MobileSmartSourceType: plain:agent-worklog-call-summary
+                                          - MobileSmartSourceType: 'script:''agent-worklog-call-summary'' + (call && (call.status === ''failed'' || call.status === ''error'') ? '' is-failed'' : '''') + (call && call.current === true ? '' is-running'' : '''')'
                                     ↓Text [ngx.components.UIDynamicElement-1782246849867]: 
                                       beanData: '{"ionBean":"SpanTag"}'
                                       tagName: span
@@ -11284,7 +11417,7 @@ title: Tigo
                                     attrValue: 
                                       - xmlizable: 
                                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                        - MobileSmartSourceType: plain:agent-worklog-call-summary agent-worklog-call-line
+                                        - MobileSmartSourceType: 'script:''agent-worklog-call-summary agent-worklog-call-line'' + (call && (call.status === ''failed'' || call.status === ''error'') ? '' is-failed'' : '''') + (call && call.current === true ? '' is-running'' : '''')'
                                   ↓Text [ngx.components.UIDynamicElement-1782246854861]: 
                                     beanData: '{"ionBean":"SpanTag"}'
                                     tagName: span
@@ -11320,7 +11453,7 @@ title: Tigo
                           attrValue: 
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: plain:agent-worklog-tool-summary agent-worklog-tool-line
+                              - MobileSmartSourceType: 'script:''agent-worklog-tool-summary agent-worklog-tool-line'' + (step && (step.status === ''failed'' || step.status === ''error'') ? '' is-failed'' : '''') + (step && step.current === true ? '' is-running'' : '''')'
                         ↓Icon [ngx.components.UIDynamicElement-1782246692554]: 
                           beanData: |
                             '{
@@ -13029,6 +13162,10 @@ title: Tigo
             						callId: trimText(eventItem.callId || eventItem.key || ""),
             						text: text,
             						title: title,
+            						rawTitle: rawTitle,
+            						groupKey: trimText(eventItem.groupKey || ""),
+            						startedAt: Number(eventItem.at || 0),
+            						completedAt: Number(eventItem.completedAt || 0),
             						detail: detail,
             						status: status,
             						current: writing === true && (eventItem.current === true || status === "running" || status === "in_progress")
@@ -13076,8 +13213,59 @@ title: Tigo
             			}
             			return items;
             		};
+            		// Consecutive tool calls between two narration lines share one expandable row ("5 commands, 2 Convertigo calls");
+            		// each call keeps its kind, short label and duration for its own line.
+            		var batchToolItems = function(list) {
+            			var result = [];
+            			var batch = null;
+            			for (var b = 0; b < list.length; b++) {
+            				var entry = list[b];
+            				if (!entry || entry.type !== "tool") {
+            					batch = null;
+            					result.push(entry);
+            					continue;
+            				}
+            				if (!batch) {
+            					batch = { text: entry.text, title: "", detail: "", status: "completed", type: "tool", batch: true, current: false, calls: [], callCount: 0 };
+            					result.push(batch);
+            				}
+            				var entryCalls = entry.calls && entry.calls.length ? entry.calls : [{ callId: "", text: entry.text, title: entry.title, detail: entry.detail, status: entry.status, current: entry.current === true }];
+            				for (var c = 0; c < entryCalls.length; c++) {
+            					var entryCall = entryCalls[c];
+            					var described = page.describeProgressToolCall ? page.describeProgressToolCall(entryCall) : { kind: "other", label: entryCall.title };
+            					entryCall.kind = described.kind;
+            					entryCall.label = described.label;
+            					var callStart = Number(entryCall.startedAt || 0);
+            					var callEnd = Number(entryCall.completedAt || 0);
+            					entryCall.durationMs = callStart && callEnd && callEnd >= callStart ? callEnd - callStart : 0;
+            					batch.calls.push(entryCall);
+            					if (entryCall.current === true) {
+            						batch.current = true;
+            						batch.status = "running";
+            					} else if ((entryCall.status === "failed" || entryCall.status === "error") && batch.status !== "running") {
+            						batch.status = "failed";
+            					}
+            				}
+            				var failedCalls = 0;
+            				for (var f = 0; f < batch.calls.length; f++) {
+            					if (batch.calls[f].status === "failed" || batch.calls[f].status === "error") {
+            						failedCalls++;
+            					}
+            				}
+            				if (batch.status !== "running") {
+            					// Red only when every call failed: partial failures are counted in the label.
+            					batch.status = failedCalls && failedCalls === batch.calls.length ? "failed" : "completed";
+            				}
+            				if (!batch.detail.length && entry.detail) {
+            					batch.detail = entry.detail;
+            				}
+            				batch.callCount = batch.calls.length;
+            				batch.title = page.getProgressBatchTitle ? page.getProgressBatchTitle(batch) : (batch.callCount + "");
+            			}
+            			return result;
+            		};
             		var progressView = function(lines, events, writing) {
-            			var structuredItems = normalizeProgressEvents(events, writing);
+            			var structuredItems = batchToolItems(normalizeProgressEvents(events, writing));
             			var items = [];
             			var details = [];
             			var statusLine = "";
@@ -13240,6 +13428,9 @@ title: Tigo
             			page.local.AgentProgressStartedAt = progressNow;
             		}
             		page.local.AgentProgressStartedAtRunId = progressRunKey;
+            		// Tool rows show workspace paths relative to the Studio workspace (the parent of .metadata).
+            		var stateWorkspace = trimText(state.workspaceRoot || "");
+            		page.local.AgentWorkspaceDir = stateWorkspace.indexOf("/.metadata/") !== -1 ? stateWorkspace.substring(0, stateWorkspace.indexOf("/.metadata/")) : stateWorkspace;
             		// A run id starts with the run start time: a reloaded page shows the real duration, not the time since the reload.
             		var runStartedAt = /^(\d{13})-/.exec(progressRunKey);
             		if (runStartedAt && Number(runStartedAt[1]) < Number(page.local.AgentProgressStartedAt) && Number(runStartedAt[1]) > progressNow - 2 * 86400000) {
@@ -17712,4 +17903,20 @@ title: Tigo
           .modern-scroll-bottom-btn { bottom: 14px !important; left: auto !important; opacity: 1; right: max(14px, calc((100% - 980px) / 2 - 52px)) !important; transform: none; }
           /* A long request (a whole specification) no longer fills several screens: the bubble scrolls past ~12 lines. */
           :host ::ng-deep .chat-user-text { max-height: min(45vh, 312px); overflow-y: auto; scrollbar-width: thin; }
+          /* Grouped tool calls: one line per call inside the group, failures in red, the running call in full text colour. */
+          .agent-worklog-call-summary { display: flex; max-width: 100%; min-width: 0; }
+          .agent-worklog-call-summary > span { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 19px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .agent-worklog-call-summary::before { flex: 0 0 auto; }
+          .agent-worklog-call { margin: 0 0 2px 0; }
+          .agent-worklog-tool-body { padding-top: 4px; }
+          .agent-worklog-tool-summary.is-failed > span,
+          .agent-worklog-call-summary.is-failed > span { color: #dc2626; }
+          .agent-worklog-tool-summary.is-running > span,
+          .agent-worklog-call-summary.is-running > span { color: var(--modern-text, #0f172a); }
+          @media (prefers-color-scheme: dark) {
+          :host-context(html:not(.force-light)) .agent-worklog-tool-summary.is-failed > span,
+          :host-context(html:not(.force-light)) .agent-worklog-call-summary.is-failed > span { color: #f87171; }
+          }
+          :host-context(.force-dark) .agent-worklog-tool-summary.is-failed > span,
+          :host-context(.force-dark) .agent-worklog-call-summary.is-failed > span { color: #f87171; }
           '
