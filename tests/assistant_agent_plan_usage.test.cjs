@@ -38,6 +38,16 @@ test('a usage update keeps the context, the threshold and the session totals', (
   assert.equal(state.usage.costAmount, null);
 });
 
+test('cached tokens come from the Vibe journal and stay unknown without it', () => {
+  const s = load(), state = {};
+  s.rememberAgentUsage(state, { update: { used: 10, _meta: { cachedTokens: 0 } } });
+  assert.equal(state.usage.cachedTokens, null, 'the 0 of the unified harness is not a real value');
+  s.rememberAgentUsage(state, { journalUsage: { requests: 3, inputTokens: 4000, cachedTokens: 2700, cacheRate: 0.675 }, update: { used: 10, _meta: { cachedTokens: 0 } } });
+  assert.equal(state.usage.cachedTokens, 2700);
+  assert.equal(state.usage.inputTokens, 4000);
+  assert.equal(state.usage.cacheRate, 0.675);
+});
+
 test('slash commands are recognised from the commands Vibe advertised', () => {
   const s = load(), state = { provider: 'convertigo' };
   s.rememberAgentCommands(state, { update: { availableCommands: [

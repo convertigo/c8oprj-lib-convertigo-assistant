@@ -3832,6 +3832,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var parsed = Number(value);
       return isNaN(parsed) ? null : parsed;
     };
+    // Vibe's unified harness reports cachedTokens 0 even when its cache serves most of the input: the Bridge reads the
+    // real totals from the Vibe journal. Without them the value is unknown (null), never 0.
+    var journal = (data && data.journalUsage) || null;
+    var metaCached = number(meta.cachedTokens);
+    var journalCached = journal ? number(journal.cachedTokens) : null;
     state.usage = {
       used: number(update.used),
       size: number(update.size),
@@ -3842,7 +3847,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       steps: number(meta.steps),
       promptTokens: number(meta.promptTokens),
       completionTokens: number(meta.completionTokens),
-      cachedTokens: number(meta.cachedTokens),
+      cachedTokens: journalCached !== null ? journalCached : (metaCached ? metaCached : null),
+      inputTokens: journal ? number(journal.inputTokens) : null,
+      cacheRate: journal ? number(journal.cacheRate) : null,
+      requests: journal ? number(journal.requests) : null,
       totalTokens: number(meta.totalTokens),
       tokensPerSecond: number(meta.tokensPerSecond),
       lastTurnDuration: number(meta.lastTurnDuration),
