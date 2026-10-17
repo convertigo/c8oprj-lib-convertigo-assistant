@@ -3913,7 +3913,13 @@ scriptContent:
                 this.local.ResourceEditConnection = JSON.stringify(resource.connection || {transport:''http'',url:''https://example.invalid/mcp'',env:[],headers:{}},null,2);
                 this.local.ResourceAccordion = kind === ''mcp'' ? ''mcp'' : kind + ''s'';
                 this.loadTigoEditorLanguage(); this.local.ResourceEditorPending = true; this.local.ResourceEditorOpen = true; this.local.ResourceDeleteConfirmed = false; this.local.ResourceError = '''';
-                this.tick(); setTimeout(() => document.querySelector(''.tigo-resource-editor'')?.scrollIntoView({block:''nearest'',behavior:''smooth''}),0);
+                this.tick(); this.revealTigoResourceEditor();
+            }
+            public revealTigoResourceEditor(attempt = 0) {
+                // The editor is rendered below every library category: bring it into view once Angular has rendered it.
+                const editor: any = document.querySelector(''.tigo-resource-editor'');
+                if (editor) { editor.scrollIntoView({block:''start'',behavior:''smooth''}); return; }
+                if (attempt < 20) { setTimeout(() => this.revealTigoResourceEditor(attempt + 1), 50); }
             }
             public loadTigoEditorLanguage() {
                 const editor = this.local.ResourceEditor; if (!editor) { return; }
@@ -9334,6 +9340,32 @@ title: Tigo
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: script:this.tigoText('connection')
+                    ↓EditorError [ngx.components.UIControlDirective-1792235316230]: 
+                      directiveName: If
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:!!local.ResourceError
+                      ↓EditorErrorMessage [ngx.components.UIDynamicElement-1792235316800]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Attr [ngx.components.UIAttribute-1792235316802]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:tigo-resource-error tigo-editor-error
+                        ↓Role [ngx.components.UIAttribute-1792235316804]: 
+                          attrName: role
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:alert
+                        ↓Text [ngx.components.UIText-1792235316806]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.ResourceError","prefix":"","suffix":"","custom":"","useCustom":false}}
                     ↓EditorActions [ngx.components.UIDynamicElement-1792084651277]: 
                       beanData: '{"ionBean":"DivTag"}'
                       tagName: div
@@ -17405,6 +17437,7 @@ title: Tigo
           .tigo-resource-editor ion-textarea { font-family:ui-monospace,monospace; font-size:.88rem; }
           .tigo-resource-editor ion-select { --background:var(--modern-surface); --color:var(--modern-text); color:var(--modern-text); width:100%; padding:10px 0; }
           .tigo-resource-error { color:var(--ion-color-danger,#ef4444); width:100%; }
+          .tigo-resource-editor .tigo-editor-error { margin:4px 0 10px; font-size:13px; }
           .tigo-resource-notice { color:var(--ion-color-success,#22c55e); width:100%; }
           .tigo-resource-secrets { border-top:1px solid var(--modern-border); margin-top:12px; padding-top:8px; }
           .agent-config-page .agent-provider-options { grid-template-columns:1fr!important; gap:6px!important; }
