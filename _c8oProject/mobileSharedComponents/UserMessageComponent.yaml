@@ -77,9 +77,9 @@
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:chat-user-text
-          ↓Text [ngx.components.UIText-1771949858929]: 
-            i18n: true
-            textValue: 
+          ↓MessageText [ngx.components.UIAttribute-1792237615701]: 
+            attrName: '[innerText]'
+            attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:this.message
@@ -159,6 +159,8 @@
           }
           .chat-user-text {
             margin: 0;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
             color: #ffffff;
             font-size: 16px;
             line-height: 26px;
