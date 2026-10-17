@@ -20090,4 +20090,8 @@ title: Tigo
           .agent-dock-numbers { color: var(--modern-muted, #94a3b8); font-size: 12.5px; margin: 0 0 8px; }
           @media (max-width: 520px) { .agent-dock-plan { display: none; } }
           .agent-worklog-step.is-current, .agent-worklog-step-tool.is-current .agent-worklog-tool-summary, .agent-worklog-header.is-current .agent-worklog-title { animation: none; }
+          /* In a conversation the page keeps a thin top and bottom margin: no welcome title, no 50 px paddings. */
+          .modern-main:has(lib_convertigoassistant-usermessagecomponent) { padding-bottom: 6px; padding-top: 6px; }
+          .modern-center.agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) { padding-bottom: 8px; padding-top: 8px; }
+          .agent-desktop-center:has(lib_convertigoassistant-usermessagecomponent) > .agent-desktop-hero { display: none; }
           '
