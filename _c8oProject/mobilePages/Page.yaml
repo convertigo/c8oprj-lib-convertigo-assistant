@@ -3580,7 +3580,8 @@ scriptContent:
         			var count = item && item.progressItems && item.progressItems.length ? item.progressItems.length : 0;
         			var start = Number(item && item.progressStartedAt ? item.progressStartedAt : 0);
         			var writing = item && item.writing === true;
-        			var end = writing ? (new Date()).getTime() : Number(item && item.progressEndedAt ? item.progressEndedAt : 0);
+        			// The time of the last read, not the render time: the title must not change between two change-detection passes.
+        			var end = writing ? (Number(item && item.progressNow) || (new Date()).getTime()) : Number(item && item.progressEndedAt ? item.progressEndedAt : 0);
         			var duration = start ? this.formatAgentDuration((end || (new Date()).getTime()) - start) : "0 s";
         			var title = writing ? this.t("Agent_Progress_Running", "Traitement en cours depuis {duration}") : this.t("Agent_Progress_Done", "A travaillé pendant {duration}");
         			var suffix = count ? (" " + (count > 1 ? this.t("Agent_Progress_Steps", "en {count} étapes") : this.t("Agent_Progress_One_Step", "en 1 étape")).replace("{count}", "" + count)) : "";
@@ -13318,7 +13319,15 @@ title: Tigo
             					}
             				}
             				if (!statusLine.length) {
-            					items.push({ text: page.t("Agent_Thinking", "En réflexion"), title: page.t("Agent_Thinking", "En réflexion"), detail: "", status: "running", type: "activity", current: true });
+            					// The closing activity line says how long the agent has been silent since its last step.
+            					var lastEventAt = 0;
+            					var eventList = asArray(events);
+            					for (var e = 0; e < eventList.length; e++) {
+            						lastEventAt = Math.max(lastEventAt, Number((eventList[e] && (eventList[e].completedAt || eventList[e].updatedAt || eventList[e].at)) || 0));
+            					}
+            					var idleMs = lastEventAt ? (new Date()).getTime() - lastEventAt : 0;
+            					var thinkingText = page.t("Agent_Thinking", "En réflexion") + (idleMs >= 2000 && idleMs < 86400000 ? " · " + page.formatAgentDuration(idleMs) : "");
+            					items.push({ text: thinkingText, title: page.t("Agent_Thinking", "En réflexion"), detail: "", status: "running", type: "activity", current: true });
             					statusLine = page.t("Agent_Thinking", "En réflexion");
             				}
             			} else {
@@ -13516,6 +13525,7 @@ title: Tigo
             				active.target.time = ("0" + runStartDate.getHours()).slice(-2) + ":" + ("0" + runStartDate.getMinutes()).slice(-2);
             			}
             			active.target.progressTitle = progressTitle(false);
+            			active.target.progressNow = progressNow;
             			active.target.progressCollapsed = true;
             			active.target.id = runid != null ? runid : active.target.id;
             			page.local.StreamingIndex = active.index;
