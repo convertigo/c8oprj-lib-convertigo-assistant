@@ -13116,6 +13116,76 @@ title: Tigo
             				summary: page.t("Agent_Progress_Summary", "Étapes et appels MCP ({count})").replace("{count}", "" + items.length)
             			};
             		};
+            		// Reuse the previous step objects on every read, so Angular keeps their rows (and the tool
+            		// details the user opened) instead of rebuilding the whole work log about once a second.
+            		var progressItemKey = function(item) {
+            			if (!item || typeof item !== "object") {
+            				return "value:" + item;
+            			}
+            			if (item.type === "tool") {
+            				var firstCallId = item.calls && item.calls.length ? trimText(item.calls[0] && item.calls[0].callId) : "";
+            				return "tool:" + (firstCallId || item.title || item.text || "");
+            			}
+            			return (item.type || "") + ":" + (item.title || item.text || "");
+            		};
+            		var reuseToolCalls = function(previous, next) {
+            			if (!previous || !previous.length || !next || !next.length) {
+            				return next;
+            			}
+            			var byId = {};
+            			for (var p = 0; p < previous.length; p++) {
+            				byId[trimText(previous[p] && previous[p].callId) || ("#" + p)] = previous[p];
+            			}
+            			var calls = [];
+            			for (var n = 0; n < next.length; n++) {
+            				var kept = byId[trimText(next[n] && next[n].callId) || ("#" + n)];
+            				if (kept && typeof kept === "object" && next[n] && typeof next[n] === "object") {
+            					for (var callKey in next[n]) {
+            						if (Object.prototype.hasOwnProperty.call(next[n], callKey)) {
+            							kept[callKey] = next[n][callKey];
+            						}
+            					}
+            					calls.push(kept);
+            				} else {
+            					calls.push(next[n]);
+            				}
+            			}
+            			return calls;
+            		};
+            		var reuseProgressItems = function(previous, next) {
+            			if (!previous || !previous.length || !next || !next.length) {
+            				return next || [];
+            			}
+            			var pool = {};
+            			for (var p = 0; p < previous.length; p++) {
+            				var previousKey = progressItemKey(previous[p]);
+            				if (!pool[previousKey]) {
+            					pool[previousKey] = [];
+            				}
+            				pool[previousKey].push(previous[p]);
+            			}
+            			var items = [];
+            			for (var n = 0; n < next.length; n++) {
+            				var fresh = next[n];
+            				var bucket = pool[progressItemKey(fresh)];
+            				var kept = bucket && bucket.length ? bucket.shift() : null;
+            				if (!kept || typeof kept !== "object" || !fresh || typeof fresh !== "object") {
+            					items.push(fresh);
+            					continue;
+            				}
+            				var keptCalls = kept.calls;
+            				for (var itemKey in fresh) {
+            					if (Object.prototype.hasOwnProperty.call(fresh, itemKey) && itemKey !== "calls") {
+            						kept[itemKey] = fresh[itemKey];
+            					}
+            				}
+            				if (fresh.calls) {
+            					kept.calls = reuseToolCalls(keptCalls, fresh.calls);
+            				}
+            				items.push(kept);
+            			}
+            			return items;
+            		};
             		var progressItemsForWriting = function(view) {
             			return view && view.items ? view.items : [{ text: page.t("Agent_Thinking", "En réflexion"), title: page.t("Agent_Thinking", "En réflexion"), type: "activity", status: "running", current: true }];
             		};
@@ -13197,7 +13267,7 @@ title: Tigo
             				active.target.progressNarrative = "";
             				active.target.progressDetails = "";
             				active.target.progressSummary = "";
-            				active.target.progressItems = progressItemsForWriting(currentSnapshot);
+            				active.target.progressItems = reuseProgressItems(active.target.progressItems, progressItemsForWriting(currentSnapshot));
             				active.target.status = currentSnapshot.status || page.t("Agent_Thinking", "En réflexion");
             			} else if (!trimText(active.target.msg).length && !trimText(active.target.status).length) {
             				active.target.msg = "";
@@ -13290,7 +13360,7 @@ title: Tigo
                         target.progressNarrative = "";
                         target.progressSummary = "";
                         target.progressDetails = "";
-                        target.progressItems = view.items || [];
+                        target.progressItems = reuseProgressItems(target.progressItems, view.items || []);
                         target.progressCollapsed = true;
                         target.progressStartedAt = page.local.AgentProgressStartedAt;
                         target.progressEndedAt = page.local.AgentProgressFinishedAt;
