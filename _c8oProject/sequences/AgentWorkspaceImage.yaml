@@ -1,0 +1,27 @@
+accessibility: Hidden
+comment: WEB_ADMIN only. Returns, as base64, a PNG, JPEG or WebP image of the Studio user workspace or the projects folder (same rules as the image-describe MCP tool), for the thumbnails of the agent tool calls.
+includeResponseElement: false
+responseTimeout: 30
+↓Run [steps.SimpleStep-1792265826771]: 
+  expression: |
+    'include("js/agent_workspace_image.js");
+    try {
+        response = C8O.assistantWorkspaceImage.read(context, { path: String(path || "") });
+    } catch (e) {
+        response = {ok:false,error:{code:"read_error"}};
+    }'
+↓Response [steps.JsonToXmlStep-1792265826773]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓path [variables.RequestableVariable-1792265826775]: 
+  comment: 'Image path: absolute, or relative to the Studio user workspace then to the projects folder.'
