@@ -2810,6 +2810,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progressEvents: state.progressEvents || [],
       phase: String(state.lastStatusText || ""),
       warnings: state.warnings || [],
+      plan: state.plan || null,
+      usage: state.usage || null,
+      commands: state.commands || [],
       deleted: state.status === "deleted" || state.deleted === true
     };
     writeJsonFile(new File(state.conversationFile), record);
@@ -2888,6 +2891,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       state.progressLog = String(record.progress || "");
       state.progressEvents = record.progressEvents || [];
+      state.plan = record.plan || state.plan || null;
+      state.usage = record.usage || state.usage || null;
+      state.commands = record.commands || state.commands || [];
       state.lastStatusText = String(record.phase || "");
       state.warnings = record.warnings || [];
       state.updatedAt = recordUpdatedAt;
@@ -3785,6 +3791,78 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       completedAt: now()
     };
     state.nocodeContext = noCodeConversationContext(state.formMutation);
+  }
+
+  // Vibe plan (from the agent's todo tool), usage and slash commands are kept in the state, so
+  // the page can show the task list, the context gauge and the "/" menu.
+  function rememberAgentPlan(state, data) {
+    var update = (data && data.update) || {};
+    var entries = update.entries || [];
+    var plan = [];
+    for (var i = 0; i < entries.length && plan.length < 50; i++) {
+      var entry = entries[i] || {};
+      var content = trim(entry.content || entry.title || entry.text);
+      if (!content.length) {
+        continue;
+      }
+      var status = trim(entry.status).toLowerCase();
+      if (status !== "completed" && status !== "in_progress") {
+        status = "pending";
+      }
+      plan.push({
+        content: content.length > 300 ? content.substring(0, 300) + "…" : content,
+        status: status,
+        priority: trim(entry.priority)
+      });
+    }
+    state.plan = { entries: plan, runid: String(state.runid || ""), updatedAt: now() };
+  }
+
+  function rememberAgentUsage(state, data) {
+    var update = (data && data.update) || {};
+    var meta = update._meta || update.field_meta || {};
+    var number = function (value) {
+      if (value === null || typeof value === "undefined" || value === "") {
+        return null;
+      }
+      var parsed = Number(value);
+      return isNaN(parsed) ? null : parsed;
+    };
+    state.usage = {
+      used: number(update.used),
+      size: number(update.size),
+      threshold: number(data && data.autoCompactThreshold),
+      costAmount: update.cost ? number(update.cost.amount) : null,
+      costCurrency: update.cost && update.cost.currency ? String(update.cost.currency) : "",
+      steps: number(meta.steps),
+      promptTokens: number(meta.promptTokens),
+      completionTokens: number(meta.completionTokens),
+      cachedTokens: number(meta.cachedTokens),
+      totalTokens: number(meta.totalTokens),
+      tokensPerSecond: number(meta.tokensPerSecond),
+      lastTurnDuration: number(meta.lastTurnDuration),
+      lastTurnTotalTokens: number(meta.lastTurnTotalTokens),
+      updatedAt: now()
+    };
+  }
+
+  function rememberAgentCommands(state, data) {
+    var update = (data && data.update) || {};
+    var list = update.availableCommands || update.available_commands || [];
+    var commands = [];
+    for (var i = 0; i < list.length && commands.length < 40; i++) {
+      var command = list[i] || {};
+      var name = trim(command.name).replace(/^\//, "");
+      if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+        continue;
+      }
+      commands.push({
+        name: name,
+        description: trim(command.description),
+        hint: trim(command.input && (command.input.hint || command.input.placeholder))
+      });
+    }
+    state.commands = commands;
   }
 
   function pushProgressEvent(state, item) {
@@ -4872,6 +4950,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       answerIsFinal: record && trim(record.status) === "completed" && trim(record.lastAnswerPreview).length > 0,
       progressLog: record && record.progress ? String(record.progress) : "",
       progressEvents: record && record.progressEvents ? record.progressEvents : [],
+      plan: record && record.plan ? record.plan : null,
+      usage: record && record.usage ? record.usage : null,
+      commands: record && record.commands ? record.commands : [],
       lastProgressLine: "",
       lastStatusText: record && record.phase ? String(record.phase) : "",
       warnings: record && record.warnings ? record.warnings : [],
@@ -4916,6 +4997,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progressEvents: state.progressEvents || [],
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
+      plan: state.plan || null,
+      usage: state.usage || null,
+      commands: state.commands || [],
       formMutation: state.formMutation || null,
       nocodeContext: savedNoCodeContext(state),
       setupRequired: state.setupRequired === true,
@@ -6729,6 +6813,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (data.threadId || data.sessionId) {
             rememberCodexSessionFromResult(state, {sessionId: data.threadId || data.sessionId});
           }
+        } else if (type === "plan/update") {
+          rememberAgentPlan(state, data);
+        } else if (type === "usage/update") {
+          rememberAgentUsage(state, data);
+        } else if (type === "commands/update") {
+          rememberAgentCommands(state, data);
         } else if (type === "progress/message" || type === "status/message") {
           appendProgress(state, eventText(data));
         } else if (type === "progress/chunk") {

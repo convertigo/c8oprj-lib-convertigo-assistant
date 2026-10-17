@@ -1,0 +1,46 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const { backendParts } = require('./helpers/assistant-source.cjs');
+
+function load() {
+  const sandbox = { trim: v => String(v ?? '').trim(), now: () => 42, isVibeHarness: p => p === 'convertigo' || p === 'vibe' };
+  vm.runInNewContext(backendParts(['rememberAgentPlan', 'rememberAgentUsage', 'rememberAgentCommands']), sandbox);
+  return sandbox;
+}
+
+test('a Vibe plan update becomes the task list of the run', () => {
+  const s = load(), state = { runid: 'run-1' };
+  s.rememberAgentPlan(state, { update: { sessionUpdate: 'plan', entries: [
+    { content: 'Lire la spécification', status: 'completed', priority: 'high' },
+    { content: 'Créer les transactions', status: 'in_progress' },
+    { content: 'Tester', status: 'whatever' },
+    { content: '   ', status: 'pending' }] } });
+  assert.deepEqual(JSON.parse(JSON.stringify(state.plan)), { entries: [
+    { content: 'Lire la spécification', status: 'completed', priority: 'high' },
+    { content: 'Créer les transactions', status: 'in_progress', priority: '' },
+    { content: 'Tester', status: 'pending', priority: '' }], runid: 'run-1', updatedAt: 42 });
+});
+
+test('a usage update keeps the context, the threshold and the session totals', () => {
+  const s = load(), state = {};
+  s.rememberAgentUsage(state, { autoCompactThreshold: 200000, update: { used: 51200, size: 262144, cost: { amount: 0.42, currency: 'USD' },
+    _meta: { steps: 12, promptTokens: 900000, completionTokens: 12000, cachedTokens: 600000, totalTokens: 912000, tokensPerSecond: 38.5, lastTurnDuration: 95.2, lastTurnTotalTokens: 51000 } } });
+  assert.equal(state.usage.used, 51200);
+  assert.equal(state.usage.threshold, 200000);
+  assert.equal(state.usage.costAmount, 0.42);
+  assert.equal(state.usage.cachedTokens, 600000);
+  assert.equal(state.usage.lastTurnDuration, 95.2);
+  s.rememberAgentUsage(state, { update: { used: 10 } });
+  assert.equal(state.usage.threshold, null);
+  assert.equal(state.usage.costAmount, null);
+});
+
+test('the commands Vibe advertised are kept for the page', () => {
+  const s = load(), state = { provider: 'convertigo' };
+  s.rememberAgentCommands(state, { update: { availableCommands: [
+    { name: 'compact', description: 'Compact conversation history', input: { hint: 'Optional instructions' } },
+    { name: 'bad name' }, { name: 'help', description: 'Help' }] } });
+  assert.deepEqual(JSON.parse(JSON.stringify(state.commands.map(c => c.name))), ['compact', 'help']);
+  assert.equal(state.commands[0].hint, 'Optional instructions');
+});
