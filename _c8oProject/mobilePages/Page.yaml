@@ -16166,6 +16166,7 @@ title: Tigo
             color: #075985;
           }
           ion-header.modern-header ion-button.toolbar-reveal-button ion-icon {
+            flex-shrink: 0;
             font-size: 15px;
             margin-right: 4px;
           }
@@ -16190,17 +16191,24 @@ title: Tigo
             color: #e0f2fe;
           }
           @media (max-width: 430px) {
+            ion-header.modern-header ion-buttons {
+              gap: 6px;
+            }
             ion-header.modern-header ion-button.toolbar-reveal-button {
-              min-width: 38px;
-              --padding-end: 8px;
-              --padding-start: 8px;
+              font-size: 0;
+              min-width: 34px;
+              width: 34px;
+              --padding-end: 0;
+              --padding-start: 0;
             }
             ion-header.modern-header ion-button.toolbar-reveal-button ion-icon {
-              margin-right: 0;
+              font-size: 16px;
+              margin: 0;
             }
-            ion-header.modern-header ion-button.toolbar-reveal-button .button-text,
-            ion-header.modern-header ion-button.toolbar-reveal-button span {
-              display: none;
+            ion-header.modern-header ion-select.toolbar-lang-select {
+              max-width: 96px;
+              --padding-end: 6px;
+              --padding-start: 10px;
             }
           }
           '
