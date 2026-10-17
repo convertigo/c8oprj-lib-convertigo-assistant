@@ -3938,8 +3938,9 @@ scriptContent:
         		var writing = item && item.writing === true;
         		var end = writing ? (Number(item && item.progressNow) || (new Date()).getTime()) : Number(item && item.progressEndedAt ? item.progressEndedAt : 0);
         		var parts = [];
-        		if (item && item.time) {
-        			parts.push(this.agentLayoutText("turn").replace("{time}", item.time));
+        		var turnTime = item && (item.turnTime || item.time);
+        		if (turnTime) {
+        			parts.push(this.agentLayoutText("turn").replace("{time}", turnTime));
         		}
         		if (start && end) {
         			var duration = this.formatAgentDuration(end - start);
@@ -4230,6 +4231,87 @@ scriptContent:
         				body.parentElement.classList.remove("has-new-calls");
         			}
         		}
+        	}
+        	public historyWorklog(item) {
+        		// A past turn of a reopened conversation: its saved events become the same work log as a live turn (narration,
+        		// grouped tool calls, plan), shown collapsed above its answer. Built once per message.
+        		if (!item || !item.runEvents || !item.runEvents.length) {
+        			return false;
+        		}
+        		if (item.historyEvents === item.runEvents) {
+        			return true;
+        		}
+        		var items = [];
+        		var batch = null;
+        		var first = 0;
+        		var last = 0;
+        		var finish = (group: any) => {
+        			if (!group) {
+        				return;
+        			}
+        			var failed = 0;
+        			for (var f = 0; f < group.calls.length; f++) {
+        				if (group.calls[f].status === "failed" || group.calls[f].status === "error") {
+        					failed++;
+        				}
+        			}
+        			group.status = failed && failed === group.calls.length ? "failed" : "completed";
+        			group.callCount = group.calls.length;
+        			group.title = this.getProgressBatchTitle(group);
+        		};
+        		for (var i = 0; i < item.runEvents.length; i++) {
+        			var event = item.runEvents[i] || {};
+        			var at = Number(event.at) || 0;
+        			var done = Number(event.completedAt) || 0;
+        			if (at && (!first || at < first)) {
+        				first = at;
+        			}
+        			last = Math.max(last, at, done);
+        			if (event.type === "tool") {
+        				var detail = this.worklogTrim(event.detail);
+        				var call: any = {
+        					callId: event.callId || event.key,
+        					text: event.text,
+        					title: event.title,
+        					rawTitle: event.title,
+        					groupKey: event.groupKey || "",
+        					detail: detail.length && detail.indexOf("\x60\x60\x60") !== 0 ? "\x60\x60\x60\n" + detail.replace(/\x60\x60\x60/g, "''''''") + "\n\x60\x60\x60" : detail,
+        					status: event.status || "completed",
+        					startedAt: at,
+        					completedAt: done,
+        					current: false
+        				};
+        				var described = this.describeProgressToolCall(call);
+        				call.kind = described.kind;
+        				call.label = described.label;
+        				call.durationMs = at && done && done >= at ? done - at : 0;
+        				if (!batch) {
+        					batch = { text: event.text, title: "", detail: "", status: "completed", type: "tool", batch: true, current: false, calls: [], callCount: 0 };
+        					items.push(batch);
+        				}
+        				batch.calls.push(call);
+        				continue;
+        			}
+        			finish(batch);
+        			batch = null;
+        			var text = this.worklogTrim(event.text || event.title);
+        			if (text.length) {
+        				items.push({ text: text, title: event.title || text, type: event.type || "narrative", status: event.status || "", current: false });
+        			}
+        		}
+        		finish(batch);
+        		item.progressItems = items;
+        		item.progressStartedAt = first;
+        		item.progressEndedAt = last;
+        		if (first) {
+        			var start = new Date(first);
+        			item.turnTime = ("0" + start.getHours()).slice(-2) + ":" + ("0" + start.getMinutes()).slice(-2);
+        		}
+        		if (item.runPlan) {
+        			item.planView = this.getAgentPlanView(item.runPlan, null, false);
+        		}
+        		item.historyEvents = item.runEvents;
+        		return true;
         	}
         	public compactAgentConversation(mode) {
         		// Sends "/compact [instructions]" through the composer, like a message the user typed.
@@ -11714,7 +11796,7 @@ title: Tigo
             directiveSource: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:item && (item.type == 'worklog' || item.writing === true || !!item.progressDetails)
+                - MobileSmartSourceType: script:item && (item.type == 'worklog' || item.writing === true || !!item.progressDetails || (item.type == 'assistant' && !!item.runEvents && this.historyWorklog(item)))
             ↓Worklog [ngx.components.UIDynamicElement-1782137358863]: 
               beanData: '{"ionBean":"DivTag"}'
               tagName: details

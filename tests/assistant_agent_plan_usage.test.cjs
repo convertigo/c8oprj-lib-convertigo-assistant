@@ -90,3 +90,13 @@ test('slash commands are recognised from the commands Vibe advertised', () => {
   assert.equal(s.agentSlashCommandName({ provider: 'codex', commands: state.commands }, '/compact'), '');
   assert.equal(s.agentSlashCommandName({ provider: 'vibe' }, '/compact now'), 'compact');
 });
+
+test('a run event saved for the history keeps its call and truncates a long detail', () => {
+  const sandbox = { trim: v => String(v ?? '').trim(), RUN_DETAIL_MAX_DETAIL: 10 };
+  vm.runInNewContext(backendParts(['runDetailEvent']), sandbox);
+  const saved = sandbox.runDetailEvent({ key: 'tool:1', type: 'tool', title: 'bash: ls', status: 'completed', detail: '0123456789abcdef', callId: 'c1', at: 5, completedAt: 9, current: true });
+  assert.equal(saved.detail, '0123456789\n…');
+  assert.equal(saved.callId, 'c1');
+  assert.equal(saved.completedAt, 9);
+  assert.equal(saved.current, undefined, 'a saved event is never running');
+});

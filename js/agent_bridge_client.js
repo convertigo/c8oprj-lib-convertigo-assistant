@@ -2829,6 +2829,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       runid: state.runid || "",
       content: text
     }) + "\n");
+    if (role === "assistant" && state.plan && state.plan.entries && state.plan.entries.length) {
+      appendRunDetail(state, { kind: "plan", plan: state.plan });
+    }
   }
 
   function latestTranscriptContent(state, role, runid) {
@@ -2953,6 +2956,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           id: item.runid || i
         };
         if (role === "assistant") {
+          var details = item.runid ? readRunDetails(state, item.runid) : null;
+          if (details && details.events.length) {
+            message.runEvents = details.events;
+            message.runPlan = details.plan;
+          }
           message.tag1 = "History";
           message.tag2 = providerLabel(state.provider);
           message.tag3 = "Resume";
@@ -3930,6 +3938,84 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  // Every progress event of a run is also appended to runs/<runid>.ndjson next to the conversation, since the live state
+  // keeps only its last 80 events: a reopened conversation shows each past turn with its steps and tool calls, not only
+  // its final answer. A line per update; the last line of a key wins when the file is read.
+  var RUN_DETAIL_MAX_EVENTS = 2000;
+  var RUN_DETAIL_MAX_DETAIL = 4000;
+
+  function runDetailsFile(state, runid) {
+    var id = trim(runid || (state && state.runid));
+    if (!state || !state.conversationFile || !/^[A-Za-z0-9._-]{1,120}$/.test(id) || id === "pending") {
+      return null;
+    }
+    return new File(new File(new File(String(state.conversationFile)).getParentFile(), "runs"), id + ".ndjson");
+  }
+
+  function appendRunDetail(state, value) {
+    try {
+      var file = runDetailsFile(state, state && state.runid);
+      if (file === null) {
+        return;
+      }
+      var parent = file.getParentFile();
+      if (parent !== null && !parent.exists()) {
+        parent.mkdirs();
+      }
+      appendTextFile(file, JSON.stringify(value) + "\n");
+    } catch (_ignoreRunDetail) {}
+  }
+
+  function runDetailEvent(event) {
+    var detail = trim(event && event.detail);
+    return {
+      key: event.key,
+      type: event.type,
+      text: event.text || "",
+      title: event.title || "",
+      status: event.status || "",
+      detail: detail.length > RUN_DETAIL_MAX_DETAIL ? detail.substring(0, RUN_DETAIL_MAX_DETAIL) + "\n…" : detail,
+      callId: event.callId || "",
+      toolName: event.toolName || "",
+      groupKey: event.groupKey || "",
+      at: event.at || 0,
+      completedAt: event.completedAt || 0
+    };
+  }
+
+  function readRunDetails(state, runid) {
+    var file = runDetailsFile(state, runid);
+    if (file === null || !file.exists()) {
+      return null;
+    }
+    var lines = readTextFile(file).split(/\r?\n/);
+    var order = [];
+    var byKey = {};
+    var plan = null;
+    for (var i = 0; i < lines.length; i++) {
+      var line = trim(lines[i]);
+      if (!line.length) {
+        continue;
+      }
+      try {
+        var item = JSON.parse(line);
+        if (item && item.kind === "plan") {
+          plan = item.plan || null;
+        } else if (item && trim(item.key).length) {
+          if (!byKey[item.key]) {
+            order.push(item.key);
+          }
+          byKey[item.key] = item;
+        }
+      } catch (_ignoreRunDetailLine) {}
+    }
+    var events = [];
+    for (var k = Math.max(0, order.length - RUN_DETAIL_MAX_EVENTS); k < order.length; k++) {
+      events.push(byKey[order[k]]);
+    }
+    return { events: events, plan: plan };
+  }
+
   function pushProgressEvent(state, item) {
     if (!state) {
       return null;
@@ -3963,6 +4049,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           existing.completedAt = existing.completedAt || now();
           existing.current = false;
         }
+        appendRunDetail(state, runDetailEvent(existing));
         return existing;
       }
     }
@@ -3981,6 +4068,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       at: now(),
       updatedAt: now()
     });
+    appendRunDetail(state, runDetailEvent(state.progressEvents[state.progressEvents.length - 1]));
     while (state.progressEvents.length > 80) {
       state.progressEvents.shift();
     }
