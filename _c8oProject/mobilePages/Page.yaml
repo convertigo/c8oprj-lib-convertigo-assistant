@@ -13126,6 +13126,12 @@ title: Tigo
             					status = status || "completed";
             					type = "tool";
             				}
+            				if (type === "tool" && /^context compacted/i.test(rawTitle)) {
+            					// A compaction is a landmark of the conversation, not a tool call.
+            					var compactedLabel = page.progressToolWord ? page.progressToolWord("compacted", 1) : "Context compacted";
+            					items.push({ text: compactedLabel, title: compactedLabel, detail: "", status: "completed", type: "compaction", current: false });
+            					continue;
+            				}
             				if (type === "tool") {
             					var title = toolDisplayName(eventItem, rawTitle || text);
             					var groupKey = trimText(eventItem.groupKey || eventItem.toolName || title).toLowerCase();
@@ -17919,4 +17925,10 @@ title: Tigo
           }
           :host-context(.force-dark) .agent-worklog-tool-summary.is-failed > span,
           :host-context(.force-dark) .agent-worklog-call-summary.is-failed > span { color: #f87171; }
+          /* A context compaction is a landmark across the work log, not a tool row. */
+          .agent-worklog-step-compaction { align-items: center; display: flex; gap: 10px; margin: 12px 0; }
+          .agent-worklog-step-compaction::before,
+          .agent-worklog-step-compaction::after { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 40%, transparent 60%); content: ''''; flex: 1 1 auto; height: 1px; }
+          .agent-worklog-step-compaction lib_convertigoassistant-mdreader { flex: 0 0 auto; width: auto !important; }
+          :host ::ng-deep .agent-worklog-step-compaction markdown p { color: color-mix(in srgb, var(--modern-muted, #94a3b8) 90%, var(--modern-text, #0f172a) 10%); font-size: 12px; letter-spacing: 0.02em; line-height: 18px; white-space: nowrap; }
           '
