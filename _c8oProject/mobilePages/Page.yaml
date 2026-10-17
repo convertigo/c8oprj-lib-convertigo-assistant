@@ -1090,6 +1090,7 @@ scriptContent:
         			this.local.AgentSettingsRefreshRunning = true;
         			if (forceFullSettings === true || noCode) {
         				this.local.AgentRuntimeLoading = true;
+        				this.local.AgentRuntimeOperation = '''';
         				this.local.AgentRuntimeError = '''';
         			}
         			var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
@@ -1299,6 +1300,7 @@ scriptContent:
         		this.local.ShowConversationPanel = false;
         		this.local.ShowAgentConfigPanel = true;
         		this.local.AgentRuntimeLoading = true;
+        		this.local.AgentRuntimeOperation = '''';
         		this.local.AgentRuntimeError = '''';
         		this.setAgentSettingsUrlState(true);
         		if (this.setEnableChat) { this.setEnableChat(); }
@@ -7422,7 +7424,7 @@ title: Tigo
                             textValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeLoading === true) ? (this.local.AgentAuthenticationRequired === true ? this.t(''Agent_Runtime_Signing_In'', ''Connexion en cours...'') : this.t(''Agent_Runtime_Updating'', ''Mise à jour en cours...'')) : ((this.local && this.local.AgentRuntimeActionText) ? this.local.AgentRuntimeActionText : this.t(''Agent_Runtime_Install_Update'', ''Installer ou mettre à jour''))'
+                                - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntimeLoading === true) ? (this.local.AgentAuthenticationRequired === true ? this.t(''Agent_Runtime_Signing_In'', ''Connexion en cours...'') : (this.local.AgentRuntimeOperation === ''update'' ? this.t(''Agent_Runtime_Updating'', ''Mise à jour en cours...'') : this.t(''Agent_Runtime_Checking'', ''Vérification de l’environnement...''))) : ((this.local && this.local.AgentRuntimeActionText) ? this.local.AgentRuntimeActionText : this.t(''Agent_Runtime_Install_Update'', ''Installer ou mettre à jour''))'
                           ↓Event [ngx.components.UIControlEvent-1785253202555]: 
                             ↓InstallOrUpdateRuntime [ngx.components.UICustomAction-1785253204061]: 
                               actionValue: 
@@ -7595,6 +7597,7 @@ title: Tigo
                                               if (provider === ''claude'') { payload.forceClaudeInstall = true; }
                                               page.local.AgentProviderSelectionPending = true;
                                               page.local.AgentRuntimeLoading = true;
+                                              page.local.AgentRuntimeOperation = ''update'';
                                               page.local.AgentRuntimeError = '''';
                                               page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Runtime_Updating_Codex'', ''Mise à jour de Codex en cours...'') : (provider === ''claude'' ? tr(''Agent_Runtime_Updating_Claude'', ''Mise à jour de Claude Code en cours...'') : (provider === ''convertigo'' ? tr(''Agent_Runtime_Updating_Convertigo'', ''Préparation de l\''agent Convertigo...'') : tr(''Agent_Runtime_Updating_Vibe'', ''Mise à jour de Vibe en cours...'')));
                                               page.tick();
