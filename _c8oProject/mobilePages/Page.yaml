@@ -13089,7 +13089,13 @@ title: Tigo
             				}
             			}
             			if (writing === true) {
+            				statusLine = "";
             				for (var j = 0; j < items.length; j++) {
+            					if (items[j].current === true && items[j].type !== "tool" && j < items.length - 1) {
+            						// The bridge can leave its first activity line "running" for the whole turn: later steps show it is over.
+            						items[j].current = false;
+            						items[j].status = "completed";
+            					}
             					if (items[j].current === true) {
             						statusLine = items[j].text || items[j].title;
             					}
@@ -13211,6 +13217,11 @@ title: Tigo
             			page.local.AgentProgressStartedAt = progressNow;
             		}
             		page.local.AgentProgressStartedAtRunId = progressRunKey;
+            		// A run id starts with the run start time: a reloaded page shows the real duration, not the time since the reload.
+            		var runStartedAt = /^(\d{13})-/.exec(progressRunKey);
+            		if (runStartedAt && Number(runStartedAt[1]) < Number(page.local.AgentProgressStartedAt) && Number(runStartedAt[1]) > progressNow - 2 * 86400000) {
+            			page.local.AgentProgressStartedAt = Number(runStartedAt[1]);
+            		}
             		var progressElapsedLabel = function(done) {
             			var end = done && page.local.AgentProgressFinishedAt ? Number(page.local.AgentProgressFinishedAt) : (new Date()).getTime();
             			return formatDuration(end - Number(page.local.AgentProgressStartedAt || end));
@@ -13280,6 +13291,10 @@ title: Tigo
             			active.target.writing = true;
             			active.target.type = "worklog";
             			active.target.progressStartedAt = page.local.AgentProgressStartedAt;
+            			var runStartDate = new Date(Number(page.local.AgentProgressStartedAt));
+            			if (!isNaN(runStartDate.getTime())) {
+            				active.target.time = ("0" + runStartDate.getHours()).slice(-2) + ":" + ("0" + runStartDate.getMinutes()).slice(-2);
+            			}
             			active.target.progressTitle = progressTitle(false);
             			active.target.progressCollapsed = true;
             			active.target.id = runid != null ? runid : active.target.id;
@@ -17658,4 +17673,13 @@ title: Tigo
           :host-context(html:not(.force-light)) ion-header.modern-header ion-button.toolbar-reveal-button { --background: rgba(15, 23, 42, 0.88); --background-activated: rgba(14, 165, 233, 0.28); --background-hover: rgba(14, 165, 233, 0.2); --border-color: rgba(148, 163, 184, 0.28); --color: #cbd5e1; color: #cbd5e1; }
           :host-context(html:not(.force-light)) ion-header.modern-header ion-button.toolbar-reveal-button.active { --background: rgba(14, 165, 233, 0.22); --border-color: rgba(56, 189, 248, 0.48); --color: #e0f2fe; color: #e0f2fe; }
           }
+          /* While the agent works, the run header stays visible at the top with a live dot and the real duration. */
+          .agent-worklog[open] > .agent-worklog-header.is-current { align-self: stretch; background: var(--modern-bg, #f8fafc); box-shadow: 0 1px 0 color-mix(in srgb, var(--modern-muted, #94a3b8) 28%, transparent 72%); margin: 0 -8px 0 -18px; padding: 7px 8px 7px 18px; position: sticky; top: 0; z-index: 6; }
+          .agent-worklog-header.is-current .agent-worklog-title { animation: none; color: var(--modern-text, #0f172a); font-weight: 600; order: 2; }
+          .agent-worklog-header.is-current::after { animation: tigo-live-dot 1.2s ease-in-out infinite; background: var(--modern-cyan, #06b6d4); border-radius: 50%; content: ''''; flex: 0 0 8px; height: 8px; order: 1; width: 8px; }
+          .agent-worklog-step-activity.is-current { animation: none; align-items: center; display: flex; gap: 8px; margin-top: 8px; }
+          .agent-worklog-step-activity.is-current::before { animation: tigo-live-dot 1.2s ease-in-out infinite; background: var(--modern-cyan, #06b6d4); border-radius: 50%; content: ''''; flex: 0 0 7px; height: 7px; width: 7px; }
+          :host ::ng-deep .agent-worklog-step-activity.is-current markdown p { color: var(--modern-text, #0f172a); font-size: 14px; font-style: italic; }
+          @keyframes tigo-live-dot { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+          @media (prefers-reduced-motion: reduce) { .agent-worklog-header.is-current::after, .agent-worklog-step-activity.is-current::before { animation: none; } }
           '
