@@ -12977,6 +12977,10 @@ title: Tigo
             						groupKey = title.toLowerCase();
             					}
             					var group = seen["tool:" + groupKey];
+            					if (group && items[items.length - 1] !== group) {
+            						// Only consecutive calls share a row: a later call must not be hidden in an earlier one.
+            						group = null;
+            					}
             					if (!group) {
             						group = {
             							text: localizeProgress(eventItem.text || "I am using a Convertigo tool."),
