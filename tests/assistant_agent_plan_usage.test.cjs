@@ -46,6 +46,11 @@ test('cached tokens come from the Vibe journal and stay unknown without it', () 
   assert.equal(state.usage.cachedTokens, 2700);
   assert.equal(state.usage.inputTokens, 4000);
   assert.equal(state.usage.cacheRate, 0.675);
+  s.rememberAgentUsage(state, { journalUsage: { cachedTokens: 2700, inputTokens: 4000, costAmount: 20.39, costCurrency: 'USD' }, update: { used: 10, cost: { amount: 29.7, currency: 'USD' } } });
+  assert.equal(state.usage.costAmount, 20.39, 'the journal cost replaces the Vibe cost that ignores the cache');
+  assert.equal(state.usage.costSource, 'journal');
+  s.rememberAgentUsage(state, { update: { used: 10, cost: { amount: 1.5, currency: 'USD' } } });
+  assert.equal(state.usage.costSource, 'vibe');
 });
 
 test('slash commands are recognised from the commands Vibe advertised', () => {

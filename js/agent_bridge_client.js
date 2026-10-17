@@ -3842,8 +3842,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       size: number(update.size),
       threshold: number(data && data.autoCompactThreshold),
       window: number(data && data.contextWindow),
-      costAmount: update.cost ? number(update.cost.amount) : null,
-      costCurrency: update.cost && update.cost.currency ? String(update.cost.currency) : "",
+      // Vibe's own cost ignores the cache; the Bridge values the journal totals at the model prices.
+      costAmount: journal && number(journal.costAmount) !== null ? number(journal.costAmount) : (update.cost ? number(update.cost.amount) : null),
+      costCurrency: journal && number(journal.costAmount) !== null ? String(journal.costCurrency || "USD") : (update.cost && update.cost.currency ? String(update.cost.currency) : ""),
+      costSource: journal && number(journal.costAmount) !== null ? "journal" : (update.cost ? "vibe" : ""),
       steps: number(meta.steps),
       promptTokens: number(meta.promptTokens),
       completionTokens: number(meta.completionTokens),
