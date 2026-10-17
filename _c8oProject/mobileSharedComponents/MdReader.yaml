@@ -318,3 +318,17 @@
           }
           }
           '
+↓TigoCodeBlockStyle [ngx.components.UIStyle-1792265584692]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Prism''s coy theme draws a curled-paper shadow under every code block with rotated ::before/::after boxes. Inside the
+             Assistant''s bounded, scrolling blocks (tool arguments and outputs) they overflowed as curves at the bottom: removed. */
+          :host ::ng-deep markdown pre[class*="language-"]::before,
+          :host ::ng-deep markdown pre[class*="language-"]::after,
+          :host ::ng-deep markdown pre::before,
+          :host ::ng-deep markdown pre::after { box-shadow: none !important; content: none !important; display: none !important; }
+          :host ::ng-deep markdown pre[class*="language-"] { box-shadow: none !important; }
+          '
