@@ -3382,7 +3382,8 @@ scriptContent:
         	}
         	public getProjectHeading() {
         		if (this.global && this.global.studio) {
-        			if (this.isEditionMode()) {
+        			// Component edition only: an agent conversation opened by URL has no component to name.
+        			if (this.isEditionMode() && this.global.threadQname) {
         				let compname = this.global.threadQname;
         				try { compname = compname.substring(compname.lastIndexOf(".")+1); } catch (e) {}
                         return "édition de " + compname;
