@@ -952,6 +952,28 @@ scriptContent:
         		this.refreshAssetView();
         	}
         	
+        	@HostListener(''document:keydown.escape'')
+        	onAddMenuEscape() {
+        		if (this[''showAddMenu''] === true) {
+        			this[''showAddMenu''] = false;
+        			this.tick();
+        		}
+        	}
+        	
+        	@HostListener(''document:click'', [''$event''])
+        	onAddMenuOutsideClick(event) {
+        		// Close the add menu when the click lands outside the menu and its toggle button.
+        		if (this[''showAddMenu''] !== true) {
+        			return;
+        		}
+        		var target = event && event.target ? event.target : null;
+        		if (target && target.closest && (target.closest(''.codex-add-panel'') || target.closest(''.codex-prompt-plus''))) {
+        			return;
+        		}
+        		this[''showAddMenu''] = false;
+        		this.tick();
+        	}
+        	
         	@HostListener(''window:dragover'', [''$event''])
         	onDragOver(event) {
         		if (!this.isAssetInputEnabled()) {
