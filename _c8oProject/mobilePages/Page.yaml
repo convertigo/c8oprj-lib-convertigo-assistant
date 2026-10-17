@@ -2561,6 +2561,16 @@ scriptContent:
             }
             return model.length ? model : this.getDefaultAgentModel();
         }
+        public getAgentReasoningLabel() {
+            var effort = "" + (this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : "");
+            var levels = this.local && Array.isArray(this.local.AgentReasoningLevels) ? this.local.AgentReasoningLevels : [];
+            for (var i = 0; i < levels.length; i++) {
+                if (levels[i] && levels[i].id === effort && levels[i].label) {
+                    return "" + levels[i].label;
+                }
+            }
+            return effort;
+        }
         public getAgentModelLabel(model = null, provider = null) {
             var value = model == null ? this.getAgentModel() : this.cleanProjectName(model);
             var options = this.getAgentModelOptions(provider);
@@ -14332,7 +14342,7 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningEffort) ? local.AgentReasoningEffort : '''''
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningEffort) ? this.getAgentReasoningLabel() : '''''
     ↓AgentProviderLabel [ngx.components.UIUseVariable-1789743727415]: 
       varValue: 
         - xmlizable: 
