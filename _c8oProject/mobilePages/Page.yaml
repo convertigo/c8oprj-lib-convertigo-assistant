@@ -14,6 +14,8 @@ scriptContent:
         	public agentHostContextMessageHandler: any = null;
             public agentHostReceiveFromJavaOriginal: any = null;
             public agentHostReceiveFromJavaWrapped: any = false;
+            public chatScrollElement: any = null;
+            public chatScrollIntentBound = false;
         	/*End_c8o_PageDeclaration*/
         /*Begin_c8o_PageConstructor*/
         		//this.c8o.log.debug("[Assistant] navParams: "+ JSON.stringify(this.navParams));
@@ -2918,16 +2920,16 @@ scriptContent:
         					self.local.ShowScrollBottomButton = false;
         					self.local.AutoScrollLockUntil = Date.now() + 1400;
         				}
+        				if (self.bindChatScrollIntent) {
+        					self.bindChatScrollIntent();
+        				}
+        				// Once the user has scrolled away, only the user brings auto-scroll back:
+        				// reaching the bottom, the scroll-to-bottom button or a new message.
         				if (self.local && self.local.AutoScrollEnabled === false) {
-        					if (self.local.ShowScrollBottomButton !== true) {
-        						self.local.AutoScrollEnabled = true;
-        						self.local.AutoScrollLockUntil = Date.now() + 700;
-        					} else {
-        						if (self.refreshScrollButtons) {
-        							self.refreshScrollButtons(20);
-        						}
-        						return;
+        					if (self.refreshScrollButtons) {
+        						self.refreshScrollButtons(20);
         					}
+        					return;
         				}
         				var scrollOnce = function(duration) {
         					try {
@@ -2995,13 +2997,8 @@ scriptContent:
         			var distanceToBottom = scrollHeight > 0 && contentHeight > 0 ? scrollHeight - (scrollTop + contentHeight) : -1;
         			var hasScrollableHistory = this.hasConversationContent ? this.hasConversationContent() : !!(this.local.Messages && this.local.Messages.length);
         			var canScroll = scrollHeight > contentHeight + 4;
-        			var showTop = hasScrollableHistory && canScroll && scrollTop > 120;
         			var showBottom = hasScrollableHistory && canScroll && distanceToBottom > 56;
         			var changed = false;
-        			if (this.local.ShowScrollTopButton !== showTop) {
-        				this.local.ShowScrollTopButton = showTop;
-        				changed = true;
-        			}
         			if (this.local.ShowScrollBottomButton !== showBottom) {
         				this.local.ShowScrollBottomButton = showBottom;
         				changed = true;
@@ -3064,6 +3061,14 @@ scriptContent:
         			if (isNaN(lockUntil)) {
         				lockUntil = 0;
         			}
+        			if (this.bindChatScrollIntent) {
+        				this.bindChatScrollIntent();
+        			}
+        			if ((!(scrollHeight > 0) || !(contentHeight > 0)) && this.chatScrollElement) {
+        				// ionScroll details carry no heights: read them from the scroll element.
+        				scrollHeight = Number(this.chatScrollElement.scrollHeight || 0);
+        				contentHeight = Number(this.chatScrollElement.clientHeight || 0);
+        			}
         			var hasMetrics = scrollHeight > 0 && contentHeight > 0;
         			var distanceToBottom = -1;
         			if (hasMetrics) {
@@ -3072,12 +3077,7 @@ scriptContent:
         				this.refreshScrollButtons(0);
         			}
         			var hasScrollableHistory = this.hasConversationContent ? this.hasConversationContent() : !!(this.local.Messages && this.local.Messages.length);
-        			var showTop = hasScrollableHistory && scrollTop > 120;
         			var changed = false;
-        			if (this.local.ShowScrollTopButton !== showTop) {
-        				this.local.ShowScrollTopButton = showTop;
-        				changed = true;
-        			}
         			if (hasMetrics) {
         				var showBottom = hasScrollableHistory && distanceToBottom > 56;
         				if (this.local.ShowScrollBottomButton !== showBottom) {
@@ -3090,7 +3090,8 @@ scriptContent:
         				this.local.AutoScrollEnabled = false;
         				changed = true;
         			}
-        			if (distanceToBottom >= 0 && distanceToBottom <= 24 && this.local.AutoScrollEnabled === false) {
+        			var sinceUserScrollUp = Date.now() - Number(this.local.UserScrollUpAt || 0);
+        			if (distanceToBottom >= 0 && distanceToBottom <= 24 && this.local.AutoScrollEnabled === false && !isGoingUp && sinceUserScrollUp > 400) {
         				this.local.AutoScrollEnabled = true;
         				this.local.AutoScrollLockUntil = Date.now() + 300;
         				changed = true;
@@ -3100,6 +3101,59 @@ scriptContent:
         				this.tick();
         			}
         		} catch (e) {}
+        	}
+        	bindChatScrollIntent() {
+        		var self = this;
+        		if (self.chatScrollIntentBound || !self.content || !self.content.getScrollElement) {
+        			return;
+        		}
+        		self.chatScrollIntentBound = true;
+        		var bind = function(el) {
+        			if (!el || !el.addEventListener) {
+        				self.chatScrollIntentBound = false;
+        				return;
+        			}
+        			self.chatScrollElement = el;
+        			var stopFollowing = function() {
+        				if (!self.local) {
+        					self.local = {};
+        				}
+        				self.local.UserScrollUpAt = Date.now();
+        				if (self.local.AutoScrollEnabled !== false) {
+        					self.local.AutoScrollEnabled = false;
+        					self.local.AutoScrollLockUntil = 0;
+        					if (self.refreshScrollButtons) {
+        						self.refreshScrollButtons(0);
+        					}
+        				}
+        			};
+        			el.addEventListener(''wheel'', function(event) {
+        				if (event && event.deltaY < 0) {
+        					stopFollowing();
+        				}
+        			}, { passive: true });
+        			el.addEventListener(''touchmove'', function() {
+        				if (el.scrollHeight - el.scrollTop - el.clientHeight > 24) {
+        					stopFollowing();
+        				}
+        			}, { passive: true });
+        			el.addEventListener(''keydown'', function(event) {
+        				var key = event ? event.key : '''';
+        				if (key === ''ArrowUp'' || key === ''PageUp'' || key === ''Home'') {
+        					stopFollowing();
+        				}
+        			});
+        		};
+        		try {
+        			var result = self.content.getScrollElement();
+        			if (result && result.then) {
+        				result.then(bind).catch(function() { self.chatScrollIntentBound = false; });
+        			} else {
+        				bind(result);
+        			}
+        		} catch (e) {
+        			self.chatScrollIntentBound = false;
+        		}
         	}
         	enableAutoScroll() {
         		if (!this.local) {
@@ -11313,57 +11367,6 @@ title: Tigo
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:!(this.local && this.local.spinner === true && this.local.IsProcessing !== true)
-  ↓IfScrollTopButton [ngx.components.UIControlDirective-1781676529458]: 
-    directiveName: If
-    directiveSource: 
-      - xmlizable: 
-        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:this.local && this.local.ShowScrollTopButton === true
-    ↓ScrollTopButton [ngx.components.UIDynamicElement-1781676533574]: 
-      beanData: |
-        '{
-         "ionBean": "Button",
-         "IonColor": "plain:light",
-         "IonShape": "plain:round"
-        }'
-      tagName: ion-button
-      ↓Slot [ngx.components.UIAttribute-1781676533576]: 
-        attrName: slot
-        attrValue: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:fixed
-      ↓Class [ngx.components.UIAttribute-1781676533578]: 
-        attrName: class
-        attrValue: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:modern-scroll-top-btn
-      ↓Aria [ngx.components.UIAttribute-1781676533580]: 
-        attrName: aria-label
-        attrValue: 
-          - xmlizable: 
-            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:Scroll to top
-      ↓Event [ngx.components.UIControlEvent-1781676533582]: 
-        ↓ScrollTop [ngx.components.UICustomAction-1781676535068]: 
-          actionValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-              - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                →: |
-                  		page.scrollChatTop(0, true);
-                  		resolve();
-      ↓Icon [ngx.components.UIDynamicElement-1781676535070]: 
-        beanData: |
-          '{
-           "ionBean": "Icon",
-           "IonColor": "plain:dark",
-           "IconName": "plain:arrow-up-outline",
-           "IonSize": "plain:small",
-           "IconSlot": "plain:icon-only"
-          }'
-        tagName: ion-icon
   ↓IfScrollBottomButton [ngx.components.UIControlDirective-1773900000010]: 
     directiveName: If
     directiveSource: 
@@ -11391,11 +11394,11 @@ title: Tigo
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:modern-scroll-bottom-btn
       ↓Aria [ngx.components.UIAttribute-1773900000013]: 
-        attrName: aria-label
+        attrName: '[attr.aria-label]'
         attrValue: 
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-            - MobileSmartSourceType: plain:Scroll to bottom
+            - MobileSmartSourceType: script:this.t('Agent_Scroll_To_Bottom', 'Revenir en bas')
       ↓Event [ngx.components.UIControlEvent-1773900000014]: 
         ↓EnableAutoScroll [ngx.components.UICustomAction-1773900000015]: 
           actionValue: 
@@ -15071,29 +15074,6 @@ title: Tigo
           .agent-conversation-action[disabled] {
             opacity: 0.55;
           }
-          .modern-scroll-top-btn {
-                      bottom: 86px;
-                      position: absolute;
-                      right: 12px;
-                      z-index: 40;
-                      opacity: 0.72;
-                      --padding-start: 0;
-                      --padding-end: 0;
-                      width: 36px;
-                      height: 36px;
-                      min-height: 36px;
-                    }
-                    .modern-scroll-top-btn::part(native) {
-                      border-radius: 10px;
-                      padding: 7px;
-                    }
-                    .modern-scroll-top-btn ion-icon {
-                      font-size: 19px;
-                    }
-                    .modern-scroll-top-btn:hover,
-                    .modern-scroll-top-btn:focus {
-                      opacity: 0.95;
-                    }
           @media (max-width: 768px) {
             ion-header.modern-header .modern-title-sub.modern-title-sub-project {
               display: block !important;
@@ -15270,36 +15250,32 @@ title: Tigo
             font-size: 13px;
             line-height: 20px;
           }
-          .modern-scroll-top-btn,
+          /* Single "back to latest" control, centered above the composer like chat apps. */
           .modern-scroll-bottom-btn {
+            --box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
             --padding-start: 0 !important;
             --padding-end: 0 !important;
-            bottom: 14px !important;
-            height: 30px !important;
-            min-height: 30px !important;
-            opacity: 0.58;
+            bottom: 12px !important;
+            height: 34px !important;
+            left: 50% !important;
+            min-height: 34px !important;
+            opacity: 0.92;
             position: absolute !important;
-            right: 10px !important;
-            width: 30px !important;
+            right: auto !important;
+            transform: translateX(-50%);
+            width: 34px !important;
             z-index: 32;
           }
-          .modern-scroll-top-btn {
-            bottom: 50px !important;
-          }
-          .modern-scroll-top-btn::part(native),
           .modern-scroll-bottom-btn::part(native) {
-            border-radius: 8px;
-            padding: 5px;
+            border-radius: 999px;
+            padding: 6px;
           }
-          .modern-scroll-top-btn ion-icon,
           .modern-scroll-bottom-btn ion-icon {
-            font-size: 16px !important;
+            font-size: 18px !important;
           }
-          .modern-scroll-top-btn:hover,
           .modern-scroll-bottom-btn:hover,
-          .modern-scroll-top-btn:focus,
           .modern-scroll-bottom-btn:focus {
-            opacity: 0.9;
+            opacity: 1;
           }
           @media (max-width: 640px) {
             .agent-desktop-center {
