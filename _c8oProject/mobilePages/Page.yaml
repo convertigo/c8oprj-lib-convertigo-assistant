@@ -20056,10 +20056,12 @@ title: Tigo
           .agent-side .agent-plan-list, .agent-dock .agent-plan-list { margin: 0; }
           .agent-side .agent-plan-task, .agent-dock .agent-plan-task { font-size: 13.5px; }
           .agent-side .agent-plan-task.is-in_progress::before, .agent-dock .agent-plan-task.is-in_progress::before { animation: tigo-plan-spin 1.6s linear infinite; }
-          .agent-side .agent-context { background: transparent; border-top: 0; margin: 0; padding: 0; position: static; }
+          .agent-side .agent-context { background: color-mix(in srgb, var(--modern-surface, #ffffff) 70%, var(--modern-bg, #f8fafc) 30%); border: 1px solid var(--modern-border, #cbd5e1); border-radius: 12px; margin: 0; padding: 14px 16px; position: static; }
+          .agent-side .agent-context-body { padding: 12px 0 0; }
+          .agent-side .agent-context-instructions { --inner-padding-end: 0; }
           .agent-side .agent-context-summary { flex-wrap: wrap; row-gap: 6px; }
           .agent-side .agent-context-gauge { flex: 1 1 100%; order: 3; }
-          .agent-side .agent-context-numbers { margin-left: auto; }
+          .agent-side .agent-context-numbers { flex: 1 1 100%; white-space: normal; }
           .agent-side .agent-context-rows { grid-template-columns: 1fr; }
           @media (min-width: 1280px) {
             .modern-center.agent-desktop-center:has(.agent-side) { align-items: start; column-gap: 32px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; max-width: min(100%, 1580px); row-gap: 0; }
