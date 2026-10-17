@@ -5,7 +5,7 @@ const { backendParts } = require('./helpers/assistant-source.cjs');
 
 function load() {
   const sandbox = { trim: v => String(v ?? '').trim(), now: () => 42, isVibeHarness: p => p === 'convertigo' || p === 'vibe' };
-  vm.runInNewContext(backendParts(['rememberAgentPlan', 'rememberAgentUsage', 'agentUsageModels', 'rememberAgentCommands', 'agentSlashCommandName']), sandbox);
+  vm.runInNewContext(backendParts(['rememberAgentPlan', 'rememberAgentUsage', 'agentUsageModels', 'agentUsageMetrics', 'rememberAgentCommands', 'agentSlashCommandName']), sandbox);
   return sandbox;
 }
 
@@ -99,4 +99,15 @@ test('a run event saved for the history keeps its call and truncates a long deta
   assert.equal(saved.callId, 'c1');
   assert.equal(saved.completedAt, 9);
   assert.equal(saved.current, undefined, 'a saved event is never running');
+});
+
+test('the session measures of the Bridge are kept in the usage, eight tools at most', () => {
+  const s = load(), state = {};
+  const tools = Array.from({ length: 10 }, (_, i) => ({ name: 'tool' + i, calls: 10 - i, failures: i === 0 ? 1 : 0, durationMs: 1000 }));
+  s.rememberAgentUsage(state, { journalUsage: { cachedTokens: 1, inputTokens: 2, metrics: { activeMs: 60000, wallMs: 90000, requests: 7, toolCalls: 4, toolFailures: 1, tools, sleeps: { count: 1, durationMs: 3000 }, builderWaits: { count: 0, durationMs: 0 }, compactions: null } }, update: { used: 10 } });
+  assert.equal(state.usage.metrics.requests, 7);
+  assert.equal(state.usage.metrics.tools.length, 8);
+  assert.equal(state.usage.metrics.tools[0].failures, 1);
+  assert.equal(state.usage.metrics.sleeps.durationMs, 3000);
+  assert.equal(state.usage.metrics.compactions, null, 'an unknown compaction count is not 0');
 });

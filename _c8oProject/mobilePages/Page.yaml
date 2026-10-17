@@ -3899,8 +3899,47 @@ scriptContent:
         			level: compactRatio >= 0.9 ? "high" : (compactRatio >= 0.7 ? "mid" : "low"),
         			label: this.agentUiText("context") + " " + percent + " %",
         			numbers: this.formatAgentTokens(used) + " / " + this.formatAgentTokens(limit) + " " + tokens + (showThreshold ? " · " + this.agentUiText("usageAutoCompactShort").replace("{value}", this.formatAgentTokens(compactAt)) : "") + (fromHistory ? " · " + this.agentUiText("usageLastKnown") : ""),
-        			rows: rows
+        			rows: rows,
+        			metrics: this.getAgentMetricsView(usage.metrics)
         		};
+        	}
+        	public getAgentMetricsView(metrics) {
+        		// "Session measures", computed by the Bridge from the Vibe journal: active time, requests, tool calls and failures,
+        		// the eight most used tools, builder waits, sleeps and compactions.
+        		if (!metrics) {
+        			return null;
+        		}
+        		var t = (key: any) => this.agentMetricsText(key);
+        		var duration = (ms: any) => ms != null ? this.formatAgentDuration(Number(ms)) : "";
+        		var rows = [];
+        		var add = (label: any, value: any) => {
+        			if (value !== null && value !== undefined && ("" + value).length) {
+        				rows.push({ label: label, value: value });
+        			}
+        		};
+        		add(t("active"), metrics.activeMs != null ? duration(metrics.activeMs) + (metrics.wallMs ? " · " + t("wall").replace("{value}", duration(metrics.wallMs)) : "") : null);
+        		add(t("requests"), metrics.requests != null ? "" + metrics.requests : null);
+        		add(t("toolCalls"), metrics.toolCalls != null ? metrics.toolCalls + (metrics.toolFailures ? " · " + t("failures").replace("{n}", "" + metrics.toolFailures) : "") : null);
+        		add(t("builder"), metrics.builderWaits ? (metrics.builderWaits.count ? metrics.builderWaits.count + " · " + duration(metrics.builderWaits.durationMs) : "0") : null);
+        		add(t("sleeps"), metrics.sleeps ? (metrics.sleeps.count ? metrics.sleeps.count + " · " + duration(metrics.sleeps.durationMs) : "0") : null);
+        		add(t("compactions"), metrics.compactions != null ? "" + metrics.compactions : this.agentUiText("notProvided"));
+        		var tools = [];
+        		var list = metrics.tools || [];
+        		for (var i = 0; i < list.length && i < 8; i++) {
+        			var tool = list[i];
+        			tools.push({ label: ("" + tool.name).replace(/^mcp_Convertigo\./, "Convertigo · ").replace(/^mcp_playwright\./, "Playwright · ").replace(/^file_system\./, ""), value: tool.calls + (tool.failures ? " · " + t("failures").replace("{n}", "" + tool.failures) : "") + (tool.durationMs ? " · " + this.formatToolDuration(tool.durationMs) : "") });
+        		}
+        		return { title: t("title"), toolsTitle: t("tools"), rows: rows, tools: tools };
+        	}
+        	public agentMetricsText(key) {
+        		var texts: any = {
+        			fr: { title: "Mesures de la session", active: "Temps actif", wall: "{value} au total", requests: "Requêtes au modèle", toolCalls: "Appels d''outils", failures: "{n} échecs", builder: "Attente du builder", sleeps: "Pauses (sleep)", compactions: "Compactions", tools: "Outils les plus appelés" },
+        			en: { title: "Session measures", active: "Active time", wall: "{value} overall", requests: "Model requests", toolCalls: "Tool calls", failures: "{n} failures", builder: "Builder waits", sleeps: "Sleeps", compactions: "Compactions", tools: "Most called tools" },
+        			it: { title: "Misure della sessione", active: "Tempo attivo", wall: "{value} in totale", requests: "Richieste al modello", toolCalls: "Chiamate di strumenti", failures: "{n} errori", builder: "Attesa del builder", sleeps: "Pause (sleep)", compactions: "Compattazioni", tools: "Strumenti più chiamati" },
+        			es: { title: "Medidas de la sesión", active: "Tiempo activo", wall: "{value} en total", requests: "Solicitudes al modelo", toolCalls: "Llamadas a herramientas", failures: "{n} errores", builder: "Espera del builder", sleeps: "Pausas (sleep)", compactions: "Compactaciones", tools: "Herramientas más llamadas" }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
         	}
         	public applyAgentConversationState(state) {
         		// A reopened conversation shows its last known context gauge, plan and commands before any new turn.
@@ -13409,6 +13448,155 @@ title: Tigo
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: script:row.value
+            ↓HasMetrics [ngx.components.UIControlDirective-1792266647077]: 
+              directiveName: If
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.local.AgentUsageView.metrics
+              ↓Metrics [ngx.components.UIDynamicElement-1792266648139]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: details
+                ↓Class [ngx.components.UIAttribute-1792266648141]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-metrics
+                ↓MetricsSummary [ngx.components.UIDynamicElement-1792266648143]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: summary
+                  ↓Class [ngx.components.UIAttribute-1792266648145]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-summary
+                  ↓Text [ngx.components.UIText-1792266648147]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.local.AgentUsageView.metrics.title
+                ↓MetricsRows [ngx.components.UIDynamicElement-1792266648149]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792266648151]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-context-rows
+                  ↓MetricRows [ngx.components.UIControlDirective-1792266648153]: 
+                    directiveIndexName: metricIndex
+                    directiveItemName: metric
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.local.AgentUsageView.metrics.rows
+                    ↓Row [ngx.components.UIDynamicElement-1792266648155]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Class [ngx.components.UIAttribute-1792266648157]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-context-row
+                      ↓Key [ngx.components.UIDynamicElement-1792266648159]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: span
+                        ↓Class [ngx.components.UIAttribute-1792266648161]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-key
+                        ↓Text [ngx.components.UIText-1792266648163]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:metric.label
+                      ↓Value [ngx.components.UIDynamicElement-1792266648165]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: span
+                        ↓Class [ngx.components.UIAttribute-1792266648167]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-value
+                        ↓Text [ngx.components.UIText-1792266648169]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:metric.value
+                ↓ToolsTitle [ngx.components.UIDynamicElement-1792266648171]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1792266648173]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-tools-title
+                  ↓Text [ngx.components.UIText-1792266648175]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.local.AgentUsageView.metrics.toolsTitle
+                ↓ToolRows [ngx.components.UIDynamicElement-1792266648177]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792266648179]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-context-rows
+                  ↓MetricTools [ngx.components.UIControlDirective-1792266648181]: 
+                    directiveIndexName: toolIndex
+                    directiveItemName: tool
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.local.AgentUsageView.metrics.tools
+                    ↓Row [ngx.components.UIDynamicElement-1792266648183]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Class [ngx.components.UIAttribute-1792266648185]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-context-row
+                      ↓Key [ngx.components.UIDynamicElement-1792266648187]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: span
+                        ↓Class [ngx.components.UIAttribute-1792266648189]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-key
+                        ↓Text [ngx.components.UIText-1792266648191]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:tool.label
+                      ↓Value [ngx.components.UIDynamicElement-1792266648193]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: span
+                        ↓Class [ngx.components.UIAttribute-1792266648195]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-context-value
+                        ↓Text [ngx.components.UIText-1792266648197]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:tool.value
             ↓CompactTitle [ngx.components.UIDynamicElement-1792250178398]: 
               beanData: '{"ionBean":"Paragraph"}'
               tagName: p
@@ -20571,4 +20759,12 @@ title: Tigo
           .agent-call-question { color: var(--modern-text, #0f172a); font-size: 13px; font-style: italic; }
           .agent-call-description { color: var(--modern-text, #0f172a); font-size: 13px; line-height: 19px; }
           .agent-call-path { color: var(--modern-muted, #94a3b8); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; overflow-wrap: anywhere; }
+          /* "Session measures": a collapsed section of the context panel. */
+          .agent-metrics { border-top: 1px solid var(--modern-border, #cbd5e1); margin: 12px 0 4px; padding-top: 8px; }
+          .agent-metrics-summary { color: var(--modern-text, #0f172a); cursor: pointer; font-size: 13px; font-weight: 600; list-style: none; }
+          .agent-metrics-summary::-webkit-details-marker { display: none; }
+          .agent-metrics-summary::before { content: ''›''; display: inline-block; margin-right: 7px; transition: transform 160ms ease; }
+          .agent-metrics[open] > .agent-metrics-summary::before { transform: rotate(90deg); }
+          .agent-metrics > .agent-context-rows { margin-top: 8px; }
+          .agent-metrics-tools-title { color: var(--modern-muted, #94a3b8); font-size: 12px; margin: 10px 0 0; }
           '

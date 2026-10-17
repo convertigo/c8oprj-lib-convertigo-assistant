@@ -3860,6 +3860,32 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return rows;
   }
 
+  function agentUsageMetrics(metrics, number) {
+    var tools = [];
+    var list = metrics.tools && metrics.tools.length ? metrics.tools : [];
+    for (var i = 0; i < list.length && tools.length < 8; i++) {
+      var tool = list[i] || {};
+      if (trim(tool.name).length) {
+        tools.push({ name: trim(tool.name), calls: number(tool.calls) || 0, failures: number(tool.failures) || 0, durationMs: number(tool.durationMs) || 0 });
+      }
+    }
+    var pair = function (value) {
+      return value && typeof value === "object" ? { count: number(value.count) || 0, durationMs: number(value.durationMs) || 0 } : null;
+    };
+    return {
+      activeMs: number(metrics.activeMs),
+      wallMs: number(metrics.wallMs),
+      requests: number(metrics.requests),
+      toolCalls: number(metrics.toolCalls),
+      toolFailures: number(metrics.toolFailures),
+      tools: tools,
+      sleeps: pair(metrics.sleeps),
+      builderWaits: pair(metrics.builderWaits),
+      compactions: number(metrics.compactions),
+      turnCount: number(metrics.turnCount)
+    };
+  }
+
   function rememberAgentUsage(state, data) {
     var update = (data && data.update) || {};
     var meta = update._meta || update.field_meta || {};
@@ -3894,6 +3920,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       outputTokens: journal ? number(journal.outputTokens) : null,
       model: String(state.model || ""),
       models: agentUsageModels(journal, number),
+      // Session measures computed by the Bridge from the Vibe journal (active time, requests, tools, waits...).
+      metrics: journal && journal.metrics && typeof journal.metrics === "object" ? agentUsageMetrics(journal.metrics, number) : null,
       sessionTokens: journal && journal.sessionTokens ? { inputTokens: number(journal.sessionTokens.inputTokens), cachedTokens: number(journal.sessionTokens.cachedTokens), outputTokens: number(journal.sessionTokens.outputTokens) } : null,
       totalTokens: number(meta.totalTokens),
       tokensPerSecond: number(meta.tokensPerSecond),
