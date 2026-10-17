@@ -1763,11 +1763,11 @@ scriptContent:
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: script:!this.isAttachmentInputEnabled()
         ↓Aria [ngx.components.UIAttribute-1782131786795]: 
-          attrName: aria-label
+          attrName: '[attr.aria-label]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Ajouter des fichiers ou images
+              - MobileSmartSourceType: 'script:this.t(''Agent_Add_Files_Or_Images'', ''Ajouter des fichiers ou images'')'
         ↓Event [ngx.components.UIControlEvent-1782131786797]: 
           attrName: click
           eventName: click
@@ -1859,11 +1859,11 @@ scriptContent:
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: script:!this.isAssetInputEnabled()
         ↓Aria [ngx.components.UIAttribute-1782131788341]: 
-          attrName: aria-label
+          attrName: '[attr.aria-label]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Ajouter une image
+              - MobileSmartSourceType: 'script:this.t(''Agent_Add_Image_Aria'', ''Ajouter une image'')'
         ↓Event [ngx.components.UIControlEvent-1782131788343]: 
           attrName: click
           eventName: click
@@ -2274,11 +2274,11 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:codex-prompt-icon-btn codex-prompt-plus
           ↓Aria [ngx.components.UIAttribute-1782125435774]: 
-            attrName: aria-label
+            attrName: '[attr.aria-label]'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Ajouter un fichier
+                - MobileSmartSourceType: 'script:this.t(''Agent_Add_File'', ''Ajouter un fichier'')'
           ↓Disabled [ngx.components.UIAttribute-1782125435776]: 
             attrName: '[disabled]'
             attrValue: 
@@ -2529,11 +2529,11 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: 'script:(this.hasAgentControls && this.hasAgentControls()) ? ''codex-access-chip'' : ''codex-access-chip ion-hide'''
           ↓Aria [ngx.components.UIAttribute-1782125437304]: 
-            attrName: aria-label
+            attrName: '[attr.aria-label]'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Configurer l'agent actif
+                - MobileSmartSourceType: 'script:this.t(''Agent_Configure_Active'', ''Configurer l\''agent actif'')'
           ↓Shield [ngx.components.UIDynamicElement-1782125437306]: 
             beanData: |
               '{
@@ -2631,11 +2631,11 @@ scriptContent:
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:!(this.AgentModels && this.AgentModels.length > 0)
           ↓Aria [ngx.components.UIAttribute-1782125437322]: 
-            attrName: aria-label
+            attrName: '[attr.aria-label]'
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: plain:Modèle
+                - MobileSmartSourceType: 'script:this.t(''Agent_Model_Label'', ''Modèle'')'
           ↓Interface [ngx.components.UIAttribute-1782125437324]: 
             attrName: '[interface]'
             attrValue: 
@@ -2653,7 +2653,7 @@ scriptContent:
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.AgentModelLabel || this.AgentModel || 'Modèle'
+                - MobileSmartSourceType: 'script:this.AgentModelLabel || this.AgentModel || this.t(''Agent_Model_Label'', ''Modèle'')'
           ↓ChangeEvent [ngx.components.UIControlEvent-1782125437330]: 
             attrName: (ionChange)
             eventName: ionChange
@@ -2705,11 +2705,11 @@ scriptContent:
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:agent-prompt-select agent-prompt-reasoning-select
             ↓Aria [ngx.components.UIAttribute-1782125441552]: 
-              attrName: aria-label
+              attrName: '[attr.aria-label]'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: plain:Raisonnement
+                  - MobileSmartSourceType: 'script:this.t(''Agent_Reasoning_Label'', ''Raisonnement'')'
             ↓Interface [ngx.components.UIAttribute-1782125441554]: 
               attrName: '[interface]'
               attrValue: 
@@ -2727,7 +2727,7 @@ scriptContent:
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:this.AgentReasoningLabel || this.AgentReasoningEffort || 'Raisonnement'
+                  - MobileSmartSourceType: 'script:this.AgentReasoningLabel || this.AgentReasoningEffort || this.t(''Agent_Reasoning_Label'', ''Raisonnement'')'
             ↓ChangeEvent [ngx.components.UIControlEvent-1782125441560]: 
               attrName: (ionChange)
               eventName: ionChange

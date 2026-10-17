@@ -2509,7 +2509,7 @@ scriptContent:
                 });
             }
             if (!hasConfigure) {
-                out.push({ id: "__configure_agent__", label: "Configurer..." });
+                out.push({ id: "__configure_agent__", label: this.t("Agent_Configure_Ellipsis", "Configurer...") });
             }
             return out;
         }
@@ -2661,7 +2661,7 @@ scriptContent:
             parts.push(this.getConversationAgentLabel(conversation));
             var created = this.formatConversationDate(conversation.createdAt);
             if (created.length) {
-                parts.push("créée " + created);
+                parts.push(this.t("Agent_Created_On", "créée {date}").replace("{date}", created));
             }
             return parts.join(" - ");
         }
@@ -5380,7 +5380,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? (''Démarrer maintenant avec '' + ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''')) : ''Sélectionnez le projet à continuer'''
+                      - MobileSmartSourceType: 'script:((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? (this.t(''Agent_Start_With_Project'', ''Démarrer maintenant avec'') + '' '' + ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''')) : this.t(''Agent_Select_Project_To_Continue'', ''Sélectionnez le projet à continuer'')'
               ↓Meta [ngx.components.UIDynamicElement-1782746869528]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -5394,7 +5394,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? ''Le premier message utilisera ce projet comme contexte.'' : ''Choisissez un projet dans Studio pour activer cette option.'''
+                      - MobileSmartSourceType: 'script:((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''') ? this.t(''Agent_Start_With_Project_Meta'', ''Le premier message utilisera ce projet comme contexte.'') : this.t(''Agent_Start_Select_Project_Meta'', ''Choisissez un projet dans Studio pour activer cette option.'')'
             ↓Role [ngx.components.UIAttribute-1782746869534]: 
               attrName: role
               attrValue: 
@@ -5509,7 +5509,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.getC8OformsText ? this.getC8OformsText(''startTitle'') : ''Contexte :'') + '' '' + ((this.getNoCodeContextTargetLabel && this.getNoCodeContextTargetLabel()) || (this.getC8OformsText ? this.getC8OformsText(''chooseContext'') : ''Choisir un contexte''))) : ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationTitle ? this.getAgentActivationTitle() : "Activer l''assistant local") : ''Démarrer maintenant'')'
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.getC8OformsText ? this.getC8OformsText(''startTitle'') : ''Contexte :'') + '' '' + ((this.getNoCodeContextTargetLabel && this.getNoCodeContextTargetLabel()) || (this.getC8OformsText ? this.getC8OformsText(''chooseContext'') : ''Choisir un contexte''))) : ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationTitle ? this.getAgentActivationTitle() : "Activer l''assistant local") : this.t(''Agent_Start_Now'', ''Démarrer maintenant''))'
               ↓Meta [ngx.components.UIDynamicElement-1782746911806]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -5523,7 +5523,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? (this.getNoCodeContextTargetMeta ? this.getNoCodeContextTargetMeta() : '''') : ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationMeta ? this.getAgentActivationMeta() : ''Installe les projets Agent locaux et recharge la vue Assistant.'') : ''Sans projet sélectionné, ou en ignorant le projet sélectionné.'')'
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? (this.getNoCodeContextTargetMeta ? this.getNoCodeContextTargetMeta() : '''') : ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? (this.getAgentActivationMeta ? this.getAgentActivationMeta() : this.t(''Agent_Activation_Meta_Default'', ''Installe les projets Agent locaux et recharge la vue Assistant.'')) : this.t(''Agent_Start_Without_Project_Meta'', ''Sans projet sélectionné, ou en ignorant le projet sélectionné.''))'
             ↓Role [ngx.components.UIAttribute-1782746911812]: 
               attrName: role
               attrValue: 
@@ -5632,7 +5632,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''Ouvrir le menu des assistants'' : ((this.local && this.local.AgentConversationsLoading === true) ? ''Récupération des conversations précédentes'' : ((this.local && this.local.AgentConversations && this.local.AgentConversations.length > 0) ? (''Reprendre une des '' + this.local.AgentConversations.length + '' conversations'') : ''Reprendre une conversation''))'
+                      - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? this.t(''Agent_Open_Assistants_Menu'', ''Ouvrir le menu des assistants'') : ((this.local && this.local.AgentConversationsLoading === true) ? this.t(''Agent_Conversations_Loading'', ''Récupération des conversations précédentes'') : ((this.local && this.local.AgentConversations && this.local.AgentConversations.length > 0) ? (this.local.AgentConversations.length === 1 ? this.t(''Agent_Resume_One_Conversation'', ''Reprendre la conversation précédente'') : this.t(''Agent_Resume_N_Conversations'', ''Reprendre une des {count} conversations'').replace(''{count}'', '''' + this.local.AgentConversations.length)) : this.t(''Agent_Resume_Conversation'', ''Reprendre une conversation'')))'
               ↓Meta [ngx.components.UIDynamicElement-1782748152209]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -5646,7 +5646,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? ''Accédez à How-To, composants et Figma.'' : ((this.local && this.local.AgentConversationsLoading === true) ? ''Lecture de l’historique local en cours.'' : ''Cliquez pour choisir une conversation existante.'')'
+                      - MobileSmartSourceType: 'script:(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? this.t(''Agent_Open_Assistants_Menu_Copy'', ''Accédez à How-To, composants et Figma.'') : ((this.local && this.local.AgentConversationsLoading === true) ? this.t(''Agent_Conversations_Loading_Copy'', ''Lecture de l’historique local en cours.'') : this.t(''Agent_Resume_Conversation_Copy'', ''Cliquez pour choisir une conversation existante.''))'
             ↓Chevron [ngx.components.UIDynamicElement-1782746954600]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:chevron-down-outline"}'
               tagName: ion-icon
@@ -5735,7 +5735,7 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ''Retour à la nouvelle conversation'' : ''Fermer les conversations'''
+                      - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? this.t(''Agent_Back_To_New_Conversation'', ''Retour à la nouvelle conversation'') : this.t(''Agent_Close_Conversations'', ''Fermer les conversations'')'
                 ↓Icon [ngx.components.UIDynamicElement-1785165559197]: 
                   beanData: |
                     '{
@@ -6268,7 +6268,7 @@ title: Tigo
                                   textValue: 
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: plain:Convertigo - Agent intégré
+                                      - MobileSmartSourceType: 'script:this.t(''Agent_Provider_Convertigo_Title'', ''Convertigo - Agent intégré'')'
                               ↓ProviderDescription [ngx.components.UIDynamicElement-1789580000028]: 
                                 beanData: '{"ionBean":"Paragraph"}'
                                 tagName: p
@@ -6952,7 +6952,7 @@ title: Tigo
                               textValue: 
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? ''Activé'' : ''Désactivé'''
+                                  - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? this.t(''Agent_Enabled'', ''Activé'') : this.t(''Agent_Disabled'', ''Désactivé'')'
                       ↓ModelSettings [ngx.components.UIDynamicElement-1787737346772]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -6975,7 +6975,7 @@ title: Tigo
                             textValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:Modèle
+                                - MobileSmartSourceType: 'script:this.t(''Agent_Model_Label'', ''Modèle'')'
                         ↓ModelDescription [ngx.components.UIDynamicElement-1787737406416]: 
                           beanData: '{"ionBean":"Paragraph"}'
                           tagName: p
@@ -7149,11 +7149,10 @@ title: Tigo
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: plain:agent-create-label
                             ↓Text [ngx.components.UIText-1785253274462]: 
-                              i18n: true
                               textValue: 
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: plain:Raisonnement
+                                  - MobileSmartSourceType: 'script:this.t(''Agent_Reasoning_Label'', ''Raisonnement'')'
                           ↓ReasoningDescription [ngx.components.UIDynamicElement-1787737410878]: 
                             beanData: '{"ionBean":"Paragraph"}'
                             tagName: p
@@ -9644,7 +9643,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.hasReadyAgentProvider && this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : '''')) ? ''Mettre à jour l’agent'' : ''Installer / préparer l’agent'''
+                      - MobileSmartSourceType: 'script:(this.hasReadyAgentProvider && this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : '''')) ? this.t(''Agent_Update_Agent'', ''Mettre à jour l’agent'') : this.t(''Agent_Install_Agent'', ''Installer / préparer l’agent'')'
                 ↓Event [ngx.components.UIControlEvent-1781811000105]: 
                   ↓SetupAgent [ngx.components.UICustomAction-1781811000106]: 
                     actionValue: 
@@ -10046,7 +10045,7 @@ title: Tigo
                         textValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsConversationMeta(conversation) : (((conversation && conversation.primaryProject) ? conversation.primaryProject : ((conversation && conversation.projectNames && conversation.projectNames.length) ? conversation.projectNames[0] : ''Sans projet'')) + '' · '' + (this.getAgentProviderLabel ? this.getAgentProviderLabel(conversation && conversation.provider ? conversation.provider : '''') : ((conversation && conversation.provider) ? conversation.provider : ''Agent'')) + ((conversation && conversation.createdAt && this.formatConversationDate) ? ('' · créée '' + this.formatConversationDate(conversation.createdAt)) : '''') + ((conversation && conversation.status && conversation.status !== ''completed'') ? ('' · '' + conversation.status) : ''''))'
+                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsConversationMeta(conversation) : (((conversation && conversation.primaryProject) ? conversation.primaryProject : ((conversation && conversation.projectNames && conversation.projectNames.length) ? conversation.projectNames[0] : this.t(''Agent_No_Project'', ''Sans projet''))) + '' · '' + (this.getAgentProviderLabel ? this.getAgentProviderLabel(conversation && conversation.provider ? conversation.provider : '''') : ((conversation && conversation.provider) ? conversation.provider : ''Agent'')) + ((conversation && conversation.createdAt && this.formatConversationDate) ? ('' · '' + this.t(''Agent_Created_On'', ''créée {date}'').replace(''{date}'', this.formatConversationDate(conversation.createdAt))) : '''') + ((conversation && conversation.status && conversation.status !== ''completed'') ? ('' · '' + conversation.status) : ''''))'
                   ↓Actions [ngx.components.UIDynamicElement-1781608119123]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: div
@@ -10076,7 +10075,7 @@ title: Tigo
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? (this.getFormsHistoryText(''resume'') + '' : '' + (conversation?.title || '''')) : ''Reprendre la conversation'''
+                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? (this.getFormsHistoryText(''resume'') + '' : '' + (conversation?.title || '''')) : this.t(''Agent_Resume_This_Conversation'', ''Reprendre la conversation'')'
                       ↓Icon [ngx.components.UIDynamicElement-1781608119133]: 
                         beanData: |
                           '{
@@ -10089,7 +10088,7 @@ title: Tigo
                         textValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(conversation?.conversationId === this.local.Conversation ? ''active'' : ''resume'') : (conversation?.conversationId === this.local.Conversation ? ''Active'' : ''Reprendre'')'
+                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(conversation?.conversationId === this.local.Conversation ? ''active'' : ''resume'') : (conversation?.conversationId === this.local.Conversation ? this.t(''Agent_Conversation_Active'', ''Active'') : this.t(''Agent_Resume'', ''Reprendre''))'
                       ↓Event [ngx.components.UIControlEvent-1781608119135]: 
                         ↓ResumeConversation [ngx.components.UIDynamicAction-1781608120627]: 
                           beanData: |
@@ -10423,11 +10422,11 @@ title: Tigo
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-action danger agent-hidden'' : ''agent-conversation-action danger'''
                       ↓Aria [ngx.components.UIAttribute-1781608122147]: 
-                        attrName: aria-label
+                        attrName: '[attr.aria-label]'
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: plain:Supprimer la conversation
+                            - MobileSmartSourceType: 'script:this.t(''Agent_Delete_Conversation'', ''Supprimer la conversation'')'
                       ↓Icon [ngx.components.UIDynamicElement-1781608122149]: 
                         beanData: |
                           '{
@@ -10497,11 +10496,11 @@ title: Tigo
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:agent-conversation-action
                       ↓Aria [ngx.components.UIAttribute-1782745322282]: 
-                        attrName: aria-label
+                        attrName: '[attr.aria-label]'
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: plain:Renommer la conversation
+                            - MobileSmartSourceType: 'script:this.t(''Agent_Rename_Conversation'', ''Renommer la conversation'')'
                       ↓Icon [ngx.components.UIDynamicElement-1782745322284]: 
                         beanData: |
                           '{
@@ -10556,7 +10555,7 @@ title: Tigo
                                           input.type = ''text'';
                                           input.className = ''agent-conversation-rename-input'';
                                           input.value = currentTitle;
-                                          input.setAttribute(''aria-label'', ''Renommer la conversation'');
+                                          input.setAttribute(''aria-label'', page.t ? page.t(''Agent_Rename_Conversation'', ''Renommer la conversation'') : ''Renommer la conversation'');
                                           titleNode.parentNode.insertBefore(input, titleNode.nextSibling);
                                           var done = false;
                                           var cleanup = function() {
