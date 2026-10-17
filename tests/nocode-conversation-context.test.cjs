@@ -123,7 +123,7 @@ test('persisted/public context contains resource identity only, and Studio has n
     trim: v => String(v ?? '').trim(), normalizeSkillProfile: s => s.skillProfile || 'studio', normalizeProvider: v => v || 'codex',
     conversationTitleFromText: v => v || '', conversationTitleForRecord: r => r.title || '', conversationSkillProfile: r => r.skillProfile,
     sanitizeCodexHome: () => '', isResidentProvider: () => true, readJsonFile: () => null,
-    now: () => 100, File: function(p) { this.path = p; }, writeJsonFile: (_, r) => { record = r; }, readState: () => null
+    now: () => 100, File: function(p) { this.path = p; }, writeJsonFile: (_, r) => { record = r; }, readState: () => null, agentCommandsFor: s => s.commands || []
   });
   const state = { conversationFile: 'fixture', skillProfile: 'nocode', hostFormContext: { formId: 'A', formName: 'Congés', pageId: 'p', token: 'secret', hostOrigin: 'private', currentUrl: 'private' } };
   ctx.writeConversationRecord(state);

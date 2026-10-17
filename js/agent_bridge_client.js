@@ -3948,6 +3948,42 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       });
     }
     state.commands = commands;
+    if (commands.length) {
+      try {
+        var file = knownCommandsFile(state);
+        if (file !== null) {
+          writeJsonFile(file, { provider: state.provider || "", updatedAt: now(), commands: commands });
+        }
+      } catch (_ignoreKnownCommands) {}
+    }
+  }
+
+  // Vibe announces its commands when its process starts: a conversation that reuses a running process, or has not had a
+  // turn yet, has none. The last list announced is kept per user and provider (agents/<provider>/users/<user>/), and
+  // offered to the "/" menu when a conversation has none.
+  function knownCommandsFile(state) {
+    try {
+      if (!state || !state.conversationFile) {
+        return null;
+      }
+      var userDir = new File(String(state.conversationFile)).getParentFile().getParentFile().getParentFile();
+      return userDir !== null ? new File(userDir, "agent-commands.json") : null;
+    } catch (_ignoreKnownCommandsFile) {
+      return null;
+    }
+  }
+
+  function agentCommandsFor(state) {
+    if (state && state.commands && state.commands.length) {
+      return state.commands;
+    }
+    try {
+      var file = knownCommandsFile(state);
+      var known = file !== null && file.exists() ? readJsonFile(file) : null;
+      return known && known.commands && known.commands.length ? known.commands : [];
+    } catch (_ignoreKnownCommandsRead) {
+      return [];
+    }
   }
 
   // "/compact keep the demo accounts": a slash command of the agent harness, sent as typed.
@@ -5230,7 +5266,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       warnings: state.warnings || [],
       plan: state.plan || null,
       usage: state.usage || null,
-      commands: state.commands || [],
+      commands: agentCommandsFor(state),
       formMutation: state.formMutation || null,
       nocodeContext: savedNoCodeContext(state),
       setupRequired: state.setupRequired === true,
