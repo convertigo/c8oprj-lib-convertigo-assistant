@@ -1695,10 +1695,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     // In the Studio, the engine gives every caller of a sequence one shared context unless its name starts with
     // "studio_", and serializes the requests on it: each read of a viewer waited behind the long-poll of the run pilot,
-    // whatever its session. A context of its own per read, removed at its end, lets the reads wait side by side.
+    // whatever its session. Each viewer gets a context of its own, stable for its HTTP session and the conversation:
+    // a new context per read (removal was not honoured) filled the engine's 1500 contexts in an hour and every request
+    // then failed with HTTP 500.
     if (sequence === "agent_events") {
-      payload.__context = "studio_assistant_events_" + String(java.util.UUID.randomUUID());
-      payload.__removeContext = "true";
+      var eventsKey = String(params && (params.handle || params.threadid) || "") + "|" + callerSessionId();
+      payload.__context = "studio_assistant_events_" + java.lang.Integer.toHexString(new java.lang.String(eventsKey).hashCode());
     }
     var bridgeUrl = trim(options.bridgeBaseUrl) || defaultBridgeUrl(options);
     var headers = {};
