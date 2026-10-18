@@ -11617,6 +11617,12 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: plain:0
+                              ↓__context [ngx.components.UIControlVariable-1792321533113]: 
+                                comment: 'In the Studio, the engine runs every read without a "studio_" context name in one context shared by all browsers and serializes them: a read of a second viewer waited behind the long read of the first. The engine keeps this first __context over the one the SDK appends.'
+                                varValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000)
                           ↓SetConversationProject [ngx.components.UIDynamicAction-1781676328041]: 
                             beanData: |
                               '{
@@ -14968,6 +14974,12 @@ title: Tigo
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                       - MobileSmartSourceType: plain:0
+                ↓__context [ngx.components.UIControlVariable-1792321533343]: 
+                  comment: Own engine context per read in the Studio, see the ResumeConversation read.
+                  varValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000)
         ↓targetProject [ngx.components.UIControlVariable-1781590187587]: 
           varValue: 
             - xmlizable: 
@@ -16711,6 +16723,12 @@ title: Tigo
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
+        ↓__context [ngx.components.UIControlVariable-1792321533573]: 
+          comment: Own engine context per read in the Studio, see the ResumeConversation read.
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000)
       ↓Else_Handler [ngx.components.UIActionElseEvent-1744618173305]: 
         ↓SetLocal [ngx.components.UIDynamicAction-1744618189222]: 
           beanData: |
@@ -17697,6 +17715,12 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
+                        ↓__context [ngx.components.UIControlVariable-1792321533803]: 
+                          comment: Own engine context per read in the Studio, see the ResumeConversation read.
+                          varValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000)
                   ↓SetNewConversationMode [ngx.components.UIDynamicAction-1782134957158]: 
                     beanData: |
                       '{
@@ -18500,6 +18524,12 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
+              ↓__context [ngx.components.UIControlVariable-1792321534033]: 
+                comment: Own engine context per read in the Studio, see the ResumeConversation read.
+                varValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000)
         ↓NormalizeAgentModelsAfterProjectConversation [ngx.components.UICustomAction-1783431350222]: 
           actionValue: 
             - xmlizable: 
