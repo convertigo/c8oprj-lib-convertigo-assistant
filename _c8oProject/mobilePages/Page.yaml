@@ -1301,6 +1301,8 @@ scriptContent:
         		this.local.AgentConfigExplicitOpen = true;
         		this.local.ShowConversationPanel = false;
         		this.local.ShowAgentConfigPanel = true;
+        		// The settings show above the conversation: bring them into view, with their way back to the conversation.
+        		setTimeout(() => { try { var content: any = (this as any).content; if (content && content.scrollToTop) { content.scrollToTop(250); } } catch (e) {} }, 60);
         		this.local.AgentRuntimeLoading = true;
         		this.local.AgentRuntimeOperation = '''';
         		this.local.AgentRuntimeError = '''';
@@ -5553,7 +5555,7 @@ title: Tigo
         beanData: |
           '{
            "ionBean": "Button",
-           "Disabled": "script:this.local && this.local.AgentRuntimeLoading === true",
+           "Disabled": "script:this.local && this.local.AgentRuntimeLoading === true && this.local.ShowAgentConfigPanel !== true",
            "IonFill": "plain:clear"
           }'
         tagName: ion-button
