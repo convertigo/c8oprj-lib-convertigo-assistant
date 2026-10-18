@@ -1602,6 +1602,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (shouldAttachMcpTokenHandle(sequence)) {
       attachMcpTokenHandle(payload, options);
     }
+    // In the Studio, the engine gives every caller of a sequence one shared context unless its name starts with
+    // "studio_", and serializes the requests on it: each read of a viewer waited behind the long-poll of the run pilot,
+    // whatever its session. A context of its own per read, removed at its end, lets the reads wait side by side.
+    if (sequence === "agent_events") {
+      payload.__context = "studio_assistant_events_" + String(java.util.UUID.randomUUID());
+      payload.__removeContext = "true";
+    }
     var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(options), payload, timeoutMs || 70000);
     if (normalizeSkillProfile(options) === "nocode" && response && response.document && response.document.error) {
       throw new Error(trim(response.document.error.message) || "Agent bridge request failed");
