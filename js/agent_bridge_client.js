@@ -1469,10 +1469,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!identity.length) {
         identity = trim(params.userId) + "|" + trim(params.projectId) + "|settings";
       }
+      // Events are long-polled: each reader (browser session) keeps its own Bridge session. Shared, the reads of a second
+      // viewer of a running conversation queued behind the waits of the first one (the run pilot) on the same Bridge
+      // context, up to 30 s each, and the opened conversation seemed frozen until the next agent event.
+      if (slot === "events") {
+        identity += "|" + callerSessionId();
+      }
       var dir = new File(new File(new File(workspaceRoot), "agents"), "assistant-bridge-sessions");
       return new File(dir, hashShort(identity) + "-" + slot + ".cookie");
     } catch (_ignoreBridgeCachePath) {
       return null;
+    }
+  }
+
+  function callerSessionId() {
+    try {
+      var session = context && context.httpSession;
+      return session && session.getId ? String(session.getId()) : "";
+    } catch (_ignoreCallerSession) {
+      return "";
     }
   }
 
