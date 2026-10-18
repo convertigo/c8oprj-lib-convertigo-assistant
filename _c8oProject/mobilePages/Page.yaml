@@ -21540,4 +21540,9 @@ title: Tigo
           .agent-metrics-card .agent-context-rows { grid-template-columns: 1fr; }
           .agent-metrics-copy { background: transparent; border: 1px solid var(--modern-border, #cbd5e1); border-radius: 8px; color: var(--modern-text, #0f172a); cursor: pointer; font: inherit; font-size: 12.5px; margin-top: 10px; padding: 5px 12px; }
           .agent-metrics-copy:hover { border-color: var(--modern-cyan, #06b6d4); }
+          /* Long texts of the side column wrap or shorten inside their card: the column never scrolls sideways. */
+          .agent-side { overflow-x: hidden; }
+          .agent-side-card, .agent-side .agent-context { min-width: 0; overflow-wrap: anywhere; }
+          .agent-now-row > div { flex: 1 1 auto; min-width: 0; }
+          .agent-now-after { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; }
           '
