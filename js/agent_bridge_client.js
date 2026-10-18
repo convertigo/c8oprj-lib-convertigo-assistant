@@ -317,7 +317,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return text;
   }
 
-  function engineConvertigoBaseUrl() {
+  // Engine URL from the engine configuration only, never from request headers.
+  function configuredConvertigoBaseUrl() {
     try {
       var EnginePropertiesManager = Packages.com.twinsoft.convertigo.engine.EnginePropertiesManager;
       var PropertyName = Packages.com.twinsoft.convertigo.engine.EnginePropertiesManager.PropertyName;
@@ -325,11 +326,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (url.length) {
         return url;
       }
-      url = normalizeConvertigoBaseUrl(EnginePropertiesManager.getProperty(PropertyName.APPLICATION_SERVER_CONVERTIGO_ENDPOINT));
-      if (url.length) {
-        return url;
-      }
-    } catch (_ignoreConvertigoUrlProperty) {}
+      return normalizeConvertigoBaseUrl(EnginePropertiesManager.getProperty(PropertyName.APPLICATION_SERVER_CONVERTIGO_ENDPOINT));
+    } catch (_ignoreConvertigoUrlProperty) {
+      return "";
+    }
+  }
+
+  function engineConvertigoBaseUrl() {
+    var configured = configuredConvertigoBaseUrl();
+    if (configured.length) {
+      return configured;
+    }
     try {
       var request = context && context.httpServletRequest ? context.httpServletRequest : null;
       if (request !== null) {
@@ -1545,13 +1552,96 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return cookie;
   }
 
-  function postForm(urlText, params, timeoutMs) {
+  // lib_ConvertigoAgentBridge (js/agent_bridge_access.js) refuses its sequences to anonymous callers and accepts the
+  // Assistant of this engine by this key. Same server store entry and same lock as the Bridge; memory only.
+  var BRIDGE_CALLER_KEY_ENTRY = "lib_ConvertigoAgentBridge.callerKey.v1";
+  var BRIDGE_CALLER_KEY_HEADER = "X-Convertigo-Agent-Bridge-Key";
+  var BRIDGE_JSON_PATH = "/projects/" + DEFAULT_BRIDGE_PROJECT + "/.json";
+
+  function bridgeCallerKey() {
+    var store = sharedStorage();
+    if (store === null) {
+      return "";
+    }
+    var readOrCreate = function () {
+      var key = store.get(BRIDGE_CALLER_KEY_ENTRY);
+      if (key === null || typeof key === "undefined" || !String(key).length) {
+        var bytes = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, 32);
+        new Packages.java.security.SecureRandom().nextBytes(bytes);
+        key = String(Packages.java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes));
+        store.set(BRIDGE_CALLER_KEY_ENTRY, key);
+      }
+      return String(key);
+    };
+    return String(new Packages.org.mozilla.javascript.Synchronizer(readOrCreate, store)());
+  }
+
+  // The Assistant reaches the agents only for its own users: the Studio WEB_ADMIN, or on a server WEB_ADMIN or an
+  // authenticated user (same rule as tigo_resources.js and AgentQuota). Without it, the caller key would turn every
+  // Public Assistant sequence into an anonymous relay to the Bridge.
+  function requireBridgeCaller() {
+    var studio = Engine.isStudioMode();
+    try {
+      if (Engine.authenticatedSessionManager.hasRole(context.httpSession, Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN)) {
+        return;
+      }
+    } catch (_ignoreAdminRole) {}
+    if (!studio) {
+      try {
+        if (trim(context.getAuthenticatedUser()).length) {
+          return;
+        }
+      } catch (_ignoreAuthenticatedUser) {}
+    }
+    // Wording read by the Tigo UI (isStudioSessionAuthFailure renews the Studio session) and by the run drivers.
+    throw new Error("authentication_required: " + (studio ? "A WEB_ADMIN session is required" : "Authenticated Assistant session required"));
+  }
+
+  // Checked first by the entry points that reach the Bridge, before any conversation state is read or written:
+  // a failed Bridge call is recorded in the conversation, so a refused caller must never get that far.
+  function bridgeCallerRefusal() {
+    try {
+      requireBridgeCaller();
+      return null;
+    } catch (e) {
+      return { ok: false, status: "failed", error: { code: "authentication_required", message: String(e && e.message ? e.message : e) } };
+    }
+  }
+
+  // The key goes only to this engine's Bridge: at the configured engine URL, or on a loopback host at the port that
+  // received the request. A bridgeBaseUrl sent by a caller, or a request Host header, never receives it.
+  function isOwnBridgeUrl(urlText) {
+    try {
+      var target = new java.net.URI(trim(urlText));
+      var configured = configuredConvertigoBaseUrl();
+      if (configured.length && String(target.normalize()) === String(new java.net.URI(configured + BRIDGE_JSON_PATH).normalize())) {
+        return true;
+      }
+      var scheme = trim(target.getScheme()).toLowerCase();
+      var host = trim(target.getHost()).toLowerCase();
+      var port = target.getPort() >= 0 ? target.getPort() : (scheme === "https" ? 443 : 80);
+      if (["localhost", "127.0.0.1", "[::1]", "::1"].indexOf(host) < 0 || !/^https?$/.test(scheme)) {
+        return false;
+      }
+      var request = context.httpServletRequest;
+      return port === Number(request.getLocalPort()) && trim(target.getPath()) === trim(request.getContextPath()) + BRIDGE_JSON_PATH;
+    } catch (_ignoreBridgeUrl) {
+      return false;
+    }
+  }
+
+  function postForm(urlText, params, timeoutMs, headers) {
     var conn = new URL(urlText).openConnection();
     conn.setRequestMethod("POST");
     conn.setConnectTimeout(timeoutMs);
     conn.setReadTimeout(timeoutMs);
     conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
     conn.setRequestProperty("Accept", "application/json");
+    for (var header in headers || {}) {
+      if (Object.prototype.hasOwnProperty.call(headers, header)) {
+        conn.setRequestProperty(header, headers[header]);
+      }
+    }
     var sessionSlot = bridgeSessionSlot(params);
     var sessionCookie = bridgeSessionCookie(params, sessionSlot);
     if (sessionCookie.length) {
@@ -1578,6 +1668,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function bridgeCall(options, sequence, params, timeoutMs) {
+    requireBridgeCaller();
     var payload = {
       __connector: "void",
       __sequence: sequence
@@ -1609,7 +1700,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       payload.__context = "studio_assistant_events_" + String(java.util.UUID.randomUUID());
       payload.__removeContext = "true";
     }
-    var response = postForm(trim(options.bridgeBaseUrl) || defaultBridgeUrl(options), payload, timeoutMs || 70000);
+    var bridgeUrl = trim(options.bridgeBaseUrl) || defaultBridgeUrl(options);
+    var headers = {};
+    if (isOwnBridgeUrl(bridgeUrl)) {
+      headers[BRIDGE_CALLER_KEY_HEADER] = bridgeCallerKey();
+    }
+    var response = postForm(bridgeUrl, payload, timeoutMs || 70000, headers);
+    if (response && response.error && /agent_bridge_caller_refused/.test(String(response.error.details || response.error.message || ""))) {
+      throw new Error("agent_bridge_caller_refused: the agent bridge at " + bridgeUrl + " refused the Assistant");
+    }
     if (normalizeSkillProfile(options) === "nocode" && response && response.document && response.document.error) {
       throw new Error(trim(response.document.error.message) || "Agent bridge request failed");
     }
@@ -5976,6 +6075,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   C8O.assistantAgentBridge.createConversation = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = options || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
@@ -6124,6 +6227,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.settings = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = optionsWithRequestFallbacks(options);
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
@@ -6150,6 +6257,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.setupAgent = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = optionsWithRequestFallbacks(options || {});
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
@@ -6741,6 +6852,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.sendMessage = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = optionsWithRequestFallbacks(options || {});
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
@@ -7182,6 +7297,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.readResponse = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = options || {};
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length && trim(options.runid).length) {
@@ -7473,6 +7592,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.resumeConversation = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = options || {};
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     if (!threadid.length) {
@@ -7525,6 +7648,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.deleteConversation = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = options || {};
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     if (!threadid.length) {
@@ -7698,6 +7825,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.closeConversation = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
     options = options || {};
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length) {

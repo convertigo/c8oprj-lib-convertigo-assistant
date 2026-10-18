@@ -23,6 +23,22 @@ parallel backend path for a local CLI agent managed by the
 - `AgentDeleteConversation`: closes the bridge handle, removes runtime state,
   and deletes the durable conversation folder.
 
+## Bridge access
+
+- lib_ConvertigoAgentBridge refuses its sequences to anonymous callers. `bridgeCall`
+  sends the engine caller key (`X-Convertigo-Agent-Bridge-Key`, read or created in
+  `context.server` under `lib_ConvertigoAgentBridge.callerKey.v1`) only to this
+  engine's Bridge: the configured engine URL, or a loopback URL on the port that
+  received the request. A caller-chosen `bridgeBaseUrl` never receives it.
+- The Assistant relays to the Bridge only for its own users: in the Studio a WEB_ADMIN
+  session, on a server WEB_ADMIN or an authenticated user (same rule as
+  `tigo_resources.js` and `AgentQuota`). The entry points that reach the Bridge
+  (create, settings, setup, send, read, resume, delete, close) refuse first with
+  `authentication_required`, before reading or writing a conversation, and
+  `bridgeCall` checks again.
+- The Studio message "A WEB_ADMIN session is required" is the one the Tigo UI renews
+  its Studio session on. Covered by `tests/bridge_caller.test.cjs`.
+
 ## Current defaults
 
 - Bridge endpoint: `http://localhost:18082/convertigo/projects/lib_ConvertigoAgentBridge/.json`

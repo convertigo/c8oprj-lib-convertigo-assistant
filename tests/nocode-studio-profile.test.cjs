@@ -20,6 +20,7 @@ function fixture(record = null) {
     noCodeMcpUserId: () => assert.fail('Studio must not request a Forms identity or token'),
     sharedSecretGet: () => 'test-secret',
     postForm: (...args) => { calls.push(args); return { result: { ok: true } }; },
+    requireBridgeCaller() {}, isOwnBridgeUrl: () => false,
     resolveWorkspaceRoot: () => '/test-workspace', normalizeUserKey: trim,
     normalizeConversationId: trim, makeConversationId: () => 'new',
     normalizeProvider: trim, readConversationRecord: () => record,

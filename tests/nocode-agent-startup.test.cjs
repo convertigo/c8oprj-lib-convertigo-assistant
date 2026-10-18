@@ -171,7 +171,8 @@ test('NoCode uses the deployed bridge library and surfaces engine errors; Studio
     engineConvertigoBaseUrl: () => 'https://engine/convertigo/',
     trim: value => String(value ?? '').trim(),
     flowCapabilityAvailable: () => false,
-    postForm: (...args) => { calls.push(args); return response; }
+    postForm: (...args) => { calls.push(args); return response; },
+    requireBridgeCaller() {}, isOwnBridgeUrl: () => false
   };
   vm.runInNewContext(snippets, context);
   assert.equal(context.defaultBridgeUrl({ userId: 'forms-user', skillProfile: 'nocode' }), 'https://engine/convertigo/projects/lib_ConvertigoAgentBridge/.json');
