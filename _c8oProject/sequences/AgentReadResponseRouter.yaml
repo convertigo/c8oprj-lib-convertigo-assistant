@@ -56,7 +56,9 @@ responseTimeout: 120
       projectArray[0] = ''lib_ConvertigoAssistant'';
       params.put(''__project'', projectArray);
       params.put(''__sequence'', sequenceName);
-      params.put(''__context'', ''agent_router_'' + sequenceName + ''_'' + String(System.currentTimeMillis()));
+      // In the Studio, a context name without the "studio_" prefix is replaced by one context shared by every caller of the
+      // sequence (the run pilot included), and the engine serializes the requests on it: a read waited behind the others.
+      params.put(''__context'', ''studio_agent_router_'' + sequenceName + ''_'' + String(java.util.UUID.randomUUID()));
       for (var key in variables) {
         if (Object.prototype.hasOwnProperty.call(variables, key) && variables[key] !== null && typeof variables[key] !== ''undefined'') {
           params.put(key, String(variables[key]));
