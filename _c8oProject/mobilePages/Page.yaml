@@ -22162,6 +22162,9 @@ title: Tigo
           .agent-dock-drawer .agent-plan-list { display: grid; gap: 4px 24px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
           .agent-dock-drawer .agent-context-rows { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
           .agent-dock-numbers { color: var(--modern-muted, #94a3b8); font-size: 12.5px; margin: 0 0 8px; }
+          /* Narrow panel: the plan and context of the status dock wrap long paths and tool names instead of being cut at its edge. */
+          .agent-dock-drawer { overflow-x: hidden; }
+          .agent-dock-drawer .agent-plan-list, .agent-dock-drawer .agent-plan-task, .agent-dock-drawer .agent-plan-task > *, .agent-dock-drawer .agent-context-row, .agent-dock-drawer .agent-context-value { min-width: 0; overflow-wrap: anywhere; }
           @media (max-width: 520px) { .agent-dock-plan { display: none; } }
           .agent-worklog-step.is-current, .agent-worklog-step-tool.is-current .agent-worklog-tool-summary, .agent-worklog-header.is-current .agent-worklog-title { animation: none; }
           /* In a conversation the page keeps a thin top and bottom margin: no welcome title, no 50 px paddings. */
