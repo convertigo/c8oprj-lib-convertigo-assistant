@@ -2925,7 +2925,8 @@ scriptContent:
         				self[''_chatResizeObserver''].disconnect();
         			}
         			var stickToBottom = function() {
-        				if (!self.local || self.local.AutoScrollEnabled === false || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
+        				// The conversation list grows the start screen (a page of rows, a search): it is read from its top.
+        				if (!self.local || self.local.AutoScrollEnabled === false || self.local.ShowConversationPanel === true || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
         					return;
         				}
         				if (el.scrollHeight - el.scrollTop - el.clientHeight > 1) {
@@ -4349,6 +4350,132 @@ scriptContent:
         		}
         		media.zoom = true;
         		self.zoomedMedia = media;
+        	}
+        	public historyText(key) {
+        		// Texts of the conversation list of the Studio, in the four Assistant languages.
+        		var texts: any = {
+        			fr: { search: "Rechercher par titre, projet ou modèle", all: "Toutes", project: "Projet {name}", count: "{total} conversations", countSome: "{shown} sur {total}", more: "Afficher {n} de plus", none: "Aucune conversation ne correspond à « {query} ».", today: "Aujourd''hui", yesterday: "Hier", running: "en cours", failed: "échec", cancelled: "annulée", rename: "Renommer", remove: "Supprimer" },
+        			en: { search: "Search by title, project or model", all: "All", project: "Project {name}", count: "{total} conversations", countSome: "{shown} of {total}", more: "Show {n} more", none: "No conversation matches “{query}”.", today: "Today", yesterday: "Yesterday", running: "running", failed: "failed", cancelled: "cancelled", rename: "Rename", remove: "Delete" },
+        			it: { search: "Cerca per titolo, progetto o modello", all: "Tutte", project: "Progetto {name}", count: "{total} conversazioni", countSome: "{shown} su {total}", more: "Mostra altre {n}", none: "Nessuna conversazione corrisponde a «{query}».", today: "Oggi", yesterday: "Ieri", running: "in corso", failed: "errore", cancelled: "annullata", rename: "Rinomina", remove: "Elimina" },
+        			es: { search: "Buscar por título, proyecto o modelo", all: "Todas", project: "Proyecto {name}", count: "{total} conversaciones", countSome: "{shown} de {total}", more: "Mostrar {n} más", none: "Ninguna conversación coincide con «{query}».", today: "Hoy", yesterday: "Ayer", running: "en curso", failed: "error", cancelled: "cancelada", rename: "Renombrar", remove: "Eliminar" }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] || texts.en[key] || "";
+        	}
+        	public historyCurrentProject() {
+        		return "" + ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || "");
+        	}
+        	public getHistoryItems() {
+        		// The conversation list of the Studio: latest activity first, narrowed by the search and the project filter, shown
+        		// 30 at a time; the first conversation of each day carries the day label. Cached until the list or a criterion changes.
+        		var self: any = this;
+        		var list = (this.local && this.local.AgentConversations) || [];
+        		var query = ("" + ((this.local && this.local.HistoryQuery) || "")).trim().toLowerCase();
+        		var project = this.local && this.local.HistoryProjectOnly === true ? this.historyCurrentProject() : "";
+        		var limit = Number(this.local && this.local.HistoryLimit) || 30;
+        		var key = [list.length, list.length ? list[0].conversationId + ":" + list[0].updatedAt : "", query, project, limit, this.agentUiLanguage(), this.local && this.local.Conversation].join("|");
+        		if (self.historyCacheList === list && self.historyCacheKey === key) {
+        			return self.historyCache;
+        		}
+        		var when = (c: any) => Number(c && (c.updatedAt || c.createdAt)) || 0;
+        		var matches = list.filter((c: any) => {
+        			if (!c) {
+        				return false;
+        			}
+        			var projects = [c.primaryProject || ""].concat(c.projectNames || []);
+        			if (project.length && projects.indexOf(project) === -1) {
+        				return false;
+        			}
+        			if (!query.length) {
+        				return true;
+        			}
+        			var text = [c.title, c.lastAnswerPreview, projects.join(" "), this.getAgentProviderLabel ? this.getAgentProviderLabel(c.provider || "") : c.provider, c.model].join(" ").toLowerCase();
+        			return text.indexOf(query) !== -1;
+        		}).sort((a: any, b: any) => when(b) - when(a));
+        		var shown = matches.slice(0, limit);
+        		var days: any = {};
+        		var lastDay = "";
+        		for (var i = 0; i < shown.length; i++) {
+        			var day = this.historyDayLabel(when(shown[i]));
+        			if (day !== lastDay) {
+        				days[shown[i].conversationId] = day;
+        				lastDay = day;
+        			}
+        		}
+        		self.historyDays = days;
+        		self.historyMatches = matches.length;
+        		self.historyCacheList = list;
+        		self.historyCacheKey = key;
+        		self.historyCache = shown;
+        		return shown;
+        	}
+        	public historyDayLabel(time) {
+        		if (!time) {
+        			return "";
+        		}
+        		var date = new Date(time);
+        		var start = new Date();
+        		start.setHours(0, 0, 0, 0);
+        		var day = new Date(date.getTime());
+        		day.setHours(0, 0, 0, 0);
+        		var diff = Math.round((start.getTime() - day.getTime()) / 86400000);
+        		if (diff === 0) {
+        			return this.historyText("today");
+        		}
+        		if (diff === 1) {
+        			return this.historyText("yesterday");
+        		}
+        		var options: any = { weekday: "long", day: "numeric", month: "long" };
+        		if (date.getFullYear() !== new Date().getFullYear()) {
+        			options.year = "numeric";
+        		}
+        		try {
+        			return date.toLocaleDateString(this.agentUiLanguage(), options);
+        		} catch (e) {
+        			return date.toDateString();
+        		}
+        	}
+        	public historyDay(conversation) {
+        		var self: any = this;
+        		return conversation && self.historyDays ? (self.historyDays[conversation.conversationId] || "") : "";
+        	}
+        	public historyMeta(conversation) {
+        		// Project (when there is one), agent, model and time of the latest activity: the day is the group label above.
+        		if (!conversation) {
+        			return "";
+        		}
+        		var parts = [];
+        		var project = conversation.primaryProject || (conversation.projectNames && conversation.projectNames.length ? conversation.projectNames[0] : "");
+        		if (project) {
+        			parts.push(project);
+        		}
+        		parts.push(this.getAgentProviderLabel ? this.getAgentProviderLabel(conversation.provider || "") : (conversation.provider || "Agent"));
+        		var model = ("" + (conversation.model || "")).replace(/^.*[/]/, "");
+        		if (model) {
+        			parts.push(model);
+        		}
+        		var time = Number(conversation.updatedAt || conversation.createdAt) || 0;
+        		if (time) {
+        			var date = new Date(time);
+        			parts.push(("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2));
+        		}
+        		return parts.join(" · ");
+        	}
+        	public historyStatus(conversation) {
+        		var status = "" + ((conversation && conversation.status) || "");
+        		return status === "in_progress" || status === "running" || status === "queued" || status === "starting" ? "running" : (status === "failed" || status === "cancelled" ? status : "");
+        	}
+        	public historySummary() {
+        		// "99 conversations", "30 of 99" while pages remain, "22 of 99" for a search or a project filter.
+        		var self: any = this;
+        		var total = ((this.local && this.local.AgentConversations) || []).length;
+        		var shown = this.getHistoryItems().length;
+        		var count = Number(self.historyMatches || 0) < total ? Number(self.historyMatches || 0) : shown;
+        		return count === total ? this.historyText("count").replace("{total}", "" + total) : this.historyText("countSome").replace("{shown}", "" + count).replace("{total}", "" + total);
+        	}
+        	public historyRemaining() {
+        		var self: any = this;
+        		return Math.max(0, Number(self.historyMatches || 0) - this.getHistoryItems().length);
         	}
         	public subagentShots(list) {
         		// The screenshots of a verifier run, as thumbnails of its block: each image is loaded once per page, through
@@ -6969,7 +7096,7 @@ title: Tigo
                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                       →: |
-                                if (!page.local) {
+                        '        if (!page.local) {
                                     page.local = {};
                                 }
                                 if (page.shouldBlockRemoteStudioAgent && page.shouldBlockRemoteStudioAgent()) {
@@ -6991,8 +7118,20 @@ title: Tigo
                                 }
                                 page.local.NewConversationMode = false;
                                 page.local.ShowConversationPanel = !page.local.ShowConversationPanel;
+                                if (page.local.ShowConversationPanel) {
+                                    // The list opens on its first page, with its header (search, filters) in view rather than its oldest rows.
+                                    page.local.HistoryLimit = 30;
+                                    setTimeout(() => {
+                                        try {
+                                            var head = document.querySelector(''.agent-history-tools'') || document.querySelector(''.agent-conversations-panel'');
+                                            if (head) {
+                                                head.scrollIntoView({ block: ''center'' });
+                                            }
+                                        } catch (e) {}
+                                    }, 120);
+                                }
                                 page.tick();
-                                resolve();
+                                resolve();'
           ↓AgentConversationsPanelIf [ngx.components.UIControlDirective-1781608114975]: 
             directiveName: If
             directiveSource: 
@@ -11295,12 +11434,203 @@ title: Tigo
                            "Property": "plain:FormsHistoryCurrentOnly",
                            "Value": "script:true"
                           }'
+              ↓HistoryTools [ngx.components.UIControlDirective-1792416217571]: 
+                comment: 'Header of the conversation list of the Studio: search, project filter and count (C8Oforms keeps FormsHistoryControls).'
+                directiveName: If
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true
+                ↓Tools [ngx.components.UIDynamicElement-1792416218141]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792416218143]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-history-tools
+                  ↓Search [ngx.components.UIDynamicElement-1792416218145]: 
+                    beanData: |
+                      '{
+                       "ionBean": "Input",
+                       "ControlName": "plain:historySearch",
+                       "DoubleBinding": "script:this.local.HistoryQuery",
+                       "ClearInput": "plain:true",
+                       "Debounce": "plain:150",
+                       "Placeholder": "script:this.historyText(''search'')",
+                       "Type": "plain:search"
+                      }'
+                    tagName: ion-input
+                    ↓Aria [ngx.components.UIAttribute-1792416218147]: 
+                      attrName: '[attr.aria-label]'
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.historyText('search')
+                    ↓Class [ngx.components.UIAttribute-1792416218149]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-history-search
+                    ↓SearchChanged [ngx.components.UIControlEvent-1792416530828]: 
+                      attrName: (ionInput)
+                      eventName: ionInput
+                      ↓Refresh [ngx.components.UICustomAction-1792416531274]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                '		// The page renders on demand: show the narrowed list once the model holds the new search.
+                                		setTimeout(() => page.tick(), 0);
+                                		resolve();'
+                  ↓Filters [ngx.components.UIDynamicElement-1792416218151]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: div
+                    ↓Class [ngx.components.UIAttribute-1792416218153]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-history-filters
+                    ↓Role [ngx.components.UIAttribute-1792416218155]: 
+                      attrName: role
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:group
+                    ↓All [ngx.components.UIDynamicElement-1792416218157]: 
+                      beanData: |
+                        '{
+                         "ionBean": "Button",
+                         "IonFill": "plain:clear",
+                         "IonSize": "plain:small"
+                        }'
+                      tagName: ion-button
+                      ↓Class [ngx.components.UIAttribute-1792416218159]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-history-filter
+                      ↓Pressed [ngx.components.UIAttribute-1792416218161]: 
+                        attrName: '[attr.aria-pressed]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.local?.HistoryProjectOnly !== true
+                      ↓Text [ngx.components.UIText-1792416218163]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.historyText('all')
+                      ↓Event [ngx.components.UIControlEvent-1792416218165]: 
+                        ↓FilterAll [ngx.components.UIDynamicAction-1792416218387]: 
+                          beanData: |
+                            '{
+                             "ionBean": "SetLocalAction",
+                             "Property": "plain:HistoryProjectOnly",
+                             "Value": "script:false"
+                            }'
+                    ↓HasProject [ngx.components.UIControlDirective-1792416218389]: 
+                      directiveName: If
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.historyCurrentProject()
+                      ↓Project [ngx.components.UIDynamicElement-1792416218391]: 
+                        beanData: |
+                          '{
+                           "ionBean": "Button",
+                           "IonFill": "plain:clear",
+                           "IonSize": "plain:small"
+                          }'
+                        tagName: ion-button
+                        ↓Class [ngx.components.UIAttribute-1792416218393]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-history-filter
+                        ↓Pressed [ngx.components.UIAttribute-1792416218395]: 
+                          attrName: '[attr.aria-pressed]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.local?.HistoryProjectOnly === true
+                        ↓Text [ngx.components.UIText-1792416218397]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:this.historyText('project').replace('{name}', this.historyCurrentProject())
+                        ↓Event [ngx.components.UIControlEvent-1792416218399]: 
+                          ↓FilterProject [ngx.components.UIDynamicAction-1792416218401]: 
+                            beanData: |
+                              '{
+                               "ionBean": "SetLocalAction",
+                               "Property": "plain:HistoryProjectOnly",
+                               "Value": "script:true"
+                              }'
+                    ↓Count [ngx.components.UIDynamicElement-1792416218403]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: span
+                      ↓Class [ngx.components.UIAttribute-1792416218405]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-history-count
+                      ↓Live [ngx.components.UIAttribute-1792416218407]: 
+                        attrName: aria-live
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:polite
+                      ↓Text [ngx.components.UIText-1792416218409]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.historySummary()
               ↓Conversations [ngx.components.UIControlDirective-1781608119101]: 
                 directiveItemName: conversation
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryItems() : this.local?.AgentConversations'
+                    - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryItems() : this.getHistoryItems()'
+                ↓HistoryDay [ngx.components.UIControlDirective-1792416218979]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.historyDay(conversation)
+                  ↓Day [ngx.components.UIDynamicElement-1792416218981]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: p
+                    ↓Class [ngx.components.UIAttribute-1792416219551]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-history-day
+                    ↓Role [ngx.components.UIAttribute-1792416219553]: 
+                      attrName: role
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:heading
+                    ↓Level [ngx.components.UIAttribute-1792416219555]: 
+                      attrName: aria-level
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:3
+                    ↓Text [ngx.components.UIText-1792416219557]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.historyDay(conversation)
                 ↓Row [ngx.components.UIDynamicElement-1781608119103]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -11333,9 +11663,35 @@ title: Tigo
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:(conversation && conversation.title) ? conversation.title : ((conversation && conversation.lastAnswerPreview) ? ((conversation.lastAnswerPreview.length > 76) ? (conversation.lastAnswerPreview.substring(0, 76) + ''...'') : conversation.lastAnswerPreview) : ((conversation && this.local && conversation.conversationId === this.local.Conversation) ? ''Conversation en cours'' : ''Conversation''))'
+                      ↓Title [ngx.components.UIAttribute-1792416220127]: 
+                        attrName: '[attr.title]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:conversation?.title || ''
                     ↓Meta [ngx.components.UIDynamicElement-1781608119117]: 
                       beanData: '{"ionBean":"Paragraph"}'
                       tagName: p
+                      ↓HistoryStatus [ngx.components.UIControlDirective-1792416220697]: 
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.historyStatus(conversation)
+                        ↓Status [ngx.components.UIDynamicElement-1792416221267]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792416221269]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:'agent-history-status s-' + this.historyStatus(conversation)
+                          ↓Text [ngx.components.UIText-1792416221271]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.historyText(this.historyStatus(conversation))
                       ↓Class [ngx.components.UIAttribute-1781608119119]: 
                         attrName: class
                         attrValue: 
@@ -11346,7 +11702,7 @@ title: Tigo
                         textValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsConversationMeta(conversation) : (((conversation && conversation.primaryProject) ? conversation.primaryProject : ((conversation && conversation.projectNames && conversation.projectNames.length) ? conversation.projectNames[0] : this.t(''Agent_No_Project'', ''Sans projet''))) + '' · '' + (this.getAgentProviderLabel ? this.getAgentProviderLabel(conversation && conversation.provider ? conversation.provider : '''') : ((conversation && conversation.provider) ? conversation.provider : ''Agent'')) + ((conversation && conversation.createdAt && this.formatConversationDate) ? ('' · '' + this.t(''Agent_Created_On'', ''créée {date}'').replace(''{date}'', this.formatConversationDate(conversation.createdAt))) : '''') + ((conversation && conversation.status && conversation.status !== ''completed'') ? ('' · '' + conversation.status) : ''''))'
+                            - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsConversationMeta(conversation) : this.historyMeta(conversation)'
                   ↓Actions [ngx.components.UIDynamicElement-1781608119123]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: div
@@ -11382,7 +11738,7 @@ title: Tigo
                           '{
                            "ionBean": "Icon",
                            "IconName": "plain:return-down-back-outline",
-                           "IconSlot": "script:this.isEmbeddedInC8Oforms() ? ''start'' : ''icon-only''"
+                           "IconSlot": "plain:start"
                           }'
                         tagName: ion-icon
                       ↓Text [ngx.components.UIText-1781676432698]: 
@@ -11752,9 +12108,29 @@ title: Tigo
                            "ionBean": "Icon",
                            "IonColor": "plain:danger",
                            "IconName": "plain:close-outline",
-                           "IconSlot": "plain:icon-only"
+                           "IconSlot": "script:this.isEmbeddedInC8Oforms() ? ''icon-only'' : ''start''"
                           }'
                         tagName: ion-icon
+                      ↓HasLabel [ngx.components.UIControlDirective-1792416221841]: 
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms()
+                        ↓Label [ngx.components.UIDynamicElement-1792416222411]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792416222413]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-history-action-label
+                          ↓Text [ngx.components.UIText-1792416222415]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.historyText('remove')
                       ↓Event [ngx.components.UIControlEvent-1781608122151]: 
                         ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
                           beanData: |
@@ -11825,9 +12201,29 @@ title: Tigo
                           '{
                            "ionBean": "Icon",
                            "IconName": "plain:create-outline",
-                           "IconSlot": "plain:icon-only"
+                           "IconSlot": "script:this.isEmbeddedInC8Oforms() ? ''icon-only'' : ''start''"
                           }'
                         tagName: ion-icon
+                      ↓HasLabel [ngx.components.UIControlDirective-1792416222985]: 
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms()
+                        ↓Label [ngx.components.UIDynamicElement-1792416223555]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1792416223557]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-history-action-label
+                          ↓Text [ngx.components.UIText-1792416223559]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.historyText('rename')
                       ↓Event [ngx.components.UIControlEvent-1782745322286]: 
                         ↓RenameConversation [ngx.components.UICustomAction-1782745323792]: 
                           actionValue: 
@@ -11971,6 +12367,65 @@ title: Tigo
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.provider ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''codex'')'
+              ↓HistoryMore [ngx.components.UIControlDirective-1792416224129]: 
+                directiveName: If
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.historyRemaining() > 0
+                ↓More [ngx.components.UIDynamicElement-1792416224699]: 
+                  beanData: |
+                    '{
+                     "ionBean": "Button",
+                     "IonFill": "plain:clear",
+                     "IonSize": "plain:small"
+                    }'
+                  tagName: ion-button
+                  ↓Class [ngx.components.UIAttribute-1792416224701]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-history-more
+                  ↓Text [ngx.components.UIText-1792416224703]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.historyText('more').replace('{n}', '' + Math.min(30, this.historyRemaining()))
+                  ↓Event [ngx.components.UIControlEvent-1792416224705]: 
+                    ↓ShowMore [ngx.components.UIDynamicAction-1792416224927]: 
+                      beanData: |
+                        '{
+                         "ionBean": "SetLocalAction",
+                         "Property": "plain:HistoryLimit",
+                         "Value": "script:(Number(this.local.HistoryLimit) || 30) + 30"
+                        }'
+              ↓HistoryEmpty [ngx.components.UIControlDirective-1792416225497]: 
+                directiveName: If
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.getHistoryItems().length === 0 && !!this.local?.HistoryQuery
+                ↓Empty [ngx.components.UIDynamicElement-1792416226067]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1792416226069]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-history-empty
+                  ↓Role [ngx.components.UIAttribute-1792416226071]: 
+                    attrName: role
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:status
+                  ↓Text [ngx.components.UIText-1792416226073]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.historyText('none').replace('{query}', '' + this.local.HistoryQuery)
               ↓FormsHistoryEmpty [ngx.components.UIControlDirective-1789464168243]: 
                 directiveName: If
                 directiveSource: 
@@ -21758,4 +22213,52 @@ title: Tigo
           .agent-now-row > .agent-now-text { flex: 1 1 auto; min-width: 0; }
           .agent-now-row > .agent-now-spin { flex: 0 0 22px; }
           .agent-now-after { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; }
+          '
+↓TigoHistoryListStyle [ngx.components.UIStyle-1792416226627]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Conversation list of the Studio: a reading column wider than the start card, a header with search, project filter and
+             count, day groups, two-line titles, a status badge only for unfinished runs, and named actions. */
+          .modern-center.agent-desktop-center:has(.agent-history-tools) { max-width: min(100%, 1040px); }
+          .agent-start-card:has(.agent-history-tools) .agent-conversations-panel { max-height: none; overflow: visible; }
+          .agent-history-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 6px 0 4px; }
+          .agent-history-tools ion-input.agent-history-search { --padding-end: 10px; --padding-start: 12px; background: color-mix(in srgb, var(--modern-surface, #0f172a) 70%, transparent 30%); border: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 30%, transparent 70%); border-radius: 9px; flex: 1 1 320px; font-size: 13px; min-height: 38px; min-width: 0; }
+          .agent-history-tools ion-input.agent-history-search.has-focus { border-color: var(--modern-cyan, #06b6d4); }
+          .agent-history-filters { align-items: center; display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 6px; }
+          .agent-history-filters ion-button.agent-history-filter { --border-color: color-mix(in srgb, var(--modern-muted, #94a3b8) 30%, transparent 70%); --border-radius: 999px; --border-style: solid; --border-width: 1px; --color: var(--modern-muted, #94a3b8); --padding-end: 12px; --padding-start: 12px; font-size: 12px; height: 30px; margin: 0; text-transform: none; }
+          .agent-history-filters ion-button.agent-history-filter[aria-pressed="true"] { --background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 18%, transparent 82%); --border-color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 55%, transparent 45%); --color: var(--modern-text, #e2e8f0); }
+          .agent-history-count { color: var(--modern-muted, #94a3b8); font-size: 12px; margin-left: auto; white-space: nowrap; }
+          .agent-history-day { color: var(--modern-muted, #94a3b8); font-size: 11px; font-weight: 650; letter-spacing: 0.06em; margin: 14px 2px 6px; text-transform: uppercase; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-row { gap: 12px; margin-bottom: 6px; padding: 10px 12px; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-name { -webkit-box-orient: vertical; -webkit-line-clamp: 2; display: -webkit-box; font-size: 13.5px; line-height: 19px; overflow: hidden; white-space: normal; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-meta { margin-top: 3px; }
+          .agent-history-status { border-radius: 999px; display: inline-block; font-size: 11px; font-weight: 600; line-height: 16px; margin-right: 6px; padding: 0 7px; }
+          .agent-history-status.s-running { background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 20%, transparent 80%); color: var(--modern-cyan, #06b6d4); }
+          .agent-history-status.s-failed { background: rgba(239, 68, 68, 0.16); color: #f87171; }
+          .agent-history-status.s-cancelled { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 18%, transparent 82%); color: var(--modern-muted, #94a3b8); }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-actions { flex-wrap: nowrap; gap: 6px; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-action,
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-action.danger { --padding-end: 10px; --padding-start: 9px; font-size: 12px; height: 32px; min-width: 34px; width: auto; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-action.danger { --background: transparent; --border-color: color-mix(in srgb, var(--modern-muted, #94a3b8) 24%, transparent 76%); --color: var(--modern-muted, #94a3b8); }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-action.danger:hover { --background: rgba(239, 68, 68, 0.12); --border-color: rgba(239, 68, 68, 0.45); --color: #f87171; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-action.danger ion-icon { margin-right: 4px; }
+          .agent-history-more { display: block; height: 34px; margin: 10px auto 2px; text-transform: none; }
+          .agent-history-empty { color: var(--modern-muted, #94a3b8); font-size: 13px; margin: 0; padding: 22px 6px; text-align: center; }
+          @media (max-width: 640px) {
+            .agent-start-card:has(.agent-history-tools) .agent-conversation-row { grid-template-columns: minmax(0, 1fr); }
+            .agent-start-card:has(.agent-history-tools) .agent-conversation-actions { flex-wrap: wrap; justify-content: flex-start; }
+          }
+          @media (max-width: 359px) {
+            .agent-history-action-label { display: none; }
+            .agent-history-count { margin-left: 0; width: 100%; }
+            .agent-start-card:has(.agent-history-tools) .agent-conversation-action.danger ion-icon { margin-right: 0; }
+          }
+          /* The panel orders its children with "order" (rows are 2): the day labels go with the rows, the header before them. */
+          .agent-history-tools { order: 1; }
+          .agent-history-day { order: 2; }
+          .agent-history-more, .agent-history-empty { order: 3; }
+          .agent-start-card:has(.agent-history-tools) .agent-conversations-title { display: none; }
           '
