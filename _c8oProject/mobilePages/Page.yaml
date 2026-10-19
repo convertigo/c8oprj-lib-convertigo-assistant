@@ -4333,7 +4333,7 @@ scriptContent:
         	}
         	public historyWorklog(item) {
         		// A past turn of a reopened conversation: its saved events become the same work log as a live turn (narration,
-        		// grouped tool calls, plan), shown collapsed above its answer. Built once per message.
+        		// grouped tool calls, plan), shown open above its answer. Built once per message.
         		if (!item || !item.runEvents || !item.runEvents.length) {
         			return false;
         		}
@@ -11514,7 +11514,10 @@ title: Tigo
                                     					writing: false,
                                     					status: msg.status || '''',
                                     					progressSummary: msg.progressSummary || '''',
-                                    					progressDetails: msg.progressDetails || ''''
+                                    					progressDetails: msg.progressDetails || '''',
+                                    					// The saved events and plan of the turn: its work log stays shown above the answer, as during the turn.
+                                    					runEvents: msg.runEvents || null,
+                                    					runPlan: msg.runPlan || null
                                     				});
                                     			}
                                     		}
@@ -12242,7 +12245,7 @@ title: Tigo
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:item && item.writing === true
+                    - MobileSmartSourceType: script:true
               ↓Flow [ngx.components.UIDynamicElement-1782146116475]: 
                 beanData: '{"ionBean":"DivTag"}'
                 tagName: div
