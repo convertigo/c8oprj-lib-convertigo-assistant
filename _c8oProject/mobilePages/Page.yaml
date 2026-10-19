@@ -11605,7 +11605,7 @@ title: Tigo
                   directiveSource: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.historyDay(conversation)
+                      - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.historyDay(conversation)
                   ↓Day [ngx.components.UIDynamicElement-1792416218981]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: p
