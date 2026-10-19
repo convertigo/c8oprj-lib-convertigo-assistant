@@ -2925,8 +2925,9 @@ scriptContent:
         				self[''_chatResizeObserver''].disconnect();
         			}
         			var stickToBottom = function() {
-        				// The conversation list grows the start screen (a page of rows, a search): it is read from its top.
-        				if (!self.local || self.local.AutoScrollEnabled === false || self.local.ShowConversationPanel === true || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
+        				// The conversation list grows the start screen (a page of rows, a search), and the settings open above the
+        				// conversation (the gear, the "…" after the prompt chips): both are read from their top, not the thread bottom.
+        				if (!self.local || self.local.AutoScrollEnabled === false || self.local.ShowConversationPanel === true || self.local.ShowAgentConfigPanel === true || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
         					return;
         				}
         				if (el.scrollHeight - el.scrollTop - el.clientHeight > 1) {
