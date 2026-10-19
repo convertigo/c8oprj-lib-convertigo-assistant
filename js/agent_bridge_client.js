@@ -2403,11 +2403,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (isTechnicalConversationTitle(text)) {
       return "";
     }
-    if (text.length > 76) {
-      text = text.substring(0, 73).replace(/\s+\S*$/, "") + "...";
+    // Two lines of the conversation list (its 1040 px column) hold about 140 characters; narrower panels clamp the title
+    // and show it whole on hover. Cut on a word, trailing punctuation dropped, with an ellipsis. A title already cut
+    // (an older one ends with "...") is kept as it is.
+    if (text.length > CONVERSATION_TITLE_MAX && !/(\.\.\.|…)$/.test(text)) {
+      var cut = text.substring(0, CONVERSATION_TITLE_MAX);
+      if (/\S/.test(text.charAt(CONVERSATION_TITLE_MAX))) {
+        cut = cut.replace(/\s+\S*$/, "");
+      }
+      text = cut.replace(/[\s,;:.!?…-]+$/, "") + "…";
     }
     return text;
   }
+
+  var CONVERSATION_TITLE_MAX = 140;
 
   function isTechnicalConversationTitle(value) {
     var text = trim(value).toLowerCase();
