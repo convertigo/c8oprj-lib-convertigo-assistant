@@ -3246,6 +3246,85 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreRemoveServerState) {}
   }
 
+  // Readers of one conversation (the page of each viewer, a run pilot) wait for its events side by side, then record
+  // them one at a time, under a lock file of the conversation: two readers ending a turn together wrote its answer twice.
+  function lockConversationRead(state) {
+    var channel = null;
+    try {
+      if (!state || !state.conversationFile) {
+        return null;
+      }
+      var dir = new File(String(state.conversationFile)).getParentFile();
+      if (dir === null || !dir.exists()) {
+        return null;
+      }
+      channel = new java.io.RandomAccessFile(new File(dir, "read.lock"), "rw").getChannel();
+      var deadline = now() + 15000;
+      while (true) {
+        var lock = null;
+        try {
+          lock = channel.tryLock();
+        } catch (_busyInThisEngine) {
+          // Another reader of this engine holds it.
+        }
+        if (lock !== null) {
+          return { channel: channel, lock: lock };
+        }
+        if (now() > deadline) {
+          channel.close();
+          return null;
+        }
+        Thread.sleep(20);
+      }
+    } catch (_ignoreReadLock) {
+      try {
+        if (channel !== null) {
+          channel.close();
+        }
+      } catch (_ignoreReadLockClose) {}
+      return null;
+    }
+  }
+
+  // Another reader ended the turn while this one waited for events: answer with its state, and keep it in this session.
+  function recordedByAnotherReader(state) {
+    var status = String(state && state.status || "");
+    if (status !== "completed" && status !== "failed" && status !== "cancelled" && status !== "closed" && status !== "deleted") {
+      return false;
+    }
+    try {
+      context.httpSession.setAttribute(stateKey(state.threadid), JSON.stringify(state));
+    } catch (_ignoreSessionCopy) {}
+    setStateBuffer(state);
+    return true;
+  }
+
+  function unlockConversationRead(held) {
+    if (!held) {
+      return;
+    }
+    try {
+      held.lock.release();
+    } catch (_ignoreReadUnlock) {}
+    try {
+      held.channel.close();
+    } catch (_ignoreReadUnlockClose) {}
+  }
+
+  // The state another reader saved last: the copy of this HTTP session can be behind it.
+  function latestSavedState(state) {
+    try {
+      var storage = sharedStorage();
+      if (storage !== null && storage.get) {
+        var raw = storage.get(stateKey(state.threadid));
+        if (raw !== null && typeof raw !== "undefined" && trim(raw).length) {
+          return ensureState(sanitizeProgressLog(JSON.parse(String(raw))));
+        }
+      }
+    } catch (_ignoreLatestState) {}
+    return state;
+  }
+
   function sharedStorage() {
     if (typeof server !== "undefined" && server !== null) {
       return server;
@@ -7358,6 +7437,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return responseForState(state);
     }
 
+    var readLock = null;
     try {
       var events = bridgeCall(state, "agent_events", {
         handle: state.handle,
@@ -7365,6 +7445,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         limit: String(intValue(options.limit, 100, 1, 500)),
         waitMs: String(intValue(options.waitMs, DEFAULT_EVENT_WAIT_MS, 0, 30000))
       }, 45000);
+      // The wait above is shared; recording is not: from the latest saved state, skip what another reader recorded.
+      readLock = lockConversationRead(state);
+      state = latestSavedState(state);
+      if (recordedByAnotherReader(state)) {
+        return responseForState(state);
+      }
+      var recordedCursor = Number(state.cursor || 0);
       if (events && events.ok === false) {
         var bridgeStatus = trim(events.status).toLowerCase();
         if (bridgeStatus === "not_found") {
@@ -7391,7 +7478,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         throw new Error(events.error || ("agent_events " + (bridgeStatus || "failed")));
       }
       state.readErrors = 0;
-      var list = events.events || [];
+      var list = [];
+      var fetched = events.events || [];
+      for (var f = 0; f < fetched.length; f++) {
+        if (!fetched[f] || typeof fetched[f].index === "undefined" || Number(fetched[f].index) >= recordedCursor) {
+          list.push(fetched[f]);
+        }
+      }
       for (var i = 0; i < list.length; i++) {
         var event = list[i] || {};
         var type = String(event.type || "");
@@ -7511,7 +7604,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         }
       }
-      state.cursor = typeof events.nextCursor !== "undefined" ? Number(events.nextCursor) : state.cursor;
+      state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
       var bridgeStatus = trim(bridgeState.status).toLowerCase();
@@ -7566,6 +7659,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       setStateBuffer(state);
       return responseForState(state);
     } catch (e) {
+      if (readLock === null) {
+        readLock = lockConversationRead(state);
+        state = latestSavedState(state);
+        if (recordedByAnotherReader(state)) {
+          return responseForState(state);
+        }
+      }
       state.error = String(e);
       if (keepRunAliveAfterBridgeReadFailure(state, lang(state).bridgeReadError)) {
         state.status = "in_progress";
@@ -7578,6 +7678,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       saveState(state);
       setStateBuffer(state);
       return responseForState(state);
+    } finally {
+      unlockConversationRead(readLock);
     }
   };
 
