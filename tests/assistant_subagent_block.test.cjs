@@ -53,7 +53,7 @@ test('a running run shows its latest steps, no report; an unknown cost is left o
 
 test('the client turns the runs of the conversation into subagent events of the turn', () => {
   const sandbox = { trim: v => String(v ?? '').trim(), now: () => 1792269300000 };
-  vm.runInNewContext(backendParts(['subagentProfileLabel', 'subagentEventDetail', 'syncSubagentRuns'], ['SUBAGENT_LABELS']), sandbox);
+  vm.runInNewContext(backendParts(['subagentProfileLabel', 'subagentDurationMs', 'subagentEventDetail', 'syncSubagentRuns'], ['SUBAGENT_LABELS']), sandbox);
   const pushed = [];
   let asked = null;
   sandbox.pushProgressEvent = (state, item) => pushed.push(item);

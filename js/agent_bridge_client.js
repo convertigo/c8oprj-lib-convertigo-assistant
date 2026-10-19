@@ -4367,6 +4367,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     for (var i = 0; i < state.progressEvents.length; i++) {
       var existing = state.progressEvents[i];
       if (existing && existing.key === key) {
+        var savedBefore = JSON.stringify(runDetailEvent(existing));
         if (isOpaqueCallId(title) && existing.title && !isOpaqueCallId(existing.title)) {
           title = existing.title;
         }
@@ -4383,7 +4384,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           existing.completedAt = existing.completedAt || now();
           existing.current = false;
         }
-        appendRunDetail(state, runDetailEvent(existing));
+        // Sub-agent runs are pushed again at every read: save an event again only when it changed (a run history of
+        // 13.9 MB was mostly copies of the same sub-agent blocks).
+        var saved = runDetailEvent(existing);
+        if (JSON.stringify(saved) !== savedBefore) {
+          appendRunDetail(state, saved);
+        }
         return existing;
       }
     }
@@ -4547,6 +4553,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return labels[profile] || profile || "Sub-agent";
   }
 
+  // A run stopped without its output (time budget, killed process) lasted until its last step, not until now.
+  function subagentDurationMs(run) {
+    var reported = Number(run.output && run.output.durationMs) || 0;
+    if (reported > 0) {
+      return reported;
+    }
+    var startedAt = Number(run.startedAt || 0) || now();
+    var last = run.activity && run.activity.length ? Number(run.activity[run.activity.length - 1].at) || 0 : 0;
+    return Math.max(0, (run.status === "running" || !last ? now() : last) - startedAt);
+  }
+
   function subagentEventDetail(run) {
     var report = (run.output && run.output.report) || {};
     var usage = (run.output && run.output.usage) || {};
@@ -4558,7 +4575,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       task: trim(run.task).substring(0, 400),
       status: run.status,
       startedAt: run.startedAt,
-      durationMs: Number(run.output && run.output.durationMs) || Math.max(0, now() - Number(run.startedAt || now())),
+      durationMs: subagentDurationMs(run),
       activity: (run.activity || []).slice(-6).map(function (a) { return trim(a && a.text).substring(0, 140); }),
       verdict: trim(report.verdict),
       summary: trim(report.summary).substring(0, 900),
