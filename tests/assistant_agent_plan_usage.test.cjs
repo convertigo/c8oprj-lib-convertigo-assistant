@@ -93,6 +93,18 @@ test('slash commands are recognised from the commands Vibe advertised', () => {
   assert.equal(s.agentSlashCommandName({ provider: 'vibe' }, '/compact now'), 'compact');
 });
 
+test('a Claude Code local command keeps the last measured usage', () => {
+  const s = load(), state = { provider: 'claude' };
+  s.rememberAgentUsage(state, { update: { used: 39553, size: 1000000, _meta: { promptTokens: 39552, completionTokens: 1 } }, contextWindow: 1000000 });
+  s.rememberAgentUsage(state, { update: { used: 0, size: 1000000, _meta: { promptTokens: 0, completionTokens: 0, cachedTokens: 0 } }, contextWindow: 1000000 });
+  assert.equal(state.usage.used, 39553);
+  assert.equal(state.usage.promptTokens, 39552);
+  const vibe = { provider: 'vibe' };
+  s.rememberAgentUsage(vibe, { update: { used: 100, size: 1000 } });
+  s.rememberAgentUsage(vibe, { update: { used: 0, size: 1000 } });
+  assert.equal(vibe.usage.used, 0);
+});
+
 test('Claude Code commands are sent as typed, from its announced list or its built-in ones', () => {
   const s = load(), state = { provider: 'claude' };
   assert.equal(s.agentSlashCommandName(state, '/context'), 'context');

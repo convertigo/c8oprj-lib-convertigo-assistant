@@ -4116,6 +4116,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     // Vibe's unified harness reports cachedTokens 0 even when its cache serves most of the input: the Bridge reads the
     // real totals from the Vibe journal. Without them the value is unknown (null), never 0.
     var journal = (data && data.journalUsage) || null;
+    // A local command of Claude Code (/context, /cost, /compact) calls no model and reports a usage of zero, which is not
+    // the context of the conversation: keep the last measure.
+    if (state.usage && isClaudeHarness(state.provider) && !number(update.used) && !number(meta.promptTokens) && !number(meta.completionTokens)) {
+      return;
+    }
     var metaCached = number(meta.cachedTokens);
     var journalCached = journal ? number(journal.cachedTokens) : null;
     state.usage = {
@@ -7514,7 +7519,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         } else if (type === "progress/chunk") {
           appendProgressChunk(state, eventText(data));
         } else if (type === "answer/chunk") {
-          if (codexAnswerChunkIsProgress(state, data)) {
+          if (state.slashCommand === "compact" && isClaudeHarness(state.provider)) {
+            // Claude Code ends /compact with the text of the previous result: the answer is the compaction notice.
+          } else if (codexAnswerChunkIsProgress(state, data)) {
             appendProgressChunk(state, eventText(data));
           } else {
             // ACP: each agent message has its own messageId. When a new message starts, the
