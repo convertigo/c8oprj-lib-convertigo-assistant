@@ -4536,7 +4536,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title: title,
       status: status || "running",
       detail: preview,
-      input: toolInputPreview(data),
+      // Claude Code gives the arguments of a call only as the preview of its start event, which its result then
+      // replaces: keep them as the input (the file a Read opened, for its thumbnail).
+      input: toolInputPreview(data) || (type === "tool/start" && trim(data && data.provider) === "claude" && trim(preview).charAt(0) === "{" ? preview : ""),
       provider: state.provider || "",
       callId: toolCallId(data),
       toolName: shellCommand.length ? "exec_command" : toolNameFromData(data),

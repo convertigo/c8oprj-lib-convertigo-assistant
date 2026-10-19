@@ -4600,8 +4600,8 @@ scriptContent:
         		return true;
         	}
         	public toolCallMedia(call) {
-        		// The image an image-describe call analysed (with its question and description) or a Playwright screenshot file,
-        		// shown as a thumbnail in the call row. Parsed once per call; the image is loaded once, through
+        		// The image an image-describe call analysed (with its question and description), a Playwright screenshot file or an
+        		// image file the agent read, shown as a thumbnail in the call row. Parsed once per call; the image is loaded once, through
         		// AgentWorkspaceImage, which only serves images of the Studio workspace.
         		if (!call) {
         			return null;
@@ -4634,8 +4634,18 @@ scriptContent:
         			}
         		} else if (/take_screenshot/.test(name)) {
         			var file = field(input, "filename");
+        			// Claude Code names no file in the call: its result links the screenshot it saved ("[Screenshot of viewport](./home.png)").
+        			var link = /\]\(((?:\.\/)?[^)\s]+\.(?:png|jpe?g|webp))\)/i.exec(detail);
         			if (file.length && /\.(png|jpe?g|webp)$/i.test(file)) {
         				media = { path: file.indexOf("/") === 0 || file.indexOf(".playwright-mcp/") === 0 ? file : ".playwright-mcp/" + file, question: "", description: "" };
+        			} else if (link) {
+        				media = { path: link[1].replace(/^\.\//, ""), question: "", description: "" };
+        			}
+        		} else if (/^(read|read_file|view_image)$/.test(name.replace(/^.*__/, ""))) {
+        			// The agent looking at an image file (a screenshot it took): the call names the file.
+        			var image = field(input, "file_path") || field(input, "path");
+        			if (image.length && /\.(png|jpe?g|webp)$/i.test(image)) {
+        				media = { path: image, question: "", description: "" };
         			}
         		}
         		if (media && call.media && call.media.path === media.path) {
