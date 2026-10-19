@@ -4305,7 +4305,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       text: event.text || "",
       title: event.title || "",
       status: event.status || "",
-      detail: detail.length > RUN_DETAIL_MAX_DETAIL ? detail.substring(0, RUN_DETAIL_MAX_DETAIL) + "\n…" : detail,
+      // A sub-agent detail is the JSON of its block (report, screenshots): kept whole, a cut one cannot be read back.
+      detail: detail.length > RUN_DETAIL_MAX_DETAIL && event.type !== "subagent" ? detail.substring(0, RUN_DETAIL_MAX_DETAIL) + "\n…" : detail,
       input: event.input || "",
       callId: event.callId || "",
       toolName: event.toolName || "",
@@ -4568,7 +4569,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       error: trim(run.output && run.output.error).substring(0, 300),
       stopReason: trim(run.output && run.output.stopReason),
       modelCalls: Number(usage.requests) || 0,
-      cost: cost
+      cost: cost,
+      screenshots: (run.screenshots || []).map(function (shot) { return { name: trim(shot.name).substring(0, 120), path: trim(shot.path) }; })
     });
   }
 
@@ -4649,6 +4651,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           try { if (trim(entries[a]).length) { activity.push(JSON.parse(entries[a])); } } catch (_partialLine) {}
         }
       }
+      // The screenshots a verifier saved in its run folder ("screenshot admin-dashboard" in its activity), newest last:
+      // their paths, relative to the Studio workspace, are what AgentWorkspaceImage serves to the page.
+      var screenshots = [];
+      var files = dir.listFiles();
+      for (var s = 0; files !== null && s < files.length; s++) {
+        var shot = files[s];
+        if (shot.isFile() && /\.(png|jpe?g|webp)$/i.test(String(shot.getName()))) {
+          screenshots.push({ name: String(shot.getName()).replace(/\.[^.]+$/, ""), path: "subagents/" + dir.getName() + "/" + shot.getName(), at: Number(shot.lastModified()) });
+        }
+      }
+      screenshots.sort(function (x, y) { return x.at - y.at; });
       runs.push({
         runId: String(dir.getName()),
         profile: trim(meta.profile),
@@ -4657,7 +4670,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         startedAt: Number(meta.startedAt || 0),
         status: output !== null ? (output.ok === true ? "completed" : "failed") : (alive ? "running" : "failed"),
         output: output,
-        activity: activity
+        activity: activity,
+        screenshots: screenshots.slice(-24)
       });
     }
     runs.sort(function (x, y) { return x.startedAt - y.startedAt; });
@@ -7399,7 +7413,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var details = runid.length ? readRunDetails(state, runid) : null;
     var events = details ? details.events : [];
     for (var i = 0; i < events.length; i++) {
-      if (events[i] && events[i].detail && events[i].detail.length > 2000) {
+      if (events[i] && events[i].type !== "subagent" && events[i].detail && events[i].detail.length > 2000) {
         events[i].detail = events[i].detail.substring(0, 2000) + "\n…";
       }
     }

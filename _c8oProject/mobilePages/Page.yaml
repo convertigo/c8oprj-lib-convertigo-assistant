@@ -4324,12 +4324,65 @@ scriptContent:
         			activity: (info.activity || []).filter((x: any) => !!x),
         			report: verdictText && report ? verdictText + " — " + report : (verdictText || report),
         			failed: status === "failed" || verdict === "failed",
-        			running: status === "running"
+        			running: status === "running",
+        			shots: this.subagentShots(info.screenshots)
         		};
         		step.subagentView = view;
         		step.subagentViewDetail = step.detail;
         		step.subagentViewStatus = step.status;
         		return view;
+        	}
+        	public toggleMediaZoom(media) {
+        		// One thumbnail zoomed at a time in the whole thread (tool calls and sub-agent screenshots): opening one closes
+        		// the one open before.
+        		if (!media) {
+        			return;
+        		}
+        		var self: any = this;
+        		if (media.zoom === true) {
+        			media.zoom = false;
+        			self.zoomedMedia = null;
+        			return;
+        		}
+        		if (self.zoomedMedia && self.zoomedMedia !== media) {
+        			self.zoomedMedia.zoom = false;
+        		}
+        		media.zoom = true;
+        		self.zoomedMedia = media;
+        	}
+        	public subagentShots(list) {
+        		// The screenshots of a verifier run, as thumbnails of its block: each image is loaded once per page, through
+        		// AgentWorkspaceImage (paths relative to the Studio workspace), and keeps its zoom state while the view is rebuilt.
+        		var self: any = this;
+        		var cache = self.subagentShotCache = self.subagentShotCache || {};
+        		var load = (target: any) => {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWorkspaceImage", { path: target.path }).async().then((response: any) => {
+        				var result = response && response.response ? response.response : response;
+        				if (result && result.ok === true && result.data) {
+        					target.src = "data:" + result.mimeType + ";base64," + result.data;
+        					target.state = "ready";
+        				} else {
+        					target.state = "missing";
+        				}
+        				this.tick();
+        			}).catch(() => {
+        				target.state = "missing";
+        				this.tick();
+        			});
+        		};
+        		var shots = [];
+        		for (var i = 0; list && i < list.length; i++) {
+        			var path = "" + (list[i] && list[i].path ? list[i].path : "");
+        			if (!path.length) {
+        				continue;
+        			}
+        			if (!cache[path]) {
+        				cache[path] = { path: path, name: "" + (list[i].name || path), src: "", state: "loading", zoom: false };
+        				load(cache[path]);
+        			}
+        			shots.push(cache[path]);
+        		}
+        		return shots;
         	}
         	public historyWorklog(item) {
         		// A past turn of a reopened conversation: its saved events become the same work log as a live turn (narration,
@@ -12593,8 +12646,7 @@ title: Tigo
                                               - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                                               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                                                 →: |
-                                                  		var media = page.toolCallMedia(props.stack.root.scope.call);
-                                                  		if (media) { media.zoom = media.zoom !== true; }
+                                                  		page.toggleMediaZoom(page.toolCallMedia(props.stack.root.scope.call));
                                                   		resolve();
                                   ↓NoImage [ngx.components.UIControlDirective-1792265892844]: 
                                     directiveName: If
@@ -12824,6 +12876,115 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: script:this.getSubagentView(step).report
+                      ↓HasShots [ngx.components.UIControlDirective-1792414249989]: 
+                        comment: 'The screenshots the verifier saved in its run folder, as thumbnails that zoom on click. Outside the folding body: shown even when the block is closed.'
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.getSubagentView(step).shots.length
+                        ↓Shots [ngx.components.UIDynamicElement-1792414251051]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1792414251053]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-subagent-shots
+                          ↓ShotList [ngx.components.UIControlDirective-1792414251055]: 
+                            directiveIndexName: shotIndex
+                            directiveItemName: shot
+                            directiveSource: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.getSubagentView(step).shots
+                            ↓Shot [ngx.components.UIDynamicElement-1792414251057]: 
+                              beanData: '{"ionBean":"DivTag"}'
+                              tagName: div
+                              ↓Class [ngx.components.UIAttribute-1792414251059]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:''agent-call-media agent-subagent-shot'' + (shot.zoom ? '' is-zoomed'' : '''')'
+                              ↓HasImage [ngx.components.UIControlDirective-1792414251061]: 
+                                directiveName: If
+                                directiveSource: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:shot.src
+                                ↓Thumb [ngx.components.UIDynamicElement-1792414251063]: 
+                                  beanData: '{"ionBean":"DivTag"}'
+                                  selfClose: true
+                                  tagName: img
+                                  ↓Class [ngx.components.UIAttribute-1792414251065]: 
+                                    attrName: class
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: plain:agent-call-thumb
+                                  ↓Src [ngx.components.UIAttribute-1792414251067]: 
+                                    attrName: '[src]'
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:shot.src
+                                  ↓Alt [ngx.components.UIAttribute-1792414251069]: 
+                                    attrName: alt
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:shot.name
+                                  ↓Title [ngx.components.UIAttribute-1792414251071]: 
+                                    attrName: title
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:shot.name
+                                  ↓Event [ngx.components.UIControlEvent-1792414251073]: 
+                                    ↓Zoom [ngx.components.UICustomAction-1792414251519]: 
+                                      actionValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                            →: |
+                                              		page.toggleMediaZoom(props.stack.root.scope.shot);
+                                              		resolve();
+                              ↓NoImage [ngx.components.UIControlDirective-1792414251521]: 
+                                directiveName: If
+                                directiveSource: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:!shot.src
+                                ↓Placeholder [ngx.components.UIDynamicElement-1792414251523]: 
+                                  beanData: '{"ionBean":"DivTag"}'
+                                  tagName: div
+                                  ↓Class [ngx.components.UIAttribute-1792414251525]: 
+                                    attrName: class
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: plain:agent-call-thumb is-placeholder
+                                  ↓Text [ngx.components.UIText-1792414251527]: 
+                                    textValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: 'script:shot.state === ''missing'' ? ''∅'' : ''…'''
+                              ↓Name [ngx.components.UIDynamicElement-1792414251529]: 
+                                beanData: '{"ionBean":"DivTag"}'
+                                tagName: div
+                                ↓Class [ngx.components.UIAttribute-1792414251531]: 
+                                  attrName: class
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: plain:agent-call-path
+                                ↓Text [ngx.components.UIText-1792414251533]: 
+                                  textValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:shot.name
                     ↓IsText [ngx.components.UIControlDirective-1782245574152]: 
                       directiveName: If
                       directiveSource: 
@@ -21569,6 +21730,10 @@ title: Tigo
           .agent-call-question { color: var(--modern-text, #0f172a); font-size: 13px; font-style: italic; }
           .agent-call-description { color: var(--modern-text, #0f172a); font-size: 13px; line-height: 19px; }
           .agent-call-path { color: var(--modern-muted, #94a3b8); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; overflow-wrap: anywhere; }
+          .agent-subagent-shots { display: flex; flex-wrap: wrap; gap: 8px; margin: -2px 0 10px 12px; }
+          .agent-subagent-shots .agent-call-media { flex-direction: column; gap: 4px; margin: 0; max-width: 140px; }
+          .agent-subagent-shots .agent-call-thumb { height: 64px; }
+          .agent-subagent-shots .agent-call-media.is-zoomed { flex: 1 1 100%; max-width: 100%; }
           /* "Session measures": a collapsed section of the context panel. */
           .agent-metrics { border-top: 1px solid var(--modern-border, #cbd5e1); margin: 12px 0 4px; padding-top: 8px; }
           .agent-metrics-summary { color: var(--modern-text, #0f172a); cursor: pointer; font-size: 13px; font-weight: 600; list-style: none; }

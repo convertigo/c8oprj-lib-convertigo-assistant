@@ -6,16 +6,19 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { ts, pageClass, backendParts } = require('./helpers/assistant-source.cjs');
 
-const METHODS = ['getSubagentView', 'subagentProfileLabel', 'agentUiText', 'agentUiLanguage', 'formatAgentNumber', 'formatAgentTokens', 'formatAgentCost', 'formatAgentDuration'];
+const METHODS = ['getSubagentView', 'subagentShots', 'subagentProfileLabel', 'agentUiText', 'agentUiLanguage', 'formatAgentNumber', 'formatAgentTokens', 'formatAgentCost', 'formatAgentDuration'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter((m) => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map((m) => m.name.getText(pageAst)).sort(), [...METHODS].sort());
 const pageSandbox = {};
 vm.runInNewContext(ts.transpileModule('class View { ' + members.map((m) => m.getText(pageAst)).join('\n') + ' }; this.View = View;',
   { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, pageSandbox);
+const imageCalls = [];
 function view(language, step) {
   const page = new pageSandbox.View();
   page.global = { currentLanguage: () => language };
+  page.tick = () => {};
+  page.c8o = { callJsonObject: (name, args) => { imageCalls.push(args.path); return { async: () => Promise.resolve({ ok: true, mimeType: 'image/png', data: 'AAAA' }) }; } };
   return JSON.parse(JSON.stringify(page.getSubagentView(step)));
 }
 
@@ -88,4 +91,14 @@ test('a constructor run lists the objects it created and modified, and what is l
   assert.equal(v.badge, 'Sous-agent · constructeur');
   assert.equal(v.report, 'Terminé — Séquence et page créées, prouvées.\nCréés : VerifyDemo.sq:poste_stats, VerifyDemo.Application.NgxApp.pg:Stats\nReste : Libellés anglais du kit CRUD');
   assert.equal(v.failed, false);
+});
+
+test('a verifier run shows its screenshots, each image asked once', () => {
+  const shots = Object.assign({}, finished, { screenshots: [
+    { name: 'login-page', path: 'subagents/verify-1/login-page.png' }, { name: 'admin-dashboard', path: 'subagents/verify-1/admin-dashboard.png' }] });
+  imageCalls.length = 0;
+  const v = view('fr', { type: 'subagent', status: 'completed', detail: JSON.stringify(shots) });
+  assert.deepEqual(v.shots.map((s) => s.name), ['login-page', 'admin-dashboard']);
+  assert.deepEqual(imageCalls, ['subagents/verify-1/login-page.png', 'subagents/verify-1/admin-dashboard.png']);
+  assert.equal(view('fr', { type: 'subagent', status: 'completed', detail: JSON.stringify(finished) }).shots.length, 0, 'no screenshot, no strip');
 });
