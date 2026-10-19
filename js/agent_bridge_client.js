@@ -3056,6 +3056,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var lines = readTextFile(file).split(/\r?\n/);
     var messages = [];
+    var lastAnswer = "";
     for (var i = 0; i < lines.length; i++) {
       var line = trim(lines[i]);
       if (!line.length) {
@@ -3068,6 +3069,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (!content.length || (role !== "user" && role !== "assistant")) {
           continue;
         }
+        // Two readers ending the same turn at once can both save its answer: show it, and its work log, once.
+        var answerKey = role === "assistant" && item.runid ? String(item.runid) + "\n" + content : "";
+        if (answerKey.length && answerKey === lastAnswer) {
+          continue;
+        }
+        lastAnswer = answerKey;
         if (role === "assistant" && String(item.runid || "") === String(state.runid || "") && state.status === "completed" && answerLooksIncomplete(state, content)) {
           content = incompleteFinalAnswer(state);
         }
