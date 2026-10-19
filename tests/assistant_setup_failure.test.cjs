@@ -27,7 +27,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user') 
     clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null,
     normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {},
     shouldInstallForRun: () => install, shouldShowAgentPreparingProgress: () => false,
-    isResidentProvider: () => false, isVibeHarness: () => true, providerSequence: (p, action) => 'agent_vibe_' + action,
+    isResidentProvider: () => false, isVibeHarness: () => true, isClaudeHarness: () => false, agentCommandsFor: () => [], providerSequence: (p, action) => 'agent_vibe_' + action,
     callAgentSetup: () => { calls.push('setup'); return { result: report, sequence: 'agent_vibe_setup' }; },
     isConvertigoMode: p => p === 'convertigo', providerLabel: v => v,
     lang: () => ({ starting: 'Analyse', setupRequired: 'Configuration requise', setupCanInstall: 'Installer', startFailed: 'Échec' }),

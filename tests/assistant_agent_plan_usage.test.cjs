@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { backendParts } = require('./helpers/assistant-source.cjs');
 
 function load() {
-  const sandbox = { trim: v => String(v ?? '').trim(), now: () => 42, isVibeHarness: p => p === 'convertigo' || p === 'vibe' };
+  const sandbox = { trim: v => String(v ?? '').trim(), now: () => 42, isVibeHarness: p => p === 'convertigo' || p === 'vibe', isClaudeHarness: p => p === 'claude', agentCommandsFor: st => (st && st.commands) || [] };
   vm.runInNewContext(backendParts(['rememberAgentPlan', 'rememberAgentUsage', 'agentUsageModels', 'agentUsageMetrics', 'rememberAgentCommands', 'agentSlashCommandName']), sandbox);
   return sandbox;
 }
@@ -91,6 +91,19 @@ test('slash commands are recognised from the commands Vibe advertised', () => {
   assert.equal(s.agentSlashCommandName(state, 'compact /compact'), '');
   assert.equal(s.agentSlashCommandName({ provider: 'codex', commands: state.commands }, '/compact'), '');
   assert.equal(s.agentSlashCommandName({ provider: 'vibe' }, '/compact now'), 'compact');
+});
+
+test('Claude Code commands are sent as typed, from its announced list or its built-in ones', () => {
+  const s = load(), state = { provider: 'claude' };
+  assert.equal(s.agentSlashCommandName(state, '/context'), 'context');
+  assert.equal(s.agentSlashCommandName(state, '/cost'), 'cost');
+  assert.equal(s.agentSlashCommandName(state, '/compact keep the plan'), 'compact');
+  assert.equal(s.agentSlashCommandName(state, '/help'), '');
+  s.rememberAgentCommands(state, { update: { availableCommands: [
+    { name: 'compact', description: 'Clear history but keep a summary' }, { name: 'convertigo-generalist', description: 'Skill' }] } });
+  assert.equal(s.agentSlashCommandName(state, '/convertigo-generalist build it'), 'convertigo-generalist');
+  assert.equal(s.agentSlashCommandName(state, '/context'), '');
+  assert.equal(s.agentSlashCommandName({ provider: 'claude' }, 'please /context'), '');
 });
 
 test('a run event saved for the history keeps its call and truncates a long detail', () => {

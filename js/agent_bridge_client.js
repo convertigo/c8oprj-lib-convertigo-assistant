@@ -2037,6 +2037,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return providerHarness(provider) === "vibe";
   }
 
+  function isClaudeHarness(provider) {
+    return providerHarness(provider) === "claude";
+  }
+
   function vibeProfileForProvider(provider) {
     return isConvertigoMode(provider) ? "convertigo" : "";
   }
@@ -4199,14 +4203,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
-  // "/compact keep the demo accounts": a slash command of the agent harness, sent as typed.
+  // "/compact keep the demo accounts": a slash command of the agent harness (Vibe, Claude Code), sent as typed.
   function agentSlashCommandName(state, text) {
     var match = /^\/([A-Za-z0-9_-]+)(\s|$)/.exec(trim(text));
-    if (!match || !state || !isVibeHarness(state.provider)) {
+    var claude = !!state && isClaudeHarness(state.provider);
+    if (!match || !state || (!claude && !isVibeHarness(state.provider))) {
       return "";
     }
     var name = match[1].toLowerCase();
-    var known = state.commands && state.commands.length ? state.commands : [{ name: "compact" }, { name: "help" }, { name: "reload" }];
+    // Before the first read of a conversation, its harness has not announced its commands yet: the last list announced
+    // for this user and provider, else the commands each harness always has.
+    var known = agentCommandsFor(state);
+    if (!known.length) {
+      known = claude ? [{ name: "compact" }, { name: "context" }, { name: "cost" }] : [{ name: "compact" }, { name: "help" }, { name: "reload" }];
+    }
     for (var i = 0; i < known.length; i++) {
       if (String(known[i].name).toLowerCase() === name) {
         return name;
