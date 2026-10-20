@@ -4194,6 +4194,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // Vibe announces its commands when its process starts: a conversation that reuses a running process, or has not had a
   // turn yet, has none. The last list announced is kept per user and provider (agents/<provider>/users/<user>/), and
   // offered to the "/" menu when a conversation has none.
+  // Vibe and Claude Code announce their commands as their session starts, often just before the prompt is accepted: a
+  // run reads its events from the prompt's cursor, so that announcement was skipped and the "/" menu only had the
+  // Assistant's own commands. Once per agent process, while no command is known, its first events are read for it.
+  function readEarlyAgentCommands(state) {
+    if (!state || !trim(state.handle).length || (state.commands && state.commands.length) ||
+        state.commandsScannedHandle === state.handle || !(isVibeHarness(state.provider) || isClaudeHarness(state.provider))) {
+      return;
+    }
+    state.commandsScannedHandle = state.handle;
+    try {
+      var early = bridgeCall(state, "agent_events", { handle: state.handle, cursor: "0", limit: "60", waitMs: "0" }, 15000);
+      var list = (early && early.events) || [];
+      for (var i = list.length - 1; i >= 0; i--) {
+        if (list[i] && list[i].type === "commands/update") {
+          rememberAgentCommands(state, list[i].data || {});
+          return;
+        }
+      }
+    } catch (_ignoreEarlyCommands) {}
+  }
+
   function knownCommandsFile(state) {
     try {
       if (!state || !state.conversationFile) {
@@ -7673,6 +7694,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
+      readEarlyAgentCommands(state);
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
       var bridgeStatus = trim(bridgeState.status).toLowerCase();

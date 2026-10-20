@@ -138,3 +138,28 @@ test('the session measures of the Bridge are kept in the usage, eight tools at m
   assert.equal(state.usage.metrics.sleeps.durationMs, 3000);
   assert.equal(state.usage.metrics.compactions, null, 'an unknown compaction count is not 0');
 });
+
+test('the commands announced before the prompt are read once per agent process', () => {
+  const calls = [];
+  let answer = { events: [{ type: 'system/start' }, { type: 'commands/update', data: { update: { availableCommands: [
+    { name: 'compact', description: 'Compact the history' }, { name: 'help', description: 'Show help' }] } } }, { type: 'acp/session' }] };
+  const sandbox = { trim: v => String(v ?? '').trim(), now: () => 42, isVibeHarness: p => p === 'convertigo' || p === 'vibe', isClaudeHarness: p => p === 'claude',
+    bridgeCall: (st, sequence, params) => { calls.push(sequence + ':' + params.handle + ':' + params.cursor); return answer; } };
+  vm.runInNewContext(backendParts(['rememberAgentCommands', 'readEarlyAgentCommands']), sandbox);
+  const state = { provider: 'convertigo', handle: 'h1' };
+  sandbox.readEarlyAgentCommands(state);
+  assert.deepEqual(JSON.parse(JSON.stringify(state.commands.map(c => c.name))), ['compact', 'help']);
+  assert.deepEqual(calls, ['agent_events:h1:0']);
+  sandbox.readEarlyAgentCommands(state);
+  assert.equal(calls.length, 1, 'commands known: no other read');
+  answer = { events: [{ type: 'system/start' }] };
+  const silent = { provider: 'convertigo', handle: 'h2' };
+  sandbox.readEarlyAgentCommands(silent);
+  sandbox.readEarlyAgentCommands(silent);
+  assert.equal(calls.length, 2, 'one read per agent process, even when it announced nothing');
+  silent.handle = 'h3';
+  sandbox.readEarlyAgentCommands(silent);
+  assert.equal(calls.length, 3, 'a new agent process is read again');
+  sandbox.readEarlyAgentCommands({ provider: 'codex', handle: 'h4' });
+  assert.equal(calls.length, 3, 'Codex announces no command');
+});
