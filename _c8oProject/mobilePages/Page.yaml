@@ -3968,10 +3968,10 @@ scriptContent:
         	public agentLayoutText(key) {
         		// Labels of the turn line, the live banner, the side column and the status dock, in the four Assistant languages.
         		var texts: any = {
-        			fr: { turn: "Tour de {time}", running: "en cours depuis {duration}", steps: "{count} étapes", oneStep: "1 étape", now: "En cours", thinking: "Réflexion", executing: "Exécution", liveThinking: "Tigo réfléchit à l''étape suivante", liveRunning: "Tigo exécute : {label}", lastAction: "Dernière action : {label}", planStep: "Étape du plan : {label}", after: "après « {title} »", duration: "durée du tour", stepsLabel: "étapes", failures: "échecs", failure: "échec", plan: "Plan", context: "Contexte", done: "Terminé", toggle: "Afficher le plan et le contexte", interrupted: "interrompu", latestCalls: "derniers appels" },
-        			en: { turn: "Turn at {time}", running: "running for {duration}", steps: "{count} steps", oneStep: "1 step", now: "Now", thinking: "Thinking", executing: "Running", liveThinking: "Tigo is thinking about the next step", liveRunning: "Tigo is running: {label}", lastAction: "Last action: {label}", planStep: "Plan step: {label}", after: "after \"{title}\"", duration: "turn duration", stepsLabel: "steps", failures: "failures", failure: "failure", plan: "Plan", context: "Context", done: "Done", toggle: "Show the plan and the context", interrupted: "interrupted", latestCalls: "latest calls" },
-        			it: { turn: "Turno delle {time}", running: "in corso da {duration}", steps: "{count} passi", oneStep: "1 passo", now: "In corso", thinking: "Riflessione", executing: "Esecuzione", liveThinking: "Tigo riflette sul passo successivo", liveRunning: "Tigo esegue: {label}", lastAction: "Ultima azione: {label}", planStep: "Passo del piano: {label}", after: "dopo «{title}»", duration: "durata del turno", stepsLabel: "passi", failures: "errori", failure: "errore", plan: "Piano", context: "Contesto", done: "Terminato", toggle: "Mostra il piano e il contesto", interrupted: "interrotto", latestCalls: "ultime chiamate" },
-        			es: { turn: "Turno de las {time}", running: "en curso desde hace {duration}", steps: "{count} pasos", oneStep: "1 paso", now: "En curso", thinking: "Reflexión", executing: "Ejecución", liveThinking: "Tigo piensa en el siguiente paso", liveRunning: "Tigo ejecuta: {label}", lastAction: "Última acción: {label}", planStep: "Paso del plan: {label}", after: "después de «{title}»", duration: "duración del turno", stepsLabel: "pasos", failures: "errores", failure: "error", plan: "Plan", context: "Contexto", done: "Terminado", toggle: "Mostrar el plan y el contexto", interrupted: "interrumpido", latestCalls: "últimas llamadas" }
+        			fr: { turn: "Tour de {time}", running: "en cours depuis {duration}", steps: "{count} étapes", oneStep: "1 étape", now: "En cours", thinking: "Réflexion", executing: "Exécution", liveThinking: "Tigo réfléchit à l''étape suivante", liveRunning: "Tigo exécute : {label}", lastAction: "Dernière action : {label}", planStep: "Étape du plan : {label}", after: "après « {title} »", duration: "durée du tour", stepsLabel: "étapes", failures: "échecs", failure: "échec", plan: "Plan", context: "Contexte", done: "Terminé", toggle: "Afficher le plan et le contexte", interrupted: "interrompu", latestCalls: "derniers appels", reasoning: "Réflexion", reasoningChars: "{count} caractères", reasoningOmitted: "{count} caractères omis" },
+        			en: { turn: "Turn at {time}", running: "running for {duration}", steps: "{count} steps", oneStep: "1 step", now: "Now", thinking: "Thinking", executing: "Running", liveThinking: "Tigo is thinking about the next step", liveRunning: "Tigo is running: {label}", lastAction: "Last action: {label}", planStep: "Plan step: {label}", after: "after \"{title}\"", duration: "turn duration", stepsLabel: "steps", failures: "failures", failure: "failure", plan: "Plan", context: "Context", done: "Done", toggle: "Show the plan and the context", interrupted: "interrupted", latestCalls: "latest calls", reasoning: "Reasoning", reasoningChars: "{count} characters", reasoningOmitted: "{count} characters left out" },
+        			it: { turn: "Turno delle {time}", running: "in corso da {duration}", steps: "{count} passi", oneStep: "1 passo", now: "In corso", thinking: "Riflessione", executing: "Esecuzione", liveThinking: "Tigo riflette sul passo successivo", liveRunning: "Tigo esegue: {label}", lastAction: "Ultima azione: {label}", planStep: "Passo del piano: {label}", after: "dopo «{title}»", duration: "durata del turno", stepsLabel: "passi", failures: "errori", failure: "errore", plan: "Piano", context: "Contesto", done: "Terminato", toggle: "Mostra il piano e il contesto", interrupted: "interrotto", latestCalls: "ultime chiamate", reasoning: "Ragionamento", reasoningChars: "{count} caratteri", reasoningOmitted: "{count} caratteri omessi" },
+        			es: { turn: "Turno de las {time}", running: "en curso desde hace {duration}", steps: "{count} pasos", oneStep: "1 paso", now: "En curso", thinking: "Reflexión", executing: "Ejecución", liveThinking: "Tigo piensa en el siguiente paso", liveRunning: "Tigo ejecuta: {label}", lastAction: "Última acción: {label}", planStep: "Paso del plan: {label}", after: "después de «{title}»", duration: "duración del turno", stepsLabel: "pasos", failures: "errores", failure: "error", plan: "Plan", context: "Contexto", done: "Terminado", toggle: "Mostrar el plan y el contexto", interrupted: "interrumpido", latestCalls: "últimas llamadas", reasoning: "Razonamiento", reasoningChars: "{count} caracteres", reasoningOmitted: "{count} caracteres omitidos" }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -4090,6 +4090,58 @@ scriptContent:
         		}
         		return view;
         	}
+        	public stepReasoning(step) {
+        		// The model reasoning attached to a work log step (a comment, a group of tool calls, the closing step): a folded
+        		// line with its size and duration, then its text. Cached on the step, like its group view.
+        		if (!step) {
+        			return null;
+        		}
+        		var list: any[] = [];
+        		if (step.reasoning) {
+        			list.push(step.reasoning);
+        		}
+        		var calls = step.calls || [];
+        		for (var i = 0; i < calls.length; i++) {
+        			if (calls[i] && calls[i].reasoning) {
+        				list.push(calls[i].reasoning);
+        			}
+        		}
+        		if (!list.length) {
+        			return null;
+        		}
+        		var language = this.agentUiLanguage();
+        		var key = language + "|" + list.map(function(r) { return (Number(r.chars) || 0) + ":" + (Number(r.ms) || 0); }).join(",");
+        		if (step.reasoningView && step.reasoningViewKey === key) {
+        			return step.reasoningView;
+        		}
+        		var count = function(n) {
+        			try {
+        				return Number(n || 0).toLocaleString(language);
+        			} catch (e) {
+        				return "" + (n || 0);
+        			}
+        		};
+        		var chars = 0;
+        		var ms = 0;
+        		var parts = [];
+        		for (var j = 0; j < list.length; j++) {
+        			var r = list[j] || {};
+        			chars += Number(r.chars) || 0;
+        			ms += Number(r.ms) || 0;
+        			var omitted = Number(r.omitted) || 0;
+        			var text = this.worklogTrim(String(r.head || "") + (omitted ? "\n\n… " + this.agentLayoutText("reasoningOmitted").replace("{count}", count(omitted)) + " …\n\n" : "") + String(r.tail || ""));
+        			if (text.length) {
+        				parts.push(text);
+        			}
+        		}
+        		var view = {
+        			label: this.agentLayoutText("reasoning") + " · " + this.agentLayoutText("reasoningChars").replace("{count}", count(chars)) + (ms >= 1000 ? " · " + this.formatAgentDuration(ms) : ""),
+        			text: parts.join("\n\n—\n\n")
+        		};
+        		step.reasoningView = view;
+        		step.reasoningViewKey = key;
+        		return view;
+        	}
         	public getAgentRunView() {
         		// What the side column (wide) and the status dock (narrow) show: the live activity of the current turn, its plan
         		// and current step, and the context. Cached per read so that change detection sees the same object.
@@ -4111,7 +4163,7 @@ scriptContent:
         			return null;
         		}
         		var steps = active && item.progressItems ? item.progressItems : [];
-        		var key = [active ? item.progressNow + ":" + item.time : "-", steps.length, plan ? plan.title + plan.done : "", usage ? usage.numbers : "", this.agentUiLanguage()].join("|");
+        		var key = [active ? item.progressNow + ":" + item.time : "-", active && item.reasoningLive ? item.reasoningLive.chars : 0, steps.length, plan ? plan.title + plan.done : "", usage ? usage.numbers : "", this.agentUiLanguage()].join("|");
         		var self: any = this;
         		if (self.agentRunViewCache && self.agentRunViewKey === key) {
         			return self.agentRunViewCache;
@@ -4156,9 +4208,13 @@ scriptContent:
         			}
         		}
         		var lastLabel = lastCall ? this.worklogTrim(lastCall.label) + (lastCall.durationMs ? " (" + this.formatToolDuration(lastCall.durationMs) + ")" : "") : "";
+        		// While the model reasons, the end of its reasoning shows instead of the last action and the plan line.
+        		var thought = active && !runningCall && item.reasoningLive && item.reasoningLive.text ? this.worklogTrim(item.reasoningLive.text) : "";
         		var liveSub = [];
         		if (runningCall) {
         			liveSub.push(this.progressToolWord(runningCall.kind || "other", 1));
+        		} else if (thought.length) {
+        			liveSub.push("\u2026 " + thought);
         		} else if (lastLabel.length) {
         			liveSub.push(this.agentLayoutText("lastAction").replace("{label}", lastLabel));
         		}
@@ -4166,6 +4222,7 @@ scriptContent:
         			liveSub.push(this.agentLayoutText("planStep").replace("{label}", current.content));
         		}
         		var planCount = plan ? plan.done + "/" + plan.total : "";
+        		var planLine = plan ? this.agentLayoutText("plan") + " " + planCount + (current ? " · " + (current.status === "interrupted" ? this.agentLayoutText("interrupted") + " : " : "") + current.content : "") : "";
         		var view = {
         			active: active,
         			time: active ? item.time : "",
@@ -4182,7 +4239,9 @@ scriptContent:
         			planCount: planCount,
         			planRatio: plan && plan.total ? plan.done / plan.total : 0,
         			planCurrent: current ? current.content : "",
-        			planLine: plan ? this.agentLayoutText("plan") + " " + planCount + (current ? " · " + (current.status === "interrupted" ? this.agentLayoutText("interrupted") + " : " : "") + current.content : "") : "",
+        			planLine: planLine,
+        			thought: thought,
+        			dockLine: thought.length ? "\u2026 " + thought : planLine,
         			usage: usage,
         			contextShort: usage ? usage.label : ""
         		};
@@ -4572,6 +4631,7 @@ scriptContent:
         					rawTitle: event.title,
         					groupKey: event.groupKey || "",
         					input: event.input || "",
+        					reasoning: event.reasoning || null,
         					detail: detail.length && detail.indexOf("\x60\x60\x60") !== 0 ? "\x60\x60\x60\n" + detail.replace(/\x60\x60\x60/g, "''''''") + "\n\x60\x60\x60" : detail,
         					status: event.status || "completed",
         					startedAt: at,
@@ -4598,7 +4658,7 @@ scriptContent:
         			var text = this.worklogTrim(event.text || event.title);
         			var previous = items.length ? items[items.length - 1] : null;
         			if (text.length && !(previous && previous.type !== "tool" && previous.text === text)) {
-        				items.push({ text: text, title: event.title || text, type: event.type || "narrative", status: event.status || "", current: false });
+        				items.push({ text: text, title: event.title || text, type: event.type || "narrative", status: event.status || "", current: false, reasoning: event.reasoning || null });
         			}
         		}
         		finish(batch);
@@ -12806,6 +12866,51 @@ title: Tigo
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: 'script:''agent-worklog-step agent-worklog-step-'' + ((step && step.type) ? step.type : ''narrative'') + ((step && step.current) ? '' is-current'' : '''')'
+                    ↓IsReasoning [ngx.components.UIControlDirective-1792530000001]: 
+                      directiveName: If
+                      directiveSource: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.stepReasoning(step)
+                      ↓Reasoning [ngx.components.UIDynamicElement-1792530000003]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: details
+                        ↓Class [ngx.components.UIAttribute-1792530000005]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-worklog-reasoning
+                        ↓Summary [ngx.components.UIDynamicElement-1792530000007]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: summary
+                          ↓Class [ngx.components.UIAttribute-1792530000009]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-worklog-reasoning-summary
+                          ↓Text [ngx.components.UIText-1792530000011]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.stepReasoning(step).label
+                        ↓Body [ngx.components.UIDynamicElement-1792530000013]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1792530000015]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-worklog-reasoning-body
+                          ↓Md [ngx.components.UIUseShared-1792530000021]: 
+                            sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.MdReader
+                            ↓data [ngx.components.UIUseVariable-1792530000023]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.stepReasoning(step).text
                     ↓IsTool [ngx.components.UIControlDirective-1782245565718]: 
                       directiveName: If
                       directiveSource: 
@@ -13587,7 +13692,7 @@ title: Tigo
                       directiveSource: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:!step || step.type != 'tool'
+                          - MobileSmartSourceType: script:!step || (step.type != 'tool' && step.type != 'reasoning')
                       ↓StepMd [ngx.components.UIUseShared-1782245574154]: 
                         sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.MdReader
                         ↓data [ngx.components.UIUseVariable-1782245574156]: 
@@ -16651,6 +16756,7 @@ title: Tigo
             				if (callId.length && existing.callId === callId) {
             					existing.status = call.status || existing.status;
             					existing.detail = call.detail || existing.detail;
+            					existing.reasoning = call.reasoning || existing.reasoning || null;
             					existing.current = call.current === true;
             					existing.text = call.text || existing.text;
             					return existing;
@@ -16702,7 +16808,7 @@ title: Tigo
             				}
             				// Only short status lines ("J''utilise le MCP Convertigo.") are activity; the agent''s own narration
             				// often starts with "I am ..." too, and must keep the narration style.
-            				var type = rawType === "tool" ? "tool" : (rawType === "activity" ? "activity" : (isProgressActivity(text) && text.length <= 80 ? "activity" : "narrative"));
+            				var type = rawType === "tool" ? "tool" : (rawType === "reasoning" ? "reasoning" : (rawType === "activity" ? "activity" : (isProgressActivity(text) && text.length <= 80 ? "activity" : "narrative")));
             				var commandLine = text || rawTitle;
             				if (type !== "tool" && isShellCommandLine(commandLine)) {
             					eventItem.toolName = "exec_command";
@@ -16762,6 +16868,7 @@ title: Tigo
             						completedAt: Number(eventItem.completedAt || 0),
             						detail: detail,
             						input: trimText(eventItem.input || ""),
+            						reasoning: eventItem.reasoning || null,
             						status: status,
             						current: writing === true && (eventItem.current === true || status === "running" || status === "in_progress")
             					};
@@ -16789,6 +16896,7 @@ title: Tigo
             					existing.text = text || existing.text;
             					existing.title = title || existing.title;
             					existing.detail = detail || existing.detail;
+            					existing.reasoning = eventItem.reasoning || existing.reasoning || null;
             					existing.status = status || existing.status;
             					existing.current = writing === true && eventItem.current === true;
             					continue;
@@ -16797,6 +16905,7 @@ title: Tigo
             					text: text,
             					title: title,
             					detail: detail,
+            					reasoning: eventItem.reasoning || null,
             					status: status,
             					type: type,
             					current: writing === true && (eventItem.current === true || status === "running" || status === "in_progress")
@@ -17202,6 +17311,7 @@ title: Tigo
             			}
             			active.target.progressTitle = progressTitle(false);
             			active.target.progressNow = progressNow;
+            			active.target.reasoningLive = state.reasoningLive || aiData.reasoningLive || null;
             			if (page.getAgentPlanView) {
             				active.target.planView = page.getAgentPlanView(state.plan, progressRunKey, true);
             				// The run shows its plan in its own work log: the reopened conversation''s last plan is no longer needed.
@@ -17708,7 +17818,7 @@ title: Tigo
           directiveSource: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getAgentRunView().planLine
+              - MobileSmartSourceType: script:this.getAgentRunView().dockLine
           ↓DockPlan [ngx.components.UIDynamicElement-1792254390503]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: span
@@ -17722,7 +17832,7 @@ title: Tigo
               textValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:this.getAgentRunView().planLine
+                  - MobileSmartSourceType: script:this.getAgentRunView().dockLine
         ↓HasDockUsage [ngx.components.UIControlDirective-1792254390509]: 
           directiveName: If
           directiveSource: 
@@ -22116,6 +22226,17 @@ title: Tigo
           .agent-worklog-step-narrative { margin-top: 8px; }
           .agent-worklog-step-narrative:first-child { margin-top: 0; }
           .agent-worklog-step-tool + .agent-worklog-step-narrative { margin-top: 10px; }
+          .agent-worklog-reasoning { margin: 2px 0 4px; }
+          .agent-worklog-reasoning > summary { align-items: center; color: var(--modern-muted, #94a3b8); cursor: pointer; display: inline-flex; font-size: 12.5px; gap: 6px; line-height: 20px; list-style: none; user-select: none; }
+          .agent-worklog-reasoning > summary::-webkit-details-marker { display: none; }
+          .agent-worklog-reasoning > summary::before { content: "\203A"; display: inline-block; font-size: 14px; transition: transform 160ms ease; }
+          .agent-worklog-reasoning[open] > summary::before { transform: rotate(90deg); }
+          .agent-worklog-reasoning > summary:hover { color: var(--modern-text, #0f172a); }
+          .agent-worklog-reasoning-body { border-left: 2px solid var(--modern-border, #cbd5e1); color: var(--modern-muted, #64748b); font-size: 12.5px; line-height: 1.55; margin: 4px 0 8px 3px; max-height: 260px; overflow-wrap: anywhere; overflow-y: auto; padding: 2px 0 2px 10px; scrollbar-width: thin; }
+          :host ::ng-deep .agent-worklog-reasoning-body markdown p,
+          :host ::ng-deep .agent-worklog-reasoning-body markdown li { color: inherit; font-size: 12.5px; line-height: 1.55; margin: 0 0 6px; }
+          :host ::ng-deep .agent-worklog-reasoning-body markdown code { font-size: 12px; }
+          .agent-worklog-step-reasoning { margin-top: 8px; }
           .agent-worklog-tool-body { max-height: 360px; }
           :host ::ng-deep .agent-worklog-call-body markdown pre { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 12%, transparent 88%); border-radius: 6px; margin: 4px 0 8px; padding: 6px 8px; }
           :host ::ng-deep .agent-worklog-call-body markdown pre code { background: transparent; font-size: 11.5px; line-height: 17px; }

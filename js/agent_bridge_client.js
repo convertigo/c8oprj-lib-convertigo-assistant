@@ -3396,6 +3396,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     fr: {
       starting: "J'analyse la demande.",
       thinking: "J'analyse la demande.",
+      reasoningStep: "R\u00e9flexion du mod\u00e8le.",
       projectList: "J'utilise le MCP Convertigo pour lister les projets.",
       inspect: "J'utilise le MCP Convertigo pour inspecter le projet.",
       apply: "J'utilise le MCP Convertigo pour appliquer une modification.",
@@ -3435,6 +3436,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     en: {
       starting: "I am analyzing the request.",
       thinking: "I am analyzing the request.",
+      reasoningStep: "Model reasoning.",
       projectList: "I am using the Convertigo MCP to list projects.",
       inspect: "I am using the Convertigo MCP to inspect the project.",
       apply: "I am using the Convertigo MCP to apply a change.",
@@ -4304,6 +4306,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // its final answer. A line per update; the last line of a key wins when the file is read.
   var RUN_DETAIL_MAX_EVENTS = 2000;
   var RUN_DETAIL_MAX_DETAIL = 4000;
+  // The model's reasoning kept per step: a block of up to 8,000 characters whole, a longer one as its start and end.
+  var REASONING_KEEP_HEAD = 3000;
+  var REASONING_KEEP_TAIL = 5000;
 
   function runDetailsFile(state, runid) {
     var id = trim(runid || (state && state.runid));
@@ -4342,7 +4347,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       toolName: event.toolName || "",
       groupKey: event.groupKey || "",
       at: event.at || 0,
-      completedAt: event.completedAt || 0
+      completedAt: event.completedAt || 0,
+      reasoning: event.reasoning || undefined
     };
   }
 
@@ -4410,6 +4416,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         existing.groupKey = trim(item.groupKey || existing.groupKey || "");
         existing.current = item.current === true;
         existing.updatedAt = now();
+        if (item.reasoning && !existing.reasoning) {
+          existing.reasoning = item.reasoning;
+        }
         if (existing.status === "completed" || existing.status === "failed" || existing.status === "error") {
           existing.completedAt = existing.completedAt || now();
           existing.current = false;
@@ -4439,6 +4448,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       at: now(),
       updatedAt: now()
     });
+    var reasoning = item.reasoning || (kind === "narrative" || kind === "tool" ? takeStepReasoning(state) : null);
+    if (reasoning) {
+      state.progressEvents[state.progressEvents.length - 1].reasoning = reasoning;
+    }
     appendRunDetail(state, runDetailEvent(state.progressEvents[state.progressEvents.length - 1]));
     while (state.progressEvents.length > 80) {
       state.progressEvents.shift();
@@ -4455,6 +4468,159 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state.progressEvents[i].current = false;
       }
     }
+  }
+
+  // The model's reasoning (Vibe, Claude Code) is kept apart while it streams, for the live line of the status dock, then
+  // attached to the step it led to: the next comment or tool call, or the final answer. Codex already shows its
+  // reasoning summaries as comments.
+  function reasoningCaptured(state) {
+    return !!state && (isVibeHarness(state.provider) || isClaudeHarness(state.provider));
+  }
+
+  function appendReasoningChunk(state, text, separate) {
+    text = String(text || "");
+    if (!text.length) {
+      return;
+    }
+    var pending = state.reasoningPending;
+    if (!pending) {
+      pending = state.reasoningPending = { head: "", tail: "", chars: 0, startedAt: now(), updatedAt: now() };
+    }
+    // Vibe streams deltas; Claude Code sends whole thinking blocks.
+    if (separate && pending.chars) {
+      text = "\n\n" + text;
+    }
+    pending.chars += text.length;
+    pending.updatedAt = now();
+    var room = REASONING_KEEP_HEAD - pending.head.length;
+    if (room > 0) {
+      pending.head += text.substring(0, room);
+      text = text.substring(room);
+    }
+    if (text.length) {
+      pending.tail += text;
+      if (pending.tail.length > REASONING_KEEP_TAIL) {
+        pending.tail = pending.tail.substring(pending.tail.length - REASONING_KEEP_TAIL);
+      }
+    }
+  }
+
+  function reasoningText(reasoning) {
+    return String(reasoning.head || "") + (reasoning.omitted ? "\n\n[\u2026]\n\n" : "") + String(reasoning.tail || "");
+  }
+
+  function finishedReasoning(pending) {
+    // What a step keeps: its start, its end, how many characters were left out between them, and how long it took.
+    if (!pending || !pending.chars || !trim(pending.head + pending.tail).length) {
+      return null;
+    }
+    return {
+      head: pending.head,
+      tail: pending.tail,
+      chars: pending.chars,
+      omitted: Math.max(0, pending.chars - pending.head.length - pending.tail.length),
+      ms: Math.max(0, Number(pending.updatedAt || 0) - Number(pending.startedAt || 0))
+    };
+  }
+
+  function mergeReasoning(first, second) {
+    if (!first || !second) {
+      return first || second || null;
+    }
+    var merged = { head: "", tail: "", chars: 0, startedAt: 0, updatedAt: 0 };
+    appendReasoningChunk({ reasoningPending: merged }, reasoningText(first) + "\n\n" + reasoningText(second), false);
+    var result = finishedReasoning(merged);
+    result.chars = Number(first.chars || 0) + Number(second.chars || 0);
+    result.omitted = Math.max(0, result.chars - result.head.length - result.tail.length);
+    result.ms = Number(first.ms || 0) + Number(second.ms || 0);
+    return result;
+  }
+
+  function settleReasoning(state) {
+    var finished = finishedReasoning(state && state.reasoningPending);
+    if (state) {
+      state.reasoningPending = null;
+    }
+    return finished;
+  }
+
+  function holdStepReasoning(state, reasoning) {
+    if (reasoning) {
+      state.stepReasoning = mergeReasoning(state.stepReasoning, reasoning);
+    }
+  }
+
+  function takeStepReasoning(state) {
+    var reasoning = state && state.stepReasoning ? state.stepReasoning : null;
+    if (state) {
+      state.stepReasoning = null;
+    }
+    return reasoning;
+  }
+
+  function attachReasoningToComment(state, text, reasoning) {
+    // The comment of a message is the narrative that starts with its first line: the status lines the Assistant adds
+    // itself ("J'utilise le MCP Convertigo.") can be written to the work log just before it.
+    var lines = String(text || "").split(/\n/);
+    var first = "";
+    for (var i = 0; i < lines.length && !first.length; i++) {
+      first = trim(cleanEventText(compactLine(normalizeProgressLine(state, lines[i]))).replace(/\s+/g, " "));
+    }
+    if (!first.length || !state.progressEvents) {
+      return false;
+    }
+    for (var j = state.progressEvents.length - 1; j >= 0; j--) {
+      var event = state.progressEvents[j];
+      if (!event || trim(event.type || "narrative") !== "narrative") {
+        continue;
+      }
+      var eventText = trim(String(event.text || event.title || "").replace(/\s+/g, " "));
+      if (eventText.length && (eventText === first || eventText.indexOf(first) === 0 || first.indexOf(eventText) === 0)) {
+        if (event.reasoning) {
+          return false;
+        }
+        event.reasoning = reasoning;
+        appendRunDetail(state, runDetailEvent(event));
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function finishTurnReasoning(state) {
+    // The reasoning before the final answer (or left over by a stopped turn) closes the work log, just above the answer.
+    var reasoning = mergeReasoning(mergeReasoning(takeStepReasoning(state), state.answerReasoning), settleReasoning(state));
+    state.answerReasoning = null;
+    if (!reasoning) {
+      return;
+    }
+    pushProgressEvent(state, {
+      key: "reasoning:final:" + (state.runid || ""),
+      type: "reasoning",
+      text: lang(state).reasoningStep,
+      title: lang(state).reasoningStep,
+      status: "completed",
+      reasoning: reasoning
+    });
+  }
+
+  function liveReasoning(state) {
+    // The end of the reasoning that is streaming now, for the status dock: its last sentence or so.
+    var pending = state && state.reasoningPending;
+    if (!pending || !pending.chars) {
+      return null;
+    }
+    var text = trim(String((pending.tail.length ? pending.head.substring(Math.max(0, pending.head.length - 400)) + pending.tail : pending.head) || "").replace(/\s+/g, " "));
+    if (text.length > 160) {
+      text = text.substring(text.length - 160);
+      var cut = text.search(/[.!?:;]\s/);
+      if (cut !== -1 && cut < 100) {
+        text = text.substring(cut + 2);
+      } else {
+        text = text.substring(text.indexOf(" ") + 1);
+      }
+    }
+    return { since: Number(pending.startedAt || 0), chars: Number(pending.chars || 0), text: trim(text) };
   }
 
   function appendNarrativeEvent(state, text, source) {
@@ -4476,6 +4642,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         return;
       }
       if (compactText.indexOf(existingText + " ") === 0) {
+        if (state.stepReasoning && !existing.reasoning) {
+          existing.reasoning = takeStepReasoning(state);
+        }
         existing.key = eventKeyForText("narrative", text);
         existing.text = text;
         existing.title = text;
@@ -4894,8 +5063,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state.answer = "";
     state.answerIsFinal = false;
+    var reasoning = state.answerReasoning;
+    state.answerReasoning = null;
     appendProgressChunk(state, interim + (/\n$/.test(interim) ? "" : "\n"));
     state.progressChunkActive = false;
+    if (reasoning && !attachReasoningToComment(state, interim, reasoning)) {
+      holdStepReasoning(state, reasoning);
+    }
     return true;
   }
 
@@ -5692,6 +5866,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectNames: state.projectNames || [],
       progress: state.progressLog || "",
       progressEvents: state.progressEvents || [],
+      reasoningLive: liveReasoning(state),
       phase: state.lastStatusText || "",
       warnings: state.warnings || [],
       plan: state.plan || null,
@@ -5749,6 +5924,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         explanation: state.answer || state.error || "",
         progress: state.progressLog || "",
         progressEvents: state.progressEvents || [],
+        reasoningLive: liveReasoning(state),
         formMutation: state.formMutation || null,
         setupRequired: state.setupRequired === true,
         setup: state.setupReport || null,
@@ -7101,6 +7277,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.progressLog = "";
     state.progressEvents = [];
     state.lastProgressLine = "";
+    state.reasoningPending = null;
+    state.answerReasoning = null;
+    state.stepReasoning = null;
     state.hostFormContext = {
       formId: firstOptionValue(options, ["formId", "currentFormId", "nocodeCurrentFormId", "applicationId", "currentApplicationId"]),
       formName: firstOptionValue(options, ["formName", "currentFormName"]),
@@ -7594,7 +7773,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           if (state.slashCommand === "compact" && isClaudeHarness(state.provider)) {
             // Claude Code ends /compact with the text of the previous result: the answer is the compaction notice.
           } else if (codexAnswerChunkIsProgress(state, data)) {
+            var commentReasoning = reasoningCaptured(state) ? settleReasoning(state) : null;
             appendProgressChunk(state, eventText(data));
+            if (commentReasoning && !attachReasoningToComment(state, eventText(data), commentReasoning)) {
+              holdStepReasoning(state, commentReasoning);
+            }
           } else {
             // ACP: each agent message has its own messageId. When a new message starts, the
             // previous one was narration (the model kept working after it): move it to the
@@ -7606,17 +7789,29 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
               }
               state.vibeAnswerMessageId = chunkMessageId;
             }
+            // The reasoning before this message belongs to it: to its comment if it is flushed to the work log, else to
+            // the final answer.
+            state.answerReasoning = mergeReasoning(state.answerReasoning, settleReasoning(state));
             markProgressEventsIdle(state);
             appendAnswerChunk(state, eventText(data));
             state.answerIsFinal = true;
           }
         } else if (type === "reasoning/chunk") {
+          if (reasoningCaptured(state)) {
+            appendReasoningChunk(state, eventText(data), data.provider === "claude");
+          }
           if (!state.answer.length) {
             appendActivityEvent(state, lang(state).thinking, true);
             appendProgressLine(state, lang(state).thinking);
           }
         } else if (type === "tool/start" || type === "tool/update") {
           flushVibeInterimAnswerToProgress(state);
+          if (type === "tool/start") {
+            // A tool call right after the reasoning (no comment between them) takes it.
+            holdStepReasoning(state, state.answerReasoning);
+            state.answerReasoning = null;
+            holdStepReasoning(state, settleReasoning(state));
+          }
           var toolStatus = eventToolStatus(data);
           rememberProjectFromToolEvent(state, data);
           appendToolEvent(state, event, data, type);
@@ -7634,6 +7829,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "turn/end") {
           markProgressEventsIdle(state);
+          finishTurnReasoning(state);
           if (state.status !== "failed" && state.status !== "cancelled" && cancellationRequested(state.threadid)) {
             // A turn ended by the Stop button is not a completed task.
             state.status = "cancelled";
@@ -7660,6 +7856,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             }
           }
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
+          finishTurnReasoning(state);
           state.status = "failed";
           state.error = userFacingAgentError(state, data);
           if (isResidentProvider(state.provider) && isCodexAuthenticationError(data)) {
@@ -7682,6 +7879,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             state.answerTranscriptRunid = state.runid;
           }
         } else if (type === "system/closed" && !isTerminalStatus(state.status)) {
+          finishTurnReasoning(state);
           if (trim(state.answer).length) {
             state.status = "completed";
             state.answerIsFinal = true;
