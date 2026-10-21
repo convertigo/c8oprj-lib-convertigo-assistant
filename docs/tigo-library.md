@@ -1,7 +1,7 @@
-# Tigo 1.5 preview: prompts, skills and MCP connections
+# Tigo 1.5: prompts, skills and MCP connections
 
-This library is unfinished and awaits review. Customer installations use the
-1.4.49 stable bundle. See [release channels](release-channels.md).
+This library is part of the 1.5.2 stable bundle. See
+[release channels](release-channels.md).
 
 The configuration panel has five categories: **Agent and model**, **Runtime and
 stack**, **Prompts**, **Skills**, and **MCP connections**. The library combines
@@ -210,7 +210,7 @@ full bearer token rather than relying on sequence visibility.
 
 ## Version and hosting
 
-The 1.5.1 preview stack pairs Assistant **1.5.1**, Bridge **0.4.24**, and MCP **0.2.24**.
+The 1.5.2 stable stack pairs Assistant **1.5.2**, Bridge **0.4.25**, and MCP **0.2.25**.
 It uses the 8.4.6 build plugin and existing 8.4.6 NGX components and Java APIs.
 The Assistant and MCP NGX references are pinned to the module-based 8.4.0.18 legacy template
 (commit `8ca383ae844129df72bd3436a7869bfdc0a69d5c`); the floating 8.4 branch

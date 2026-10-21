@@ -5,12 +5,13 @@ of each companion project.
 
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
-| Stable | 1.4.49 | 0.4.22 | 0.2.23 |
-| Preview | 1.5.1 | 0.4.24 | 0.2.24 |
+| Stable | 1.5.2 | 0.4.25 | 0.2.25 |
+| Preview | 1.5.2 | 0.4.25 | 0.2.25 |
 
-The 1.5 prompt/skill/MCP library is unfinished and awaits functional review.
-Use the stable bundle for customer installations. Both bundles target Convertigo
-8.4.6; compatibility alone does not constitute stable acceptance.
+Tigo 1.5.2 promotes the 1.5 prompt/skill/MCP library to the stable bundle (see
+[release 1.5.2](release-1.5.2.md)). The preview manifest points at the same
+bundle until the next preview. Both bundles target Convertigo 8.4.6;
+compatibility alone does not constitute stable acceptance.
 
 ## Manifests and existing Studios
 
