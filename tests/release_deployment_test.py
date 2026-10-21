@@ -67,6 +67,8 @@ class DeploymentPolicyTest(unittest.TestCase):
         self.assertNotIn("prereleased", trigger)
         self.assertIn("C8O_DEPLOY_TARGET: ${{ github.event_name == 'release' && 'production' || inputs.target }}", workflow)
         self.assertIn("C8O_RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}", workflow)
+        # A fresh Gradle JVM needs load before deploy: CLI.deploy logs through the engine logger that load initializes.
+        self.assertIn("deploy-published.gradle load deploy -x car", workflow)
         build = (Path(__file__).resolve().parents[1] / ".github/workflows/build-and-release.yml").read_text()
         self.assertNotIn(" deploy ", build, "building and tagging never deploy")
 

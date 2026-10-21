@@ -49,4 +49,6 @@ jobs:
           C8O_SERVER: ${{ env.C8O_DEPLOY_TARGET == 'production' && secrets.C8O_SERVER_PROD || env.C8O_DEPLOY_TARGET == 'development' && secrets.C8O_SERVER || '' }}
           C8O_USER: ${{ env.C8O_DEPLOY_TARGET == 'production' && secrets.C8O_USER_PROD || env.C8O_DEPLOY_TARGET == 'development' && secrets.C8O_USER || '' }}
           C8O_PASSWORD: ${{ env.C8O_DEPLOY_TARGET == 'production' && secrets.C8O_PASSWORD_PROD || env.C8O_DEPLOY_TARGET == 'development' && secrets.C8O_PASSWORD || '' }}
-        run: sh gradlew --console=plain --init-script .github/scripts/deploy-published.gradle deploy -x car
+        # load starts the Convertigo engine (deploy logs through it and fails with a null logger without it); it reads
+        # the checked-out source in memory and builds nothing. The deployed archive stays the verified published CAR.
+        run: sh gradlew --console=plain --init-script .github/scripts/deploy-published.gradle load deploy -x car
