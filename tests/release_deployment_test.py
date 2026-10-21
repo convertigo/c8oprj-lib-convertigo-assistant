@@ -57,6 +57,19 @@ class DeploymentPolicyTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 deployment.verify_archive(car, "v1.4.49", "sha256:" + "b" * 64)
 
+    def test_a_stable_release_deploys_to_production_and_a_preview_never_does(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/deploy-release.yml").read_text()
+        trigger = workflow.split("\npermissions:")[0]
+        # "released": a release published as stable, or a pre-release promoted. Pre-releases and pushes do not trigger.
+        self.assertIn("  release:\n    types: [released]\n", trigger)
+        self.assertIn("  workflow_dispatch:\n", trigger)
+        self.assertNotIn("push:", trigger)
+        self.assertNotIn("prereleased", trigger)
+        self.assertIn("C8O_DEPLOY_TARGET: ${{ github.event_name == 'release' && 'production' || inputs.target }}", workflow)
+        self.assertIn("C8O_RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.release_tag }}", workflow)
+        build = (Path(__file__).resolve().parents[1] / ".github/workflows/build-and-release.yml").read_text()
+        self.assertNotIn(" deploy ", build, "building and tagging never deploy")
+
 
 if __name__ == "__main__":
     unittest.main()

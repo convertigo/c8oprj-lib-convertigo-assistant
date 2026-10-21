@@ -68,6 +68,12 @@ For the Assistant, additionally:
   exist**. Pushing `master` earlier publishes a manifest whose `importUrl` returns 404, and
   every stack update fails until the build finishes.
 
+Tags publish GitHub pre-releases (see [release channels](docs/release-channels.md)). A stable
+release is promoted once `master` carries its manifests: mark the three releases as non-prerelease
+and Latest (`gh release edit vX.Y.Z --prerelease=false --latest`). Promoting the Assistant release
+deploys it to production through the **Deploy published Assistant release** workflow; a preview
+stays a pre-release and is never deployed.
+
 After pushing `master`, check the published manifest and that the three URLs answer 200:
 
 ```bash

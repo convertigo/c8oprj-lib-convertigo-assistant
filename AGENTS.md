@@ -458,8 +458,11 @@ rediscovering the same context.
 - See `docs/release-channels.md`. All newly tagged releases are pre-releases,
   never Latest automatically. Promote only after review and functional acceptance.
 - Push/tag CI cannot deploy, regardless of commit message. Only the Assistant has
-  a manual `workflow_dispatch` deployment; it verifies and deploys a published CAR
-  without rebuilding master. Production accepts only the reviewed stable tag.
+  a deployment workflow: it runs for production when a release becomes stable
+  (`released` event: published as stable or promoted from pre-release), and by
+  hand (`workflow_dispatch`) for development or a redeploy. It verifies and deploys
+  a published CAR without rebuilding master. Production accepts only the reviewed
+  stable tag; pre-releases never deploy on their own.
 - Changing channels does not downgrade installed Studios. Preserve existing tags
   and CAR bytes. Never mix independently selected companion versions.
 

@@ -45,7 +45,8 @@ silently rewrite or retag those CARs.
 
 Pushes build CARs. Tags publish GitHub pre-releases with `make_latest: false`,
 including tags without a suffix. Neither event deploys to a Convertigo server.
-`[skip deploy]` is no longer needed to prevent deployment.
+`[skip deploy]` is no longer needed to prevent deployment. Promoting the
+Assistant release to stable deploys it to production (see below).
 
 The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
 its unsuffixed tag. Use beta and release-candidate tags for future preview
@@ -58,11 +59,15 @@ and frontend fallback together, then mark the corresponding three GitHub
 releases as non-prereleases/Latest. Update this table at the same time. A
 successful build does not promote or deploy a release.
 
-## Manual hosted deployment
+## Hosted deployment
 
 Only the Assistant repository has the **Deploy published Assistant release**
-workflow. A maintainer starts it with `workflow_dispatch`, selects an existing
-release tag and chooses `development` or `production`.
+workflow. It runs by itself for production when an Assistant release becomes
+stable: a release published as stable, or a pre-release marked as a release
+(the GitHub `released` event, as with `gh release edit --prerelease=false`).
+Pre-releases, previews included, never deploy on their own. A maintainer can
+also start it with `workflow_dispatch`, select an existing release tag and choose
+`development` or `production`, for instance to deploy a release again.
 
 The workflow downloads the published CAR and verifies its GitHub SHA-256 digest,
 project identity and version. Production additionally requires the Assistant tag
