@@ -22,7 +22,9 @@ function fixture({ studio = true, admin = false, user = '', localPort = 18086, c
   const sandbox = {
     DEFAULT_BRIDGE_PROJECT: 'lib_ConvertigoAgentBridge',
     trim: value => String(value ?? '').trim(),
-    java: { net: { URI: FakeUri }, util: { UUID: { randomUUID: () => 'uuid' } } },
+    java: { net: { URI: FakeUri }, util: { UUID: { randomUUID: () => 'uuid' } },
+      // The events reads name their engine context from a hash of the reader: a stable stand-in is enough here.
+      lang: { Integer: { toHexString: n => (n >>> 0).toString(16) }, String: class { constructor(t) { this.t = String(t); } hashCode() { let h = 0; for (const c of this.t) h = (h * 31 + c.charCodeAt(0)) | 0; return h; } } } },
     Packages: { com: { twinsoft: { convertigo: { engine: { AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN' } } } } } } },
     Engine: {
       isStudioMode: () => studio,
@@ -41,7 +43,7 @@ function fixture({ studio = true, admin = false, user = '', localPort = 18086, c
     response: { result: { ok: true } },
     postForm(...args) { calls.push(args); return sandbox.response; }
   };
-  vm.runInNewContext(backendParts(['requireBridgeCaller', 'bridgeCallerRefusal', 'isOwnBridgeUrl', 'bridgeCall'],
+  vm.runInNewContext(backendParts(['requireBridgeCaller', 'bridgeCallerRefusal', 'isOwnBridgeUrl', 'bridgeCall', 'callerSessionId'],
     ['BRIDGE_CALLER_KEY_HEADER', 'BRIDGE_JSON_PATH']), sandbox);
   return { sandbox, calls };
 }

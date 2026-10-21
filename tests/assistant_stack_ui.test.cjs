@@ -148,6 +148,7 @@ test('network, malformed and HTTP-200 engine failures clear stale authorization;
     f.page.openAgentSettingsPage(); await flush();
     assert.equal(f.calls.filter(c => c.name.endsWith('.AgentStackStatus')).length, 2);
     assert.equal(f.page.isAgentStackUpdateAllowed(), true);
+    f.fire(60); // the settings scroll into view; no retry timer may be left
     assert.equal(f.timers.size, 0);
   }
 });
