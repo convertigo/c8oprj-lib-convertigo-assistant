@@ -706,22 +706,45 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     restrictSecretFile(file);
   }
 
+  // A token is kept only once C8Oforms accepts it: C8Oforms could answer ok for a token it had not stored when another
+  // write to the user's document came first, and the agent was then refused on its first MCP call.
   function createNoCodeMcpToken(options, userKey, userId) {
-    try {
-      var label = noCodeMcpTokenLabel(options);
-      var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
-        name: label
-      });
-      var result = unwrapSequenceResult(response) || {};
-      var token = trim(result.token);
-      if (!token.length) {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        var label = noCodeMcpTokenLabel(options);
+        var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
+          name: label
+        });
+        var result = unwrapSequenceResult(response) || {};
+        var token = trim(result.token);
+        if (!token.length) {
+          return "";
+        }
+        if (!validateNoCodeMcpToken(token)) {
+          continue;
+        }
+        writeNoCodeMcpToken(options, userKey, userId, token, result.tokenInfo || null);
+        return token;
+      } catch (_ignoreNoCodeTokenCreate) {
         return "";
       }
-      writeNoCodeMcpToken(options, userKey, userId, token, result.tokenInfo || null);
-      return token;
-    } catch (_ignoreNoCodeTokenCreate) {
-      return "";
     }
+    return "";
+  }
+
+  // The requests a No Code page sends together (one resource catalog per host context message) all get here for a
+  // user without a token yet: one at a time, the first creates it and the others read it from its file. Same lock as
+  // bridgeCallerKey; the session's handle is checked before, so a user takes it once per session.
+  function resolveNoCodeMcpToken(options, userKey, userId) {
+    var resolve = function () {
+      var token = readNoCodeMcpToken(options, userKey);
+      return token.length ? token : createNoCodeMcpToken(options, userKey, userId);
+    };
+    var store = sharedStorage();
+    if (store === null) {
+      return resolve();
+    }
+    return String(new Packages.org.mozilla.javascript.Synchronizer(resolve, store)());
   }
 
   function sharedSecretGet(handle) {
@@ -779,10 +802,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
     } catch (_ignoreExistingTokenHandle) {}
-    var token = readNoCodeMcpToken(options, userKey);
-    if (!token.length) {
-      token = createNoCodeMcpToken(options, userKey, userId);
-    }
+    var token = resolveNoCodeMcpToken(options, userKey, userId);
     if (!token.length) {
       return "";
     }
