@@ -2006,7 +2006,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
       credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
-      mcpCatalogKey: feedbackCatalogKey(state),
+      mcpCatalogKey: mcpCatalogKey(state),
       requestTimeoutMs: "60000"
     };
   }
@@ -4663,6 +4663,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreFeedbackCatalog) {
       return "";
     }
+  }
+
+  // The tools of the Convertigo MCP also change with its version: after a stack update on a server, a resident agent kept
+  // the previous tool list and its schemas until its process ended. The key carries the installed MCP version, so the
+  // Bridge restarts it on its session at the next turn.
+  function mcpCatalogKey(state) {
+    var key = feedbackCatalogKey(state);
+    var version = "";
+    try {
+      var project = Engine.theApp.databaseObjectsManager.getOriginalProjectByName("lib_ConvertigoMCP");
+      version = project ? trim(String(project.getVersion())) : "";
+    } catch (_ignoreMcpVersion) {}
+    return version.length ? (key.length ? key + "|" : "") + "mcp:" + version : key;
   }
 
   // The surface of a report: the No Code Studio for a no-code conversation, else the one the store knows.

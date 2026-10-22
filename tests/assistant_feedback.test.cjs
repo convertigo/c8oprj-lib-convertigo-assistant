@@ -801,5 +801,19 @@ test('the agent restarts on its session when its user turns feedback on or off: 
   sandbox.feedback = { mode: () => { throw new Error('store'); } };
   assert.equal(sandbox.feedbackCatalogKey({}), '');
   const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_bridge_client.js'), 'utf8');
-  assert.match(source, /agentRevealMode: revealModeOption\(options\),\n      mcpCatalogKey: feedbackCatalogKey\(state\),/);
+  assert.match(source, /agentRevealMode: revealModeOption\(options\),\n      mcpCatalogKey: mcpCatalogKey\(state\),/);
+});
+
+test('the agent also restarts on its session when the Convertigo MCP is updated: its tools and their schemas change', () => {
+  const sandbox = { feedback: { mode: () => 'ask' }, version: '0.2.27-beta.2', trim: value => String(value ?? '').trim() };
+  sandbox.feedbackModule = () => sandbox.feedback;
+  sandbox.Engine = { theApp: { databaseObjectsManager: { getOriginalProjectByName: name => name === 'lib_ConvertigoMCP' && sandbox.version ? { getVersion: () => sandbox.version } : null } } };
+  vm.runInNewContext(backendParts(['feedbackCatalogKey', 'mcpCatalogKey']), sandbox);
+  assert.equal(sandbox.mcpCatalogKey({}), 'feedback:on|mcp:0.2.27-beta.2');
+  sandbox.version = '0.2.27-beta.3';
+  assert.equal(sandbox.mcpCatalogKey({}), 'feedback:on|mcp:0.2.27-beta.3', 'another MCP version, another key');
+  sandbox.feedback = null;
+  assert.equal(sandbox.mcpCatalogKey({}), 'mcp:0.2.27-beta.3', 'a server user without feedback still gets the MCP version');
+  sandbox.version = '';
+  assert.equal(sandbox.mcpCatalogKey({}), '');
 });
