@@ -14,7 +14,7 @@ const lib = sandbox.C8O.tigoResources;
 const plain = (v) => JSON.parse(JSON.stringify(v));
 function fixture(admin = true, user = "studio", files = new Map()) {
   const host = {
-    identity: () => ({ admin, user, key: user }),
+    identity: () => ({ admin, user, key: user, owner: lib.conversationOwner(user) }),
     personal: (k) => "users/" + k,
     builtins: () => "builtin",
     projects: () => ({ Demo: "project/Demo" }),
@@ -248,6 +248,32 @@ test("untrusted identities cannot enumerate projects, activate MCP or read anoth
     /conversation_access_denied/,
   );
 });
+test("a server user owns the conversations keyed by the email C8Oforms gives the page", () => {
+  assert.equal(
+    lib.conversationOwner("google:108792390496318778325:alice@example.com"),
+    "alice@example.com",
+  );
+  assert.equal(lib.conversationOwner("alice@example.com"), "alice@example.com");
+  assert.equal(lib.conversationOwner("c8o:admin"), "c8o:admin");
+  assert.equal(lib.conversationOwner("a:b:not-an-email"), "a:b:not-an-email");
+  const f = fixture(false, "google:108792390496318778325:alice@example.com");
+  assert.equal(
+    f.api.prepare({ threadid: "x", userId: "alice@example.com" }).text,
+    "",
+  );
+  assert.throws(
+    () => f.api.prepare({ threadid: "x", userId: "bob@example.com" }),
+    /conversation_access_denied/,
+  );
+  assert.throws(
+    () =>
+      f.api.prepare({
+        threadid: "x",
+        userId: "google:108792390496318778325:alice@example.com",
+      }),
+    /conversation_access_denied/,
+  );
+});
 test("invalid ids, schema, secrets in declarations and unsafe URLs are rejected", () => {
   for (const bad of ["../other", "A", "x/y", "__proto__"]) {
     assert.throws(() => lib.normalize("prompt", data(bad)), /invalid_id/);
@@ -400,6 +426,7 @@ test("Studio and NoCode built-ins are scoped to their surface with language fall
   f.host.identity = () => ({
     admin: false,
     user: "form-user",
+    owner: "form-user",
     key: "form-user",
     surface: "nocode",
   });

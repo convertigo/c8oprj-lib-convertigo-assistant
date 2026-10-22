@@ -11,6 +11,13 @@ C8O.tigoResources = (function () {
   function text(v) {
     return v == null ? "" : String(v);
   }
+  // The userId a server conversation is stored under: the email of a C8Oforms OAuth user
+  // ("provider:subject:email"), the whole name otherwise. Same rule as callerUserId in agent_bridge_client.js.
+  function conversationOwner(user) {
+    var parts = text(user).trim().split(":"),
+      last = parts[parts.length - 1];
+    return parts.length > 2 && last.indexOf("@") > 0 ? last : parts.join(":");
+  }
   function object(v) {
     if (typeof v === "string") {
       v = JSON.parse(v || "{}");
@@ -745,7 +752,7 @@ C8O.tigoResources = (function () {
       fail("invalid_action");
     }
     function prepare(state) {
-      if (!who.admin && who.user !== state.userId) {
+      if (!who.admin && who.owner !== state.userId) {
         fail("conversation_access_denied");
       }
       var s = selected(state.threadid);
@@ -906,6 +913,7 @@ C8O.tigoResources = (function () {
       admin: !!admin,
       surface: projectOnly ? "all" : studio || !user ? "studio" : "nocode",
       user: studio && !projectOnly ? "studio" : user,
+      owner: studio && !projectOnly ? "studio" : conversationOwner(user),
       key: studio && !projectOnly ? "studio" : hash(user || "admin")
     };
     function hash(v) {
@@ -1142,6 +1150,7 @@ C8O.tigoResources = (function () {
   return {
     create: create,
     normalize: normalize,
+    conversationOwner: conversationOwner,
     javaHost: javaHost,
     manage: function (args) {
       return create(javaHost(context)).execute(args);

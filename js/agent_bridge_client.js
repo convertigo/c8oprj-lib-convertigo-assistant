@@ -1608,6 +1608,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // On a server the conversations belong to the authenticated user, never to the userId the page sends. C8Oforms
+  // signs an OAuth user in as "provider:subject:email" and the page keys its conversations by the email; a local
+  // account or "c8o:admin" keeps its whole name. Same rule as tigo_resources.js (conversationOwner). The Studio has
+  // one user and keeps the page value; a WEB_ADMIN session without a user name may act for the user it names.
+  function callerUserId(requested) {
+    if (Engine.isStudioMode()) {
+      return trim(requested);
+    }
+    var user = "";
+    try {
+      user = trim(context.getAuthenticatedUser());
+    } catch (_ignoreAuthenticatedUser) {}
+    if (!user.length) {
+      return trim(requested);
+    }
+    var parts = user.split(":");
+    var last = parts[parts.length - 1];
+    return parts.length > 2 && last.indexOf("@") > 0 ? last : user;
+  }
+
+  // Called by every entry point right after bridgeCallerRefusal, before options.userId locates any conversation.
+  function withCallerUserId(options) {
+    options = options || {};
+    options.userId = callerUserId(options.userId);
+    return options;
+  }
+
   // The key goes only to this engine's Bridge: at the configured engine URL, or on a loopback host at the port that
   // received the request. A bridgeBaseUrl sent by a caller, or a request Host header, never receives it.
   function isOwnBridgeUrl(urlText) {
@@ -6502,7 +6529,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
@@ -6638,7 +6665,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // Resolve only trusted identity/ownership here. The private native sequence may
   // read account metadata before the first conversation; never create one.
   C8O.assistantAgentBridge.quota = function(options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var provider = normalizeProvider(options.provider);
     var empty = {status:"ok",quota:{provider:provider,source:"wrapper",available:false,kind:"limits",windows:[],updatedAt:null}};
     var id = normalizeThreadId(options.threadid);
@@ -6654,7 +6685,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = optionsWithRequestFallbacks(options);
+    options = withCallerUserId(optionsWithRequestFallbacks(options));
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
@@ -6684,7 +6715,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = optionsWithRequestFallbacks(options || {});
+    options = withCallerUserId(optionsWithRequestFallbacks(options || {}));
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
     if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
@@ -7147,7 +7178,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // temporary files are copied under the conversation folder and their local
   // paths are returned as `file` entries, mirroring the legacy UploadFiles shape.
   C8O.assistantAgentBridge.storeAttachments = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var stored = [];
     var errors = [];
     var sources = attachmentPathList(options.files).concat(attachmentPathList(options.attachments));
@@ -7260,7 +7295,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (["list", "get"].indexOf(String(args.action || "list")) < 0 && args.csrf !== csrf) { throw new Error("csrf_invalid"); }
     if (args.threadid) {
       var current = readState(normalizeThreadId(args.threadid));
-      if (current && !who.admin && current.userId !== who.user) { throw new Error("conversation_access_denied"); }
+      if (current && !who.admin && current.userId !== who.owner) { throw new Error("conversation_access_denied"); }
       if (current && args.action === "select" && current.status === "in_progress") { throw new Error("conversation_busy"); }
     }
     var result = C8O.tigoResources.manage(args);
@@ -7279,7 +7314,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = optionsWithRequestFallbacks(options || {});
+    options = withCallerUserId(optionsWithRequestFallbacks(options || {}));
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
@@ -7699,7 +7734,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // Every event of a turn, read from runs/<runid>.ndjson: a page opened during a long turn shows the turn from its start,
   // not only the last 80 events the state keeps. Long details are shortened for this one-time read.
   C8O.assistantAgentBridge.runHistory = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length) {
       return { ok: false, error: { code: "unknown_conversation" } };
@@ -7728,7 +7767,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length && trim(options.runid).length) {
       var runRecord = conversationRecordForRunId(
@@ -8056,7 +8095,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.listConversations = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
@@ -8079,7 +8122,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     if (!threadid.length) {
       return {
@@ -8135,7 +8178,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     if (!threadid.length) {
       return {
@@ -8244,7 +8287,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.renameConversation = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     var title = conversationTitleFromText(options.title || options.name || "");
     if (!threadid.length) {
@@ -8312,7 +8359,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length) {
       var workspaceRoot = resolveWorkspaceRoot(options);

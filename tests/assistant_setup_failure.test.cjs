@@ -37,7 +37,8 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user') 
     publicState: v => v, publicInstallationDiagnostic: () => null, publicCommandDiagnostic: () => null,
     cancellationRequested: () => false, recoverableBridgeError: () => false,
     bridgeCall: () => { calls.push('unexpected-agent-start'); throw new Error('must not start'); },
-    bridgeCallerRefusal: () => null
+    bridgeCallerRefusal: () => null,
+    withCallerUserId: options => options || {}
   };
   vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName']) + '\nvar sendMessage = ' + send + ';', sandbox);
   return { response: sandbox.sendMessage({ threadid: state.threadid, Question: 'Bonjour' }), calls };
