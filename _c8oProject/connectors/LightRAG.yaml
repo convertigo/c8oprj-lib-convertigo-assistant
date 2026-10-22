@@ -3,6 +3,7 @@ port: 443
 server: ${assistant.lrag.host.url=}
 ↓query_text [transactions.JsonHttpTransaction]: 
   ↑default: true
+  accessibility: Private
   comment: Query Text
   httpInfo: true
   httpParameters: 
@@ -76,6 +77,7 @@ server: ${assistant.lrag.host.url=}
     httpMethod: POST
     required: true
 ↓query_text_stream [transactions.JsonHttpTransaction]: 
+  accessibility: Private
   comment: Query Text Stream
   httpInfo: true
   httpParameters: 
