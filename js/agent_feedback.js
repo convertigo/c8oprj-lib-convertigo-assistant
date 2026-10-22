@@ -12,6 +12,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   var MODES = { off: true, ask: true, auto: true };
   var POLICIES = { user: true, off: true, ask: true, auto: true };
   var KINDS = { agent_friction: true, tool_error: true, runtime_error: true, user_report: true };
+  var CHANNELS = { dev: true, release: true };
   var MAX_PENDING = 100;
   var MAX_BATCH = 50;
   var MAX_BATCH_BYTES = 256 * 1024;
@@ -241,6 +242,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       if (item.length) {
         out.stack[stackKeys[j]] = cut(item, 60);
       }
+    }
+    if (CHANNELS[trim(stack.channel)]) {
+      out.stack.channel = trim(stack.channel);
     }
     if (report.turn && typeof report.turn === "object") {
       out.turn = {
@@ -587,6 +591,35 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       }
     }
 
+    function text(path) {
+      return String(new java.lang.String(Files.readAllBytes(path), UTF8));
+    }
+
+    // "dev" when the Assistant runs from a git clone on a branch (a developer's checkout, or a reference that follows a
+    // branch); "release" for a CAR install or a clone checked out at a tag (detached HEAD).
+    function channel() {
+      try {
+        var project = Engine.theApp.databaseObjectsManager.getOriginalProjectByName("lib_ConvertigoAssistant");
+        var dir = project ? project.getDirFile().toPath() : null;
+        var git = dir ? dir.resolve(".git") : null;
+        if (!git || !Files.exists(git)) {
+          return "release";
+        }
+        if (Files.isRegularFile(git)) {
+          // A worktree: .git names the folder that holds its HEAD.
+          var pointer = /^gitdir:\s*(.+)$/m.exec(text(git));
+          if (!pointer) {
+            return "dev";
+          }
+          git = dir.resolve(trim(pointer[1]));
+        }
+        var head = git.resolve("HEAD");
+        return Files.isRegularFile(head) && /^ref:\s*refs\/heads\//.test(text(head)) ? "dev" : "release";
+      } catch (_ignoreChannel) {
+        return "release";
+      }
+    }
+
     return {
       studio: function () {
         return Engine.isStudioMode() === true;
@@ -633,7 +666,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
           mcp: version("lib_ConvertigoMCP"),
           studio: studio,
           provider: trim(provider),
-          model: trim(model)
+          model: trim(model),
+          channel: channel()
         };
       },
       readSettings: function () {

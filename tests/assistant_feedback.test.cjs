@@ -26,7 +26,7 @@ function feedback(options = {}) {
     uuid: () => 'report-' + String(++id).padStart(4, '0'),
     sha256: text => crypto.createHash('sha256').update(String(text)).digest('hex'),
     projectNames: () => ['PcaUpdateTracker'],
-    stack: (provider, model) => ({ assistant: '1.5.3', bridge: '0.4.26', mcp: '0.2.26', studio: '8.4.7', provider: provider || '', model: model || '' }),
+    stack: (provider, model) => ({ assistant: '1.5.3', bridge: '0.4.26', mcp: '0.2.26', studio: '8.4.7', provider: provider || '', model: model || '', channel: options.channel || 'release' }),
     readSettings: () => store.settings,
     writeSettings: value => { store.settings = value; },
     listPending: () => [...store.pending.values()].map(r => JSON.parse(JSON.stringify(r))).sort((a, b) => String(a.firstAt).localeCompare(String(b.firstAt)) || a.reportId.localeCompare(b.reportId)),
@@ -128,7 +128,17 @@ test('tool errors are collected only with consent, Convertigo tools only, and co
   assert.equal(pending[0].finding.subject, 'databaseobject-delete');
   assert.ok(!JSON.stringify(pending).includes('PcaUpdateTracker'));
   assert.equal(pending[0].stack.model, 'glm-5-3');
+  assert.equal(pending[0].stack.channel, 'release');
   assert.equal(store.pending.size, 1);
+});
+
+test('the channel says whether the Assistant runs from a release or a git clone on a branch; nothing else passes', () => {
+  let { F } = feedback({ settings: { mode: 'ask' }, channel: 'dev' });
+  F.collectRuntimeError({ provider: 'vibe', message: 'boom' });
+  assert.equal(F.pending()[0].stack.channel, 'dev');
+  ({ F } = feedback({ settings: { mode: 'ask' }, channel: '/Users/jane/dev' }));
+  F.collectRuntimeError({ provider: 'vibe', message: 'boom' });
+  assert.equal(F.pending()[0].stack.channel, undefined);
 });
 
 test('a user report is an explicit act: prepared even when collection is off, never under an "off" policy', () => {
@@ -211,7 +221,7 @@ test('automatic mode sends after a turn; the outbox and a batch stay bounded', (
 });
 
 const METHODS = ['agentFeedbackText', 'feedbackCommand', 'fillFeedbackCard', 'agentUiLanguage', 'feedbackErrorText', 'feedbackTurnFailures', 'feedbackCard',
-  'dropOpenFeedbackCards', 'offerFeedback', 'onFeedbackCta', 'canReportTurn', 'prefillFeedbackReport', 'feedbackSettingNote', 'feedbackSettingChoices'];
+  'dropOpenFeedbackCards', 'offerFeedback', 'offerFeedbackOnOpen', 'onFeedbackCta', 'canReportTurn', 'prefillFeedbackReport', 'feedbackSettingNote', 'feedbackSettingChoices'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter(m => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map(m => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -274,7 +284,7 @@ test('the card shows the mode, one row per waiting report and what to do next; i
   assert.match(offline.message, /^Activez Tigo/);
 });
 
-test('after a turn the thread invites once, cites the failed tools, and then reminds of waiting reports only when they grow', () => {
+test('after a turn the thread invites until it is answered, cites the failed tools, and reminds of waiting reports when they grow', () => {
   const p = page('fr');
   const events = [{ type: 'tool', status: 'failed' }, { type: 'tool', status: 'completed', detail: '{"content":[{"type":"text","text":"{\\"code\\":\\"-1\\",\\"message\\":\\"x\\"}"}]}' },
     { type: 'tool', status: 'completed', detail: '{"status":"ok"}' }, { type: 'narrative', status: 'failed' }];
@@ -286,8 +296,11 @@ test('after a turn the thread invites once, cites the failed tools, and then rem
   assert.equal(invite.variant, 'invite');
   assert.match(invite.message, /^Ce tour a rencontré 2 erreur\(s\) d'outil\. Partagez avec Convertigo/);
   assert.deepEqual(Array.from(invite.actions, a => a.id), ['ask', 'auto', 'later']);
+  // The next turn moves the open invitation to the end of the thread: one card, never two.
+  p.local.Messages.push({ type: 'assistant', msg: 'next answer' });
   p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }, 0);
-  assert.equal(p.local.Messages.length, 1);
+  assert.deepEqual(Array.from(p.local.Messages, m => m.type), ['assistant', 'feedback']);
+  assert.match(p.local.Messages[1].message, /^Partagez avec Convertigo/);
   // Imposed by the administrator: no card at all.
   const locked = page('fr');
   locked.offerFeedback({ status: 'ok', available: true, mode: 'off', locked: true, invite: false, pending: [] }, 3);
@@ -378,4 +391,25 @@ test('the setting lists the three modes and says what waits or who decided', () 
       assert.notEqual(texts.agentFeedbackText(key), key, language + ' ' + key);
     }
   }
+});
+
+test('a reopened conversation shows the unanswered invitation again at its end, after a finished turn only', async () => {
+  const p = page('fr', [{ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }]);
+  p.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: 'Bonjour !', runEvents: [] }];
+  p.offerFeedbackOnOpen();
+  await settle();
+  assert.deepEqual(p.calls, [{ action: 'status' }]);
+  assert.deepEqual(Array.from(p.local.Messages, m => m.type), ['user', 'assistant', 'feedback']);
+  assert.equal(p.local.Messages[2].variant, 'invite');
+  // Answered or snoozed: the status says no invitation, nothing comes back.
+  const answered = page('fr', [{ status: 'ok', available: true, mode: 'ask', invite: false, pending: [] }]);
+  answered.local.Messages = [{ type: 'assistant', msg: 'ok' }];
+  answered.offerFeedbackOnOpen();
+  await settle();
+  assert.equal(answered.local.Messages.length, 1);
+  // A new conversation, or one still running: no call at all.
+  const empty = page('fr');
+  empty.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: '…', writing: true }];
+  empty.offerFeedbackOnOpen();
+  assert.equal(empty.calls.length, 0);
 });

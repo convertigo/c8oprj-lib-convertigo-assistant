@@ -21,9 +21,10 @@ only.
 ## Putting it forward
 
 - **Invitation.** After a finished turn, while nobody chose a mode and nothing is imposed, the thread shows a card that
-  asks the user to share (once per Assistant view). It cites the tool calls of the turn that failed, if any. Its
-  buttons: "Activer avec relecture" (`ask`), "Toujours partager" (`auto`), "Pas maintenant" (asked again in seven
-  days). Any choice of a mode, `off` included, ends the invitation.
+  asks the user to share. It cites the tool calls of the turn that failed, if any. It stays at the end of the thread
+  until it is answered: the next turn moves it below the new answer, and a reopened conversation shows it again after
+  its last finished turn. Its buttons: "Activer avec relecture" (`ask`), "Toujours partager" (`auto`), "Pas
+  maintenant" (asked again in seven days). Any choice of a mode, `off` included, ends the invitation.
 - **Reminder.** In `ask` mode, when the reports waiting grow after a turn, a card says how many wait, with "Envoyer"
   and "Relire" (the `/retours` card). The thread keeps one open feedback card.
 - **Report a problem.** The last finished turn carries a "Signaler un problème" link that puts `/signaler ` in the
@@ -40,8 +41,10 @@ only.
 | `runtime_error` | a turn that fails (agent process, gateway, protocol) | provider, error template |
 | `user_report` | `/signaler <comment>` (`/report <comment>`) on the last turn | comment, the turn's tools and their status |
 
-Each report carries the versions (Assistant, Bridge, MCP, Studio), the provider and model, a count and its first and
-last dates. Reports with the same fingerprint (kind, subject or tool, error template) are counted, not repeated.
+Each report carries the versions (Assistant, Bridge, MCP, Studio), the provider and model, the channel, a count and
+its first and last dates. The channel is `dev` when the Assistant runs from a git clone on a branch (a developer's
+checkout, or a project reference that follows a branch) and `release` otherwise (a CAR install, or a clone checked out
+at a tag): Convertigo reads its colleagues' reports apart from its customers'. Reports with the same fingerprint (kind, subject or tool, error template) are counted, not repeated.
 
 Never sent: project files, prompts, agent answers, tool arguments or results, credentials, the account email.
 
@@ -75,7 +78,7 @@ aside). Error templates also replace quoted values and numbers. Texts are cut (s
   "finding": { "area": "", "subject": "", "severity": "low|medium|high", "summary": "", "suggestion": "", "template": "" },
   "turn": { "steps": 0, "tools": [{ "name": "", "calls": 0, "failures": 0 }] },
   "comment": "",
-  "stack": { "assistant": "", "bridge": "", "mcp": "", "studio": "", "provider": "", "model": "" }
+  "stack": { "assistant": "", "bridge": "", "mcp": "", "studio": "", "provider": "", "model": "", "channel": "dev|release" }
 }
 ```
 
@@ -91,5 +94,5 @@ accepted reports leave the outbox. A refusal or an unreachable service keeps the
 sent again after a lost answer is counted once by TigoAccess (same account, same report id). A loopback host
 (`localhost`, `127.0.0.1`, `*.localhost`) is reached in plain HTTP, to test against a local TigoAccess.
 
-Convertigo reads them with the admin sequence `AdminFeedback` of TigoAccess, grouped by fingerprint (count, accounts,
-versions, last date, a sample).
+Convertigo reads them with the admin sequence `AdminFeedback` of TigoAccess, one list per channel (`release`, `dev`,
+and `unknown` for reports without a channel), grouped by fingerprint (count, accounts, versions, last date, a sample).

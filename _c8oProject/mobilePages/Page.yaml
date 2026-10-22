@@ -4906,7 +4906,8 @@ scriptContent:
         		}
         	}
         	public offerFeedback(result, failures) {
-        		// After a turn, one card at most: the invitation, once per page, while nobody chose a mode and nothing is imposed;
+        		// After a turn, one card at most: the invitation, while nobody chose a mode and nothing is imposed (it stays at the
+        		// end of the thread until it is answered);
         		// else, in "ask" mode, the reminder of the waiting reports when their number grew since the last reminder.
         		var self: any = this;
         		if (!this.local || !result || result.status !== "ok") {
@@ -4920,8 +4921,7 @@ scriptContent:
         		var t = (key: any) => this.agentFeedbackText(key);
         		var pending = (result.pending || []).length;
         		var card: any = null;
-        		if (result.invite === true && !self.feedbackInviteShown) {
-        			self.feedbackInviteShown = true;
+        		if (result.invite === true) {
         			card = this.feedbackCard("invite", t("inviteTitle"), (failures ? t("inviteFailures").replace("{n}", "" + failures) + " " : "") + t("inviteText"),
         				[{ id: "ask", label: t("inviteAsk"), primary: true }, { id: "auto", label: t("inviteAuto") }, { id: "later", label: t("inviteLater") }]);
         		} else if (result.mode === "ask" && pending > (self.feedbackReminderCount || 0)) {
@@ -4936,6 +4936,29 @@ scriptContent:
         			this.scrollChatBottom(0, true);
         		}
         		this.tick();
+        	}
+        	public offerFeedbackOnOpen() {
+        		// A reopened conversation is rebuilt from its history, without the local cards: the invitation nobody answered
+        		// comes back at its end when the conversation has a finished turn.
+        		var list = (this.local && this.local.Messages) || [];
+        		var finished = false;
+        		for (var i = 0; i < list.length && !finished; i++) {
+        			finished = !!list[i] && list[i].type === "assistant" && list[i].writing !== true;
+        		}
+        		if (!finished) {
+        			return;
+        		}
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", { action: "status" }).async().then((response: any) => {
+        				var result = response && response.response ? response.response : response;
+        				if (result && result.status === "ok") {
+        					this.local.FeedbackStatus = result;
+        				}
+        				if (result && result.status === "ok" && result.invite === true) {
+        					this.offerFeedback(result, 0);
+        				}
+        			}).catch(() => {});
+        		} catch (e) {}
         	}
         	public onFeedbackCta(card, cta) {
         		// A button of a feedback card: a mode, "not now", send, or review (the /retours card).
@@ -12500,6 +12523,9 @@ title: Tigo
                                     			});
                                     			page.local.StreamingIndex = page.local.Messages.length - 1;
                                     			page.local.Buffer = { progress: progress, phase: phase || lines[lines.length - 1] };
+                                    		}
+                                    		if (!active && page.offerFeedbackOnOpen) {
+                                    			page.offerFeedbackOnOpen();
                                     		}
                                     		page.tick();
                                     		page.scrollChatBottom(0);
