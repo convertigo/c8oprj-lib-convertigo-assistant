@@ -780,7 +780,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreSecretRemove) {}
   }
 
-  function noCodeMcpTokenHandle(options) {
+  // Forgets a token C8Oforms refused (revoked in the settings, or never stored): the session's handle, and the user's
+  // shared token when it is still that one (another session may have replaced it). The next resolution reads the file
+  // again, which C8Oforms checks, or creates a token.
+  function forgetNoCodeMcpToken(options, refusedToken) {
+    var userKey = normalizeUserKey(noCodeMcpUserId(options));
+    try {
+      context.httpSession.removeAttribute(NOCODE_MCP_TOKEN_SESSION_PREFIX + userKey);
+    } catch (_ignoreForgetTokenSession) {}
+    var handle = NOCODE_MCP_TOKEN_HANDLE_PREFIX + userKey;
+    if (sharedSecretGet(handle) === trim(refusedToken)) {
+      sharedSecretRemove(handle);
+    }
+  }
+
+  // verify: ask C8Oforms whether the session's token is still accepted before using it (an agent keeps the token it
+  // starts with; the Bridge restarts a resident one when the token changes).
+  function noCodeMcpTokenHandle(options, verify) {
     options = options || {};
     if (normalizeSkillProfile(options) !== "nocode") {
       return "";
@@ -797,8 +813,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var existingHandle = context.httpSession.getAttribute(sessionKey);
       if (existingHandle !== null && typeof existingHandle !== "undefined") {
         existingHandle = String(existingHandle);
-        if (trim(existingHandle).length && sharedSecretGet(existingHandle).length) {
-          return existingHandle;
+        var existingToken = trim(existingHandle).length ? sharedSecretGet(existingHandle) : "";
+        if (existingToken.length) {
+          if (verify !== true || validateNoCodeMcpToken(existingToken)) {
+            return existingHandle;
+          }
+          forgetNoCodeMcpToken(options, existingToken);
         }
       }
     } catch (_ignoreExistingTokenHandle) {}
@@ -891,7 +911,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     if (normalizeSkillProfile(options) === "nocode") {
-      var noCodeHandle = noCodeMcpTokenHandle(options);
+      var noCodeHandle = noCodeMcpTokenHandle(options, true);
       if (noCodeHandle.length) {
         payload.nocodeMcpTokenHandle = noCodeHandle;
       }
@@ -1147,22 +1167,30 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function loadNoCodeBaserowCatalog(options) {
-    var handle = noCodeMcpTokenHandle(options);
-    var token = handle.length ? sharedSecretGet(handle) : "";
-    if (!token.length) {
-      return {
-        status: "auth_required",
-        workspaces: [],
-        bases: [],
-        tables: []
-      };
+    var payload = {};
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var handle = noCodeMcpTokenHandle(options);
+      var token = handle.length ? sharedSecretGet(handle) : "";
+      if (!token.length) {
+        return {
+          status: "auth_required",
+          workspaces: [],
+          bases: [],
+          tables: []
+        };
+      }
+      var response = callLocalSequence("lib_ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
+        token: token,
+        includeColumns: "false",
+        __nolog: "true"
+      });
+      payload = sequencePayload(response);
+      // C8Oforms refused the token the session kept: forget it and ask once more with the token resolved again.
+      if (trim(payload.status) !== "auth_required") {
+        break;
+      }
+      forgetNoCodeMcpToken(options, token);
     }
-    var response = callLocalSequence("lib_ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
-      token: token,
-      includeColumns: "false",
-      __nolog: "true"
-    });
-    var payload = sequencePayload(response);
     return {
       status: trim(payload.status || "ok") || "ok",
       workspaces: catalogArray(findCatalogValue(payload, ["workspaces"], 0)),
