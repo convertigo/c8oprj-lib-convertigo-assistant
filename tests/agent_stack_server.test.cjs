@@ -56,6 +56,23 @@ const manifest = [
   { name: 'lib_ConvertigoAgentBridge', version: '0.4.11', importUrl: 'lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.11/lib_ConvertigoAgentBridge.car' }
 ];
 
+test('a pre-release comes before its release, so a server on a preview takes the final version', () => {
+  const order = require('./helpers/version-order.cjs');
+  const { stack } = load();
+  for (let i = 0; i < order.length; i++) {
+    for (let j = 0; j < order.length; j++) {
+      assert.equal(stack.compareVersions(order[i], order[j]), Math.sign(i - j), order[i] + ' vs ' + order[j]);
+    }
+  }
+  assert.equal(stack.compareVersions('v1.5.5', '1.5.5+build.7'), 0);
+  assert.equal(stack.compareVersions('1.5', '1.5.0'), 0);
+  const preview = load({ admin: true, projects: { lib_ConvertigoMCP: '0.2.8', lib_ConvertigoAgentBridge: '0.4.11', lib_ConvertigoAssistant: '1.4.17-beta.1' } });
+  const result = preview.stack.install({ projects: JSON.stringify(manifest) });
+  assert.equal(result.status, 'success');
+  assert.equal(result.results.map(entry => entry.action).join(','), 'up_to_date,up_to_date,updated');
+  assert.equal(preview.projects.lib_ConvertigoAssistant, '1.4.17');
+});
+
 test('only official release CARs of the three repositories are accepted', () => {
   const { stack } = load();
   assert.equal(stack.validateImportUrl('lib_ConvertigoMCP', manifest[1].importUrl), manifest[1].importUrl);

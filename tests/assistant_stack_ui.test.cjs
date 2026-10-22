@@ -18,6 +18,17 @@ const compiled = ts.transpileModule('class Page {\n' + methods.map(m => m.getTex
 assert.deepEqual(compiled.diagnostics, []);
 const flush = async () => { for (let i = 0; i < 25; i++) await Promise.resolve(); };
 
+test('the page orders versions like the server installer, a pre-release before its release', () => {
+  const order = require('./helpers/version-order.cjs');
+  const { page } = fixture();
+  for (let i = 0; i < order.length; i++) {
+    for (let j = 0; j < order.length; j++) {
+      assert.equal(page.compareAgentStackVersions(order[i], order[j]), Math.sign(i - j), order[i] + ' vs ' + order[j]);
+    }
+  }
+  assert.equal(page.compareAgentStackVersions('v1.5.5', '1.5.5+build.7'), 0);
+});
+
 test('default manifest alias and offline fallback pin the reviewed stable bundle', () => {
   const fs = require('node:fs'), path = require('node:path');
   const root = path.resolve(__dirname, '..');

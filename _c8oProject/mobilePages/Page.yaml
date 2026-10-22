@@ -1718,22 +1718,31 @@ scriptContent:
         		return projects;
         	}
         
+        	// Same order as compareVersions in js/agent_stack_server.js: a pre-release comes before its release
+        	// (1.5.5-beta.1 < 1.5.5-beta.2 < 1.5.5), identifiers compare number by number and text by text, build metadata is ignored.
         	public compareAgentStackVersions(left, right) {
         		var parse = function(value) {
-        			var text = ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "").replace(/^v/i, "").split("-")[0];
-        			var parts = text.split(".");
-        			var out = [];
-        			for (var i = 0; i < 4; i++) {
-        				var number = Number(parts[i] || 0);
-        				out.push(isNaN(number) ? 0 : number);
-        			}
-        			return out;
+        			var text = ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "").replace(/^v/i, "").split("+")[0];
+        			var dash = text.indexOf("-");
+        			var numbers = (dash < 0 ? text : text.substring(0, dash)).split(".").map(function(part) { var number = parseInt(part, 10); return isNaN(number) ? 0 : number; });
+        			var pre: any[] = dash < 0 ? [] : (text.substring(dash + 1).toLowerCase().match(/[0-9]+|[a-z]+/g) || []);
+        			pre = pre.map(function(part) { return /^[0-9]+$/.test(part) ? parseInt(part, 10) : part; });
+        			return { numbers: numbers, pre: pre, preview: dash >= 0 };
         		};
         		var a = parse(left);
         		var b = parse(right);
-        		for (var i = 0; i < a.length; i++) {
-        			if (a[i] < b[i]) { return -1; }
-        			if (a[i] > b[i]) { return 1; }
+        		for (var i = 0; i < Math.max(a.numbers.length, b.numbers.length, 3); i++) {
+        			var x = a.numbers[i] || 0, y = b.numbers[i] || 0;
+        			if (x !== y) { return x < y ? -1 : 1; }
+        		}
+        		if (a.preview !== b.preview) { return a.preview ? -1 : 1; }
+        		for (var j = 0; j < Math.max(a.pre.length, b.pre.length); j++) {
+        			if (j >= a.pre.length || j >= b.pre.length) { return j >= a.pre.length ? -1 : 1; }
+        			var p = a.pre[j], q = b.pre[j];
+        			if (p !== q) {
+        				if (typeof p !== typeof q) { return typeof p === "number" ? -1 : 1; }
+        				return p < q ? -1 : 1;
+        			}
         		}
         		return 0;
         	}
