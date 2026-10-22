@@ -153,6 +153,21 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return F._store;
   }
 
+  // The provider as the Assistant names it (claude, codex, vibe, convertigo), whatever name an agent gives.
+  F.provider = function (value) {
+    var provider = trim(value).toLowerCase();
+    if (/^(anthropic|claude)([ _-]|$)/.test(provider) || provider === "claude-code") {
+      return "claude";
+    }
+    if (/^(openai|codex)([ _-]|$)/.test(provider)) {
+      return "codex";
+    }
+    if (/^(mistral|vibe)([ _-]|$)/.test(provider)) {
+      return "vibe";
+    }
+    return cut(provider, 60);
+  };
+
   F.policy = function () {
     var value = trim(store().symbol("assistant.feedback.policy")).toLowerCase();
     return POLICIES[value] ? value : "user";
@@ -290,7 +305,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       count: 1,
       firstAt: iso(now),
       lastAt: iso(now),
-      stack: store().stack(extra.provider, extra.model),
+      stack: store().stack(F.provider(extra.provider), extra.model),
       turn: extra.turn,
       comment: extra.comment
     }, names);
@@ -390,8 +405,10 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   };
 
   // The MCP's report-create leaves raw agent frictions in incoming/: they get the same masking, fingerprint and count
-  // as the others before they join the outbox.
-  F.ingest = function () {
+  // as the others before they join the outbox. At the end of a turn the conversation's provider replaces the one the
+  // agent named, and its model too unless it is the CLI's default and the agent named the model that answered.
+  F.ingest = function (options) {
+    options = options || {};
     var incoming = store().listIncoming();
     var added = 0;
     for (var i = 0; i < incoming.length; i++) {
@@ -404,7 +421,10 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
           severity: finding.severity,
           summary: finding.summary,
           suggestion: finding.suggestion
-        }, { provider: item.provider, model: item.model });
+        }, {
+          provider: trim(options.provider) || item.provider,
+          model: trim(options.model) && trim(options.model) !== "default" ? options.model : (trim(item.model) || options.model)
+        });
         added++;
       }
       store().removeIncoming(item.__file);

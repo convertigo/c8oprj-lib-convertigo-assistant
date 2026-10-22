@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { ts, pageClass } = require('./helpers/assistant-source.cjs');
+const { ts, pageClass, backendParts } = require('./helpers/assistant-source.cjs');
 
 const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_feedback.js'), 'utf8');
 
@@ -457,4 +457,29 @@ test('the review card sends or clears from its own buttons and shows what is lef
   await settle();
   assert.match(kept.message, /^Service de retours injoignable/);
   assert.equal(kept.actions.length, 2);
+});
+
+test('one name per provider, whatever the agent calls it; the conversation names the provider of a friction', () => {
+  const { F, store } = feedback({ settings: { mode: 'ask' }, incoming: [
+    { kind: 'agent_friction', finding: { area: 'tool', subject: 'requestable-execute', summary: 'no close names' }, provider: 'Anthropic', model: 'claude-opus-5-5', __file: 'a.json' }
+  ] });
+  assert.deepEqual(['Anthropic', 'claude-code', 'OpenAI', 'codex', 'Mistral', 'vibe', 'convertigo'].map(F.provider), ['claude', 'claude', 'codex', 'codex', 'vibe', 'vibe', 'convertigo']);
+  F.collectToolError({ tool: 'mcp_Convertigo.requestable_execute', message: 'There is no sequence named x', provider: 'claude', model: 'claude-opus-5-5' });
+  // End of turn: the conversation runs Claude Code on its default model; the agent named the model that answered.
+  F.ingest({ provider: 'claude', model: 'default' });
+  const stacks = [...store.pending.values()].map(r => r.kind + ' ' + r.stack.provider + ' ' + r.stack.model).sort();
+  assert.deepEqual(stacks, ['agent_friction claude claude-opus-5-5', 'tool_error claude claude-opus-5-5']);
+  // A model chosen for the conversation wins over the agent's word.
+  const chosen = feedback({ settings: { mode: 'ask' }, incoming: [{ kind: 'agent_friction', finding: { subject: 's', summary: 'x' }, provider: 'Zhipu', model: 'glm-x', __file: 'b.json' }] });
+  chosen.F.ingest({ provider: 'convertigo', model: 'glm-5-3' });
+  const report = [...chosen.store.pending.values()][0];
+  assert.equal(report.stack.provider + ' ' + report.stack.model, 'convertigo glm-5-3');
+});
+
+test('the model of a report: the chosen one, else the one that answered, else the default of the CLI', () => {
+  const sandbox = {};
+  vm.runInNewContext(backendParts(['trim', 'feedbackModel']) + '\nthis.feedbackModel = feedbackModel;', sandbox);
+  assert.equal(sandbox.feedbackModel({ model: 'glm-5-3', usage: { agentModel: 'x' } }), 'glm-5-3');
+  assert.equal(sandbox.feedbackModel({ model: '', usage: { agentModel: 'claude-opus-5-5' } }), 'claude-opus-5-5');
+  assert.equal(sandbox.feedbackModel({ model: '' }), 'default');
 });

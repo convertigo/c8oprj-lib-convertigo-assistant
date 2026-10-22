@@ -4135,6 +4135,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     var metaCached = number(meta.cachedTokens);
+    // The model that answered, when the agent names it (Claude Code on its default model): kept across updates.
+    var agentModel = trim(meta.model) || (state.usage && trim(state.usage.agentModel)) || "";
     var journalCached = journal ? number(journal.cachedTokens) : null;
     state.usage = {
       used: number(update.used),
@@ -4154,6 +4156,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       requests: journal ? number(journal.requests) : null,
       outputTokens: journal ? number(journal.outputTokens) : null,
       model: String(state.model || ""),
+      agentModel: agentModel,
       models: agentUsageModels(journal, number),
       // Session measures computed by the Bridge from the Vibe journal (active time, requests, tools, waits...).
       metrics: journal && journal.metrics && typeof journal.metrics === "object" ? agentUsageMetrics(journal.metrics, number) : null,
@@ -4600,7 +4603,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var feedback = feedbackModule();
       var message = feedback ? feedback.errorMessage(preview, failed) : "";
       if (message.length) {
-        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: state.model });
+        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state) });
       }
     } catch (_ignoreFeedback) {}
   }
@@ -4609,7 +4612,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     try {
       var feedback = feedbackModule();
       if (feedback && trim(message).length) {
-        feedback.collectRuntimeError({ provider: state.provider, model: state.model, message: message });
+        feedback.collectRuntimeError({ provider: state.provider, model: feedbackModel(state), message: message });
+      }
+    } catch (_ignoreFeedback) {}
+  }
+
+  // The model of a report: the one chosen for the conversation, else the one that answered, else the CLI's default.
+  function feedbackModel(state) {
+    return trim(state && state.model) || trim(state && state.usage && state.usage.agentModel) || "default";
+  }
+
+  // At the end of a turn the frictions the agent filed with report-create join the outbox with the conversation's
+  // provider and model, not the ones the agent names itself.
+  function ingestFeedback(state) {
+    try {
+      var feedback = feedbackModule();
+      if (feedback) {
+        feedback.ingest({ provider: state.provider, model: feedbackModel(state) });
       }
     } catch (_ignoreFeedback) {}
   }
@@ -7798,6 +7817,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         throw new Error(events.error || ("agent_events " + (bridgeStatus || "failed")));
       }
       state.readErrors = 0;
+      var wasTerminal = isTerminalStatus(state.status);
       var list = [];
       var fetched = events.events || [];
       for (var f = 0; f < fetched.length; f++) {
@@ -7953,6 +7973,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
+      if (!wasTerminal && isTerminalStatus(state.status)) {
+        ingestFeedback(state);
+      }
       readEarlyAgentCommands(state);
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
