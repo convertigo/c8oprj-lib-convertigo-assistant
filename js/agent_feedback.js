@@ -48,7 +48,11 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     out = out.replace(/\b\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/g, "<ip>");
     out = out.replace(/(?:\b[A-Za-z]:\\|~\/|\/(?:Users|home|private|var|tmp|opt|etc|Volumes|mnt|srv|root|Library|Applications)\/)[^\s"'<>`]*/g, "<path>");
     out = out.replace(/\b[0-9a-f]{24,}\b/gi, "<hex>");
-    out = out.replace(/[A-Za-z0-9+\/_-]{40,}={0,2}/g, "<data>");
+    // Long encoded values (keys, tokens): a digit among letters. A long name without digits, such as tools joined with
+    // "/", stays readable.
+    out = out.replace(/[A-Za-z0-9+\/_-]{40,}={0,2}/g, function (value) {
+      return /\d/.test(value) && /[A-Za-z]/.test(value) ? "<data>" : value;
+    });
     var list = (names || []).filter(function (name) {
       return trim(name).length >= 3;
     }).sort(function (a, b) {

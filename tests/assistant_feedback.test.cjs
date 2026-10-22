@@ -57,6 +57,9 @@ test('masking removes what could name the customer, its systems or a credential'
   }
   assert.equal(text, 'Mail <email>, see <url> with <secret> and Bearer <secret>, file <path> on <ip>, password=<secret>, token <secret>, project <project>.');
   assert.equal(F.redact('hash 0123456789abcdef0123456789abcdef0123'), 'hash <hex>');
+  // A long name made of words stays; an encoded value with digits goes.
+  assert.equal(F.redact('databaseobject-tree-get/requestable-execute'), 'databaseobject-tree-get/requestable-execute');
+  assert.equal(F.redact('key dGhpcyBpcyBhIHNlY3JldCB2YWx1ZSAxMjM0NTY3ODkw=='), 'key <data>');
 });
 
 test('an error template keeps the shape of an error, so the same error with other values counts once', () => {
@@ -273,12 +276,14 @@ test('the card shows the mode, one row per waiting report and what to do next; i
   ] }, 'status');
   assert.deepEqual(Array.from(card.rows, r => r.label + ' = ' + r.value), ['Mode = Relire avant envoi', 'En attente = 2', 'Envoyés = 3',
     'Erreur d\'outil · databaseobject-delete = Database object not found: <project>.pg:Home ×2', 'Signalement = Pages vides']);
-  assert.match(card.message, /\/retours envoyer/);
+  assert.match(card.message, /puis Envoyer ou Effacer\.$/);
   assert.equal(JSON.parse(card.json).length, 2);
+  assert.deepEqual(Array.from(card.actions, a => a.id), ['send', 'clear']);
   const sent = { rows: [], json: '' };
   p.fillFeedbackCard(sent, { status: 'ok', available: true, mode: 'auto', locked: true, sentCount: 1, pending: [], result: { status: 'ok', accepted: 1, rejected: [] } }, 'send');
   assert.equal(sent.rows[0].value, 'Automatique (imposé par l\'administrateur)');
   assert.match(sent.message, /^1 rapport\(s\) envoyé\(s\)\. Aucun rapport en attente\.$/);
+  assert.equal(sent.actions.length, 0);
   const offline = { rows: [] };
   p.fillFeedbackCard(offline, { status: 'ok', available: true, mode: 'ask', pending: [{ kind: 'runtime_error', count: 1, finding: { subject: 'vibe', template: 'x' } }], result: { status: 'error', code: 'not_connected' } }, 'send');
   assert.match(offline.message, /^Activez Tigo/);
@@ -426,4 +431,30 @@ test('a reopened conversation shows the unanswered invitation, or the waiting re
   empty.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: '…', writing: true }];
   empty.offerFeedbackOnOpen();
   assert.equal(empty.calls.length, 0);
+});
+
+test('the review card sends or clears from its own buttons and shows what is left', async () => {
+  const left = { status: 'ok', available: true, mode: 'ask', locked: false, sentCount: 3, pending: [], result: { status: 'ok', accepted: 2, rejected: [] } };
+  const p = page('fr', [left]);
+  const card = { type: 'metrics', rows: [], json: '' };
+  p.fillFeedbackCard(card, { status: 'ok', available: true, mode: 'ask', locked: false, sentCount: 1, pending: [{ kind: 'tool_error', count: 1, finding: { subject: 'x', template: 'y' } }] }, 'status');
+  p.onFeedbackCta(card, card.actions[0]);
+  await settle();
+  assert.deepEqual(p.calls, [{ action: 'send' }]);
+  assert.equal(card.message, '2 rapport(s) envoyé(s). Aucun rapport en attente.');
+  assert.equal(card.actions.length, 0);
+  assert.equal(card.rows[2].value, '3');
+  const cleared = page('fr', [{ status: 'ok', available: true, mode: 'ask', pending: [], result: { status: 'ok', cleared: 1 } }]);
+  const other = { type: 'metrics', rows: [], json: '', actions: [{ id: 'clear' }] };
+  cleared.onFeedbackCta(other, other.actions[0]);
+  await settle();
+  assert.deepEqual(cleared.calls, [{ action: 'clear' }]);
+  assert.match(other.message, /^1 rapport\(s\) effacé\(s\)\./);
+  // The service is down: the reports and the buttons stay, the card says why.
+  const down = page('fr', [{ status: 'ok', available: true, mode: 'ask', pending: [{ kind: 'tool_error', count: 1, finding: { subject: 'x', template: 'y' } }], result: { status: 'error', code: 'service_unavailable' } }]);
+  const kept = { type: 'metrics', rows: [], json: '', actions: [{ id: 'send' }] };
+  down.onFeedbackCta(kept, kept.actions[0]);
+  await settle();
+  assert.match(kept.message, /^Service de retours injoignable/);
+  assert.equal(kept.actions.length, 2);
 });
