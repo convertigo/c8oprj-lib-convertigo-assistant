@@ -97,8 +97,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     })).sort(function (a, b) {
       return b.name.length - a.name.length;
     });
+    // Accented Latin letters belong to a name. Rhino refuses a case-insensitive class that reaches past U+017F.
     for (var i = 0; i < list.length; i++) {
-      out = out.replace(new RegExp("(^|[^A-Za-z0-9_\u00C0-\u024F])" + escapeRegExp(list[i].name) + "(?=[^A-Za-z0-9_\u00C0-\u024F]|$)", list[i].flags), "$1" + list[i].mask);
+      out = out.replace(new RegExp("(^|[^A-Za-z0-9_\u00C0-\u017F])" + escapeRegExp(list[i].name) + "(?=[^A-Za-z0-9_\u00C0-\u017F]|$)", list[i].flags), "$1" + list[i].mask);
     }
     return out;
   };

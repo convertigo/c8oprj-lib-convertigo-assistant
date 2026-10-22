@@ -668,6 +668,9 @@ test('masking: no-code names, host names and ids; generic words and public servi
   assert.equal(F.usableName('  Demande   de congés '), 'Demande de congés');
   assert.equal(F.usableName('nocode-baserow-catalog-list'), '');
   assert.equal(F.usableName('2026-10-22'), '');
+  // Rhino (the engine) refuses a case-insensitive class past U+017F, which Node accepts.
+  assert.match(SOURCE, /\\u00C0-\\u017F/);
+  assert.doesNotMatch(SOURCE, /\\u024F/);
 });
 
 test('the names a no-code tool result shows are found, even in JSON within JSON or a cut result', () => {
