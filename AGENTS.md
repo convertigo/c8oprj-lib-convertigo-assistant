@@ -357,6 +357,17 @@ rediscovering the same context.
 
 ## Quota display (8.4.6)
 
+- TigoAccess credential installation uses `js/tigo_access_files.js`: POSIX
+  permissions on Unix, current-process-user ACLs on Windows. Java File permission
+  toggles cannot make a Windows file private. Keep symlink rejection, private
+  temporary files and atomic replacement. Run
+  `node --test tests/tigo_access_files.test.cjs` after changing this path.
+- A `local_installation_failed` response means the remote key was already
+  obtained. Keep its sanitized operation/cause diagnostic and propagate the local
+  error through AgentSetup; do not replace it with PSC troubleshooting or log
+  credential values. Native Windows validation is still required after mocked
+  ACL tests. See `docs/windows-tigo-access.md`.
+
 - The native NGX `LightRagFooterComponent` quota arc reads the authenticated `AgentQuota`
   facade through a `CallSequenceAction` subscriber (`AgentQuotaRefresh`). Keep
   this visible when the prompt is disabled or agent settings are open.
@@ -417,7 +428,7 @@ rediscovering the same context.
 ## Tigo 1.5 resource library
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
-- Assistant 1.5.3 / Bridge 0.4.26 / MCP 0.2.26 is the stable bundle (the 1.5
+- Assistant 1.5.4 / Bridge 0.4.26 / MCP 0.2.26 is the stable bundle (the 1.5
   line with the opt-in feedback to Convertigo); the preview manifest points at the
   same bundle.
   `stack-release.json` must equal `stack-release-stable.json`; the Page default

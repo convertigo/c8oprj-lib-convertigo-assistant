@@ -3,6 +3,7 @@ name: Deploy published Assistant release
 # Production follows the stable releases: when a release is published as stable, or a pre-release is promoted to a
 # release, its verified CAR is deployed. Pre-releases (previews) never deploy on their own. A maintainer can still
 # start the workflow by hand, for development or to deploy a release again.
+# A release body containing [skip deploy] explicitly suppresses automatic deployment.
 on:
   release:
     types: [released]
@@ -29,6 +30,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.release.body, '[skip deploy]') }}
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'release' && 'production' || inputs.target }}
     env:

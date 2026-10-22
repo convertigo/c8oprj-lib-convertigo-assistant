@@ -5,12 +5,12 @@ of each companion project.
 
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
-| Stable | 1.5.3 | 0.4.26 | 0.2.26 |
-| Preview | 1.5.3 | 0.4.26 | 0.2.26 |
+| Stable | 1.5.4 | 0.4.26 | 0.2.26 |
+| Preview | 1.5.4 | 0.4.26 | 0.2.26 |
 
-Tigo 1.5.3 adds the opt-in feedback to Convertigo to the stable bundle (see
-[release 1.5.3](release-1.5.3.md); the 1.5 library was promoted in
-[release 1.5.2](release-1.5.2.md)). The preview manifest points at the same
+Tigo 1.5.4 fixes Windows installation of the Tigo offer key (see
+[release 1.5.4](release-1.5.4.md)). It retains the feedback and library features
+from [1.5.3](release-1.5.3.md) and [1.5.2](release-1.5.2.md). The preview manifest points at the same
 bundle until the next preview. Both bundles target Convertigo 8.4.6;
 compatibility alone does not constitute stable acceptance.
 
@@ -47,11 +47,12 @@ silently rewrite or retag those CARs.
 Pushes build CARs. Tags publish GitHub pre-releases with `make_latest: false`,
 including tags without a suffix. Neither event deploys to a Convertigo server.
 `[skip deploy]` is no longer needed to prevent deployment. Promoting the
-Assistant release to stable deploys it to production (see below).
+Assistant release to stable normally deploys it to production (see below). A
+release body containing `[skip deploy]` suppresses this automatic deployment.
 
 The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
 its unsuffixed tag. Use beta and release-candidate tags for future preview
-iterations, for example `v1.5.4-beta.1` and `v1.5.4-rc.1`. Keep the preview manifest's three versions
+iterations, for example `v1.5.5-beta.1` and `v1.5.5-rc.1`. Keep the preview manifest's three versions
 coherent with its published CARs.
 
 Stable promotion is an explicit maintainer operation after code review and
@@ -66,7 +67,10 @@ Only the Assistant repository has the **Deploy published Assistant release**
 workflow. It runs by itself for production when an Assistant release becomes
 stable: a release published as stable, or a pre-release marked as a release
 (the GitHub `released` event, as with `gh release edit --prerelease=false`).
-Pre-releases, previews included, never deploy on their own. A maintainer can
+Pre-releases, previews included, never deploy on their own. Releases whose body
+contains `[skip deploy]` also never deploy automatically; 1.5.4 uses this explicit
+exception so it can be distributed to Studio users before hosted deployment.
+The marker may be placed in an HTML comment. A maintainer can
 also start it with `workflow_dispatch`, select an existing release tag and choose
 `development` or `production`, for instance to deploy a release again.
 

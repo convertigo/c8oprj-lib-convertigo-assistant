@@ -15,6 +15,28 @@ permissions:
   contents: read
 
 jobs:
+  credential-files-windows:
+    name: Native Windows credential permissions
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Test real NTFS ACLs and atomic credential replacement
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/native-credentials | Out-Null
+          Invoke-WebRequest 'https://repo.maven.apache.org/maven2/org/mozilla/rhino/1.7.15/rhino-1.7.15.jar' -OutFile build/rhino.jar
+          if ((Get-FileHash build/rhino.jar -Algorithm SHA256).Hash.ToLowerInvariant() -ne '2427fdcbc149ca0a25ccfbb7c71b01f39ad42708773a47816cd2342861766b63') { throw 'Rhino checksum mismatch' }
+          javac --release 17 -cp build/rhino.jar -d build/native-credentials tests/java/TigoAccessFilesNativeTest.java
+          if ($LASTEXITCODE -ne 0) { throw 'Native test compilation failed' }
+          java -cp 'build/rhino.jar;build/native-credentials' TigoAccessFilesNativeTest js/tigo_access_files.js
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows credential test failed' }
+      - name: Test credential failure diagnostics
+        run: node --test tests/tigo_access_files.test.cjs
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -88,7 +110,7 @@ jobs:
 
   release:
     if: github.ref_type == 'tag'
-    needs: build
+    needs: [build, credential-files-windows]
     permissions:
       contents: write
     runs-on: ubuntu-latest

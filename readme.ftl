@@ -5,7 +5,7 @@
 
 # Tigo, the Convertigo agent
 
-Customer installations use the **stable 1.5.3 bundle** (Bridge 0.4.26, MCP
+Customer installations use the **stable 1.5.4 bundle** (Bridge 0.4.26, MCP
 0.2.26), which includes the 1.5 prompt/skill/MCP library.
 See [release channels and manual deployment](docs/release-channels.md),
 [the stable manifest](stack-release-stable.json) and

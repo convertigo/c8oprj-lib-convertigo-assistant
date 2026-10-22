@@ -28,7 +28,7 @@ responseTimeout: 900
     if(_tigoActivation&&_tigoActivation.document){_tigoActivation=_tigoActivation.document;}
     var _tigoFailure=_tigoActivation&&(!_tigoActivation.response||_tigoActivation.response.status!=="ok");
     if(_tigoFailure){
-     result={ok:false,status:"setup_required",provider:"convertigo",setupRequired:true,setup:{ok:false,status:"authentication_required",messages:["L’accès Tigo n’a pas pu être activé. Vérifiez votre PSC ou réessayez."],authentication:{configured:false,status:"missing",action:"tigo_access"}}};
+     result={ok:false,status:"setup_required",provider:"convertigo",setupRequired:true,setup:{ok:false,status:"authentication_required",messages:[String((_tigoActivation.response&&_tigoActivation.response.error)||"L’accès Tigo n’a pas pu être activé. Vérifiez votre PSC ou réessayez.")],authentication:{configured:false,status:"missing",action:"tigo_access"}}};
     }else{
     include("js/agent_bridge_client.js");
     var _targetProject = typeof targetProject === "undefined" ? "" : targetProject;

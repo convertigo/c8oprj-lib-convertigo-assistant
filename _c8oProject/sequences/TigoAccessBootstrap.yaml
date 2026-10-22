@@ -74,17 +74,25 @@ responseTimeout: 120
       if(httpCode===200&&remote&&remote.status==="ok"&&remote.account&&remote.account.email===email&&remote.account.subject&&remote.apiKey&&remote.quota){
        var c={apiKey:remote.apiKey,baseUrl:remote.baseUrl};var validKey=/^sk-[A-Za-z0-9_-]{32,128}$/.test(String(c.apiKey||""));
        if(validKey&&String(c.baseUrl).replace(/\/$/,"")==="https://llm.convertigo.com/v1"){
+        var localOperation="prepare_directory";
         try{
          safePath(directory);java.nio.file.Files.createDirectories(directory);safePath(keyPath);safePath(metadataPath);
-         function restrict(path){if(java.nio.file.FileSystems.getDefault().supportedFileAttributeViews().contains("posix")){java.nio.file.Files.setPosixFilePermissions(path,java.nio.file.attribute.PosixFilePermissions.fromString(java.nio.file.Files.isDirectory(path)?"rwx------":"rw-------"));}else{var f=path.toFile();if(!f.setReadable(false,false)||!f.setWritable(false,false)||!f.setReadable(true,true)||!f.setWritable(true,true)){throw new Error("Credential permissions unavailable");}}}
-         restrict(directory);
-         function writePrivate(path,text){var temporary=java.nio.file.Files.createTempFile(directory,"tigo-",".tmp");try{restrict(temporary);java.nio.file.Files.write(temporary,new java.lang.String(text).getBytes("UTF-8"));safePath(path);java.nio.file.Files.move(temporary,path,java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}finally{java.nio.file.Files.deleteIfExists(temporary);}}
+         include("js/tigo_access_files.js");
+         var localOperation="restrict_directory";
+         var privateFiles=TigoAccessFiles.create(directory,safePath);
+         privateFiles.restrict(directory);
          var publicAccount={subject:remote.account.subject,email:remote.account.email};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
          var keyHash=hashLocal(c.apiKey);var metadata={version:1,source:"TigoAccess",subject:remote.account.subject,email:remote.account.email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().toISOString()};
-         writePrivate(keyPath,String(c.apiKey)+"\n");writePrivate(metadataPath,JSON.stringify(metadata));
+         localOperation="write_key";privateFiles.writePrivate(keyPath,String(c.apiKey)+"\n");
+         localOperation="write_metadata";privateFiles.writePrivate(metadataPath,JSON.stringify(metadata));
+         localOperation="cache_access";
          context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:email,keyHash:keyHash,account:publicAccount,quota:remote.quota}));
          response={status:"ok",state:"ready",account:publicAccount,quota:remote.quota,message:"Accès Tigo configuré.",error:""};
-        }catch(ignored){response={status:"error",code:"local_installation_failed",error:"La clé Tigo n’a pas pu être enregistrée dans le workspace."};}
+        }catch(ignored){
+         var diagnostic=typeof TigoAccessFiles!=="undefined"?TigoAccessFiles.failure(ignored,localOperation):{operation:localOperation,cause:"filesystem_error"};
+         log.warn("TigoAccess local credential installation failed ("+diagnostic.operation+", "+diagnostic.cause+")");
+         response={status:"error",code:"local_installation_failed",error:"La clé Tigo a été obtenue, mais son enregistrement local a échoué. Vérifiez les droits du dossier agents/convertigo du workspace.",diagnostic:diagnostic};
+        }
        }
       }else if(remote&&remote.status==="error"){response={status:"error",code:String(remote.code||"service_unavailable"),error:"L’accès Tigo n’a pas pu être activé. Vérifiez votre compte ou réessayez."};}
       secret=null;remoteResult=null;localAccess=null;c=null;
