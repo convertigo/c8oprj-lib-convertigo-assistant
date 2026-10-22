@@ -4028,9 +4028,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return status === "completed" || status === "complete" || status === "success" || status === "succeeded";
   }
 
+  // nocode-app-create saves a whole application (Baserow tables and the form): its answer carries the saved form too.
   function isNoCodeFormMutationTool(value) {
     var normalized = trim(value).toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    return /(?:^|_)nocode_form_(?:create|edit|update|get)$/.test(normalized);
+    return /(?:^|_)nocode_(?:form_(?:create|edit|update|get)|app_create)$/.test(normalized);
   }
 
   function noCodeFormToolResult(value, depth) {
