@@ -4589,15 +4589,89 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // Feedback to Convertigo (docs/tigo-feedback.md): with the user's consent, a failing Convertigo MCP tool and a failed
-  // turn are counted in the feedback outbox by their error template. The module loads only once an error is seen.
-  function feedbackModule() {
-    if (typeof C8O.assistantFeedback === "undefined" || typeof C8O.assistantFeedback.collectToolError !== "function") {
+  // turn are counted in the feedback outbox by their error template. The module loads only once an error is seen. The
+  // Studio has one outbox; on a server each user has theirs, found from the conversation's user.
+  function feedbackModule(state) {
+    if (typeof C8O.assistantFeedback === "undefined" || typeof C8O.assistantFeedback.forUser !== "function") {
       if (typeof include !== "function") {
         return null;
       }
       include("js/agent_feedback.js");
     }
-    return C8O.assistantFeedback;
+    if (Engine.isStudioMode()) {
+      return C8O.assistantFeedback;
+    }
+    var userKey = trim(state && state.userKey);
+    return userKey.length && userKey !== "studio" ? C8O.assistantFeedback.forUser(userKey) : null;
+  }
+
+  // The surface of a report: the No Code Studio for a no-code conversation, else the one the store knows.
+  function feedbackSurface(state) {
+    return normalizeSkillProfile(state || {}) === "nocode" ? "nocode" : "";
+  }
+
+  // The feedback user of the request on a server: the authenticated user only, never a name the page sends. "" in the
+  // Studio, for an anonymous caller, or for a session without a user name.
+  function feedbackUserKey() {
+    if (Engine.isStudioMode() || bridgeCallerRefusal() !== null) {
+      return "";
+    }
+    var user = "";
+    try {
+      user = trim(context.getAuthenticatedUser());
+    } catch (_ignoreAuthenticatedUser) {}
+    return user.length ? normalizeUserKey(callerUserId("")) : "";
+  }
+
+  // The names a no-code tool result shows (form, pages, components, Baserow tables), kept for masking the user's
+  // reports. The whole result is read, not the preview cut for the work log.
+  function collectFeedbackNames(state, event, data) {
+    try {
+      var remembered = state.toolCalls && state.toolCalls[toolCallId(data)] || {};
+      var titles = [eventToolTitle(event, data), trim(remembered.toolName), trim(remembered.title)];
+      if (feedbackSurface(state) !== "nocode" || !/nocode/i.test(titles.join(" "))) {
+        return;
+      }
+      var feedback = feedbackModule(state);
+      var tool = "";
+      for (var t = 0; feedback && t < titles.length && !tool.length; t++) {
+        tool = feedback.convertigoTool(titles[t]);
+      }
+      if (!/^nocode-(?!form-contract-get$)/.test(tool)) {
+        return;
+      }
+      var parts = [];
+      var candidates = [data && data.update && (data.update.rawOutput || data.update.raw_output), data && data.update && data.update.content, data && data.result, data && data.output, data && data.detail];
+      for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i] != null) {
+          parts.push(typeof candidates[i] === "string" ? candidates[i] : JSON.stringify(candidates[i]));
+        }
+      }
+      if (parts.length) {
+        feedback.rememberNames(feedback.namesIn(feedback.resultText(parts.join("\n"))));
+      }
+    } catch (_ignoreFeedbackNames) {}
+  }
+
+  // The names of the no-code context the page sends with a message: the form, page, element and Baserow selection.
+  function collectFeedbackContextNames(state, options) {
+    try {
+      if (feedbackSurface(state) !== "nocode") {
+        return;
+      }
+      var names = [];
+      var keys = ["currentFormName", "formName", "pageName", "elementName", "baserowWorkspaceName", "baserowDatabaseName", "baserowBaseName", "baserowTableName"];
+      for (var i = 0; i < keys.length; i++) {
+        var value = trim(optionOrRequest(options, keys[i]));
+        if (value.length) {
+          names.push(value);
+        }
+      }
+      var feedback = names.length ? feedbackModule(state) : null;
+      if (feedback) {
+        feedback.rememberNames(names);
+      }
+    } catch (_ignoreFeedbackContextNames) {}
   }
 
   function collectFeedbackToolError(state, event, data, toolStatus) {
@@ -4627,19 +4701,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (state.feedbackCalls.length > 200) {
         state.feedbackCalls.shift();
       }
-      var feedback = feedbackModule();
+      var feedback = feedbackModule(state);
       var message = feedback ? feedback.errorMessage(preview, failed) : "";
       if (message.length) {
-        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state) });
+        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
   }
 
   function collectFeedbackRuntimeError(state, message) {
     try {
-      var feedback = feedbackModule();
+      var feedback = feedbackModule(state);
       if (feedback && trim(message).length) {
-        feedback.collectRuntimeError({ provider: state.provider, model: feedbackModel(state), message: message });
+        feedback.collectRuntimeError({ provider: state.provider, model: feedbackModel(state), message: message, surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
   }
@@ -4653,9 +4727,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // provider and model, not the ones the agent names itself.
   function ingestFeedback(state) {
     try {
-      var feedback = feedbackModule();
+      var feedback = feedbackModule(state);
       if (feedback) {
-        feedback.ingest({ provider: state.provider, model: feedbackModel(state) });
+        feedback.ingest({ provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
   }
@@ -7431,6 +7505,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.projectNames = addArrayValue(state.projectNames, currentProject);
     }
     enrichViewerDebugOptions(options, state);
+    collectFeedbackContextNames(state, options);
     if (trim(options.rawUserQuestion).length) {
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
       options.Question = question;
@@ -7733,6 +7808,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   // Every event of a turn, read from runs/<runid>.ndjson: a page opened during a long turn shows the turn from its start,
   // not only the last 80 events the state keeps. Long details are shortened for this one-time read.
+  // The feedback user of this request on a server (AgentFeedback): "" in the Studio or without an authenticated user.
+  C8O.assistantAgentBridge.feedbackUserKey = function () {
+    return feedbackUserKey();
+  };
+
   C8O.assistantAgentBridge.runHistory = function (options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
@@ -7932,6 +8012,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           appendToolEvent(state, event, data, type);
           if (type === "tool/update") {
             collectFeedbackToolError(state, event, data, toolStatus);
+            collectFeedbackNames(state, event, data);
           }
           if (toolStatus === "failed" || toolStatus === "error") {
             appendProgressLine(state, lang(state).toolRetry);

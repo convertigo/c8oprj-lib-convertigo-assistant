@@ -40,11 +40,12 @@ function fixture({ studio = true, admin = false, user = '', localPort = 18086, c
     defaultBridgeUrl: () => configured + '/projects/lib_ConvertigoAgentBridge/.json',
     bridgeCallerKey: () => 'engine-key',
     normalizeSkillProfile: () => 'generalist',
+    normalizeUserKey: value => 'key:' + value,
     shouldAttachMcpTokenHandle: () => false,
     response: { result: { ok: true } },
     postForm(...args) { calls.push(args); return sandbox.response; }
   };
-  vm.runInNewContext(backendParts(['requireBridgeCaller', 'bridgeCallerRefusal', 'callerUserId', 'withCallerUserId',
+  vm.runInNewContext(backendParts(['requireBridgeCaller', 'bridgeCallerRefusal', 'callerUserId', 'withCallerUserId', 'feedbackUserKey',
     'isOwnBridgeUrl', 'bridgeCall', 'callerSessionId'],
     ['BRIDGE_CALLER_KEY_HEADER', 'BRIDGE_JSON_PATH']), sandbox);
   return { sandbox, calls };
@@ -72,6 +73,15 @@ test('Server: the conversations belong to the authenticated user, whatever userI
   assert.equal(owner({ studio: false, admin: true }, 'bob@example.com'), 'bob@example.com', 'a WEB_ADMIN without a user name acts for the user it names');
   assert.equal(owner({ admin: true }, 'studio'), 'studio', 'the Studio keeps the page value');
   assert.equal(owner({ admin: true }, undefined), '');
+});
+
+test('Server feedback belongs to the authenticated user only: never a page value, never an anonymous caller', () => {
+  const key = caller => fixture(caller).sandbox.feedbackUserKey();
+  assert.equal(key({ studio: false, user: 'google:108792390496318778325:alice@example.com' }), 'key:alice@example.com', 'the key of her conversations');
+  assert.equal(key({ studio: false, user: 'c8o:admin' }), 'key:c8o:admin');
+  assert.equal(key({ studio: false, admin: true }), '', 'a WEB_ADMIN without a user name has no feedback of its own');
+  assert.equal(key({ studio: false }), '');
+  assert.equal(key({ admin: true, user: 'alice@example.com' }), '', 'the Studio keeps its own store');
 });
 
 test('callerUserId and tigo_resources conversationOwner apply the same rule', () => {
@@ -144,4 +154,20 @@ test('Every Assistant entry point that reaches the Bridge refuses first, before 
     assert.match(second[name], /^options = withCallerUserId\((optionsWithRequestFallbacks\(options( \|\| \{\})?\)|options)\);$/, name);
   }
   assert.match(source, /function bridgeCall\(options, sequence, params, timeoutMs\) \{\n    requireBridgeCaller\(\);/);
+});
+
+test('A server user\'s feedback folder and conversations share one key, pinned with lib_ConvertigoMCP reporting.feedbackUserKey', () => {
+  const crypto = require('node:crypto');
+  const sandbox = {
+    trim: value => String(value ?? '').trim(),
+    MessageDigest: { getInstance: () => ({ digest: bytes => Array.from(crypto.createHash('sha256').update(bytes).digest(), b => b > 127 ? b - 256 : b) }) },
+    StandardCharsets: { UTF_8: 'utf8' },
+    java: { lang: { String: class { constructor(v) { this.v = String(v); } getBytes() { return Buffer.from(this.v, 'utf8'); } } } }
+  };
+  vm.runInNewContext(backendParts(['userPathSlug', 'safePathPart', 'hashShort']), sandbox);
+  const key = user => sandbox.userPathSlug(fixture({ studio: false, user }).sandbox.callerUserId(''));
+  assert.equal(key('google:108792390496318778325:alice@example.com'), 'alice_example.com--ff8d9819fc0e12bf');
+  assert.equal(key('c8o:admin'), 'c8o_admin--39200cbc6e42f785');
+  assert.equal(key('charlesg@convertigo.com'), 'charlesg_convertigo.com--6f44028bedca0f0f');
+  assert.equal(key('a:b:not-an-email'), 'a_b_not-an-email--07939279849dddec');
 });

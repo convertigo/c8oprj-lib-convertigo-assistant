@@ -25,7 +25,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user') 
     optionsWithRequestFallbacks: v => v, enrichNoCodePrompt: v => v, extractUserMessage: v => v,
     normalizeThreadId: v => v, readState: () => state, ensureState: v => v,
     clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null,
-    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {},
+    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {},
     shouldInstallForRun: () => install, shouldShowAgentPreparingProgress: () => false,
     isResidentProvider: () => false, isVibeHarness: () => true, isClaudeHarness: () => false, agentCommandsFor: () => [], providerSequence: (p, action) => 'agent_vibe_' + action,
     callAgentSetup: () => { calls.push('setup'); return { result: report, sequence: 'agent_vibe_setup' }; },
