@@ -4748,6 +4748,128 @@ scriptContent:
         		}
         		return media;
         	}
+        	public agentFeedbackText(key) {
+        		// Texts of the feedback commands (/retours, /signaler), in the four Assistant languages.
+        		var texts: any = {
+        			fr: { title: "Retours à Convertigo", reportTitle: "Signalement à Convertigo", help: "Retours à Convertigo : état, envoi, mode", reportHelp: "Signaler un problème du dernier tour à Convertigo", hint: "envoyer · effacer · demander · auto · off", reportHint: "<ce qui ne va pas>", loading: "Lecture des retours…", error: "Impossible de lire les retours.", mode: "Mode", off: "Désactivé", ask: "Relire avant envoi", auto: "Automatique", locked: " (imposé par l''administrateur)", pending: "En attente", sent: "Envoyés", none: "Aucun rapport en attente.", nextAsk: "Relisez-les (bouton Copier le JSON), puis /retours envoyer ou /retours effacer.", nextAuto: "Ils partent à la fin du prochain tour, ou tout de suite avec /retours envoyer.", nextOff: "Rien n''est collecté. /retours demander pour activer, avec relecture avant envoi, ou /retours auto.", sentNow: "{n} rapport(s) envoyé(s).", rejected: "{n} refusé(s).", notConnected: "Activez Tigo (fournisseur Convertigo) pour envoyer les retours.", serviceUnavailable: "Service de retours injoignable : les rapports restent en attente.", lockedByPolicy: "Mode imposé par l''administrateur.", unavailable: "Les retours ne sont disponibles que dans le Studio.", commentRequired: "Décrivez le problème après /signaler.", reportReady: "Signalement prêt : relisez-le, puis /retours envoyer.", reportSent: "Signalement envoyé.", cleared: "{n} rapport(s) effacé(s).", modeSet: "Mode : {mode}.", unknown: "Commande inconnue : /retours, /retours envoyer, effacer, demander, auto ou off.", agent_friction: "Friction (agent)", tool_error: "Erreur d''outil", runtime_error: "Erreur d''exécution", user_report: "Signalement" },
+        			en: { title: "Feedback to Convertigo", reportTitle: "Report to Convertigo", help: "Feedback to Convertigo: status, send, mode", reportHelp: "Report a problem of the last turn to Convertigo", hint: "send · clear · ask · auto · off", reportHint: "<what went wrong>", loading: "Reading feedback…", error: "The feedback cannot be read.", mode: "Mode", off: "Off", ask: "Review before sending", auto: "Automatic", locked: " (set by the administrator)", pending: "Waiting", sent: "Sent", none: "No report waiting.", nextAsk: "Review them (Copy JSON button), then /feedback send or /feedback clear.", nextAuto: "They are sent at the end of the next turn, or now with /feedback send.", nextOff: "Nothing is collected. /feedback ask to turn it on with a review before sending, or /feedback auto.", sentNow: "{n} report(s) sent.", rejected: "{n} refused.", notConnected: "Turn Tigo on (Convertigo provider) to send feedback.", serviceUnavailable: "The feedback service cannot be reached: the reports keep waiting.", lockedByPolicy: "The administrator set this mode.", unavailable: "Feedback is only available in the Studio.", commentRequired: "Describe the problem after /report.", reportReady: "Report ready: review it, then /feedback send.", reportSent: "Report sent.", cleared: "{n} report(s) cleared.", modeSet: "Mode: {mode}.", unknown: "Unknown command: /feedback, /feedback send, clear, ask, auto or off.", agent_friction: "Friction (agent)", tool_error: "Tool error", runtime_error: "Runtime error", user_report: "Report" },
+        			it: { title: "Segnalazioni a Convertigo", reportTitle: "Segnalazione a Convertigo", help: "Segnalazioni a Convertigo: stato, invio, modalità", reportHelp: "Segnala a Convertigo un problema dell''ultimo turno", hint: "send · clear · ask · auto · off", reportHint: "<cosa non va>", loading: "Lettura delle segnalazioni…", error: "Impossibile leggere le segnalazioni.", mode: "Modalità", off: "Disattivata", ask: "Rileggere prima dell''invio", auto: "Automatica", locked: " (imposta dall''amministratore)", pending: "In attesa", sent: "Inviate", none: "Nessuna segnalazione in attesa.", nextAsk: "Rileggile (pulsante Copia JSON), poi /feedback send o /feedback clear.", nextAuto: "Partono alla fine del prossimo turno, o subito con /feedback send.", nextOff: "Nulla viene raccolto. /feedback ask per attivare con rilettura, o /feedback auto.", sentNow: "{n} segnalazione/i inviata/e.", rejected: "{n} rifiutata/e.", notConnected: "Attiva Tigo (provider Convertigo) per inviare le segnalazioni.", serviceUnavailable: "Servizio non raggiungibile: le segnalazioni restano in attesa.", lockedByPolicy: "Modalità imposta dall''amministratore.", unavailable: "Le segnalazioni sono disponibili solo nello Studio.", commentRequired: "Descrivi il problema dopo /report.", reportReady: "Segnalazione pronta: rileggila, poi /feedback send.", reportSent: "Segnalazione inviata.", cleared: "{n} segnalazione/i cancellata/e.", modeSet: "Modalità: {mode}.", unknown: "Comando sconosciuto: /feedback, /feedback send, clear, ask, auto o off.", agent_friction: "Attrito (agente)", tool_error: "Errore di strumento", runtime_error: "Errore di esecuzione", user_report: "Segnalazione" },
+        			es: { title: "Comentarios a Convertigo", reportTitle: "Informe a Convertigo", help: "Comentarios a Convertigo: estado, envío, modo", reportHelp: "Informar a Convertigo de un problema del último turno", hint: "send · clear · ask · auto · off", reportHint: "<qué falla>", loading: "Leyendo los comentarios…", error: "No se pueden leer los comentarios.", mode: "Modo", off: "Desactivado", ask: "Revisar antes de enviar", auto: "Automático", locked: " (impuesto por el administrador)", pending: "En espera", sent: "Enviados", none: "Ningún informe en espera.", nextAsk: "Revíselos (botón Copiar JSON) y luego /feedback send o /feedback clear.", nextAuto: "Se envían al final del próximo turno, o ahora con /feedback send.", nextOff: "No se recoge nada. /feedback ask para activarlo con revisión, o /feedback auto.", sentNow: "{n} informe(s) enviado(s).", rejected: "{n} rechazado(s).", notConnected: "Active Tigo (proveedor Convertigo) para enviar los comentarios.", serviceUnavailable: "Servicio no disponible: los informes siguen en espera.", lockedByPolicy: "Modo impuesto por el administrador.", unavailable: "Los comentarios solo están disponibles en el Studio.", commentRequired: "Describa el problema después de /report.", reportReady: "Informe listo: revíselo y luego /feedback send.", reportSent: "Informe enviado.", cleared: "{n} informe(s) borrado(s).", modeSet: "Modo: {mode}.", unknown: "Comando desconocido: /feedback, /feedback send, clear, ask, auto u off.", agent_friction: "Fricción (agente)", tool_error: "Error de herramienta", runtime_error: "Error de ejecución", user_report: "Informe" }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        	}
+        	public feedbackCommand(text) {
+        		// /retours and /feedback (status, send, clear, ask, auto, off), /signaler and /report <comment>: they never reach
+        		// the agent. The reports and the consent live in the Studio, behind lib_ConvertigoAssistant.AgentFeedback.
+        		var line = ("" + (text == null ? "" : text)).trim();
+        		var report = /^\/(signaler|report)(?:\s+([\s\S]*))?$/i.exec(line);
+        		if (report) {
+        			var comment = ("" + (report[2] || "")).trim();
+        			this.showFeedbackCard(comment.length ? "report" : "usage", { comment: comment });
+        			return true;
+        		}
+        		var match = /^\/(retours|feedback)(?:\s+(\S+))?\s*$/i.exec(line);
+        		if (!match) {
+        			return false;
+        		}
+        		var arg = ("" + (match[2] || "")).toLowerCase();
+        		var actions: any = { "": ["status"], etat: ["status"], status: ["status"], envoyer: ["send"], send: ["send"], effacer: ["clear"], clear: ["clear"],
+        			demander: ["mode", "ask"], ask: ["mode", "ask"], auto: ["mode", "auto"], automatique: ["mode", "auto"], off: ["mode", "off"], desactiver: ["mode", "off"] };
+        		var chosen = actions[arg];
+        		this.showFeedbackCard(chosen ? chosen[0] : "unknown", { mode: chosen ? chosen[1] || "" : "" });
+        		return true;
+        	}
+        	public showFeedbackCard(action, args) {
+        		// A local card of the thread: the consent mode, the waiting reports (one row each) and their JSON as sent.
+        		if (!this.local) {
+        			return;
+        		}
+        		var t = (key: any) => this.agentFeedbackText(key);
+        		var now = new Date();
+        		var card: any = {
+        			type: "metrics",
+        			time: ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2),
+        			title: t(action === "report" || action === "usage" ? "reportTitle" : "title"),
+        			state: "loading",
+        			message: t("loading"),
+        			rows: [],
+        			tools: [],
+        			models: [],
+        			json: ""
+        		};
+        		this.local.Messages = this.local.Messages || [];
+        		this.local.Messages.push(card);
+        		if (action === "usage" || action === "unknown") {
+        			card.state = "error";
+        			card.message = t(action === "usage" ? "commentRequired" : "unknown");
+        			this.tick();
+        			this.scrollChatBottom(0, true);
+        			return;
+        		}
+        		this.tick();
+        		this.scrollChatBottom(0, true);
+        		var params: any = { action: action, mode: args && args.mode ? args.mode : "", comment: args && args.comment ? args.comment : "" };
+        		if (action === "report") {
+        			params.threadid = ("" + (this.local.Conversation || "")).trim();
+        			params.provider = this.local.AgentProvider || (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : "");
+        		}
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", params).async().then((response: any) => {
+        			var result = response && response.response ? response.response : response;
+        			this.fillFeedbackCard(card, result, action);
+        			this.tick();
+        			this.scrollChatBottom(0, true);
+        		}).catch(() => {
+        			card.state = "error";
+        			card.message = t("error");
+        			this.tick();
+        		});
+        	}
+        	public fillFeedbackCard(card, result, action) {
+        		var t = (key: any) => this.agentFeedbackText(key);
+        		if (!result || result.available === false) {
+        			card.state = "error";
+        			card.message = t(result && result.code === "unavailable" || (result && result.available === false) ? "unavailable" : "error");
+        			return;
+        		}
+        		var row = (label: any, value: any) => ({ label: label, value: value });
+        		var pending = result.pending || [];
+        		var done = result.result || null;
+        		var notes = [];
+        		if (done && done.status === "error") {
+        			var codes: any = { not_connected: "notConnected", service_unavailable: "serviceUnavailable", locked_by_policy: "lockedByPolicy", unavailable: "unavailable", comment_required: "commentRequired" };
+        			notes.push(t(codes[done.code] || "error"));
+        		} else if (done && action === "send") {
+        			notes.push(t("sentNow").replace("{n}", "" + (done.accepted || 0)) + (done.rejected && done.rejected.length ? " " + t("rejected").replace("{n}", "" + done.rejected.length) : ""));
+        		} else if (done && action === "clear") {
+        			notes.push(t("cleared").replace("{n}", "" + (done.cleared || 0)));
+        		} else if (done && action === "mode") {
+        			notes.push(t("modeSet").replace("{mode}", t(result.mode)));
+        		} else if (done && action === "report") {
+        			notes.push(done.sent && done.sent.status === "ok" && done.sent.accepted ? t("reportSent") : (done.sent && done.sent.status === "error" ? t(done.sent.code === "not_connected" ? "notConnected" : "serviceUnavailable") : t("reportReady")));
+        		}
+        		card.rows = [
+        			row(t("mode"), t(result.mode || "off") + (result.locked ? t("locked") : "")),
+        			row(t("pending"), "" + pending.length),
+        			row(t("sent"), "" + (result.sentCount || 0))
+        		];
+        		for (var i = 0; i < pending.length && i < 30; i++) {
+        			var report = pending[i] || {};
+        			var finding = report.finding || {};
+        			var text = report.comment || finding.summary || finding.template || "";
+        			card.rows.push(row(t(report.kind) + (finding.subject && report.kind !== "user_report" ? " · " + finding.subject : ""), text + (report.count > 1 ? " ×" + report.count : "")));
+        		}
+        		notes.push(pending.length ? t(result.mode === "auto" ? "nextAuto" : "nextAsk") : (result.mode === "off" ? t("nextOff") : t("none")));
+        		card.json = pending.length ? JSON.stringify(pending, null, 2) : "";
+        		card.state = "ready";
+        		card.message = notes.join(" ");
+        	}
+        	public feedbackAfterTurn() {
+        		// In automatic mode the reports collected during the turn are sent; otherwise the call returns at once.
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", { action: "flush" }).async().then(() => {}).catch(() => {});
+        		} catch (e) {}
+        	}
         	public localSlashCommands() {
         		// Commands of the Assistant itself, listed first in the "/" menu; they never reach the agent.
         		var language = this.agentUiLanguage();
@@ -4758,12 +4880,19 @@ scriptContent:
         		var help = this.agentMetricsText("help");
         		self.localSlashCommandsCache = [
         			{ name: "mesures", description: help, hint: this.agentMetricsText("turnHint"), local: true },
-        			{ name: "metrics", description: help, hint: this.agentMetricsText("turnHint"), local: true }
+        			{ name: "metrics", description: help, hint: this.agentMetricsText("turnHint"), local: true },
+        			{ name: "retours", description: this.agentFeedbackText("help"), hint: this.agentFeedbackText("hint"), local: true },
+        			{ name: "feedback", description: this.agentFeedbackText("help"), hint: this.agentFeedbackText("hint"), local: true },
+        			{ name: "signaler", description: this.agentFeedbackText("reportHelp"), hint: this.agentFeedbackText("reportHint"), local: true },
+        			{ name: "report", description: this.agentFeedbackText("reportHelp"), hint: this.agentFeedbackText("reportHint"), local: true }
         		];
         		self.localSlashCommandsLanguage = language;
         		return self.localSlashCommandsCache;
         	}
         	public runLocalCommand(text) {
+        		if (this.feedbackCommand(text)) {
+        			return true;
+        		}
         		var match = /^\/(mesures|metrics)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
         		if (!match) {
         			return false;
@@ -14153,7 +14282,7 @@ title: Tigo
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:item.state !== 'ready'
+                    - MobileSmartSourceType: script:item.state !== 'ready' || !!item.message
                 ↓CardMessage [ngx.components.UIDynamicElement-1792267236687]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: p
@@ -17376,6 +17505,9 @@ title: Tigo
                         var providerLabel = state && state.provider ? (("" + state.provider).charAt(0).toUpperCase() + ("" + state.provider).slice(1)) : "Agent";
                         var view = progressView(lines, rawProgressEvents, false);
                         page.local.AgentProgressFinishedAt = (new Date()).getTime();
+                        if (page.feedbackAfterTurn) {
+                            page.feedbackAfterTurn();
+                        }
                         var title = progressTitle(true);
                         var summary = view.summary || page.t("Agent_Progress_Summary", "Étapes et appels MCP ({count})").replace("{count}", "" + lines.length);
                         var found = findTarget();

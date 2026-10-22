@@ -4558,6 +4558,62 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return reasoning;
   }
 
+  // Feedback to Convertigo (docs/tigo-feedback.md): with the user's consent, a failing Convertigo MCP tool and a failed
+  // turn are counted in the feedback outbox by their error template. The module loads only once an error is seen.
+  function feedbackModule() {
+    if (typeof C8O.assistantFeedback === "undefined" || typeof C8O.assistantFeedback.collectToolError !== "function") {
+      if (typeof include !== "function") {
+        return null;
+      }
+      include("js/agent_feedback.js");
+    }
+    return C8O.assistantFeedback;
+  }
+
+  function collectFeedbackToolError(state, event, data, toolStatus) {
+    try {
+      var failed = toolStatus === "failed" || toolStatus === "error";
+      // A result update often has no title: the call's start named the tool.
+      var title = eventToolTitle(event, data);
+      var remembered = state.toolCalls && state.toolCalls[toolCallId(data)] || {};
+      if (!/convertigo/i.test(title)) {
+        title = String(remembered.toolName || remembered.title || title);
+      }
+      if (!/convertigo/i.test(title)) {
+        return;
+      }
+      var preview = eventToolResultPreview(data);
+      // The result may hold the error JSON escaped in its text blocks ({\"code\":\"-1\"...}).
+      if (!failed && !/\\?"code\\?"\s*:\s*\\?"-1\\?"|\\?"status\\?"\s*:\s*\\?"error\\?"|\\?"isError\\?"\s*:\s*true/.test(preview)) {
+        return;
+      }
+      // One count per call: a call can be reported again by a later update.
+      var callId = toolCallId(data) || title + "|" + preview.length;
+      state.feedbackCalls = state.feedbackCalls || [];
+      if (state.feedbackCalls.indexOf(callId) !== -1) {
+        return;
+      }
+      state.feedbackCalls.push(callId);
+      if (state.feedbackCalls.length > 200) {
+        state.feedbackCalls.shift();
+      }
+      var feedback = feedbackModule();
+      var message = feedback ? feedback.errorMessage(preview, failed) : "";
+      if (message.length) {
+        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: state.model });
+      }
+    } catch (_ignoreFeedback) {}
+  }
+
+  function collectFeedbackRuntimeError(state, message) {
+    try {
+      var feedback = feedbackModule();
+      if (feedback && trim(message).length) {
+        feedback.collectRuntimeError({ provider: state.provider, model: state.model, message: message });
+      }
+    } catch (_ignoreFeedback) {}
+  }
+
   function attachReasoningToComment(state, text, reasoning) {
     // The comment of a message is the narrative that starts with its first line: the status lines the Assistant adds
     // itself ("J'utilise le MCP Convertigo.") can be written to the work log just before it.
@@ -7815,6 +7871,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           var toolStatus = eventToolStatus(data);
           rememberProjectFromToolEvent(state, data);
           appendToolEvent(state, event, data, type);
+          if (type === "tool/update") {
+            collectFeedbackToolError(state, event, data, toolStatus);
+          }
           if (toolStatus === "failed" || toolStatus === "error") {
             appendProgressLine(state, lang(state).toolRetry);
             state.warnings.push({
@@ -7857,6 +7916,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
           finishTurnReasoning(state);
+          collectFeedbackRuntimeError(state, extractAgentErrorText(data, 0) || type);
           state.status = "failed";
           state.error = userFacingAgentError(state, data);
           if (isResidentProvider(state.provider) && isCodexAuthenticationError(data)) {
@@ -7888,6 +7948,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             state.status = "failed";
             state.error = lang(state).closedEarly;
             appendProgress(state, state.error);
+            collectFeedbackRuntimeError(state, "agent process closed before answering");
           }
         }
       }

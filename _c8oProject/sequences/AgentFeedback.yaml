@@ -1,0 +1,66 @@
+accessibility: Hidden
+comment: Feedback to Convertigo (docs/tigo-feedback.md). Local Studio WEB_ADMIN only. Reads and sets the consent mode, lists, sends or clears the waiting reports, and prepares a user report on the last turn of a conversation. The Tigo key is read on the server and never returned.
+includeResponseElement: false
+responseTimeout: 120
+↓RunFeedback [steps.SimpleStep-1792540000001]: 
+  expression: |
+    var engine=com.twinsoft.convertigo.engine.Engine;
+    var studio=engine.isStudioMode();
+    var admin=engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN);
+    var response={status:"error",code:"unavailable",available:false,mode:"off",pending:[]};
+    if(studio&&admin){
+     include("js/agent_feedback.js");
+     var options={action:String(action||""),mode:String(mode||""),comment:String(comment||""),provider:String(provider||"")};
+     if(options.action==="report"&&String(threadid||"").length){
+      include("js/agent_bridge_client.js");
+      var history=C8O.assistantAgentBridge.runHistory({threadid:String(threadid),userId:"studio",provider:options.provider});
+      options.turn=history&&history.ok===true?C8O.assistantFeedback.turnSummary(history.events):null;
+      history=null;
+     }
+     response=C8O.assistantFeedback.run(options);
+     options=null;
+    }
+    comment=null;
+↓Response [steps.JsonToXmlStep-1792540000003]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓action [variables.RequestableVariable-1792540000005]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓comment [variables.RequestableVariable-1792540000007]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓mode [variables.RequestableVariable-1792540000009]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓provider [variables.RequestableVariable-1792540000011]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓threadid [variables.RequestableVariable-1792540000013]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
