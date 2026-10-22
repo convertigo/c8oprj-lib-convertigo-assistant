@@ -38,7 +38,17 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     + "slider section group panel container row rows column columns html content address link list item items option "
     + "options choice choices yes oui non id ids the and for with new nouveau nouvelle formulaire champ champs tableau "
     + "base nom prenom prénom adresse telephone téléphone message comment comments note notes status state data host "
-    + "project secret path hex url ip date_time datagrid grid hidden password currency day month year week").split(" ").forEach(function (word) {
+    + "project secret path hex url ip date_time datagrid grid hidden password currency day month year week "
+    // Common words a workspace, table or field is often named after: they say nothing of the customer.
+    + "test tests demo essai draft copy copie sample exemple example my apps app apps application applications client "
+    + "clients customer customers user users utilisateur utilisateurs employee employees employe employes employé employés "
+    + "contact contacts company companies entreprise entreprises project projects projet projets product products produit "
+    + "produits service services job jobs task tasks tache taches tâche tâches order orders commande commandes invoice "
+    + "invoices facture factures resource resources ressource ressources event events evenement evenements événement "
+    + "événements room rooms reservation reservations booking bookings place places location locations department "
+    + "departments titles platform platforms team teams equipe equipes équipe équipes ticket tickets request requests "
+    + "demande demandes document documents category categories categorie categories catégorie catégories article articles "
+    + "stock inventory inventaire supplier suppliers fournisseur fournisseurs payment payments paiement paiements").split(" ").forEach(function (word) {
     GENERIC_NAMES[word] = true;
   });
   // Public services a message may name: their names say nothing of the customer.

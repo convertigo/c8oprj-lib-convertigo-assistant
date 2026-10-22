@@ -663,11 +663,15 @@ test('masking: no-code names, host names and ids; generic words and public servi
   assert.equal(F.redact('test-nocode.convertigo.net answered 502'), '<host> answered 502');
   // An error template of a no-code tool: the same error on another form counts once.
   assert.equal(F.template('Field Code client not found in table Clients VIP', [], ['Code client', 'Clients VIP']),
-    F.template('Field Montant not found in table Commandes', [], ['Montant', 'Commandes']));
+    F.template('Field Montant not found in table Commandes Acme', [], ['Montant', 'Commandes Acme']));
   assert.equal(F.usableName('Text'), '');
   assert.equal(F.usableName('  Demande   de congés '), 'Demande de congés');
   assert.equal(F.usableName('nocode-baserow-catalog-list'), '');
   assert.equal(F.usableName('2026-10-22'), '');
+  // A table named after a common word ("TEST", "Clients") says nothing of the customer: it stays readable.
+  for (const word of ['TEST', 'Clients', 'Employés', 'Service', 'Resources']) assert.equal(F.usableName(word), '', word);
+  assert.equal(F.usableName('Entreprise de Jane Doe'), 'Entreprise de Jane Doe');
+  assert.equal(F.redact('test of Service', [], ['TEST', 'Service', 'Clients VIP']), 'test of Service');
   // Rhino (the engine) refuses a case-insensitive class past U+017F, which Node accepts.
   assert.match(SOURCE, /\\u00C0-\\u017F/);
   assert.doesNotMatch(SOURCE, /\\u024F/);
