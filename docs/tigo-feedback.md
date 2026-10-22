@@ -63,8 +63,9 @@ Every text is masked before it is stored and again before it is sent: emails, UR
 as `llm.convertigo.com` aside), IP addresses, absolute paths, keys and tokens, UUIDs, long hexadecimal or base64 values,
 the names of the projects open in the Studio (libraries aside) and, on the No Code surface, the names the user's turns
 showed: form, page, component and Baserow workspace, database, table and field names, from the context the page sends
-and from the results of the `nocode-*` tools (the contract aside). They become `<name>`, whatever their case; generic
-words (component types, "Email", "Date"...) stay readable. These names are kept with the user's reports
+and from the results of the `nocode-*` tools (the contract aside). They become `<name>`, whatever their case (in an error template, a one-word name only as written: "position" in a
+message is not the column "Position"); generic words (component types, common business words such as "Clients" or
+"Test", the vocabulary of the product's messages) stay readable. These names are kept with the user's reports
 (`names.json`, 500 at most) only while feedback can be sent. Error templates also replace quoted values and numbers. Texts are cut (summary 500, template 300, comment
 1,000 characters).
 
@@ -87,7 +88,8 @@ Tigo in the No Code Studio of a server (C8Oforms) offers the same feedback to ea
   the server key stays under TigoAccess's hourly limit (600 batches per server key); a refused or limited send keeps
   them.
 - **Agent frictions.** With the user's consent, the MCP lists `nocode-report-create` to the No Code token of that user
-  only; its reports land in the user's `incoming/`.
+  only; its reports land in the user's `incoming/`. A resident agent reads its tool list once: when the user turns
+  feedback on or off, the next turn restarts it on the same session (Bridge `mcpCatalogKey`, Vibe).
 
 ## Storage in the Studio
 

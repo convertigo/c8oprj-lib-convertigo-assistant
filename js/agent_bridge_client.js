@@ -1958,6 +1958,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
       credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
+      mcpCatalogKey: feedbackCatalogKey(state),
       requestTimeoutMs: "60000"
     };
   }
@@ -4603,6 +4604,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var userKey = trim(state && state.userKey);
     return userKey.length && userKey !== "studio" ? C8O.assistantFeedback.forUser(userKey) : null;
+  }
+
+  // The Convertigo MCP lists its report tool only while the user agrees to send feedback. A resident agent reads the
+  // tool list once: the Bridge restarts it on the same session when this key changes (mcpCatalogKey).
+  function feedbackCatalogKey(state) {
+    try {
+      var feedback = feedbackModule(state);
+      return feedback ? (feedback.mode() === "off" ? "feedback:off" : "feedback:on") : "";
+    } catch (_ignoreFeedbackCatalog) {
+      return "";
+    }
   }
 
   // The surface of a report: the No Code Studio for a no-code conversation, else the one the store knows.

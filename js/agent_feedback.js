@@ -48,7 +48,12 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     + "événements room rooms reservation reservations booking bookings place places location locations department "
     + "departments titles platform platforms team teams equipe equipes équipe équipes ticket tickets request requests "
     + "demande demandes document documents category categories categorie categories catégorie catégories article articles "
-    + "stock inventory inventaire supplier suppliers fournisseur fournisseurs payment payments paiement paiements").split(" ").forEach(function (word) {
+    + "stock inventory inventaire supplier suppliers fournisseur fournisseurs payment payments paiement paiements "
+    // Words of the product's own messages.
+    + "position line lines column index offset length size character characters bracket brackets array arrays object "
+    + "objects string strings boolean integer json error errors warning message code result results response input output "
+    + "source target action actions step steps flow flows rule rules filter filters view views layout theme color label "
+    + "labels header footer menu tab tabs list lists chart charts grid grids image images").split(" ").forEach(function (word) {
     GENERIC_NAMES[word] = true;
   });
   // Public services a message may name: their names say nothing of the customer.
@@ -74,8 +79,10 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   }
 
   // Masking: what could name the customer, its systems or a credential never leaves the Studio or the server. names: the
-  // projects open in the engine (<project>); others: the names a no-code turn showed, case-insensitive (<name>).
-  F.redact = function (text, names, others) {
+  // projects open in the engine (<project>); others: the names a no-code turn showed (<name>), whatever their case, or
+  // with exactCase their case as written for a one-word name: an error message copies a name as it is, and "position"
+  // in a message is not the column "Position".
+  F.redact = function (text, names, others, exactCase) {
     var out = String(text == null ? "" : text);
     out = out.replace(/\b(?:https?|wss?|ftp|file|jdbc:[a-z0-9]+):\/\/[^\s"'<>)\]]+/gi, "<url>");
     out = out.replace(/\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b/g, "<email>");
@@ -103,7 +110,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     }).concat((others || []).filter(function (name) {
       return usableName(name).length > 0;
     }).map(function (name) {
-      return { name: trim(name), flags: "gi", mask: "<name>" };
+      var one = trim(name);
+      return { name: one, flags: exactCase === true && !/\s/.test(one) ? "g" : "gi", mask: "<name>" };
     })).sort(function (a, b) {
       return b.name.length - a.name.length;
     });
@@ -159,7 +167,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     var lines = String(message == null ? "" : message).split(/\r?\n/).map(trim).filter(function (line) {
       return line.length;
     }).slice(0, 2);
-    var text = F.redact(lines.join(" / "), names, others);
+    var text = F.redact(lines.join(" / "), names, others, true);
     text = text.replace(/'[^']*'|"[^"]*"|`[^`]*`|«[^»]*»|“[^”]*”/g, "…");
     // The customer's own names: qualified names (PcaUpdateTracker.pg:Home), snake_case and camelCase identifiers.
     // Product class names (SimpleStep, SqlTransaction) stay readable.
@@ -409,7 +417,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       for (var i = 0; i < keys.length; i++) {
         var value = trim(finding[keys[i]]);
         if (value.length) {
-          out.finding[keys[i]] = cut(F.redact(value, names, others), LIMITS[keys[i]] || 60);
+          out.finding[keys[i]] = cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60);
         }
       }
       var stack = report.stack || {};

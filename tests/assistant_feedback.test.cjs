@@ -672,6 +672,11 @@ test('masking: no-code names, host names and ids; generic words and public servi
   for (const word of ['TEST', 'Clients', 'Employés', 'Service', 'Resources']) assert.equal(F.usableName(word), '', word);
   assert.equal(F.usableName('Entreprise de Jane Doe'), 'Entreprise de Jane Doe');
   assert.equal(F.redact('test of Service', [], ['TEST', 'Service', 'Clients VIP']), 'test of Service');
+  // An error template masks a one-word name as written: the product's "position" is not the user's column "Position".
+  assert.equal(F.template('Unexpected end at position 45 of Trombinoscope', [], ['Position', 'Trombinoscope']), 'Unexpected end at position N of <name>');
+  assert.equal(F.template('Bad reference in Effectif: effectif expected', [], ['Effectif']), 'Bad reference in <name>: effectif expected');
+  assert.equal(F.redact('effectif of trombinoscope', [], ['Effectif', 'Trombinoscope']), '<name> of <name>', 'free text stays case-insensitive');
+  assert.equal(F.template('Table clients vip is locked', [], ['Clients VIP']), 'Table <name> is locked', 'a composed name, whatever its case');
   // Rhino (the engine) refuses a case-insensitive class past U+017F, which Node accepts.
   assert.match(SOURCE, /\\u00C0-\\u017F/);
   assert.doesNotMatch(SOURCE, /\\u024F/);
@@ -782,4 +787,19 @@ test('AgentFeedback and the turn hooks find a server user from the session, neve
   sandbox.Engine.isStudioMode = () => true;
   assert.equal(sandbox.feedbackModule({ userKey: 'alice_example.com--1234' }), sandbox.C8O.assistantFeedback);
   assert.deepEqual(made, ['alice_example.com--1234']);
+});
+
+test('the agent restarts on its session when its user turns feedback on or off: the report tool joins its tool list', () => {
+  const sandbox = { feedback: null };
+  sandbox.feedbackModule = () => sandbox.feedback;
+  vm.runInNewContext(backendParts(['feedbackCatalogKey']), sandbox);
+  assert.equal(sandbox.feedbackCatalogKey({}), '', 'no feedback module (a server user without a key): nothing to compare');
+  sandbox.feedback = { mode: () => 'off' };
+  assert.equal(sandbox.feedbackCatalogKey({}), 'feedback:off');
+  sandbox.feedback = { mode: () => 'ask' };
+  assert.equal(sandbox.feedbackCatalogKey({}), 'feedback:on');
+  sandbox.feedback = { mode: () => { throw new Error('store'); } };
+  assert.equal(sandbox.feedbackCatalogKey({}), '');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_bridge_client.js'), 'utf8');
+  assert.match(source, /agentRevealMode: revealModeOption\(options\),\n      mcpCatalogKey: feedbackCatalogKey\(state\),/);
 });
