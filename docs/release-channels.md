@@ -5,10 +5,11 @@ of each companion project.
 
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
-| Stable | 1.5.2 | 0.4.25 | 0.2.25 |
-| Preview | 1.5.2 | 0.4.25 | 0.2.25 |
+| Stable | 1.5.3 | 0.4.26 | 0.2.26 |
+| Preview | 1.5.3 | 0.4.26 | 0.2.26 |
 
-Tigo 1.5.2 promotes the 1.5 prompt/skill/MCP library to the stable bundle (see
+Tigo 1.5.3 adds the opt-in feedback to Convertigo to the stable bundle (see
+[release 1.5.3](release-1.5.3.md); the 1.5 library was promoted in
 [release 1.5.2](release-1.5.2.md)). The preview manifest points at the same
 bundle until the next preview. Both bundles target Convertigo 8.4.6;
 compatibility alone does not constitute stable acceptance.
@@ -50,7 +51,7 @@ Assistant release to stable deploys it to production (see below).
 
 The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
 its unsuffixed tag. Use beta and release-candidate tags for future preview
-iterations, for example `v1.5.2-beta.1` and `v1.5.2-rc.1`. Keep the preview manifest's three versions
+iterations, for example `v1.5.4-beta.1` and `v1.5.4-rc.1`. Keep the preview manifest's three versions
 coherent with its published CARs.
 
 Stable promotion is an explicit maintainer operation after code review and
