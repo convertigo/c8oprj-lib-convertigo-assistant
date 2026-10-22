@@ -1,5 +1,5 @@
 accessibility: Hidden
-comment: Feedback to Convertigo (docs/tigo-feedback.md). Local Studio WEB_ADMIN only. Reads and sets the consent mode, lists, sends or clears the waiting reports, and prepares a user report on the last turn of a conversation. The Tigo key is read on the server and never returned.
+comment: Feedback to Convertigo (docs/tigo-feedback.md). Local Studio WEB_ADMIN only. Reads and sets the consent mode, lists, sends or clears the waiting reports, prepares a user report on the last turn of a conversation (or, turning feedback on from a failed turn, collects its tool errors), and puts an offer aside (later, with topic invite, nudge or auto). The Tigo key is read on the server and never returned.
 includeResponseElement: false
 responseTimeout: 120
 ↓RunFeedback [steps.SimpleStep-1792540000001]: 
@@ -10,11 +10,12 @@ responseTimeout: 120
     var response={status:"error",code:"unavailable",available:false,mode:"off",pending:[]};
     if(studio&&admin){
      include("js/agent_feedback.js");
-     var options={action:String(action||""),mode:String(mode||""),comment:String(comment||""),provider:String(provider||"")};
-     if(options.action==="report"&&String(threadid||"").length){
+     var options={action:String(action||""),mode:String(mode||""),comment:String(comment||""),provider:String(provider||""),model:String(model||""),topic:String(topic||"")};
+     if((options.action==="report"||options.action==="mode")&&String(threadid||"").length){
       include("js/agent_bridge_client.js");
       var history=C8O.assistantAgentBridge.runHistory({threadid:String(threadid),userId:"studio",provider:options.provider});
-      options.turn=history&&history.ok===true?C8O.assistantFeedback.turnSummary(history.events):null;
+      if(options.action==="report"){options.turn=history&&history.ok===true?C8O.assistantFeedback.turnSummary(history.events):null;}
+      else{options.events=history&&history.ok===true?history.events:null;}
       history=null;
      }
      response=C8O.assistantFeedback.run(options);
@@ -59,6 +60,18 @@ responseTimeout: 120
     - →→: xd8e180806a1c1d83a6255212121ab827
   visibility: 15
 ↓threadid [variables.RequestableVariable-1792540000013]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓topic [variables.RequestableVariable-1792540000015]: 
+  value: 
+    - ↑ciphered: true
+    - ↑traceable: false
+    - →→: xd8e180806a1c1d83a6255212121ab827
+  visibility: 15
+↓model [variables.RequestableVariable-1792540000017]: 
   value: 
     - ↑ciphered: true
     - ↑traceable: false

@@ -25,9 +25,14 @@ only.
   until it is answered: the next turn moves it below the new answer, and a reopened conversation shows it again after
   its last finished turn. Its buttons: "Activer avec relecture" (`ask`), "Toujours partager" (`auto`), "Pas
   maintenant" (asked again in seven days). Any choice of a mode, `off` included, ends the invitation.
-- **Reminder.** In `ask` mode, when the reports waiting grow after a turn, a card says how many wait, with "Envoyer"
-  and "Relire" (the `/retours` card); a reopened conversation shows it again while reports wait. The thread keeps one
-  open feedback card.
+- **Nudge.** In `off` mode chosen by the user, a turn with tool errors shows a card that asks again: "Activer avec
+  relecture" turns `ask` on and collects the errors of that turn at once (from its saved events), "Signaler ce tour"
+  puts `/signaler ` in the draft, "Pas maintenant" puts it aside for seven days.
+- **Reminder.** In `ask` mode, when the reports waiting grow after a turn, a card says how many wait, with "Envoyer",
+  "Relire" (the `/retours` card) and "Toujours partager" (`auto`); a reopened conversation shows it again while reports
+  wait. The thread keeps one open feedback card.
+- **Automatic mode.** After a send made by hand in `ask` mode, the card offers "Passer en automatique" or "Garder la
+  relecture" (asked again in thirty days).
 - **Report a problem.** The last finished turn carries a "Signaler un problème" link that puts `/signaler ` in the
   draft (`/report ` in the other languages). Hidden when an administrator imposes `off`.
 - **Setting.** "Retours à Convertigo", with the three modes and the number of reports waiting; read-only when the mode
@@ -60,8 +65,9 @@ aside). Error templates also replace quoted values and numbers. Texts are cut (s
 
 `<engine workspace>/agents/feedback/`:
 
-- `settings.json`: `{ "mode": "off|ask|auto", "updatedAt": ms, "decidedAt": ms, "snoozedUntil": ms }` (`decidedAt` when
-  the user chose a mode, `snoozedUntil` after "Pas maintenant")
+- `settings.json`: `{ "mode": "off|ask|auto", "updatedAt": ms, "decidedAt": ms, "snoozedUntil": ms, "nudgeUntil": ms,
+  "autoOfferUntil": ms }` (`decidedAt` when the user chose a mode; the three others after "Pas maintenant" on the
+  invitation or the nudge, or "Garder la relecture")
 - `outbox/<reportId>.json`: reports waiting to be sent (100 at most, the oldest dropped first)
 - `sent.json`: the 50 last reports sent (id, kind, subject, date), for `/retours`
 

@@ -224,7 +224,7 @@ test('automatic mode sends after a turn; the outbox and a batch stay bounded', (
 });
 
 const METHODS = ['agentFeedbackText', 'feedbackCommand', 'fillFeedbackCard', 'agentUiLanguage', 'feedbackErrorText', 'feedbackTurnFailures', 'feedbackCard',
-  'dropOpenFeedbackCards', 'offerFeedback', 'offerFeedbackOnOpen', 'onFeedbackCta', 'canReportTurn', 'prefillFeedbackReport', 'feedbackSettingNote', 'feedbackSettingChoices'];
+  'dropOpenFeedbackCards', 'offerFeedback', 'offerFeedbackOnOpen', 'onFeedbackCta', 'offerAutoAfterSend', 'canReportTurn', 'prefillFeedbackReport', 'feedbackSettingNote', 'feedbackSettingChoices'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter(m => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map(m => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -338,9 +338,9 @@ test('the card buttons choose a mode, snooze, send or open the review card', asy
 
   const later = page('en', [{ status: 'ok', mode: 'off', invite: false, pending: [], result: { status: 'ok', snoozedUntil: 1 } }]);
   later.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }, 0);
-  later.onFeedbackCta(later.local.Messages[0], { id: 'later' });
+  later.onFeedbackCta(later.local.Messages[0], later.local.Messages[0].actions[2]);
   await settle();
-  assert.deepEqual(later.calls, [{ action: 'later' }]);
+  assert.deepEqual(later.calls, [{ action: 'later', topic: 'invite' }]);
   assert.match(later.local.Messages[0].message, /^All right, we will ask again in a week/);
 
   const send = page('fr', [{ status: 'ok', mode: 'ask', pending: [{}], result: { status: 'error', code: 'not_connected', pending: 1 } }]);
@@ -482,4 +482,85 @@ test('the model of a report: the chosen one, else the one that answered, else th
   assert.equal(sandbox.feedbackModel({ model: 'glm-5-3', usage: { agentModel: 'x' } }), 'glm-5-3');
   assert.equal(sandbox.feedbackModel({ model: '', usage: { agentModel: 'claude-opus-5-5' } }), 'claude-opus-5-5');
   assert.equal(sandbox.feedbackModel({ model: '' }), 'default');
+});
+
+test('server: the nudge follows an "off" choice, the offer of "auto" a review mode; each "not now" has its own delay', () => {
+  const { F, store } = feedback();
+  assert.equal(F.status().nudge, false);
+  F.setMode('off');
+  assert.equal(F.nudge(), true);
+  assert.equal(F.offerAuto(), false);
+  F.later('nudge');
+  assert.equal(F.nudge(), false);
+  assert.equal(store.settings.decidedAt > 0, true, 'a snooze keeps the choice');
+  store.clock += 8 * 24 * 3600 * 1000;
+  assert.equal(F.nudge(), true);
+  F.setMode('ask');
+  assert.equal(F.status().offerAuto, true);
+  assert.equal(F.run({ action: 'later', topic: 'auto' }).offerAuto, false);
+  store.clock += 20 * 24 * 3600 * 1000;
+  assert.equal(F.offerAuto(), false);
+  store.clock += 11 * 24 * 3600 * 1000;
+  assert.equal(F.offerAuto(), true);
+  assert.equal(F.later('other').code, 'unknown_topic');
+  const locked = feedback({ symbols: { 'assistant.feedback.policy': 'ask' } }).F;
+  assert.equal(locked.offerAuto(), false);
+});
+
+test('server: turned on from a failed turn, the errors of that turn are collected at once', () => {
+  const { F } = feedback({ settings: { mode: 'off', decidedAt: 1 } });
+  const events = [
+    { type: 'tool', toolName: 'mcp__convertigo__databaseobject-tree-get', status: 'completed', detail: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ code: '-1', message: 'Database object not found: PcaUpdateTracker.sq:x' }) }] }) },
+    { type: 'tool', toolName: 'mcp__convertigo__project-list', status: 'completed', detail: '{"status":"ok"}' },
+    { type: 'tool', toolName: 'Bash', status: 'failed', detail: 'exit 1' }
+  ];
+  const result = F.run({ action: 'mode', mode: 'ask', events, provider: 'Anthropic', model: 'default' });
+  assert.equal(result.result.collected, 1);
+  assert.equal(result.pending.length, 1);
+  assert.equal(result.pending[0].finding.subject, 'databaseobject-tree-get');
+  assert.equal(result.pending[0].stack.provider, 'claude');
+  // Turned off: nothing is collected.
+  const off = feedback({ settings: { mode: 'ask', decidedAt: 1 } }).F;
+  assert.equal(off.run({ action: 'mode', mode: 'off', events }).result.collected, undefined);
+});
+
+test('page: "off" chosen, a failed turn nudges; in review mode the reminder and a manual send offer "auto"', async () => {
+  const p = page('fr', [{ status: 'ok', available: true, mode: 'ask', invite: false, nudge: false, offerAuto: true, pending: [{}, {}], result: { status: 'ok', mode: 'ask', collected: 2 } }]);
+  p.local.Conversation = 'agent-1';
+  p.local.AgentProvider = 'claude';
+  p.local.AgentModel = 'default';
+  p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: false, nudge: true, pending: [] }, 0);
+  assert.equal(p.local.Messages.length, 0, 'no nudge without errors');
+  p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: false, nudge: true, pending: [] }, 2, true);
+  assert.equal(p.local.Messages.length, 0, 'no nudge on reopen');
+  p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: false, nudge: true, pending: [] }, 2);
+  const nudge = p.local.Messages[0];
+  assert.equal(nudge.variant, 'nudge');
+  assert.match(nudge.message, /^Ce tour a rencontré 2 erreur\(s\) d'outil\. Les partager/);
+  assert.deepEqual(Array.from(nudge.actions, a => a.id), ['ask', 'report', 'later']);
+  p.onFeedbackCta(nudge, nudge.actions[0]);
+  await settle();
+  assert.deepEqual(p.calls, [{ action: 'mode', mode: 'ask', threadid: 'agent-1', provider: 'claude', model: 'default' }]);
+  assert.match(nudge.message, /Les 2 erreur\(s\) de ce tour sont prêtes/);
+  assert.deepEqual(Array.from(nudge.actions, a => a.id), ['send', 'review']);
+  // "Report this turn" puts /signaler in the draft.
+  const report = page('fr');
+  report.onFeedbackCta({ type: 'feedback', actions: [] }, { id: 'report' });
+  assert.equal(report.published[0][1].text, '/signaler ');
+  // The reminder of review mode offers "always share".
+  const ask = page('fr');
+  ask.offerFeedback({ status: 'ok', available: true, mode: 'ask', offerAuto: true, pending: [{}] }, 0);
+  assert.deepEqual(Array.from(ask.local.Messages[0].actions, a => a.id), ['send', 'review', 'auto']);
+  // After a manual send: switch to automatic, or keep reviewing for a month.
+  const sent = page('fr', [{ status: 'ok', available: true, mode: 'ask', offerAuto: true, pending: [], result: { status: 'ok', accepted: 2, rejected: [] } },
+    { status: 'ok', available: true, mode: 'ask', offerAuto: false, pending: [], result: { status: 'ok', snoozedUntil: 1 } }]);
+  const card = { type: 'feedback', variant: 'pending', actions: [{ id: 'send' }] };
+  sent.onFeedbackCta(card, card.actions[0]);
+  await settle();
+  assert.equal(card.message, '2 rapport(s) envoyé(s). Les prochains peuvent partir tout seuls à la fin de chaque tour, masqués comme ceux-ci.');
+  assert.deepEqual(Array.from(card.actions, a => a.id), ['auto', 'keep']);
+  sent.onFeedbackCta(card, card.actions[1]);
+  await settle();
+  assert.deepEqual(sent.calls[1], { action: 'later', topic: 'auto' });
+  assert.match(card.message, /^D'accord, vous gardez la relecture/);
 });

@@ -18,7 +18,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   var MAX_BATCH_BYTES = 256 * 1024;
   var MAX_SENT = 50;
   var LIMITS = { subject: 120, summary: 500, suggestion: 500, template: 300, comment: 1000 };
-  var SNOOZE_MS = 7 * 24 * 3600 * 1000;
+  var DAY_MS = 24 * 3600 * 1000;
+  // What "not now" puts aside, and for how long: the invitation, the nudge of the "off" mode, the offer of "auto".
+  var SNOOZES = { invite: { field: "snoozedUntil", ms: 7 * DAY_MS }, nudge: { field: "nudgeUntil", ms: 7 * DAY_MS }, auto: { field: "autoOfferUntil", ms: 30 * DAY_MS } };
 
   F.SCHEMA = SCHEMA;
   F.LIMITS = LIMITS;
@@ -206,8 +208,13 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return { status: "ok", mode: mode };
   };
 
-  // "Not now" on the invitation: it comes back in a week, unless the user chooses a mode meanwhile.
-  F.later = function () {
+  // "Not now" on an offer: the invitation and the nudge come back in a week, the offer of "auto" in a month. Choosing a
+  // mode starts afresh.
+  F.later = function (topic) {
+    var snooze = SNOOZES[trim(topic).toLowerCase() || "invite"];
+    if (!snooze) {
+      return { status: "error", code: "unknown_topic" };
+    }
     if (!F.available()) {
       return { status: "error", code: "unavailable" };
     }
@@ -215,18 +222,43 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return { status: "error", code: "locked_by_policy", mode: F.policy() };
     }
     var settings = store().readSettings() || {};
-    var until = store().now() + SNOOZE_MS;
-    store().writeSettings({ mode: MODES[trim(settings.mode)] ? trim(settings.mode) : "off", updatedAt: store().now(), snoozedUntil: until });
+    var until = store().now() + snooze.ms;
+    var next = {};
+    for (var key in settings) {
+      if (Object.prototype.hasOwnProperty.call(settings, key)) {
+        next[key] = settings[key];
+      }
+    }
+    next.mode = MODES[trim(settings.mode)] ? trim(settings.mode) : "off";
+    next.updatedAt = store().now();
+    next[snooze.field] = until;
+    store().writeSettings(next);
     return { status: "ok", snoozedUntil: until };
   };
 
-  // The page invites the user to share once: a mode nobody chose, nothing imposed, no snooze running.
-  F.invite = function () {
-    if (!F.available() || F.policy() !== "user" || F.mode() !== "off") {
-      return false;
+  function offered(field) {
+    if (!F.available() || F.policy() !== "user") {
+      return null;
     }
     var settings = store().readSettings() || {};
-    return !Number(settings.decidedAt) && !(Number(settings.snoozedUntil) > store().now());
+    return Number(settings[field]) > store().now() ? null : settings;
+  }
+
+  // The page invites the user to share: a mode nobody chose, nothing imposed, no snooze running.
+  F.invite = function () {
+    var settings = offered("snoozedUntil");
+    return !!settings && F.mode() === "off" && !Number(settings.decidedAt);
+  };
+
+  // After a turn with errors, a user who chose "off" is asked again to share them (with review).
+  F.nudge = function () {
+    var settings = offered("nudgeUntil");
+    return !!settings && F.mode() === "off" && !!Number(settings.decidedAt);
+  };
+
+  // A user who reviews each send is offered to let the reports go on their own.
+  F.offerAuto = function () {
+    return !!offered("autoOfferUntil") && F.mode() === "ask";
   };
 
   function iso(ms) {
@@ -377,6 +409,23 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return { status: "ok", report: report };
   };
 
+  // The tool errors of a finished turn, from its saved events: what a user who turns feedback on from the nudge of that
+  // turn shares at once.
+  F.collectTurn = function (events, provider, model) {
+    var count = 0;
+    for (var i = 0; i < (events || []).length; i++) {
+      var event = events[i] || {};
+      if (event.type !== "tool") {
+        continue;
+      }
+      var message = F.errorMessage(event.detail, event.status === "failed" || event.status === "error");
+      if (message.length && F.collectToolError({ tool: event.toolName || event.title, message: message, provider: provider, model: model })) {
+        count++;
+      }
+    }
+    return count;
+  };
+
   // The tools of a finished turn, from its saved events: names, calls and failures only.
   F.turnSummary = function (events) {
     var tools = {};
@@ -457,6 +506,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       policy: F.policy(),
       locked: F.policy() !== "user",
       invite: F.invite(),
+      nudge: F.nudge(),
+      offerAuto: F.offerAuto(),
       pending: F.available() ? F.pending() : [],
       sent: sent.slice(-10),
       sentCount: sent.length
@@ -536,6 +587,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     var result;
     if (action === "mode") {
       result = F.setMode(options.mode);
+      if (result.status === "ok" && result.mode !== "off" && options.events) {
+        result.collected = F.collectTurn(options.events, options.provider, options.model);
+      }
     } else if (action === "send") {
       result = F.send();
     } else if (action === "flush") {
@@ -543,7 +597,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     } else if (action === "clear") {
       result = F.clear();
     } else if (action === "later") {
-      result = F.later();
+      result = F.later(options.topic);
     } else if (action === "report") {
       result = F.userReport(options);
       if (result.status === "ok" && F.mode() === "auto") {
