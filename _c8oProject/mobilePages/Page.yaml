@@ -4751,10 +4751,10 @@ scriptContent:
         	public agentFeedbackText(key) {
         		// Texts of the feedback commands (/retours, /signaler), in the four Assistant languages.
         		var texts: any = {
-        			fr: { title: "Retours à Convertigo", reportTitle: "Signalement à Convertigo", help: "Retours à Convertigo : état, envoi, mode", reportHelp: "Signaler un problème du dernier tour à Convertigo", hint: "envoyer · effacer · demander · auto · off", reportHint: "<ce qui ne va pas>", loading: "Lecture des retours…", error: "Impossible de lire les retours.", mode: "Mode", off: "Désactivé", ask: "Relire avant envoi", auto: "Automatique", locked: " (imposé par l''administrateur)", pending: "En attente", sent: "Envoyés", none: "Aucun rapport en attente.", nextAsk: "Relisez-les (bouton Copier le JSON), puis /retours envoyer ou /retours effacer.", nextAuto: "Ils partent à la fin du prochain tour, ou tout de suite avec /retours envoyer.", nextOff: "Rien n''est collecté. /retours demander pour activer, avec relecture avant envoi, ou /retours auto.", sentNow: "{n} rapport(s) envoyé(s).", rejected: "{n} refusé(s).", notConnected: "Activez Tigo (fournisseur Convertigo) pour envoyer les retours.", serviceUnavailable: "Service de retours injoignable : les rapports restent en attente.", lockedByPolicy: "Mode imposé par l''administrateur.", unavailable: "Les retours ne sont disponibles que dans le Studio.", commentRequired: "Décrivez le problème après /signaler.", reportReady: "Signalement prêt : relisez-le, puis /retours envoyer.", reportSent: "Signalement envoyé.", cleared: "{n} rapport(s) effacé(s).", modeSet: "Mode : {mode}.", unknown: "Commande inconnue : /retours, /retours envoyer, effacer, demander, auto ou off.", agent_friction: "Friction (agent)", tool_error: "Erreur d''outil", runtime_error: "Erreur d''exécution", user_report: "Signalement" },
-        			en: { title: "Feedback to Convertigo", reportTitle: "Report to Convertigo", help: "Feedback to Convertigo: status, send, mode", reportHelp: "Report a problem of the last turn to Convertigo", hint: "send · clear · ask · auto · off", reportHint: "<what went wrong>", loading: "Reading feedback…", error: "The feedback cannot be read.", mode: "Mode", off: "Off", ask: "Review before sending", auto: "Automatic", locked: " (set by the administrator)", pending: "Waiting", sent: "Sent", none: "No report waiting.", nextAsk: "Review them (Copy JSON button), then /feedback send or /feedback clear.", nextAuto: "They are sent at the end of the next turn, or now with /feedback send.", nextOff: "Nothing is collected. /feedback ask to turn it on with a review before sending, or /feedback auto.", sentNow: "{n} report(s) sent.", rejected: "{n} refused.", notConnected: "Turn Tigo on (Convertigo provider) to send feedback.", serviceUnavailable: "The feedback service cannot be reached: the reports keep waiting.", lockedByPolicy: "The administrator set this mode.", unavailable: "Feedback is only available in the Studio.", commentRequired: "Describe the problem after /report.", reportReady: "Report ready: review it, then /feedback send.", reportSent: "Report sent.", cleared: "{n} report(s) cleared.", modeSet: "Mode: {mode}.", unknown: "Unknown command: /feedback, /feedback send, clear, ask, auto or off.", agent_friction: "Friction (agent)", tool_error: "Tool error", runtime_error: "Runtime error", user_report: "Report" },
-        			it: { title: "Segnalazioni a Convertigo", reportTitle: "Segnalazione a Convertigo", help: "Segnalazioni a Convertigo: stato, invio, modalità", reportHelp: "Segnala a Convertigo un problema dell''ultimo turno", hint: "send · clear · ask · auto · off", reportHint: "<cosa non va>", loading: "Lettura delle segnalazioni…", error: "Impossibile leggere le segnalazioni.", mode: "Modalità", off: "Disattivata", ask: "Rileggere prima dell''invio", auto: "Automatica", locked: " (imposta dall''amministratore)", pending: "In attesa", sent: "Inviate", none: "Nessuna segnalazione in attesa.", nextAsk: "Rileggile (pulsante Copia JSON), poi /feedback send o /feedback clear.", nextAuto: "Partono alla fine del prossimo turno, o subito con /feedback send.", nextOff: "Nulla viene raccolto. /feedback ask per attivare con rilettura, o /feedback auto.", sentNow: "{n} segnalazione/i inviata/e.", rejected: "{n} rifiutata/e.", notConnected: "Attiva Tigo (provider Convertigo) per inviare le segnalazioni.", serviceUnavailable: "Servizio non raggiungibile: le segnalazioni restano in attesa.", lockedByPolicy: "Modalità imposta dall''amministratore.", unavailable: "Le segnalazioni sono disponibili solo nello Studio.", commentRequired: "Descrivi il problema dopo /report.", reportReady: "Segnalazione pronta: rileggila, poi /feedback send.", reportSent: "Segnalazione inviata.", cleared: "{n} segnalazione/i cancellata/e.", modeSet: "Modalità: {mode}.", unknown: "Comando sconosciuto: /feedback, /feedback send, clear, ask, auto o off.", agent_friction: "Attrito (agente)", tool_error: "Errore di strumento", runtime_error: "Errore di esecuzione", user_report: "Segnalazione" },
-        			es: { title: "Comentarios a Convertigo", reportTitle: "Informe a Convertigo", help: "Comentarios a Convertigo: estado, envío, modo", reportHelp: "Informar a Convertigo de un problema del último turno", hint: "send · clear · ask · auto · off", reportHint: "<qué falla>", loading: "Leyendo los comentarios…", error: "No se pueden leer los comentarios.", mode: "Modo", off: "Desactivado", ask: "Revisar antes de enviar", auto: "Automático", locked: " (impuesto por el administrador)", pending: "En espera", sent: "Enviados", none: "Ningún informe en espera.", nextAsk: "Revíselos (botón Copiar JSON) y luego /feedback send o /feedback clear.", nextAuto: "Se envían al final del próximo turno, o ahora con /feedback send.", nextOff: "No se recoge nada. /feedback ask para activarlo con revisión, o /feedback auto.", sentNow: "{n} informe(s) enviado(s).", rejected: "{n} rechazado(s).", notConnected: "Active Tigo (proveedor Convertigo) para enviar los comentarios.", serviceUnavailable: "Servicio no disponible: los informes siguen en espera.", lockedByPolicy: "Modo impuesto por el administrador.", unavailable: "Los comentarios solo están disponibles en el Studio.", commentRequired: "Describa el problema después de /report.", reportReady: "Informe listo: revíselo y luego /feedback send.", reportSent: "Informe enviado.", cleared: "{n} informe(s) borrado(s).", modeSet: "Modo: {mode}.", unknown: "Comando desconocido: /feedback, /feedback send, clear, ask, auto u off.", agent_friction: "Fricción (agente)", tool_error: "Error de herramienta", runtime_error: "Error de ejecución", user_report: "Informe" }
+        			fr: { title: "Retours à Convertigo", reportTitle: "Signalement à Convertigo", help: "Retours à Convertigo : état, envoi, mode", reportHelp: "Signaler un problème du dernier tour à Convertigo", hint: "envoyer · effacer · demander · auto · off", reportHint: "<ce qui ne va pas>", loading: "Lecture des retours…", error: "Impossible de lire les retours.", mode: "Mode", off: "Désactivé", ask: "Relire avant envoi", auto: "Automatique", locked: " (imposé par l''administrateur)", pending: "En attente", sent: "Envoyés", none: "Aucun rapport en attente.", nextAsk: "Relisez-les (bouton Copier le JSON), puis /retours envoyer ou /retours effacer.", nextAuto: "Ils partent à la fin du prochain tour, ou tout de suite avec /retours envoyer.", nextOff: "Rien n''est collecté. /retours demander pour activer, avec relecture avant envoi, ou /retours auto.", sentNow: "{n} rapport(s) envoyé(s).", rejected: "{n} refusé(s).", notConnected: "Activez Tigo (fournisseur Convertigo) pour envoyer les retours.", serviceUnavailable: "Service de retours injoignable : les rapports restent en attente.", lockedByPolicy: "Mode imposé par l''administrateur.", unavailable: "Les retours ne sont disponibles que dans le Studio.", commentRequired: "Décrivez le problème après /signaler.", reportReady: "Signalement prêt : relisez-le, puis /retours envoyer.", reportSent: "Signalement envoyé.", cleared: "{n} rapport(s) effacé(s).", modeSet: "Mode : {mode}.", unknown: "Commande inconnue : /retours, /retours envoyer, effacer, demander, auto ou off.", agent_friction: "Friction (agent)", tool_error: "Erreur d''outil", runtime_error: "Erreur d''exécution", user_report: "Signalement", inviteTitle: "Aidez-nous à améliorer Tigo", inviteText: "Partagez avec Convertigo les frictions et les erreurs que Tigo rencontre : nous les corrigeons dans les prochaines versions. Les rapports sont masqués (ni prompts, ni réponses, ni fichiers, ni noms de projets) et vous pouvez les relire avant envoi.", inviteFailures: "Ce tour a rencontré {n} erreur(s) d''outil.", inviteAsk: "Activer avec relecture", inviteAuto: "Toujours partager", inviteLater: "Pas maintenant", inviteDoneAsk: "Merci ! Les retours sont préparés ici : relisez-les et envoyez-les quand vous voulez (/retours).", inviteDoneAuto: "Merci ! Les retours partent à la fin de chaque tour. /retours off pour arrêter.", inviteDoneLater: "D''accord, nous vous le reproposerons dans une semaine. Le réglage Retours à Convertigo reste disponible.", pendingText: "{n} retour(s) prêt(s) pour Convertigo. Relisez-les avant de les envoyer.", review: "Relire", sendNow: "Envoyer", reportLink: "Signaler un problème", reportLinkTitle: "Signaler à Convertigo un problème de ce tour", settingLabel: "Retours à Convertigo", settingText: "Envoyez à Convertigo les frictions et les erreurs de Tigo, masquées, pour qu''elles soient corrigées. Jamais vos prompts, vos réponses ni vos fichiers.", settingPending: "{n} rapport(s) en attente : /retours pour les relire." },
+        			en: { title: "Feedback to Convertigo", reportTitle: "Report to Convertigo", help: "Feedback to Convertigo: status, send, mode", reportHelp: "Report a problem of the last turn to Convertigo", hint: "send · clear · ask · auto · off", reportHint: "<what went wrong>", loading: "Reading feedback…", error: "The feedback cannot be read.", mode: "Mode", off: "Off", ask: "Review before sending", auto: "Automatic", locked: " (set by the administrator)", pending: "Waiting", sent: "Sent", none: "No report waiting.", nextAsk: "Review them (Copy JSON button), then /feedback send or /feedback clear.", nextAuto: "They are sent at the end of the next turn, or now with /feedback send.", nextOff: "Nothing is collected. /feedback ask to turn it on with a review before sending, or /feedback auto.", sentNow: "{n} report(s) sent.", rejected: "{n} refused.", notConnected: "Turn Tigo on (Convertigo provider) to send feedback.", serviceUnavailable: "The feedback service cannot be reached: the reports keep waiting.", lockedByPolicy: "The administrator set this mode.", unavailable: "Feedback is only available in the Studio.", commentRequired: "Describe the problem after /report.", reportReady: "Report ready: review it, then /feedback send.", reportSent: "Report sent.", cleared: "{n} report(s) cleared.", modeSet: "Mode: {mode}.", unknown: "Unknown command: /feedback, /feedback send, clear, ask, auto or off.", agent_friction: "Friction (agent)", tool_error: "Tool error", runtime_error: "Runtime error", user_report: "Report", inviteTitle: "Help us improve Tigo", inviteText: "Share the frictions and errors Tigo meets with Convertigo: we fix them in the next releases. Reports are masked (no prompts, answers, files or project names) and you can review them before they are sent.", inviteFailures: "This turn met {n} tool error(s).", inviteAsk: "Turn on with review", inviteAuto: "Always share", inviteLater: "Not now", inviteDoneAsk: "Thank you! Reports are prepared here: review and send them whenever you want (/feedback).", inviteDoneAuto: "Thank you! Reports are sent at the end of each turn. /feedback off to stop.", inviteDoneLater: "All right, we will ask again in a week. The Feedback to Convertigo setting stays available.", pendingText: "{n} report(s) ready for Convertigo. Review them before sending.", review: "Review", sendNow: "Send", reportLink: "Report a problem", reportLinkTitle: "Report a problem of this turn to Convertigo", settingLabel: "Feedback to Convertigo", settingText: "Send the frictions and errors of Tigo to Convertigo, masked, so they get fixed. Never your prompts, answers or files.", settingPending: "{n} report(s) waiting: /feedback to review them." },
+        			it: { title: "Segnalazioni a Convertigo", reportTitle: "Segnalazione a Convertigo", help: "Segnalazioni a Convertigo: stato, invio, modalità", reportHelp: "Segnala a Convertigo un problema dell''ultimo turno", hint: "send · clear · ask · auto · off", reportHint: "<cosa non va>", loading: "Lettura delle segnalazioni…", error: "Impossibile leggere le segnalazioni.", mode: "Modalità", off: "Disattivata", ask: "Rileggere prima dell''invio", auto: "Automatica", locked: " (imposta dall''amministratore)", pending: "In attesa", sent: "Inviate", none: "Nessuna segnalazione in attesa.", nextAsk: "Rileggile (pulsante Copia JSON), poi /feedback send o /feedback clear.", nextAuto: "Partono alla fine del prossimo turno, o subito con /feedback send.", nextOff: "Nulla viene raccolto. /feedback ask per attivare con rilettura, o /feedback auto.", sentNow: "{n} segnalazione/i inviata/e.", rejected: "{n} rifiutata/e.", notConnected: "Attiva Tigo (provider Convertigo) per inviare le segnalazioni.", serviceUnavailable: "Servizio non raggiungibile: le segnalazioni restano in attesa.", lockedByPolicy: "Modalità imposta dall''amministratore.", unavailable: "Le segnalazioni sono disponibili solo nello Studio.", commentRequired: "Descrivi il problema dopo /report.", reportReady: "Segnalazione pronta: rileggila, poi /feedback send.", reportSent: "Segnalazione inviata.", cleared: "{n} segnalazione/i cancellata/e.", modeSet: "Modalità: {mode}.", unknown: "Comando sconosciuto: /feedback, /feedback send, clear, ask, auto o off.", agent_friction: "Attrito (agente)", tool_error: "Errore di strumento", runtime_error: "Errore di esecuzione", user_report: "Segnalazione", inviteTitle: "Aiutaci a migliorare Tigo", inviteText: "Condividi con Convertigo gli attriti e gli errori che Tigo incontra: li correggiamo nelle prossime versioni. Le segnalazioni sono mascherate (niente prompt, risposte, file o nomi di progetto) e puoi rileggerle prima dell''invio.", inviteFailures: "Questo turno ha incontrato {n} errore/i di strumento.", inviteAsk: "Attiva con rilettura", inviteAuto: "Condividi sempre", inviteLater: "Non ora", inviteDoneAsk: "Grazie! Le segnalazioni vengono preparate qui: rileggile e inviale quando vuoi (/feedback).", inviteDoneAuto: "Grazie! Le segnalazioni partono alla fine di ogni turno. /feedback off per fermarle.", inviteDoneLater: "D''accordo, te lo riproporremo tra una settimana. L''impostazione Segnalazioni a Convertigo resta disponibile.", pendingText: "{n} segnalazione/i pronta/e per Convertigo. Rileggile prima dell''invio.", review: "Rileggi", sendNow: "Invia", reportLink: "Segnala un problema", reportLinkTitle: "Segnala a Convertigo un problema di questo turno", settingLabel: "Segnalazioni a Convertigo", settingText: "Invia a Convertigo gli attriti e gli errori di Tigo, mascherati, perché vengano corretti. Mai i tuoi prompt, le risposte o i file.", settingPending: "{n} segnalazione/i in attesa: /feedback per rileggerle." },
+        			es: { title: "Comentarios a Convertigo", reportTitle: "Informe a Convertigo", help: "Comentarios a Convertigo: estado, envío, modo", reportHelp: "Informar a Convertigo de un problema del último turno", hint: "send · clear · ask · auto · off", reportHint: "<qué falla>", loading: "Leyendo los comentarios…", error: "No se pueden leer los comentarios.", mode: "Modo", off: "Desactivado", ask: "Revisar antes de enviar", auto: "Automático", locked: " (impuesto por el administrador)", pending: "En espera", sent: "Enviados", none: "Ningún informe en espera.", nextAsk: "Revíselos (botón Copiar JSON) y luego /feedback send o /feedback clear.", nextAuto: "Se envían al final del próximo turno, o ahora con /feedback send.", nextOff: "No se recoge nada. /feedback ask para activarlo con revisión, o /feedback auto.", sentNow: "{n} informe(s) enviado(s).", rejected: "{n} rechazado(s).", notConnected: "Active Tigo (proveedor Convertigo) para enviar los comentarios.", serviceUnavailable: "Servicio no disponible: los informes siguen en espera.", lockedByPolicy: "Modo impuesto por el administrador.", unavailable: "Los comentarios solo están disponibles en el Studio.", commentRequired: "Describa el problema después de /report.", reportReady: "Informe listo: revíselo y luego /feedback send.", reportSent: "Informe enviado.", cleared: "{n} informe(s) borrado(s).", modeSet: "Modo: {mode}.", unknown: "Comando desconocido: /feedback, /feedback send, clear, ask, auto u off.", agent_friction: "Fricción (agente)", tool_error: "Error de herramienta", runtime_error: "Error de ejecución", user_report: "Informe", inviteTitle: "Ayúdenos a mejorar Tigo", inviteText: "Comparta con Convertigo las fricciones y los errores que encuentra Tigo: los corregimos en las próximas versiones. Los informes están enmascarados (sin prompts, respuestas, archivos ni nombres de proyecto) y puede revisarlos antes del envío.", inviteFailures: "Este turno encontró {n} error(es) de herramienta.", inviteAsk: "Activar con revisión", inviteAuto: "Compartir siempre", inviteLater: "Ahora no", inviteDoneAsk: "¡Gracias! Los informes se preparan aquí: revíselos y envíelos cuando quiera (/feedback).", inviteDoneAuto: "¡Gracias! Los informes se envían al final de cada turno. /feedback off para detenerlo.", inviteDoneLater: "De acuerdo, se lo volveremos a proponer en una semana. El ajuste Comentarios a Convertigo sigue disponible.", pendingText: "{n} informe(s) listo(s) para Convertigo. Revíselos antes de enviarlos.", review: "Revisar", sendNow: "Enviar", reportLink: "Informar de un problema", reportLinkTitle: "Informar a Convertigo de un problema de este turno", settingLabel: "Comentarios a Convertigo", settingText: "Envíe a Convertigo las fricciones y los errores de Tigo, enmascarados, para que se corrijan. Nunca sus prompts, respuestas ni archivos.", settingPending: "{n} informe(s) en espera: /feedback para revisarlos." }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -4816,6 +4816,9 @@ scriptContent:
         		}
         		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", params).async().then((response: any) => {
         			var result = response && response.response ? response.response : response;
+        			if (result && result.status === "ok") {
+        				this.local.FeedbackStatus = result;
+        			}
         			this.fillFeedbackCard(card, result, action);
         			this.tick();
         			this.scrollChatBottom(0, true);
@@ -4837,8 +4840,7 @@ scriptContent:
         		var done = result.result || null;
         		var notes = [];
         		if (done && done.status === "error") {
-        			var codes: any = { not_connected: "notConnected", service_unavailable: "serviceUnavailable", locked_by_policy: "lockedByPolicy", unavailable: "unavailable", comment_required: "commentRequired" };
-        			notes.push(t(codes[done.code] || "error"));
+        			notes.push(this.feedbackErrorText(done.code));
         		} else if (done && action === "send") {
         			notes.push(t("sentNow").replace("{n}", "" + (done.accepted || 0)) + (done.rejected && done.rejected.length ? " " + t("rejected").replace("{n}", "" + done.rejected.length) : ""));
         		} else if (done && action === "clear") {
@@ -4864,11 +4866,217 @@ scriptContent:
         		card.state = "ready";
         		card.message = notes.join(" ");
         	}
-        	public feedbackAfterTurn() {
-        		// In automatic mode the reports collected during the turn are sent; otherwise the call returns at once.
+        	public feedbackAfterTurn(events) {
+        		// In automatic mode the reports collected during the turn are sent. The answer is the feedback status, so the
+        		// thread can put the feedback forward: the invitation, or the reminder of the reports waiting for review.
+        		var failures = this.feedbackTurnFailures(events);
         		try {
-        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", { action: "flush" }).async().then(() => {}).catch(() => {});
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", { action: "flush" }).async().then((response: any) => {
+        				this.offerFeedback(response && response.response ? response.response : response, failures);
+        			}).catch(() => {});
         		} catch (e) {}
+        	}
+        	public feedbackTurnFailures(events) {
+        		// The tool calls of the turn that failed or answered a Convertigo MCP error.
+        		var count = 0;
+        		for (var i = 0; events && i < events.length; i++) {
+        			var event = events[i] || {};
+        			var status = ("" + (event.status || "")).toLowerCase();
+        			if (event.type === "tool" && (status === "failed" || status === "error" || /\\?"code\\?"\s*:\s*\\?"-1/.test("" + (event.detail || "")))) {
+        				count++;
+        			}
+        		}
+        		return count;
+        	}
+        	public feedbackErrorText(code) {
+        		var codes: any = { not_connected: "notConnected", service_unavailable: "serviceUnavailable", locked_by_policy: "lockedByPolicy", unavailable: "unavailable", comment_required: "commentRequired" };
+        		return this.agentFeedbackText(codes[code] || "error");
+        	}
+        	public feedbackCard(variant, title, message, actions) {
+        		var now = new Date();
+        		return { type: "feedback", variant: variant, time: ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2), title: title, message: message, state: "ready", actions: actions, busy: false };
+        	}
+        	public dropOpenFeedbackCards(variant) {
+        		// The thread keeps one open feedback card: an older one nobody answered leaves.
+        		var list = (this.local && this.local.Messages) || [];
+        		for (var i = list.length - 1; i >= 0; i--) {
+        			if (list[i] && list[i].type === "feedback" && list[i].actions && list[i].actions.length && (!variant || list[i].variant === variant)) {
+        				list.splice(i, 1);
+        			}
+        		}
+        	}
+        	public offerFeedback(result, failures) {
+        		// After a turn, one card at most: the invitation, once per page, while nobody chose a mode and nothing is imposed;
+        		// else, in "ask" mode, the reminder of the waiting reports when their number grew since the last reminder.
+        		var self: any = this;
+        		if (!this.local || !result || result.status !== "ok") {
+        			return;
+        		}
+        		this.local.FeedbackStatus = result;
+        		if (result.available === false || result.locked) {
+        			this.tick();
+        			return;
+        		}
+        		var t = (key: any) => this.agentFeedbackText(key);
+        		var pending = (result.pending || []).length;
+        		var card: any = null;
+        		if (result.invite === true && !self.feedbackInviteShown) {
+        			self.feedbackInviteShown = true;
+        			card = this.feedbackCard("invite", t("inviteTitle"), (failures ? t("inviteFailures").replace("{n}", "" + failures) + " " : "") + t("inviteText"),
+        				[{ id: "ask", label: t("inviteAsk"), primary: true }, { id: "auto", label: t("inviteAuto") }, { id: "later", label: t("inviteLater") }]);
+        		} else if (result.mode === "ask" && pending > (self.feedbackReminderCount || 0)) {
+        			card = this.feedbackCard("pending", t("title"), t("pendingText").replace("{n}", "" + pending),
+        				[{ id: "send", label: t("sendNow"), primary: true }, { id: "review", label: t("review") }]);
+        		}
+        		self.feedbackReminderCount = result.mode === "ask" ? pending : 0;
+        		if (card) {
+        			this.dropOpenFeedbackCards("");
+        			this.local.Messages = this.local.Messages || [];
+        			this.local.Messages.push(card);
+        			this.scrollChatBottom(0, true);
+        		}
+        		this.tick();
+        	}
+        	public onFeedbackCta(card, cta) {
+        		// A button of a feedback card: a mode, "not now", send, or review (the /retours card).
+        		var self: any = this;
+        		var t = (key: any) => this.agentFeedbackText(key);
+        		if (!card || !cta || card.busy) {
+        			return;
+        		}
+        		if (cta.id === "review") {
+        			this.dropOpenFeedbackCards("pending");
+        			this.showFeedbackCard("status", { mode: "" });
+        			return;
+        		}
+        		card.busy = true;
+        		var params: any = cta.id === "send" || cta.id === "later" ? { action: cta.id } : { action: "mode", mode: cta.id };
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", params).async().then((response: any) => {
+        			var result = response && response.response ? response.response : response;
+        			var done = result && result.result;
+        			card.busy = false;
+        			if (!result || result.status !== "ok" || !done || done.status !== "ok") {
+        				card.state = "error";
+        				card.message = this.feedbackErrorText(done && done.code);
+        				this.tick();
+        				return;
+        			}
+        			this.local.FeedbackStatus = result;
+        			card.actions = [];
+        			if (cta.id === "send") {
+        				card.message = t("sentNow").replace("{n}", "" + (done.accepted || 0)) + (done.rejected && done.rejected.length ? " " + t("rejected").replace("{n}", "" + done.rejected.length) : "");
+        				self.feedbackReminderCount = (result.pending || []).length;
+        			} else {
+        				card.message = t(cta.id === "ask" ? "inviteDoneAsk" : (cta.id === "auto" ? "inviteDoneAuto" : "inviteDoneLater"));
+        			}
+        			this.tick();
+        		}).catch(() => {
+        			card.busy = false;
+        			card.state = "error";
+        			card.message = t("error");
+        			this.tick();
+        		});
+        	}
+        	public feedbackStatusCached() {
+        		// The feedback status the page knows; read once when no feedback call gave it yet.
+        		var self: any = this;
+        		if (!this.local) {
+        			return null;
+        		}
+        		if (this.local.FeedbackStatus === undefined && !self.feedbackStatusLoading) {
+        			self.feedbackStatusLoading = true;
+        			try {
+        				this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", { action: "status" }).async().then((response: any) => {
+        					var result = response && response.response ? response.response : response;
+        					this.local.FeedbackStatus = result && result.status === "ok" ? result : null;
+        					self.feedbackStatusLoading = false;
+        					this.tick();
+        				}).catch(() => {
+        					this.local.FeedbackStatus = null;
+        					self.feedbackStatusLoading = false;
+        				});
+        			} catch (e) {
+        				this.local.FeedbackStatus = null;
+        				self.feedbackStatusLoading = false;
+        			}
+        		}
+        		return this.local.FeedbackStatus || null;
+        	}
+        	public canReportTurn(item) {
+        		// The "Report a problem" link: on the last finished turn only, since /signaler describes the conversation''s last
+        		// turn; in the Studio, unless an administrator turned feedback off.
+        		if (!item || item.writing === true || !this.local) {
+        			return false;
+        		}
+        		var status = this.feedbackStatusCached();
+        		if (!status || status.available === false || (status.locked && status.mode === "off")) {
+        			return false;
+        		}
+        		var list = this.local.Messages || [];
+        		for (var i = list.length - 1; i >= 0; i--) {
+        			var message = list[i];
+        			if (message && (message.type == "worklog" || message.writing === true || !!message.progressDetails || (message.type == "assistant" && message.runEvents && message.runEvents.length))) {
+        				return message === item;
+        			}
+        		}
+        		return false;
+        	}
+        	public prefillFeedbackReport(event) {
+        		// The link sits in the summary of the work log: the click must not fold it.
+        		if (event && event.preventDefault) {
+        			event.preventDefault();
+        		}
+        		if (event && event.stopPropagation) {
+        			event.stopPropagation();
+        		}
+        		this.events.publish("TigoPromptInsert", { text: this.agentUiLanguage() === "fr" ? "/signaler " : "/report " });
+        	}
+        	public feedbackSettingVisible() {
+        		var status = this.feedbackStatusCached();
+        		return !!status && status.available !== false;
+        	}
+        	public feedbackSettingMode() {
+        		var status = this.local && this.local.FeedbackStatus;
+        		return status && status.mode ? status.mode : "off";
+        	}
+        	public feedbackSettingLocked() {
+        		var status = this.local && this.local.FeedbackStatus;
+        		return !!(status && status.locked);
+        	}
+        	public feedbackSettingChoices() {
+        		// A stable list: the template iterates over it at every change detection.
+        		var self: any = this;
+        		return self.feedbackModesList || (self.feedbackModesList = ["off", "ask", "auto"]);
+        	}
+        	public feedbackSettingNote() {
+        		var status = this.local && this.local.FeedbackStatus;
+        		if (!status) {
+        			return "";
+        		}
+        		if (status.locked) {
+        			return this.agentFeedbackText("lockedByPolicy");
+        		}
+        		var pending = (status.pending || []).length;
+        		return pending ? this.agentFeedbackText("settingPending").replace("{n}", "" + pending) : "";
+        	}
+        	public setFeedbackSettingMode(mode) {
+        		var self: any = this;
+        		if (self.feedbackModeSaving || this.feedbackSettingLocked() || this.feedbackSettingMode() === mode) {
+        			return;
+        		}
+        		self.feedbackModeSaving = true;
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentFeedback", { action: "mode", mode: mode }).async().then((response: any) => {
+        			var result = response && response.response ? response.response : response;
+        			self.feedbackModeSaving = false;
+        			if (result && result.status === "ok") {
+        				this.local.FeedbackStatus = result;
+        				// The choice answers an open invitation.
+        				this.dropOpenFeedbackCards("invite");
+        			}
+        			this.tick();
+        		}).catch(() => {
+        			self.feedbackModeSaving = false;
+        		});
         	}
         	public localSlashCommands() {
         		// Commands of the Assistant itself, listed first in the "/" menu; they never reach the agent.
@@ -8608,6 +8816,119 @@ title: Tigo
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? this.t(''Agent_Enabled'', ''Activé'') : this.t(''Agent_Disabled'', ''Désactivé'')'
+                      ↓FeedbackSettings [ngx.components.UIDynamicElement-1792600000067]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1792600000069]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-feedback-setting
+                        ↓Hidden [ngx.components.UIAttribute-1792600000071]: 
+                          attrName: '[hidden]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:!this.feedbackSettingVisible()
+                        ↓FeedbackLabel [ngx.components.UIDynamicElement-1792600000073]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792600000075]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-create-label
+                          ↓Text [ngx.components.UIText-1792600000077]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.agentFeedbackText('settingLabel')
+                        ↓FeedbackDescription [ngx.components.UIDynamicElement-1792600000079]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792600000081]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-setting-description
+                          ↓Text [ngx.components.UIText-1792600000083]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.agentFeedbackText('settingText')
+                        ↓FeedbackChoices [ngx.components.UIDynamicElement-1792600000085]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1792600000087]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-choice-row agent-feedback-control
+                          ↓FeedbackChoicesLoop [ngx.components.UIControlDirective-1792600000089]: 
+                            directiveIndexName: choiceIndex
+                            directiveItemName: choice
+                            directiveSource: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.feedbackSettingChoices()
+                            ↓FeedbackChoice [ngx.components.UIDynamicElement-1792600000091]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "Button",
+                                 "IonFill": "plain:clear",
+                                 "IonSize": "plain:small"
+                                }'
+                              tagName: ion-button
+                              ↓Class [ngx.components.UIAttribute-1792600000093]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:''agent-choice-button'' + (this.feedbackSettingMode() === choice ? '' active'' : '''')'
+                              ↓Disabled [ngx.components.UIAttribute-1792600000095]: 
+                                attrName: '[disabled]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.feedbackSettingLocked()
+                              ↓Text [ngx.components.UIText-1792600000097]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.agentFeedbackText(choice)
+                              ↓Event [ngx.components.UIControlEvent-1792600000099]: 
+                                ↓ChooseMode [ngx.components.UICustomAction-1792600000101]: 
+                                  actionValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                        →: |
+                                          		page.setFeedbackSettingMode(props.stack.root.scope.choice);
+                                          		resolve();
+                        ↓FeedbackNoteIf [ngx.components.UIControlDirective-1792600000103]: 
+                          directiveName: If
+                          directiveSource: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:!!this.feedbackSettingNote()
+                          ↓FeedbackNote [ngx.components.UIDynamicElement-1792600000105]: 
+                            beanData: '{"ionBean":"Paragraph"}'
+                            tagName: p
+                            ↓Class [ngx.components.UIAttribute-1792600000107]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-setting-description agent-feedback-note
+                            ↓Text [ngx.components.UIText-1792600000109]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.feedbackSettingNote()
                       ↓ModelSettings [ngx.components.UIDynamicElement-1787737346772]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -12886,6 +13207,47 @@ title: Tigo
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:this.getAgentTurnTitle(item)
+                ↓ReportIf [ngx.components.UIControlDirective-1792600000051]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:this.canReportTurn(item)
+                  ↓Report [ngx.components.UIDynamicElement-1792600000053]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: button
+                    ↓Class [ngx.components.UIAttribute-1792600000055]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-worklog-report
+                    ↓Type [ngx.components.UIAttribute-1792600000057]: 
+                      attrName: type
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:button
+                    ↓Title [ngx.components.UIAttribute-1792600000059]: 
+                      attrName: title
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.agentFeedbackText('reportLinkTitle')
+                    ↓Text [ngx.components.UIText-1792600000061]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.agentFeedbackText('reportLink')
+                    ↓Event [ngx.components.UIControlEvent-1792600000063]: 
+                      ↓Prefill [ngx.components.UICustomAction-1792600000065]: 
+                        actionValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                              →: |
+                                		page.prefillFeedbackReport(event);
+                                		resolve();
               ↓Narrative [ngx.components.UIDynamicElement-1782143276091]: 
                 beanData: '{"ionBean":"DivTag"}'
                 isEnabled: false
@@ -14531,6 +14893,129 @@ title: Tigo
                             →: |
                               		page.copyMetricsJson(props.stack.root.scope.item);
                               		resolve();
+          ↓IsFeedback [ngx.components.UIControlDirective-1792600000001]: 
+            directiveName: If
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:item && item.type == 'feedback'
+            ↓FeedbackCard [ngx.components.UIDynamicElement-1792600000003]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792600000005]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:'agent-metrics-card agent-feedback-card is-' + (item.variant || 'invite')
+              ↓CardHead [ngx.components.UIDynamicElement-1792600000007]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1792600000009]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-metrics-card-head
+                ↓CardTitle [ngx.components.UIDynamicElement-1792600000011]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: span
+                  ↓Class [ngx.components.UIAttribute-1792600000013]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-card-title
+                  ↓Text [ngx.components.UIText-1792600000015]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.title
+                ↓CardTime [ngx.components.UIDynamicElement-1792600000017]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: span
+                  ↓Class [ngx.components.UIAttribute-1792600000019]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-metrics-card-time
+                  ↓Text [ngx.components.UIText-1792600000021]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.time
+              ↓CardMessage [ngx.components.UIDynamicElement-1792600000023]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1792600000025]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:'agent-metrics-card-message is-' + (item.state || 'ready')
+                ↓Text [ngx.components.UIText-1792600000027]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.message
+              ↓CardActionsIf [ngx.components.UIControlDirective-1792600000029]: 
+                directiveName: If
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:item.actions && item.actions.length
+                ↓CardActions [ngx.components.UIDynamicElement-1792600000031]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: div
+                  ↓Class [ngx.components.UIAttribute-1792600000033]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-feedback-actions
+                  ↓CardActionsLoop [ngx.components.UIControlDirective-1792600000035]: 
+                    directiveIndexName: ctaIndex
+                    directiveItemName: cta
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:item.actions
+                    ↓Cta [ngx.components.UIDynamicElement-1792600000037]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: button
+                      ↓Class [ngx.components.UIAttribute-1792600000039]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:''agent-feedback-cta'' + (cta.primary ? '' is-primary'' : '''')'
+                      ↓Type [ngx.components.UIAttribute-1792600000041]: 
+                        attrName: type
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:button
+                      ↓Disabled [ngx.components.UIAttribute-1792600000043]: 
+                        attrName: '[disabled]'
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:item.busy === true
+                      ↓Text [ngx.components.UIText-1792600000045]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:cta.label
+                      ↓Event [ngx.components.UIControlEvent-1792600000047]: 
+                        ↓Choose [ngx.components.UICustomAction-1792600000049]: 
+                          actionValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                →: |
+                                  		page.onFeedbackCta(props.stack.root.scope.item, props.stack.root.scope.cta);
+                                  		resolve();
         ↓SpinnerWrap [ngx.components.UIDynamicElement-1773100000015]: 
           beanData: '{"ionBean":"DivTag"}'
           tagName: div
@@ -17506,7 +17991,7 @@ title: Tigo
                         var view = progressView(lines, rawProgressEvents, false);
                         page.local.AgentProgressFinishedAt = (new Date()).getTime();
                         if (page.feedbackAfterTurn) {
-                            page.feedbackAfterTurn();
+                            page.feedbackAfterTurn(rawProgressEvents);
                         }
                         var title = progressTitle(true);
                         var summary = view.summary || page.t("Agent_Progress_Summary", "Étapes et appels MCP ({count})").replace("{count}", "" + lines.length);
@@ -22613,6 +23098,17 @@ title: Tigo
           .agent-metrics-card .agent-context-rows { grid-template-columns: 1fr; }
           .agent-metrics-copy { background: transparent; border: 1px solid var(--modern-border, #cbd5e1); border-radius: 8px; color: var(--modern-text, #0f172a); cursor: pointer; font: inherit; font-size: 12.5px; margin-top: 10px; padding: 5px 12px; }
           .agent-metrics-copy:hover { border-color: var(--modern-cyan, #06b6d4); }
+          /* Feedback to Convertigo: the invitation and reminder cards, the link of the last turn, the setting. */
+          .agent-feedback-card.is-invite { border-color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 65%, transparent 35%); }
+          .agent-feedback-card .agent-metrics-card-message { color: var(--modern-text, #0f172a); line-height: 1.45; }
+          .agent-feedback-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+          .agent-feedback-cta { background: transparent; border: 1px solid var(--modern-border, #cbd5e1); border-radius: 8px; color: var(--modern-text, #0f172a); cursor: pointer; font: inherit; font-size: 12.5px; padding: 5px 12px; }
+          .agent-feedback-cta:hover { border-color: var(--modern-cyan, #06b6d4); }
+          .agent-feedback-cta.is-primary { background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 18%, transparent 82%); border-color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 60%, transparent 40%); font-weight: 600; }
+          .agent-feedback-cta[disabled] { cursor: default; opacity: 0.6; }
+          .agent-worklog-report { background: transparent; border: 0; color: var(--modern-muted, #94a3b8); cursor: pointer; flex: 0 0 auto; font: inherit; font-size: 12px; margin-left: auto; order: 9; padding: 0 2px; text-decoration: underline dotted; text-underline-offset: 3px; }
+          .agent-worklog-report:hover, .agent-worklog-report:focus-visible { color: var(--modern-cyan, #06b6d4); }
+          .agent-feedback-note { margin-top: 6px; }
           /* Long texts of the side column wrap or shorten inside their card: the column never scrolls sideways. */
           .agent-side { overflow-x: hidden; }
           .agent-side-card, .agent-side .agent-context { min-width: 0; overflow-wrap: anywhere; }

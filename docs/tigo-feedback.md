@@ -12,10 +12,24 @@ before it leaves the Studio.
 | `ask` | Reports wait in the Studio; the user reads them with `/retours` and sends them with `/retours envoyer`. |
 | `auto` | Reports are sent after each turn. |
 
-The user chooses with `/retours demander`, `/retours auto` or `/retours off` (`/feedback ask|auto|off` in English).
+The user chooses with `/retours demander`, `/retours auto` or `/retours off` (`/feedback ask|auto|off` in English),
+or with the setting "Retours à Convertigo" of Tigo's settings (Agent and model).
 An administrator can impose a mode with the global symbol `assistant.feedback.policy`: `user` (default, the user
 chooses), `off`, `ask` or `auto`. Feedback needs the Convertigo provider's Tigo key, so it is available in the Studio
 only.
+
+## Putting it forward
+
+- **Invitation.** After a finished turn, while nobody chose a mode and nothing is imposed, the thread shows a card that
+  asks the user to share (once per Assistant view). It cites the tool calls of the turn that failed, if any. Its
+  buttons: "Activer avec relecture" (`ask`), "Toujours partager" (`auto`), "Pas maintenant" (asked again in seven
+  days). Any choice of a mode, `off` included, ends the invitation.
+- **Reminder.** In `ask` mode, when the reports waiting grow after a turn, a card says how many wait, with "Envoyer"
+  and "Relire" (the `/retours` card). The thread keeps one open feedback card.
+- **Report a problem.** The last finished turn carries a "Signaler un problème" link that puts `/signaler ` in the
+  draft (`/report ` in the other languages). Hidden when an administrator imposes `off`.
+- **Setting.** "Retours à Convertigo", with the three modes and the number of reports waiting; read-only when the mode
+  is imposed.
 
 ## What is collected
 
@@ -42,7 +56,8 @@ aside). Error templates also replace quoted values and numbers. Texts are cut (s
 
 `<engine workspace>/agents/feedback/`:
 
-- `settings.json`: `{ "mode": "off|ask|auto", "updatedAt": ms }`
+- `settings.json`: `{ "mode": "off|ask|auto", "updatedAt": ms, "decidedAt": ms, "snoozedUntil": ms }` (`decidedAt` when
+  the user chose a mode, `snoozedUntil` after "Pas maintenant")
 - `outbox/<reportId>.json`: reports waiting to be sent (100 at most, the oldest dropped first)
 - `sent.json`: the 50 last reports sent (id, kind, subject, date), for `/retours`
 

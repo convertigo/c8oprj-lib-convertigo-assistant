@@ -17,6 +17,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   var MAX_BATCH_BYTES = 256 * 1024;
   var MAX_SENT = 50;
   var LIMITS = { subject: 120, summary: 500, suggestion: 500, template: 300, comment: 1000 };
+  var SNOOZE_MS = 7 * 24 * 3600 * 1000;
 
   F.SCHEMA = SCHEMA;
   F.LIMITS = LIMITS;
@@ -180,8 +181,32 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     if (F.policy() !== "user") {
       return { status: "error", code: "locked_by_policy", mode: F.policy() };
     }
-    store().writeSettings({ mode: mode, updatedAt: store().now() });
+    var now = store().now();
+    store().writeSettings({ mode: mode, updatedAt: now, decidedAt: now });
     return { status: "ok", mode: mode };
+  };
+
+  // "Not now" on the invitation: it comes back in a week, unless the user chooses a mode meanwhile.
+  F.later = function () {
+    if (!F.available()) {
+      return { status: "error", code: "unavailable" };
+    }
+    if (F.policy() !== "user") {
+      return { status: "error", code: "locked_by_policy", mode: F.policy() };
+    }
+    var settings = store().readSettings() || {};
+    var until = store().now() + SNOOZE_MS;
+    store().writeSettings({ mode: MODES[trim(settings.mode)] ? trim(settings.mode) : "off", updatedAt: store().now(), snoozedUntil: until });
+    return { status: "ok", snoozedUntil: until };
+  };
+
+  // The page invites the user to share once: a mode nobody chose, nothing imposed, no snooze running.
+  F.invite = function () {
+    if (!F.available() || F.policy() !== "user" || F.mode() !== "off") {
+      return false;
+    }
+    var settings = store().readSettings() || {};
+    return !Number(settings.decidedAt) && !(Number(settings.snoozedUntil) > store().now());
   };
 
   function iso(ms) {
@@ -403,6 +428,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       mode: F.mode(),
       policy: F.policy(),
       locked: F.policy() !== "user",
+      invite: F.invite(),
       pending: F.available() ? F.pending() : [],
       sent: sent.slice(-10),
       sentCount: sent.length
@@ -488,6 +514,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       result = F.flush();
     } else if (action === "clear") {
       result = F.clear();
+    } else if (action === "later") {
+      result = F.later();
     } else if (action === "report") {
       result = F.userReport(options);
       if (result.status === "ok" && F.mode() === "auto") {
