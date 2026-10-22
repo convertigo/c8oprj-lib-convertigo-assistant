@@ -26,7 +26,8 @@ only.
   its last finished turn. Its buttons: "Activer avec relecture" (`ask`), "Toujours partager" (`auto`), "Pas
   maintenant" (asked again in seven days). Any choice of a mode, `off` included, ends the invitation.
 - **Reminder.** In `ask` mode, when the reports waiting grow after a turn, a card says how many wait, with "Envoyer"
-  and "Relire" (the `/retours` card). The thread keeps one open feedback card.
+  and "Relire" (the `/retours` card); a reopened conversation shows it again while reports wait. The thread keeps one
+  open feedback card.
 - **Report a problem.** The last finished turn carries a "Signaler un problème" link that puts `/signaler ` in the
   draft (`/report ` in the other languages). Hidden when an administrator imposes `off`.
 - **Setting.** "Retours à Convertigo", with the three modes and the number of reports waiting; read-only when the mode

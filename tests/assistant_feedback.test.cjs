@@ -393,7 +393,7 @@ test('the setting lists the three modes and says what waits or who decided', () 
   }
 });
 
-test('a reopened conversation shows the unanswered invitation again at its end, after a finished turn only', async () => {
+test('a reopened conversation shows the unanswered invitation, or the waiting reports, again at its end, after a finished turn only', async () => {
   const p = page('fr', [{ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }]);
   p.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: 'Bonjour !', runEvents: [] }];
   p.offerFeedbackOnOpen();
@@ -407,6 +407,20 @@ test('a reopened conversation shows the unanswered invitation again at its end, 
   answered.offerFeedbackOnOpen();
   await settle();
   assert.equal(answered.local.Messages.length, 1);
+  // Review mode: the reminder of the waiting reports comes back too, even when this page already showed it.
+  const waiting = page('fr', [{ status: 'ok', available: true, mode: 'ask', invite: false, pending: [{}, {}] }]);
+  waiting.offerFeedback({ status: 'ok', available: true, mode: 'ask', invite: false, pending: [{}, {}] }, 0);
+  waiting.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: 'ok' }];
+  waiting.offerFeedbackOnOpen();
+  await settle();
+  assert.deepEqual(Array.from(waiting.local.Messages, m => m.variant || m.type), ['user', 'assistant', 'pending']);
+  assert.match(waiting.local.Messages[2].message, /^2 retour\(s\) prêt\(s\)/);
+  // Nothing waiting: nothing comes back.
+  const sent = page('fr', [{ status: 'ok', available: true, mode: 'ask', invite: false, pending: [] }]);
+  sent.local.Messages = [{ type: 'assistant', msg: 'ok' }];
+  sent.offerFeedbackOnOpen();
+  await settle();
+  assert.equal(sent.local.Messages.length, 1);
   // A new conversation, or one still running: no call at all.
   const empty = page('fr');
   empty.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: '…', writing: true }];
