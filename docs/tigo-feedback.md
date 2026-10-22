@@ -72,7 +72,9 @@ aside). Error templates also replace quoted values and numbers. Texts are cut (s
 form fields `apiKey` (the local Tigo key, never shown) and `reports` (a JSON array, 50 reports and 256 KB at most).
 TigoAccess checks the key as `getQuota` does, validates every report and stores the batch under the account's
 pseudonymous id (a hash, never the email). It answers `{ "status": "ok", "accepted": [ids], "rejected": [{ id, reason }] }`;
-accepted reports leave the outbox. A refusal or an unreachable service keeps them for the next attempt.
+accepted reports leave the outbox. A refusal or an unreachable service keeps them for the next attempt; a report
+sent again after a lost answer is counted once by TigoAccess (same account, same report id). A loopback host
+(`localhost`, `127.0.0.1`, `*.localhost`) is reached in plain HTTP, to test against a local TigoAccess.
 
 Convertigo reads them with the admin sequence `AdminFeedback` of TigoAccess, grouped by fingerprint (count, accounts,
 versions, last date, a sample).

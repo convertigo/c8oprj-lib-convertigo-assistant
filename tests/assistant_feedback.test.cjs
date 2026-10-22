@@ -163,6 +163,15 @@ test('sending: the Tigo key is needed, accepted reports leave, a refusal or an o
   assert.equal(sent[0].finding.template, 'gateway N');
 });
 
+test('reports go to TigoAccess in HTTPS; only a loopback test server is reached in plain HTTP', () => {
+  const { F } = feedback();
+  assert.equal(F.endpoint(''), 'https://backend-apps.convertigo.net/convertigo/projects/TigoAccess/.json?__sequence=submitFeedback&__disableAutologin=true');
+  assert.match(F.endpoint('studio-8-4-feedback.localhost:18112'), /^http:\/\/studio-8-4-feedback\.localhost:18112\//);
+  assert.match(F.endpoint('127.0.0.1:8080'), /^http:\/\//);
+  assert.match(F.endpoint('localhost.evil.com'), /^https:\/\//);
+  assert.throws(() => F.endpoint('evil.com/x?y'), /Invalid TigoAccess host/);
+});
+
 test('automatic mode sends after a turn; the outbox and a batch stay bounded', () => {
   let { F, store } = feedback({ settings: { mode: 'ask' } });
   F.collectRuntimeError({ provider: 'convertigo', message: 'boom' });

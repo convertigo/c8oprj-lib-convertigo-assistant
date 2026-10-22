@@ -130,6 +130,16 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return failed === true ? text : "";
   };
 
+  // TigoAccess's submitFeedback: HTTPS, except a loopback test server (localhost, 127.0.0.1, *.localhost) in plain HTTP.
+  F.endpoint = function (host) {
+    host = trim(host) || "backend-apps.convertigo.net";
+    if (!/^[A-Za-z0-9.-]+(?::\d+)?$/.test(host)) {
+      throw new Error("Invalid TigoAccess host");
+    }
+    var loopback = /^(?:localhost|127\.0\.0\.1|[A-Za-z0-9-]+\.localhost)(?::\d+)?$/i.test(host);
+    return (loopback ? "http://" : "https://") + host + "/convertigo/projects/TigoAccess/.json?__sequence=submitFeedback&__disableAutologin=true";
+  };
+
   function store() {
     if (!F._store) {
       F._store = engineStore();
@@ -690,11 +700,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         return apiKey;
       },
       post: function (fields) {
-        var host = trim(this.symbol("assistant.tigo.access.host")) || "backend-apps.convertigo.net";
-        if (!/^[A-Za-z0-9.-]+(?::\d+)?$/.test(host)) {
-          throw new Error("Invalid TigoAccess host");
-        }
-        var conn = new java.net.URL("https://" + host + "/convertigo/projects/TigoAccess/.json?__sequence=submitFeedback&__disableAutologin=true").openConnection();
+        var conn = new java.net.URL(F.endpoint(this.symbol("assistant.tigo.access.host"))).openConnection();
         conn.setRequestMethod("POST");
         conn.setConnectTimeout(15000);
         conn.setReadTimeout(30000);
