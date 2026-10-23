@@ -71,6 +71,83 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return System.currentTimeMillis();
   }
 
+  // Send timings, a diagnostic: what each step of sending a message, creating a conversation and reading the settings
+  // takes, one JSON line per call in agents/assistant/send-timings.ndjson (over 512 KB the file becomes
+  // send-timings.ndjson.1); each call to the Bridge is a step named after its sequence. A new No Code conversation waited
+  // 8 to 11 s in the Assistant before the Bridge started Vibe (test-nocode).
+  var SEND_TIMINGS_FILE = "send-timings.ndjson";
+  var SEND_TIMINGS_MAX_BYTES = 524288;
+  var activeSendTimer = null;
+
+  function sendTimer(kind) {
+    var timer = { kind: kind, at: Number(now()), fields: {}, marks: [], last: 0, workspaceRoot: "" };
+    timer.mark = function (step) {
+      var elapsed = Number(now()) - timer.at;
+      timer.marks.push({ step: step, ms: elapsed - timer.last });
+      timer.last = elapsed;
+    };
+    return timer;
+  }
+
+  // a step of the timed call, if any; the state names its conversation and where the line is written
+  function sendMark(step, state) {
+    if (activeSendTimer === null) {
+      return;
+    }
+    try {
+      if (state) {
+        activeSendTimer.fields.threadid = String(state.threadid || "");
+        activeSendTimer.fields.provider = String(state.provider || "");
+        activeSendTimer.workspaceRoot = String(state.workspaceRoot || "");
+      }
+      activeSendTimer.mark(step);
+    } catch (_ignoreSendMark) {}
+  }
+
+  // a call inside a timed one (sendMessage from its sequence) is part of it
+  function timedCall(kind, run) {
+    if (activeSendTimer !== null) {
+      return run();
+    }
+    var timer = sendTimer(kind);
+    activeSendTimer = timer;
+    var outcome = "error";
+    try {
+      var result = run();
+      outcome = result && trim(result.status) || (result && result.ok === false ? "failed" : "ok");
+      return result;
+    } finally {
+      activeSendTimer = null;
+      writeSendTimings(timer, outcome);
+    }
+  }
+
+  function writeSendTimings(timer, outcome) {
+    try {
+      var root = trim(timer.workspaceRoot) || resolveWorkspaceRoot({});
+      if (!root.length) {
+        return;
+      }
+      var dir = new File(new File(root, "agents"), "assistant");
+      ensureDir(dir);
+      var file = new File(dir, SEND_TIMINGS_FILE);
+      if (file.isFile() && file.length() > SEND_TIMINGS_MAX_BYTES) {
+        var previous = new File(dir, SEND_TIMINGS_FILE + ".1");
+        previous["delete"]();
+        file.renameTo(previous);
+      }
+      var line = { at: new Date(timer.at).toISOString(), kind: timer.kind, totalMs: Number(now()) - timer.at, outcome: trim(outcome) };
+      for (var key in timer.fields) {
+        if (Object.prototype.hasOwnProperty.call(timer.fields, key)) {
+          line[key] = timer.fields[key];
+        }
+      }
+      line.steps = timer.marks;
+      var bytes = new java.lang.String(JSON.stringify(line) + "\n").getBytes(StandardCharsets.UTF_8);
+      Files.write(file.toPath(), bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE);
+    } catch (_ignoreSendTimings) {}
+  }
+
   function makeRunId(requestId) {
     return String(now()) + "-" + String(requestId || 0);
   }
@@ -1795,7 +1872,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (isOwnBridgeUrl(bridgeUrl)) {
       headers[BRIDGE_CALLER_KEY_HEADER] = bridgeCallerKey();
     }
+    sendMark(sequence + "/payload");
     var response = postForm(bridgeUrl, payload, timeoutMs || 70000, headers);
+    sendMark(sequence);
     if (response && response.error && /agent_bridge_caller_refused/.test(String(response.error.details || response.error.message || ""))) {
       throw new Error("agent_bridge_caller_refused: the agent bridge at " + bridgeUrl + " refused the Assistant");
     }
@@ -6744,6 +6823,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return refused;
     }
     options = withCallerUserId(options);
+    return timedCall("conversation", function () {
+      return createConversationSteps(options);
+    });
+  };
+
+  function createConversationSteps(options) {
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
@@ -6765,6 +6850,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!requestedThreadId.length && !hasQuestion) {
       setBuffer("", "");
       var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
       var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
       var resolvedProvider = provider === "all" ? "" : (previewDefaults.provider || provider);
       return {
@@ -6824,6 +6910,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       };
     }
     var creationSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+    sendMark("settings");
     var creationDefaults = applyAgentSettingsDefaults(options, creationSettings, provider);
     if (creationDefaults.provider.length) {
       provider = creationDefaults.provider;
@@ -6841,6 +6928,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state.updatedAt = now();
     saveState(state);
+    sendMark("state", state);
     if (!isTerminalStatus(state.status) && trim(state.runid).length && C8O.assistantAgentBridge.readResponse) {
       try {
         C8O.assistantAgentBridge.readResponse({
@@ -6859,6 +6947,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!hasQuestion && (resumedLatest || requestedThreadId.length > 0)) {
       prewarming = prewarmCodexAppServer(state, options);
     }
+    sendMark("read");
     return {
       ok: true,
       id: state.threadid,
@@ -6874,7 +6963,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       settings: includeSettings ? (creationSettings || agentSettingsForOptions(options, state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, state.provider)) : null,
       AIData: conversationAIData(state, options.historyLimit)
     };
-  };
+  }
 
   // Resolve only trusted identity/ownership here. The private native sequence may
   // read account metadata before the first conversation; never create one.
@@ -6900,11 +6989,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return refused;
     }
     options = withCallerUserId(optionsWithRequestFallbacks(options));
+    return timedCall("settings", function () {
+      return settingsSteps(options);
+    });
+  };
+
+  function settingsSteps(options) {
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var settings = agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+    sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
+    var conversations = publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options));
+    sendMark("conversations");
     return {
       ok: settings.ok !== false,
       status: settings.status || (settings.ok === false ? "error" : "ready"),
@@ -6919,10 +7017,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         reasoning: ""
       },
       providers: settings.providers || [],
-      conversations: publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options)),
+      conversations: conversations,
       timestamp: now()
     };
-  };
+  }
 
   C8O.assistantAgentBridge.setupAgent = function (options) {
     var refused = bridgeCallerRefusal();
@@ -7449,6 +7547,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.sendMessageFromSequenceScope = function (scope) {
+    return timedCall("send", function () {
+      return sendMessageFromScope(scope);
+    });
+  };
+
+  function sendMessageFromScope(scope) {
     var names = [
       "threadid", "provider", "bridgeBaseUrl", "mcpEndpoint", "workspaceRoot", "cwd",
       "vibeHome", "agentHome", "codexHome", "codexHomeScope", "homeScope",
@@ -7477,8 +7581,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options.rawUserQuestion = rawQuestion;
     options.userQuestion = rawQuestion;
     options.Question = buildSequencePrompt(rawQuestion, options);
+    sendMark("sequence-prompt");
     return C8O.assistantAgentBridge.sendMessage(options);
-  };
+  }
 
   C8O.assistantAgentBridge.noCodeContextCatalogFromSequenceScope = function (scope) {
     return noCodeContextCatalogFromScope(scope);
@@ -7487,6 +7592,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function submitTigoPrompt(state, sequence, payload) {
     if (!C8O.tigoResources || agentSlashCommandName(state, payload.prompt).length) { return bridgeCall(state, sequence, payload, 70000); }
     var resources = C8O.tigoResources.prepare(state);
+    sendMark("resources");
     var enriched = {};
     Object.keys(payload).forEach(function (k) { enriched[k] = payload[k]; });
     enriched.prompt = String(payload.prompt || "") + resources.text;
@@ -7572,6 +7678,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
+    sendMark("nocode-context");
     if (!rawUserQuestion.length) {
       return {
         ok: false,
@@ -7607,6 +7714,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state: null
       };
     }
+    sendMark("state/read");
     var running = state !== null ? runningTurnOf(state) : null;
     if (running !== null) {
       return turnRunningResponse(state, running);
@@ -7616,6 +7724,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state = createState(options);
     }
     state = ensureState(state);
+    sendMark("state/create", state);
     var previousMcpEndpoint = trim(state.mcpEndpoint);
     var requestedMcpEndpoint = trim(options.mcpEndpoint);
     var mcpEndpointChanged = previousMcpEndpoint.length > 0 &&
@@ -7695,6 +7804,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
       options.Question = question;
     }
+    sendMark("prompt");
     state.slashCommand = agentSlashCommandName(state, rawUserQuestion);
     state.compactError = "";
     if (state.slashCommand.length) {
@@ -7711,18 +7821,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.updatedAt = now();
     saveState(state);
     setStateBuffer(state);
+    sendMark("state/save");
 
     try {
       var provider = runProvider;
       if (provider === "convertigo" && normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode()) {
         var tigoAccess = C8O.assistantAgentBridge.refreshTigoAccess();
         if (tigoAccess.status !== "ok") { throw new Error("TigoAccess (" + tigoAccess.code + "): " + tigoAccess.error); }
+        sendMark("tigo-access");
       }
       var customResources = C8O.tigoResources ? C8O.tigoResources.prepare(state) : null;
       if (customResources) {
         state.resourceHandle = state.resourceHandle || "lib_ConvertigoAssistant.resources." + String(UUID.randomUUID());
         sharedStorage().set(state.resourceHandle, JSON.stringify({expiresAt:Number(now()) + 7200000, connections:customResources.connections}));
       }
+      sendMark("resources");
       var startSequence = providerSequence(provider, "start");
       var promptSequence = providerSequence(provider, "prompt");
       var closeSequence = providerSequence(provider, "close");
@@ -7764,6 +7877,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         state.setupRequired = false;
         state.setupReport = publicSetupReport(setup);
+        sendMark("setup");
       } else {
         state.setupRequired = false;
         state.setupReport = null;
@@ -7776,6 +7890,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
 
       var startPayload = agentStartPayload(state, options, provider, installRequested);
+      sendMark("start-payload");
       if (customResources) {
         startPayload.tigoResourcesHandle = state.resourceHandle;
         if (customResources.connections.length) { state.resourceConversationHome = true; }
@@ -7930,6 +8045,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.updatedAt = now();
       saveState(state);
       setStateBuffer(state);
+      sendMark("state/save");
 
       return {
         ok: true,

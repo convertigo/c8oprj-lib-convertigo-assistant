@@ -43,7 +43,8 @@ function fixture({ studio = true, admin = false, user = '', localPort = 18086, c
     normalizeUserKey: value => 'key:' + value,
     shouldAttachMcpTokenHandle: () => false,
     response: { result: { ok: true } },
-    postForm(...args) { calls.push(args); return sandbox.response; }
+    postForm(...args) { calls.push(args); return sandbox.response; },
+    sendMark() {}
   };
   vm.runInNewContext(backendParts(['requireBridgeCaller', 'bridgeCallerRefusal', 'callerUserId', 'withCallerUserId', 'feedbackUserKey',
     'isOwnBridgeUrl', 'bridgeCall', 'callerSessionId'],

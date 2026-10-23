@@ -307,6 +307,12 @@ rediscovering the same context.
   from narrative answer text. Persist the inferred project so resumed prompts
   use the created project as their structured context.
 - Image attachment from files exists; clipboard image paste is a desired feature.
+- Sending a message, creating a conversation and reading the settings write what
+  each step takes to `agents/assistant/send-timings.ndjson` of the workspace (one
+  JSON line per call, rotated at 512 KB); each Bridge call is a step named after
+  its sequence. With the Bridge's `agents/vibe/startup-timings.ndjson` it tells
+  where a cold start spends its time. Cover with
+  `node --test tests/assistant_send_timings.test.cjs`.
 
 ## Validation
 
