@@ -30,11 +30,21 @@ scriptContent:
         					searchParams.forEach(function(value, key) { queryParams[key] = value; });
         				} catch (eQuery) {}
         				queryParams.agentBridge = ''1'';
-                        if (this.global && this.global.isAssistantAgentReleaseEnabled && this.global.isAssistantAgentReleaseEnabled()) {
-                            this.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: queryParams, preserveFragment: true, replaceUrl: true });
-                        } else {
-                            this.angularRouter.navigate([''/path-to-lightrag''], { preserveFragment: true, replaceUrl: true });
-                        }
+        				// The app onAppInit event defines the release switch, and a cold opening of this page (the C8Oforms panel)
+        				// can run before it. Wait for the switch rather than sending the user to How-To for good.
+        				var page = this, waited = 0;
+        				var decide = function() {
+        					var ready = page.global && typeof page.global.isAssistantAgentReleaseEnabled === ''function'';
+        					if (!ready && waited < 5000) {
+        						waited += 50;
+        						setTimeout(decide, 50);
+        					} else if (ready && page.global.isAssistantAgentReleaseEnabled()) {
+        						page.angularRouter.navigate([''/path-to-xfirst'', thread], { queryParams: queryParams, preserveFragment: true, replaceUrl: true });
+        					} else {
+        						page.angularRouter.navigate([''/path-to-lightrag''], { preserveFragment: true, replaceUrl: true });
+        					}
+        				};
+        				decide();
         			}
         		} catch (e) {}
         		/*End_c8o_PageInitialization*/

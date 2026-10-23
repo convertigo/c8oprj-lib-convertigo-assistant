@@ -80,6 +80,16 @@ test('an error template keeps the shape of an error, so the same error with othe
   assert.equal(F.errorMessage(result, false), 'Database object not found: PfDelta.sq:nexistepas. QName shape: ...');
   assert.match(F.errorMessage(result.slice(0, 120), false), /^Database object not found: PfDelta\.sq/);
   assert.equal(F.errorMessage('raw failure', true), 'raw failure');
+  // The error the answer names wins over an earlier "message" (schema-apply listed its planned actions first:
+  // friction 3615a606fb3f recorded "Table already exists.").
+  const schemaApply = { status: 'error', actions: [{ type: 'table_exists', message: 'Table already exists.' }], error: { code: 'baserow_schema_apply_failed', message: 'Baserow did not create the view Liste' } };
+  assert.equal(F.errorMessage(JSON.stringify(schemaApply), false), 'Baserow did not create the view Liste');
+  const wrapped = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify(schemaApply) }] });
+  assert.equal(F.errorMessage(wrapped, false), 'Baserow did not create the view Liste');
+  const cut = JSON.stringify(schemaApply);
+  assert.equal(F.errorMessage(cut.slice(0, cut.indexOf('the view')), false), 'Baserow did not create ', 'a cut preview keeps the error, not the action');
+  assert.equal(F.errorMessage('{"status":"error","error":"no table"}', false), 'no table');
+  assert.equal(F.errorMessage('{"status":"error","error":{"code":"x","message":""},"message":"other"}', false), 'other');
 });
 
 test('consent: off by default, the user chooses unless the administrator imposes a mode, Studio only', () => {
@@ -563,4 +573,257 @@ test('page: "off" chosen, a failed turn nudges; in review mode the reminder and 
   await settle();
   assert.deepEqual(sent.calls[1], { action: 'later', topic: 'auto' });
   assert.match(card.message, /^D'accord, vous gardez la relecture/);
+});
+
+// A server: each signed-in user has a store of their own (F._storeFor), and the server's feedback key replaces the
+// Studio's Tigo key.
+function server(options = {}) {
+  const sandbox = {};
+  vm.runInNewContext(SOURCE, sandbox);
+  const F = sandbox.C8O.assistantFeedback;
+  const stores = {};
+  const posts = [];
+  let id = 0;
+  const clock = { now: Date.UTC(2026, 9, 22, 10, 0, 0) };
+  F._storeFor = userKey => {
+    if (stores[userKey]) return stores[userKey];
+    const store = stores[userKey] = {
+      userKey, settings: {}, pending: new Map(), incoming: [], sent: [], names: [], writes: 0,
+      studio: () => false,
+      serverKey: () => options.serverKey === undefined ? 'sk-' + 'f'.repeat(43) : options.serverKey,
+      reporter: () => crypto.createHmac('sha256', 'server-salt').update(userKey).digest('hex'),
+      symbol: name => (options.symbols || {})[name] || '',
+      now: () => clock.now,
+      uuid: () => 'report-' + String(++id).padStart(4, '0'),
+      sha256: text => crypto.createHash('sha256').update(String(text)).digest('hex'),
+      projectNames: () => ['C8Oforms_tenant'],
+      stack: (provider, model) => ({ assistant: '1.6.0', bridge: '0.4.27', mcp: '0.2.27', studio: '8.4.7', provider: provider || '', model: model || '', channel: 'release' }),
+      readSettings: () => store.settings,
+      writeSettings: value => { store.settings = value; },
+      listPending: () => [...store.pending.values()].map(r => JSON.parse(JSON.stringify(r))).sort((a, b) => a.reportId.localeCompare(b.reportId)),
+      savePending: report => { store.pending.set(report.reportId, JSON.parse(JSON.stringify(report))); },
+      removePending: reportId => { store.pending.delete(reportId); },
+      listIncoming: () => store.incoming.map(item => ({ ...item })),
+      removeIncoming: name => { store.incoming = store.incoming.filter(item => item.__file !== name); },
+      readSent: () => store.sent,
+      writeSent: value => { store.sent = value; },
+      readNames: () => store.names,
+      writeNames: value => { store.names = value; store.writes++; },
+      readKey: () => store.serverKey(),
+      post: fields => {
+        posts.push({ userKey, fields });
+        if (options.answer) return options.answer(fields);
+        return { response: { status: 'ok', accepted: JSON.parse(fields.reports).map(r => r.reportId), rejected: [] } };
+      }
+    };
+    return store;
+  };
+  return { F, stores, posts, clock };
+}
+
+test('on a server each user has their own consent and reports, once the server feedback key is installed', () => {
+  const { F, stores, posts } = server();
+  const jane = F.forUser('jane_acme.fr--1111111111111111');
+  const paul = F.forUser('paul_acme.fr--2222222222222222');
+  assert.equal(jane.available(), true);
+  assert.equal(jane.status().invite, true);
+  assert.equal(jane.setMode('ask').status, 'ok');
+  assert.equal(jane.mode(), 'ask');
+  assert.equal(paul.mode(), 'off', 'one user\'s choice is not another\'s');
+  jane.collectToolError({ tool: 'Convertigo_nocode-form-edit', message: 'Unknown component in form', provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
+  paul.collectToolError({ tool: 'Convertigo_nocode-form-edit', message: 'Unknown component in form' });
+  assert.equal(stores['jane_acme.fr--1111111111111111'].pending.size, 1);
+  assert.equal(stores['paul_acme.fr--2222222222222222'].pending.size, 0);
+  const pending = jane.pending();
+  assert.equal(pending[0].stack.surface, 'nocode');
+  assert.match(pending[0].reporter, /^[a-f0-9]{64}$/);
+  assert.notEqual(pending[0].reporter, stores['paul_acme.fr--2222222222222222'].reporter(), 'each user has their own pseudonym');
+  assert.equal(jane.send().accepted, 1);
+  assert.equal(posts[0].fields.apiKey, 'sk-' + 'f'.repeat(43));
+  assert.equal(JSON.parse(posts[0].fields.reports)[0].reporter, pending[0].reporter, 'what the user reviewed is what is sent');
+  // Without the server key nothing shows; the default object of a server (no user) never has feedback.
+  assert.equal(server({ serverKey: '' }).F.forUser('jane_acme.fr--1111111111111111').status().available, false);
+  const bare = server();
+  bare.F._store = bare.F._storeFor('');
+  assert.equal(bare.F.available(), false);
+});
+
+test('a server report says its surface; a Studio report has no pseudonym', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  F.collectRuntimeError({ provider: 'vibe', message: 'boom' });
+  F.collectRuntimeError({ provider: 'vibe', message: 'other', surface: 'nocode' });
+  F.collectRuntimeError({ provider: 'vibe', message: 'third', surface: 'tablet' });
+  const pending = F.pending();
+  assert.deepEqual(pending.map(r => r.stack.surface), ['studio', 'nocode', 'studio']);
+  assert.ok(pending.every(r => r.reporter === undefined));
+  const { F: S } = server();
+  const user = S.forUser('jane_acme.fr--1111111111111111');
+  user.setMode('ask');
+  user.collectRuntimeError({ provider: 'convertigo', message: 'gateway 502' });
+  assert.equal(user.pending()[0].stack.surface, 'nocode');
+});
+
+test('masking: no-code names, host names and ids; generic words and public services stay readable', () => {
+  const { F } = feedback();
+  const others = ['Demande de congés', 'Coordonnées', 'Clients VIP', 'Email', 'nocode-form-get', '42'];
+  const text = F.redact('La page coordonnées du formulaire Demande de congés lit la table clients vip de acme-forms.example.com, id 3f2b9c1e-8d4a-4b6f-9e2d-1a2b3c4d5e6f, champ Email; '
+    + 'java.net.UnknownHostException: llm.convertigo.com; voir README.md et agent_feedback.js', [], others);
+  assert.equal(text, 'La page <name> du formulaire <name> lit la table <name> de <host>, id <id>, champ Email; '
+    + 'java.net.UnknownHostException: llm.convertigo.com; voir README.md et agent_feedback.js');
+  assert.equal(F.redact('test-nocode.convertigo.net answered 502'), '<host> answered 502');
+  // An error template of a no-code tool: the same error on another form counts once.
+  assert.equal(F.template('Field Code client not found in table Clients VIP', [], ['Code client', 'Clients VIP']),
+    F.template('Field Montant not found in table Commandes Acme', [], ['Montant', 'Commandes Acme']));
+  assert.equal(F.usableName('Text'), '');
+  assert.equal(F.usableName('  Demande   de congés '), 'Demande de congés');
+  assert.equal(F.usableName('nocode-baserow-catalog-list'), '');
+  assert.equal(F.usableName('2026-10-22'), '');
+  // A table named after a common word ("TEST", "Clients") says nothing of the customer: it stays readable.
+  for (const word of ['TEST', 'Clients', 'Employés', 'Service', 'Resources']) assert.equal(F.usableName(word), '', word);
+  assert.equal(F.usableName('Entreprise de Jane Doe'), 'Entreprise de Jane Doe');
+  assert.equal(F.redact('test of Service', [], ['TEST', 'Service', 'Clients VIP']), 'test of Service');
+  // An error template masks a one-word name as written: the product's "position" is not the user's column "Position".
+  assert.equal(F.template('Unexpected end at position 45 of Trombinoscope', [], ['Position', 'Trombinoscope']), 'Unexpected end at position N of <name>');
+  assert.equal(F.template('Bad reference in Effectif: effectif expected', [], ['Effectif']), 'Bad reference in <name>: effectif expected');
+  assert.equal(F.redact('effectif of trombinoscope', [], ['Effectif', 'Trombinoscope']), '<name> of <name>', 'free text stays case-insensitive');
+  assert.equal(F.template('Table clients vip is locked', [], ['Clients VIP']), 'Table <name> is locked', 'a composed name, whatever its case');
+  // Rhino (the engine) refuses a case-insensitive class past U+017F, which Node accepts.
+  assert.match(SOURCE, /\\u00C0-\\u017F/);
+  assert.doesNotMatch(SOURCE, /\\u024F/);
+});
+
+test('the names a no-code tool result shows are found, even in JSON within JSON or a cut result', () => {
+  const { F } = feedback();
+  const form = { title: 'Demande de congés', pages: [{ title: 'Coordonnées', components: [{ key: 'nomClient', label: 'Nom du client', type: 'textfield' }, { key: 'submit', label: 'Submit' }] }] };
+  const result = JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(form) }] });
+  assert.deepEqual(Array.from(F.namesIn(F.resultText(result))), ['Demande de congés', 'Coordonnées', 'nomClient', 'Nom du client']);
+  const catalog = '{"databases":[{"name":"CRM Acme","tables":[{"name":"Clients VIP","fields":[{"name":"Code client"},{"name":"Email"}]}]}],"next":"{\\"name\\":\\"Commandes 2026';
+  assert.deepEqual(Array.from(F.namesIn(catalog)), ['CRM Acme', 'Clients VIP', 'Code client']);
+});
+
+test('a server user\'s names are kept for masking only when feedback can be sent, and mask their reports', () => {
+  const { F, stores } = server();
+  const jane = F.forUser('jane_acme.fr--1111111111111111');
+  jane.setMode('ask');
+  assert.equal(jane.rememberNames(['Demande de congés', 'text', 'Coordonnées', 'Demande de congés']), 2);
+  assert.equal(jane.rememberNames(['coordonnées']), 0, 'case-insensitive');
+  jane.collectToolError({ tool: 'Convertigo_nocode-form-edit', message: 'Page Coordonnées of form "x" has no component nomClient' });
+  jane.userReport({ comment: 'Le formulaire demande de congés ne se publie pas', surface: 'nocode' });
+  const sent = JSON.stringify(jane.pending());
+  assert.ok(!/Coordonn|cong/i.test(sent), sent);
+  assert.equal(stores['jane_acme.fr--1111111111111111'].writes, 1);
+  // Off by the administrator, or no server key: nothing is kept.
+  const off = server({ symbols: { 'assistant.feedback.policy': 'off' } });
+  assert.equal(off.F.forUser('paul').rememberNames(['Clients VIP']), 0);
+  const nokey = server({ serverKey: '' });
+  assert.equal(nokey.F.forUser('paul').rememberNames(['Clients VIP']), 0);
+  // Turned on from a failed turn: the names of that turn's no-code results mask its errors.
+  const later = server().F.forUser('lea');
+  later.setMode('ask');
+  const events = [
+    { type: 'tool', toolName: 'Convertigo_nocode-form-get', status: 'completed', detail: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ title: 'Inscription Gala' }) }] }) },
+    { type: 'tool', toolName: 'Convertigo_nocode-form-edit', status: 'failed', detail: 'Form Inscription Gala is locked' }
+  ];
+  assert.equal(later.collectTurn(events, 'convertigo', 'glm-5-3', 'nocode'), 1);
+  assert.equal(later.pending()[0].finding.template, 'Form <name> is locked');
+});
+
+test('an administrator who imposes the automatic mode: each user is told once', () => {
+  const { F } = server({ symbols: { 'assistant.feedback.policy': 'auto' } });
+  const jane = F.forUser('jane');
+  assert.equal(jane.status().notice, true);
+  assert.equal(jane.status().invite, false);
+  assert.equal(jane.run({ action: 'seen' }).notice, false);
+  assert.equal(F.forUser('paul').status().notice, true);
+  assert.equal(server().F.forUser('jane').status().notice, false, 'nothing to tell when the user chooses');
+});
+
+test('on a server the automatic mode sends one user\'s reports at most every ten minutes', () => {
+  const { F, posts, clock } = server({ symbols: { 'assistant.feedback.policy': 'auto' } });
+  const jane = F.forUser('jane');
+  jane.collectRuntimeError({ provider: 'convertigo', message: 'gateway 502' });
+  assert.equal(jane.flush().accepted, 1);
+  jane.collectRuntimeError({ provider: 'convertigo', message: 'gateway 504' });
+  assert.equal(jane.flush().waiting, true);
+  assert.equal(posts.length, 1);
+  clock.now += 10 * 60 * 1000;
+  assert.equal(jane.flush().accepted, 1);
+  // The server key's hourly limit: the reports wait for the next turn after the gap.
+  const limited = server({ symbols: { 'assistant.feedback.policy': 'auto' }, answer: () => ({ response: { status: 'error', code: 'rate_limited' } }) });
+  const paul = limited.F.forUser('paul');
+  paul.collectRuntimeError({ provider: 'convertigo', message: 'x' });
+  assert.equal(paul.flush().code, 'rate_limited');
+  assert.equal(paul.pending().length, 1);
+  assert.equal(paul.flush().waiting, true);
+});
+
+test('the page: an imposed automatic mode is told once, a rate limit keeps the reports, nothing says "Studio only"', async () => {
+  const p = page('fr', [{ status: 'ok', available: true, mode: 'auto', locked: true, notice: false, pending: [], result: { status: 'ok' } }]);
+  p.offerFeedback({ status: 'ok', available: true, mode: 'auto', locked: true, notice: true, pending: [] }, 0);
+  assert.equal(p.local.Messages.length, 1);
+  const notice = p.local.Messages[0];
+  assert.equal(notice.variant, 'notice');
+  assert.match(notice.message, /^Votre administrateur partage avec Convertigo/);
+  p.offerFeedback({ status: 'ok', available: true, mode: 'auto', locked: true, notice: true, pending: [] }, 0);
+  assert.equal(p.local.Messages.length, 1, 'one notice');
+  p.onFeedbackCta(notice, notice.actions[0]);
+  await settle();
+  assert.deepEqual(p.calls, [{ action: 'seen' }]);
+  assert.equal(notice.actions.length, 0);
+  assert.match(notice.message, /^Votre administrateur/);
+  assert.match(p.feedbackErrorText('rate_limited'), /^Trop d'envois/);
+  for (const language of ['fr', 'en', 'it', 'es']) {
+    assert.doesNotMatch(page(language).agentFeedbackText('unavailable'), /Studio/);
+    assert.match(page(language).agentFeedbackText('inviteText'), /formulai|form|modulo/);
+  }
+});
+
+test('AgentFeedback and the turn hooks find a server user from the session, never from the page', () => {
+  const yaml = fs.readFileSync(path.join(__dirname, '..', '_c8oProject', 'sequences', 'AgentFeedback.yaml'), 'utf8');
+  assert.match(yaml, /if\(studio&&admin\)\{include\("js\/agent_feedback\.js"\);feedback=C8O\.assistantFeedback;\}/);
+  assert.match(yaml, /var userKey=C8O\.assistantAgentBridge\.feedbackUserKey\(\);\n\s+if\(userKey\.length\)\{feedback=C8O\.assistantFeedback\.forUser\(userKey\);\}/);
+  assert.doesNotMatch(yaml, /forUser\([^)]*userId/);
+  const made = [];
+  const sandbox = {
+    C8O: { assistantFeedback: { forUser: key => { made.push(key); return { user: key }; } } },
+    Engine: { isStudioMode: () => false },
+    trim: value => String(value ?? '').trim(),
+    include: () => {}
+  };
+  vm.runInNewContext(backendParts(['feedbackModule']), sandbox);
+  assert.deepEqual(JSON.parse(JSON.stringify(sandbox.feedbackModule({ userKey: 'alice_example.com--1234' }))), { user: 'alice_example.com--1234' });
+  assert.equal(sandbox.feedbackModule({ userKey: '' }), null);
+  assert.equal(sandbox.feedbackModule({ userKey: 'studio' }), null, 'a server never writes the Studio\'s store');
+  sandbox.Engine.isStudioMode = () => true;
+  assert.equal(sandbox.feedbackModule({ userKey: 'alice_example.com--1234' }), sandbox.C8O.assistantFeedback);
+  assert.deepEqual(made, ['alice_example.com--1234']);
+});
+
+test('the agent restarts on its session when its user turns feedback on or off: the report tool joins its tool list', () => {
+  const sandbox = { feedback: null };
+  sandbox.feedbackModule = () => sandbox.feedback;
+  vm.runInNewContext(backendParts(['feedbackCatalogKey']), sandbox);
+  assert.equal(sandbox.feedbackCatalogKey({}), '', 'no feedback module (a server user without a key): nothing to compare');
+  sandbox.feedback = { mode: () => 'off' };
+  assert.equal(sandbox.feedbackCatalogKey({}), 'feedback:off');
+  sandbox.feedback = { mode: () => 'ask' };
+  assert.equal(sandbox.feedbackCatalogKey({}), 'feedback:on');
+  sandbox.feedback = { mode: () => { throw new Error('store'); } };
+  assert.equal(sandbox.feedbackCatalogKey({}), '');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_bridge_client.js'), 'utf8');
+  assert.match(source, /agentRevealMode: revealModeOption\(options\),\n      mcpCatalogKey: mcpCatalogKey\(state\),/);
+});
+
+test('the agent also restarts on its session when the Convertigo MCP is updated: its tools and their schemas change', () => {
+  const sandbox = { feedback: { mode: () => 'ask' }, version: '0.2.27-beta.2', trim: value => String(value ?? '').trim() };
+  sandbox.feedbackModule = () => sandbox.feedback;
+  sandbox.Engine = { theApp: { databaseObjectsManager: { getOriginalProjectByName: name => name === 'lib_ConvertigoMCP' && sandbox.version ? { getVersion: () => sandbox.version } : null } } };
+  vm.runInNewContext(backendParts(['feedbackCatalogKey', 'mcpCatalogKey']), sandbox);
+  assert.equal(sandbox.mcpCatalogKey({}), 'feedback:on|mcp:0.2.27-beta.2');
+  sandbox.version = '0.2.27-beta.3';
+  assert.equal(sandbox.mcpCatalogKey({}), 'feedback:on|mcp:0.2.27-beta.3', 'another MCP version, another key');
+  sandbox.feedback = null;
+  assert.equal(sandbox.mcpCatalogKey({}), 'mcp:0.2.27-beta.3', 'a server user without feedback still gets the MCP version');
+  sandbox.version = '';
+  assert.equal(sandbox.mcpCatalogKey({}), '');
 });

@@ -65,6 +65,12 @@ test('Forms focus uses successful structured results, including newly created fo
   completed('nocode-form-contract-get', saved);
   assert.equal(state.formMutation, previous);
   assert.equal(ctx.noCodeFormToolResult({ item: saved }, 0), null);
+  // nocode-app-create answers its outline with the saved form: the new application opens in the editor.
+  const app = { status: 'ok', saved: true, id: 'app', pages: [{ name: 'Tickets' }], form: { _id: 'app', _rev: '2-b', name: 'Suivi des tickets' } };
+  completed('Convertigo_nocode_app_create', { structured: app });
+  assert.deepEqual([state.formMutation.formId, state.formMutation.changed, state.formMutation.formName], ['app', true, 'Suivi des tickets']);
+  completed('nocode-app-create', { structured: { status: 'invalid_spec', saved: false, error: { code: 'invalid_spec' } } });
+  assert.equal(state.formMutation.formId, 'app', 'a refused spec changes nothing');
 });
 
 test('Forms focus is sent while running and not repeated on completion', () => {

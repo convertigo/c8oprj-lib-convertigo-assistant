@@ -57,6 +57,26 @@ test('Agent entry retains release gating, Forms query context and the opt-in fra
       assert.equal(calls[0][1].queryParams.agentBridge, '1');
     }
   }
+  // Cold opening from the C8Oforms panel: the app onAppInit event defines the switch after this page starts.
+  const timers = [];
+  ctx.setTimeout = (fn, ms) => timers.push({fn, ms});
+  const late = {global: {}, angularRouter: {navigate: (...args) => late.calls.push(args)}, calls: []};
+  ctx.initialize.call(late);
+  assert.equal(late.calls.length, 0, 'no How-To fallback while the switch is not defined');
+  for (let i = 0; i < 3; i++) timers.shift().fn();
+  late.global.isAssistantAgentReleaseEnabled = () => true;
+  timers.shift().fn();
+  assert.equal(late.calls.length, 1);
+  assert.equal(late.calls[0][0][0], '/path-to-xfirst');
+  assert.equal(late.calls[0][1].queryParams.userId, 'forms-user');
+  assert.equal(timers.length, 0);
+  const never = {global: {}, angularRouter: {navigate: (...args) => never.calls.push(args)}, calls: []};
+  ctx.initialize.call(never);
+  let waited = 0;
+  while (timers.length) { waited += timers[0].ms; timers.shift().fn(); }
+  assert.equal(waited, 5000);
+  assert.equal(never.calls.length, 1);
+  assert.equal(never.calls[0][0][0], '/path-to-lightrag', 'without the switch the page still ends on How-To');
 });
 
 test('host context retains both Studio capabilities and Forms selection, excluding unknown secrets', () => {

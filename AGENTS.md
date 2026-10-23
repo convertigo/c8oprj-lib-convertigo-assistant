@@ -89,7 +89,7 @@ rediscovering the same context.
   administration; Studio retains its workspace instructions. Cover this with
   `node --test tests/assistant_setup_failure.test.cjs`.
 - In the C8Oforms embedded surface, successful `nocode-form-create`,
-  `nocode-form-edit`, `nocode-form-update`, and `nocode-form-get` results are
+  `nocode-app-create`, `nocode-form-edit`, `nocode-form-update`, and `nocode-form-get` results are
   returned as `state.formMutation`. Derive the subject ID only from the
   structured saved/fetched form, never from the previous host selection or
   narrative text. Reads use `changed: false`; a read of the same form after a

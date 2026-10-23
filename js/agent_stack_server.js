@@ -141,21 +141,38 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
     return names;
   }
 
+  // Semantic version order, as the Assistant page (compareAgentStackVersions): a pre-release comes before its
+  // release (1.5.5-beta.1 < 1.5.5-beta.2 < 1.5.5 < 1.5.6), so a server on a preview takes the final version.
+  // Pre-release identifiers compare number by number and text by text (beta9 < beta10); build metadata is ignored.
   function compareVersions(left, right) {
     var parse = function (value) {
-      var parts = trim(value).split(/[.\-+]/);
+      var text = trim(value).replace(/^v/i, "").split("+")[0];
+      var dash = text.indexOf("-");
+      var core = (dash < 0 ? text : text.substring(0, dash)).split(".");
       var numbers = [];
-      for (var i = 0; i < parts.length; i++) {
-        var number = parseInt(parts[i], 10);
+      for (var i = 0; i < core.length; i++) {
+        var number = parseInt(core[i], 10);
         numbers.push(isNaN(number) ? 0 : number);
       }
-      while (numbers.length < 3) { numbers.push(0); }
-      return numbers;
+      var pre = dash < 0 ? [] : (text.substring(dash + 1).toLowerCase().match(/[0-9]+|[a-z]+/g) || []);
+      for (var j = 0; j < pre.length; j++) {
+        if (/^[0-9]+$/.test(pre[j])) { pre[j] = parseInt(pre[j], 10); }
+      }
+      return { numbers: numbers, pre: pre, preview: dash >= 0 };
     };
     var a = parse(left), b = parse(right);
-    for (var i = 0; i < Math.max(a.length, b.length); i++) {
-      var x = a[i] || 0, y = b[i] || 0;
+    for (var i = 0; i < Math.max(a.numbers.length, b.numbers.length, 3); i++) {
+      var x = a.numbers[i] || 0, y = b.numbers[i] || 0;
       if (x !== y) { return x < y ? -1 : 1; }
+    }
+    if (a.preview !== b.preview) { return a.preview ? -1 : 1; }
+    for (var j = 0; j < Math.max(a.pre.length, b.pre.length); j++) {
+      if (j >= a.pre.length || j >= b.pre.length) { return j >= a.pre.length ? -1 : 1; }
+      var p = a.pre[j], q = b.pre[j];
+      if (p !== q) {
+        if (typeof p !== typeof q) { return typeof p === "number" ? -1 : 1; }
+        return p < q ? -1 : 1;
+      }
     }
     return 0;
   }

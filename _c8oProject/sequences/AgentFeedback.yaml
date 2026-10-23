@@ -1,5 +1,5 @@
 accessibility: Hidden
-comment: Feedback to Convertigo (docs/tigo-feedback.md). Local Studio WEB_ADMIN only. Reads and sets the consent mode, lists, sends or clears the waiting reports, prepares a user report on the last turn of a conversation (or, turning feedback on from a failed turn, collects its tool errors), and puts an offer aside (later, with topic invite, nudge or auto). The Tigo key is read on the server and never returned.
+comment: Feedback to Convertigo (docs/tigo-feedback.md). The local Studio WEB_ADMIN, or on a server the authenticated user (their own consent and reports; never a user the page names). Reads and sets the consent mode, lists, sends or clears the waiting reports, prepares a user report on the last turn of a conversation (or, turning feedback on from a failed turn, collects its tool errors), puts an offer aside (later, with topic invite, nudge or auto), and records that the user saw the notice of a mode the administrator imposes (seen). The Tigo key (the Studio's, or the server's feedback key) is read on the server and never returned.
 includeResponseElement: false
 responseTimeout: 120
 ↓RunFeedback [steps.SimpleStep-1792540000001]: 
@@ -8,18 +8,25 @@ responseTimeout: 120
     var studio=engine.isStudioMode();
     var admin=engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN);
     var response={status:"error",code:"unavailable",available:false,mode:"off",pending:[]};
-    if(studio&&admin){
-     include("js/agent_feedback.js");
-     var options={action:String(action||""),mode:String(mode||""),comment:String(comment||""),provider:String(provider||""),model:String(model||""),topic:String(topic||"")};
+    var feedback=null;
+    if(studio&&admin){include("js/agent_feedback.js");feedback=C8O.assistantFeedback;}
+    else if(!studio){
+     include("js/agent_bridge_client.js");include("js/agent_feedback.js");
+     var userKey=C8O.assistantAgentBridge.feedbackUserKey();
+     if(userKey.length){feedback=C8O.assistantFeedback.forUser(userKey);}
+     userKey=null;
+    }
+    if(feedback){
+     var options={action:String(action||""),mode:String(mode||""),comment:String(comment||""),provider:String(provider||""),model:String(model||""),topic:String(topic||""),surface:studio?"":"nocode"};
      if((options.action==="report"||options.action==="mode")&&String(threadid||"").length){
       include("js/agent_bridge_client.js");
       var history=C8O.assistantAgentBridge.runHistory({threadid:String(threadid),userId:"studio",provider:options.provider});
-      if(options.action==="report"){options.turn=history&&history.ok===true?C8O.assistantFeedback.turnSummary(history.events):null;}
+      if(options.action==="report"){options.turn=history&&history.ok===true?feedback.turnSummary(history.events):null;}
       else{options.events=history&&history.ok===true?history.events:null;}
       history=null;
      }
-     response=C8O.assistantFeedback.run(options);
-     options=null;
+     response=feedback.run(options);
+     options=null;feedback=null;
     }
     comment=null;
 ↓Response [steps.JsonToXmlStep-1792540000003]: 

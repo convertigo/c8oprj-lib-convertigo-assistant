@@ -706,22 +706,45 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     restrictSecretFile(file);
   }
 
+  // A token is kept only once C8Oforms accepts it: C8Oforms could answer ok for a token it had not stored when another
+  // write to the user's document came first, and the agent was then refused on its first MCP call.
   function createNoCodeMcpToken(options, userKey, userId) {
-    try {
-      var label = noCodeMcpTokenLabel(options);
-      var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
-        name: label
-      });
-      var result = unwrapSequenceResult(response) || {};
-      var token = trim(result.token);
-      if (!token.length) {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        var label = noCodeMcpTokenLabel(options);
+        var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
+          name: label
+        });
+        var result = unwrapSequenceResult(response) || {};
+        var token = trim(result.token);
+        if (!token.length) {
+          return "";
+        }
+        if (!validateNoCodeMcpToken(token)) {
+          continue;
+        }
+        writeNoCodeMcpToken(options, userKey, userId, token, result.tokenInfo || null);
+        return token;
+      } catch (_ignoreNoCodeTokenCreate) {
         return "";
       }
-      writeNoCodeMcpToken(options, userKey, userId, token, result.tokenInfo || null);
-      return token;
-    } catch (_ignoreNoCodeTokenCreate) {
-      return "";
     }
+    return "";
+  }
+
+  // The requests a No Code page sends together (one resource catalog per host context message) all get here for a
+  // user without a token yet: one at a time, the first creates it and the others read it from its file. Same lock as
+  // bridgeCallerKey; the session's handle is checked before, so a user takes it once per session.
+  function resolveNoCodeMcpToken(options, userKey, userId) {
+    var resolve = function () {
+      var token = readNoCodeMcpToken(options, userKey);
+      return token.length ? token : createNoCodeMcpToken(options, userKey, userId);
+    };
+    var store = sharedStorage();
+    if (store === null) {
+      return resolve();
+    }
+    return String(new Packages.org.mozilla.javascript.Synchronizer(resolve, store)());
   }
 
   function sharedSecretGet(handle) {
@@ -757,7 +780,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreSecretRemove) {}
   }
 
-  function noCodeMcpTokenHandle(options) {
+  // Forgets a token C8Oforms refused (revoked in the settings, or never stored): the session's handle, and the user's
+  // shared token when it is still that one (another session may have replaced it). The next resolution reads the file
+  // again, which C8Oforms checks, or creates a token.
+  function forgetNoCodeMcpToken(options, refusedToken) {
+    var userKey = normalizeUserKey(noCodeMcpUserId(options));
+    try {
+      context.httpSession.removeAttribute(NOCODE_MCP_TOKEN_SESSION_PREFIX + userKey);
+    } catch (_ignoreForgetTokenSession) {}
+    var handle = NOCODE_MCP_TOKEN_HANDLE_PREFIX + userKey;
+    if (sharedSecretGet(handle) === trim(refusedToken)) {
+      sharedSecretRemove(handle);
+    }
+  }
+
+  // verify: ask C8Oforms whether the session's token is still accepted before using it (an agent keeps the token it
+  // starts with; the Bridge restarts a resident one when the token changes).
+  function noCodeMcpTokenHandle(options, verify) {
     options = options || {};
     if (normalizeSkillProfile(options) !== "nocode") {
       return "";
@@ -774,15 +813,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var existingHandle = context.httpSession.getAttribute(sessionKey);
       if (existingHandle !== null && typeof existingHandle !== "undefined") {
         existingHandle = String(existingHandle);
-        if (trim(existingHandle).length && sharedSecretGet(existingHandle).length) {
-          return existingHandle;
+        var existingToken = trim(existingHandle).length ? sharedSecretGet(existingHandle) : "";
+        if (existingToken.length) {
+          if (verify !== true || validateNoCodeMcpToken(existingToken)) {
+            return existingHandle;
+          }
+          forgetNoCodeMcpToken(options, existingToken);
         }
       }
     } catch (_ignoreExistingTokenHandle) {}
-    var token = readNoCodeMcpToken(options, userKey);
-    if (!token.length) {
-      token = createNoCodeMcpToken(options, userKey, userId);
-    }
+    var token = resolveNoCodeMcpToken(options, userKey, userId);
     if (!token.length) {
       return "";
     }
@@ -871,7 +911,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     if (normalizeSkillProfile(options) === "nocode") {
-      var noCodeHandle = noCodeMcpTokenHandle(options);
+      var noCodeHandle = noCodeMcpTokenHandle(options, true);
       if (noCodeHandle.length) {
         payload.nocodeMcpTokenHandle = noCodeHandle;
       }
@@ -1127,22 +1167,30 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function loadNoCodeBaserowCatalog(options) {
-    var handle = noCodeMcpTokenHandle(options);
-    var token = handle.length ? sharedSecretGet(handle) : "";
-    if (!token.length) {
-      return {
-        status: "auth_required",
-        workspaces: [],
-        bases: [],
-        tables: []
-      };
+    var payload = {};
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var handle = noCodeMcpTokenHandle(options);
+      var token = handle.length ? sharedSecretGet(handle) : "";
+      if (!token.length) {
+        return {
+          status: "auth_required",
+          workspaces: [],
+          bases: [],
+          tables: []
+        };
+      }
+      var response = callLocalSequence("lib_ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
+        token: token,
+        includeColumns: "false",
+        __nolog: "true"
+      });
+      payload = sequencePayload(response);
+      // C8Oforms refused the token the session kept: forget it and ask once more with the token resolved again.
+      if (trim(payload.status) !== "auth_required") {
+        break;
+      }
+      forgetNoCodeMcpToken(options, token);
     }
-    var response = callLocalSequence("lib_ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
-      token: token,
-      includeColumns: "false",
-      __nolog: "true"
-    });
-    var payload = sequencePayload(response);
     return {
       status: trim(payload.status || "ok") || "ok",
       workspaces: catalogArray(findCatalogValue(payload, ["workspaces"], 0)),
@@ -1608,6 +1656,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // On a server the conversations belong to the authenticated user, never to the userId the page sends. C8Oforms
+  // signs an OAuth user in as "provider:subject:email" and the page keys its conversations by the email; a local
+  // account or "c8o:admin" keeps its whole name. Same rule as tigo_resources.js (conversationOwner). The Studio has
+  // one user and keeps the page value; a WEB_ADMIN session without a user name may act for the user it names.
+  function callerUserId(requested) {
+    if (Engine.isStudioMode()) {
+      return trim(requested);
+    }
+    var user = "";
+    try {
+      user = trim(context.getAuthenticatedUser());
+    } catch (_ignoreAuthenticatedUser) {}
+    if (!user.length) {
+      return trim(requested);
+    }
+    var parts = user.split(":");
+    var last = parts[parts.length - 1];
+    return parts.length > 2 && last.indexOf("@") > 0 ? last : user;
+  }
+
+  // Called by every entry point right after bridgeCallerRefusal, before options.userId locates any conversation.
+  function withCallerUserId(options) {
+    options = options || {};
+    options.userId = callerUserId(options.userId);
+    return options;
+  }
+
   // The key goes only to this engine's Bridge: at the configured engine URL, or on a loopback host at the port that
   // received the request. A bridgeBaseUrl sent by a caller, or a request Host header, never receives it.
   function isOwnBridgeUrl(urlText) {
@@ -1931,6 +2006,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       viewerCdpEndpoint: trim(options.viewerCdpEndpoint),
       credentialsPolicy: trim(options.credentialsPolicy || options.envPolicy) || "vibe-home",
       agentRevealMode: revealModeOption(options),
+      mcpCatalogKey: mcpCatalogKey(state),
       requestTimeoutMs: "60000"
     };
   }
@@ -3952,9 +4028,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return status === "completed" || status === "complete" || status === "success" || status === "succeeded";
   }
 
+  // nocode-app-create saves a whole application (Baserow tables and the form): its answer carries the saved form too.
   function isNoCodeFormMutationTool(value) {
     var normalized = trim(value).toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    return /(?:^|_)nocode_form_(?:create|edit|update|get)$/.test(normalized);
+    return /(?:^|_)nocode_(?:form_(?:create|edit|update|get)|app_create)$/.test(normalized);
   }
 
   function noCodeFormToolResult(value, depth) {
@@ -4562,15 +4639,113 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // Feedback to Convertigo (docs/tigo-feedback.md): with the user's consent, a failing Convertigo MCP tool and a failed
-  // turn are counted in the feedback outbox by their error template. The module loads only once an error is seen.
-  function feedbackModule() {
-    if (typeof C8O.assistantFeedback === "undefined" || typeof C8O.assistantFeedback.collectToolError !== "function") {
+  // turn are counted in the feedback outbox by their error template. The module loads only once an error is seen. The
+  // Studio has one outbox; on a server each user has theirs, found from the conversation's user.
+  function feedbackModule(state) {
+    if (typeof C8O.assistantFeedback === "undefined" || typeof C8O.assistantFeedback.forUser !== "function") {
       if (typeof include !== "function") {
         return null;
       }
       include("js/agent_feedback.js");
     }
-    return C8O.assistantFeedback;
+    if (Engine.isStudioMode()) {
+      return C8O.assistantFeedback;
+    }
+    var userKey = trim(state && state.userKey);
+    return userKey.length && userKey !== "studio" ? C8O.assistantFeedback.forUser(userKey) : null;
+  }
+
+  // The Convertigo MCP lists its report tool only while the user agrees to send feedback. A resident agent reads the
+  // tool list once: the Bridge restarts it on the same session when this key changes (mcpCatalogKey).
+  function feedbackCatalogKey(state) {
+    try {
+      var feedback = feedbackModule(state);
+      return feedback ? (feedback.mode() === "off" ? "feedback:off" : "feedback:on") : "";
+    } catch (_ignoreFeedbackCatalog) {
+      return "";
+    }
+  }
+
+  // The tools of the Convertigo MCP also change with its version: after a stack update on a server, a resident agent kept
+  // the previous tool list and its schemas until its process ended. The key carries the installed MCP version, so the
+  // Bridge restarts it on its session at the next turn.
+  function mcpCatalogKey(state) {
+    var key = feedbackCatalogKey(state);
+    var version = "";
+    try {
+      var project = Engine.theApp.databaseObjectsManager.getOriginalProjectByName("lib_ConvertigoMCP");
+      version = project ? trim(String(project.getVersion())) : "";
+    } catch (_ignoreMcpVersion) {}
+    return version.length ? (key.length ? key + "|" : "") + "mcp:" + version : key;
+  }
+
+  // The surface of a report: the No Code Studio for a no-code conversation, else the one the store knows.
+  function feedbackSurface(state) {
+    return normalizeSkillProfile(state || {}) === "nocode" ? "nocode" : "";
+  }
+
+  // The feedback user of the request on a server: the authenticated user only, never a name the page sends. "" in the
+  // Studio, for an anonymous caller, or for a session without a user name.
+  function feedbackUserKey() {
+    if (Engine.isStudioMode() || bridgeCallerRefusal() !== null) {
+      return "";
+    }
+    var user = "";
+    try {
+      user = trim(context.getAuthenticatedUser());
+    } catch (_ignoreAuthenticatedUser) {}
+    return user.length ? normalizeUserKey(callerUserId("")) : "";
+  }
+
+  // The names a no-code tool result shows (form, pages, components, Baserow tables), kept for masking the user's
+  // reports. The whole result is read, not the preview cut for the work log.
+  function collectFeedbackNames(state, event, data) {
+    try {
+      var remembered = state.toolCalls && state.toolCalls[toolCallId(data)] || {};
+      var titles = [eventToolTitle(event, data), trim(remembered.toolName), trim(remembered.title)];
+      if (feedbackSurface(state) !== "nocode" || !/nocode/i.test(titles.join(" "))) {
+        return;
+      }
+      var feedback = feedbackModule(state);
+      var tool = "";
+      for (var t = 0; feedback && t < titles.length && !tool.length; t++) {
+        tool = feedback.convertigoTool(titles[t]);
+      }
+      if (!/^nocode-(?!form-contract-get$)/.test(tool)) {
+        return;
+      }
+      var parts = [];
+      var candidates = [data && data.update && (data.update.rawOutput || data.update.raw_output), data && data.update && data.update.content, data && data.result, data && data.output, data && data.detail];
+      for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i] != null) {
+          parts.push(typeof candidates[i] === "string" ? candidates[i] : JSON.stringify(candidates[i]));
+        }
+      }
+      if (parts.length) {
+        feedback.rememberNames(feedback.namesIn(feedback.resultText(parts.join("\n"))));
+      }
+    } catch (_ignoreFeedbackNames) {}
+  }
+
+  // The names of the no-code context the page sends with a message: the form, page, element and Baserow selection.
+  function collectFeedbackContextNames(state, options) {
+    try {
+      if (feedbackSurface(state) !== "nocode") {
+        return;
+      }
+      var names = [];
+      var keys = ["currentFormName", "formName", "pageName", "elementName", "baserowWorkspaceName", "baserowDatabaseName", "baserowBaseName", "baserowTableName"];
+      for (var i = 0; i < keys.length; i++) {
+        var value = trim(optionOrRequest(options, keys[i]));
+        if (value.length) {
+          names.push(value);
+        }
+      }
+      var feedback = names.length ? feedbackModule(state) : null;
+      if (feedback) {
+        feedback.rememberNames(names);
+      }
+    } catch (_ignoreFeedbackContextNames) {}
   }
 
   function collectFeedbackToolError(state, event, data, toolStatus) {
@@ -4600,19 +4775,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (state.feedbackCalls.length > 200) {
         state.feedbackCalls.shift();
       }
-      var feedback = feedbackModule();
+      var feedback = feedbackModule(state);
       var message = feedback ? feedback.errorMessage(preview, failed) : "";
       if (message.length) {
-        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state) });
+        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
   }
 
   function collectFeedbackRuntimeError(state, message) {
     try {
-      var feedback = feedbackModule();
+      var feedback = feedbackModule(state);
       if (feedback && trim(message).length) {
-        feedback.collectRuntimeError({ provider: state.provider, model: feedbackModel(state), message: message });
+        feedback.collectRuntimeError({ provider: state.provider, model: feedbackModel(state), message: message, surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
   }
@@ -4626,9 +4801,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // provider and model, not the ones the agent names itself.
   function ingestFeedback(state) {
     try {
-      var feedback = feedbackModule();
+      var feedback = feedbackModule(state);
       if (feedback) {
-        feedback.ingest({ provider: state.provider, model: feedbackModel(state) });
+        feedback.ingest({ provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
   }
@@ -6502,7 +6677,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
@@ -6638,7 +6813,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // Resolve only trusted identity/ownership here. The private native sequence may
   // read account metadata before the first conversation; never create one.
   C8O.assistantAgentBridge.quota = function(options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var provider = normalizeProvider(options.provider);
     var empty = {status:"ok",quota:{provider:provider,source:"wrapper",available:false,kind:"limits",windows:[],updatedAt:null}};
     var id = normalizeThreadId(options.threadid);
@@ -6654,7 +6833,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = optionsWithRequestFallbacks(options);
+    options = withCallerUserId(optionsWithRequestFallbacks(options));
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
@@ -6684,7 +6863,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = optionsWithRequestFallbacks(options || {});
+    options = withCallerUserId(optionsWithRequestFallbacks(options || {}));
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
     if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
@@ -7147,7 +7326,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // temporary files are copied under the conversation folder and their local
   // paths are returned as `file` entries, mirroring the legacy UploadFiles shape.
   C8O.assistantAgentBridge.storeAttachments = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var stored = [];
     var errors = [];
     var sources = attachmentPathList(options.files).concat(attachmentPathList(options.attachments));
@@ -7260,7 +7443,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (["list", "get"].indexOf(String(args.action || "list")) < 0 && args.csrf !== csrf) { throw new Error("csrf_invalid"); }
     if (args.threadid) {
       var current = readState(normalizeThreadId(args.threadid));
-      if (current && !who.admin && current.userId !== who.user) { throw new Error("conversation_access_denied"); }
+      if (current && !who.admin && current.userId !== who.owner) { throw new Error("conversation_access_denied"); }
       if (current && args.action === "select" && current.status === "in_progress") { throw new Error("conversation_busy"); }
     }
     var result = C8O.tigoResources.manage(args);
@@ -7279,7 +7462,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = optionsWithRequestFallbacks(options || {});
+    options = withCallerUserId(optionsWithRequestFallbacks(options || {}));
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
@@ -7396,6 +7579,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.projectNames = addArrayValue(state.projectNames, currentProject);
     }
     enrichViewerDebugOptions(options, state);
+    collectFeedbackContextNames(state, options);
     if (trim(options.rawUserQuestion).length) {
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
       options.Question = question;
@@ -7698,8 +7882,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   // Every event of a turn, read from runs/<runid>.ndjson: a page opened during a long turn shows the turn from its start,
   // not only the last 80 events the state keeps. Long details are shortened for this one-time read.
+  // The feedback user of this request on a server (AgentFeedback): "" in the Studio or without an authenticated user.
+  C8O.assistantAgentBridge.feedbackUserKey = function () {
+    return feedbackUserKey();
+  };
+
   C8O.assistantAgentBridge.runHistory = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length) {
       return { ok: false, error: { code: "unknown_conversation" } };
@@ -7728,7 +7921,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length && trim(options.runid).length) {
       var runRecord = conversationRecordForRunId(
@@ -7893,6 +8086,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           appendToolEvent(state, event, data, type);
           if (type === "tool/update") {
             collectFeedbackToolError(state, event, data, toolStatus);
+            collectFeedbackNames(state, event, data);
           }
           if (toolStatus === "failed" || toolStatus === "error") {
             appendProgressLine(state, lang(state).toolRetry);
@@ -8056,7 +8250,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.listConversations = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
@@ -8079,7 +8277,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     if (!threadid.length) {
       return {
@@ -8135,7 +8333,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     if (!threadid.length) {
       return {
@@ -8244,7 +8442,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.renameConversation = function (options) {
-    options = options || {};
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
     var threadid = normalizeConversationId(options.threadid || options.conversationId);
     var title = conversationTitleFromText(options.title || options.name || "");
     if (!threadid.length) {
@@ -8312,7 +8514,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (refused !== null) {
       return refused;
     }
-    options = options || {};
+    options = withCallerUserId(options);
     var threadid = normalizeThreadId(options.threadid);
     if (!threadid.length) {
       var workspaceRoot = resolveWorkspaceRoot(options);

@@ -20,7 +20,7 @@ function fixture(provider,options,authenticated=false) {
     normalizeProvider:v=>v,isResidentProvider:p=>['codex','claude','vibe'].includes(p),
     callAgentSetup:()=>{calls++;return {result:login};},providerLoginAction:p=>p+'_login',
     now:()=>1,publicState:()=>({}),saveState(){throw Error('Unexpected persistence');},
-    setStateBuffer(){throw Error('Unexpected persistence');},bridgeCallerRefusal:()=>null
+    setStateBuffer(){throw Error('Unexpected persistence');},bridgeCallerRefusal:()=>null,withCallerUserId:o=>o||{}
   };
   vm.runInNewContext(backendParts(['boolValue','hasProviderLoginRequest'])+'\nvar setupAgent='+setupAgent+';',sandbox);
   return {result:sandbox.setupAgent({provider,...options}),calls};
