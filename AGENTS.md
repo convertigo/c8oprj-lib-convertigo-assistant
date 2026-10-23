@@ -100,6 +100,15 @@ rediscovering the same context.
   and opens its editor if needed. On the current form, preserve the active
   page/selection when they still exist, and never replace local editor contents
   for a read-only focus. Keep Studio and collapsed progress/final UI unchanged.
+- The Bridge status of a session carries `sandbox` (`scope`, `policy`, `source`,
+  `configured`, `confined`, `landlockAbi`; Bridge 0.4.28 and later): what the
+  agent may do, as the Bridge applied it at start. `rememberSessionSandbox` keeps
+  it on the conversation, `publicState` hands it to the page, which shows the
+  sandbox badge in the side column (wide) and in the status dock (chip, tab and
+  drawer, narrow), in Studio and C8Oforms alike. A Studio session reads
+  "Unrestricted"; a No Code session on Codex or Claude reads "Full access" (only
+  Vibe applies `agents.tool_policy`). Texts live in `agentSandboxText` (fr, en,
+  it, es). Cover with `node --test tests/assistant_sandbox_badge.test.cjs`.
 - Deduplicate form notifications per run/resource/result, including the terminal
   polling response. Baserow auto-navigation is intentionally out of scope: the
   user does not want changes to the authenticated `/c8o/` gateway.

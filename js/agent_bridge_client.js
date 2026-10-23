@@ -1834,6 +1834,39 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (state.resourceContextEpoch === state.provider + ":" && state.externalSessionId) {
       state.resourceContextEpoch = state.provider + ":" + state.externalSessionId;
     }
+    rememberSessionSandbox(state, result.state);
+  }
+
+  // What the conversation's agent may do, as its Bridge status says (Bridge 0.4.28 and later): kept with the
+  // conversation for the page's sandbox badge. An older Bridge says nothing and the conversation keeps what it had.
+  function publicSessionSandbox(value) {
+    var policies = ["mcp-only", "files", "sandboxed-shell", "full"];
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+    var policy = trim(value.policy);
+    if (policies.indexOf(policy) < 0) {
+      return null;
+    }
+    var scope = trim(value.scope) === "nocode" ? "nocode" : "studio";
+    var source = trim(value.source);
+    var configured = trim(value.configured);
+    var abi = Math.floor(Number(value.landlockAbi));
+    return {
+      scope: scope,
+      policy: scope === "studio" ? "full" : policy,
+      source: scope === "studio" ? "studio" : (source === "harness" ? "harness" : "engine"),
+      configured: scope !== "studio" && policies.indexOf(configured) >= 0 && configured !== policy ? configured : "",
+      confined: scope !== "studio" && value.confined === true,
+      landlockAbi: scope !== "studio" && abi > 0 && abi < 1000 ? abi : 0
+    };
+  }
+
+  function rememberSessionSandbox(state, bridgeState) {
+    var sandbox = publicSessionSandbox(bridgeState && bridgeState.sandbox);
+    if (state && sandbox !== null) {
+      state.sandbox = sandbox;
+    }
   }
 
   function providerHomeScope(options, primaryName, secondaryName, defaultValue) {
@@ -6156,6 +6189,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       commands: agentCommandsFor(state),
       formMutation: state.formMutation || null,
       nocodeContext: savedNoCodeContext(state),
+      sandbox: publicSessionSandbox(state.sandbox),
       setupRequired: state.setupRequired === true,
       setup: state.setupReport || null,
       codexPrewarmStartedAt: state.codexPrewarmStartedAt || 0,

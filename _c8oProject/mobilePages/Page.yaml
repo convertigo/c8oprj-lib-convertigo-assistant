@@ -3957,13 +3957,14 @@ scriptContent:
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
         	}
         	public applyAgentConversationState(state) {
-        		// A reopened conversation shows its last known context gauge, plan and commands before any new turn.
+        		// A reopened conversation shows its last known context gauge, plan, commands and sandbox before any new turn.
         		if (!this.local) {
         			return;
         		}
         		if (!state || !state.threadid) {
         			this.local.AgentUsageView = null;
         			this.local.AgentLastPlanView = null;
+        			this.local.AgentSandbox = null;
         			return;
         		}
         		this.local.AgentUsageView = this.getAgentUsageView(state.usage, true);
@@ -3973,6 +3974,59 @@ scriptContent:
         			plan.title = plan.title + " · " + this.agentUiText("planLastTurn");
         		}
         		this.local.AgentLastPlanView = plan;
+        		this.local.AgentSandbox = state.sandbox ? { threadid: state.threadid, sandbox: state.sandbox } : null;
+        	}
+        	public agentSandboxText(key) {
+        		// The sandbox badge of the side column and the status dock, in the four Assistant languages.
+        		var texts: any = {
+        			fr: { title: "Bac à sable", hover: "Bac à sable de la conversation : {label}", studio: "Non limité", full: "Accès complet", files: "Fichiers", "mcp-only": "MCP seul", "sandboxed-shell": "Shell confiné", studioLine: "Session du Studio : l''agent a tous ses outils (shell, fichiers, web), avec les droits du Studio.", "mcp-onlyLine": "L''agent n''utilise que les outils No Code de Convertigo : ni shell, ni fichiers, ni web.", filesLine: "L''agent lit et écrit des fichiers dans le dossier de cette conversation seulement : ni shell, ni web.", "sandboxed-shellLine": "L''agent a un shell et des fichiers dans le dossier de cette conversation : ni web, ni le reste du serveur.", fullLine: "L''administrateur donne aux agents No Code tous leurs outils (shell, fichiers, web), avec les droits du serveur.", harnessLine: "La politique des agents No Code ne s''applique qu''à Tigo (Vibe) : cet agent a tous ses outils, avec les droits du serveur.", confinedLine: "Le noyau confine l''agent et tout ce qu''il lance (Landlock v{abi}).", unconfinedLine: "Le noyau ne confine pas l''agent sur ce serveur (pas de Landlock) : seule sa configuration le limite.", configuredLine: "Demandé par l''administrateur : {policy}, impossible sans Landlock." },
+        			en: { title: "Sandbox", hover: "Conversation sandbox: {label}", studio: "Unrestricted", full: "Full access", files: "Files", "mcp-only": "MCP only", "sandboxed-shell": "Confined shell", studioLine: "Studio session: the agent has all its tools (shell, files, web), with the Studio''s rights.", "mcp-onlyLine": "The agent uses the Convertigo No Code tools only: no shell, no files, no web.", filesLine: "The agent reads and writes files in this conversation''s folder only: no shell, no web.", "sandboxed-shellLine": "The agent has a shell and files in this conversation''s folder: no web, nothing else of the server.", fullLine: "The administrator gives No Code agents all their tools (shell, files, web), with the server''s rights.", harnessLine: "The No Code agent policy applies to Tigo (Vibe) only: this agent has all its tools, with the server''s rights.", confinedLine: "The kernel confines the agent and everything it starts (Landlock v{abi}).", unconfinedLine: "The kernel does not confine the agent on this server (no Landlock): only its configuration limits it.", configuredLine: "Requested by the administrator: {policy}, not possible without Landlock." },
+        			it: { title: "Sandbox", hover: "Sandbox della conversazione: {label}", studio: "Senza limiti", full: "Accesso completo", files: "File", "mcp-only": "Solo MCP", "sandboxed-shell": "Shell confinata", studioLine: "Sessione dello Studio: l''agente ha tutti i suoi strumenti (shell, file, web), con i diritti dello Studio.", "mcp-onlyLine": "L''agente usa solo gli strumenti No Code di Convertigo: niente shell, file né web.", filesLine: "L''agente legge e scrive file solo nella cartella di questa conversazione: niente shell né web.", "sandboxed-shellLine": "L''agente ha una shell e dei file nella cartella di questa conversazione: niente web, niente altro del server.", fullLine: "L''amministratore dà agli agenti No Code tutti i loro strumenti (shell, file, web), con i diritti del server.", harnessLine: "La politica degli agenti No Code si applica solo a Tigo (Vibe): questo agente ha tutti i suoi strumenti, con i diritti del server.", confinedLine: "Il kernel confina l''agente e tutto ciò che avvia (Landlock v{abi}).", unconfinedLine: "Il kernel non confina l''agente su questo server (niente Landlock): lo limita solo la sua configurazione.", configuredLine: "Richiesto dall''amministratore: {policy}, impossibile senza Landlock." },
+        			es: { title: "Sandbox", hover: "Sandbox de la conversación: {label}", studio: "Sin límites", full: "Acceso completo", files: "Archivos", "mcp-only": "Solo MCP", "sandboxed-shell": "Shell confinado", studioLine: "Sesión del Studio: el agente tiene todas sus herramientas (shell, archivos, web), con los derechos del Studio.", "mcp-onlyLine": "El agente solo usa las herramientas No Code de Convertigo: ni shell, ni archivos, ni web.", filesLine: "El agente lee y escribe archivos solo en la carpeta de esta conversación: ni shell ni web.", "sandboxed-shellLine": "El agente tiene un shell y archivos en la carpeta de esta conversación: ni web ni el resto del servidor.", fullLine: "El administrador da a los agentes No Code todas sus herramientas (shell, archivos, web), con los derechos del servidor.", harnessLine: "La política de los agentes No Code solo se aplica a Tigo (Vibe): este agente tiene todas sus herramientas, con los derechos del servidor.", confinedLine: "El kernel confina al agente y todo lo que lanza (Landlock v{abi}).", unconfinedLine: "El kernel no confina al agente en este servidor (sin Landlock): solo lo limita su configuración.", configuredLine: "Solicitado por el administrador: {policy}, imposible sin Landlock." }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        	}
+        	public getAgentSandboxView() {
+        		// What the agent of the open conversation may do, as the Bridge applied it when its session started (state.sandbox),
+        		// never limited in the Studio; in No Code the agents.tool_policy of the engine where Tigo (Vibe) applies it, and whether
+        		// the kernel confines it (Landlock). One object per conversation and language, for change detection.
+        		var held = this.local ? this.local.AgentSandbox : null;
+        		var sandbox = held && held.threadid && held.threadid === this.local.Conversation ? held.sandbox : null;
+        		if (!sandbox || !sandbox.policy) {
+        			return null;
+        		}
+        		var abi = Number(sandbox.landlockAbi || 0);
+        		var key = [held.threadid, sandbox.scope, sandbox.policy, sandbox.source, sandbox.configured, sandbox.confined, abi, this.agentUiLanguage()].join("|");
+        		var self: any = this;
+        		if (self.agentSandboxViewCache && self.agentSandboxViewKey === key) {
+        			return self.agentSandboxViewCache;
+        		}
+        		var t = (name: any) => this.agentSandboxText(name);
+        		var studio = sandbox.scope !== "nocode";
+        		var harness = !studio && sandbox.source === "harness";
+        		var policy = studio ? "studio" : (harness ? "full" : sandbox.policy);
+        		var level = studio ? "studio" : (policy === "full" ? "open" : (sandbox.confined === true ? "confined" : "limited"));
+        		var lines = [t(studio ? "studioLine" : (harness ? "harnessLine" : policy + "Line"))];
+        		if (level === "confined" || level === "limited") {
+        			lines.push(level === "confined" ? t("confinedLine").replace("{abi}", "" + abi) : t("unconfinedLine"));
+        		}
+        		if (!studio && !harness && sandbox.configured) {
+        			lines.push(t("configuredLine").replace("{policy}", t(sandbox.configured)));
+        		}
+        		var label = t(policy) + (level === "confined" && abi > 0 ? " · Landlock " + abi : "");
+        		var view = {
+        			key: key,
+        			level: level,
+        			icon: level === "confined" ? "shield-checkmark-outline" : (level === "limited" ? "shield-half-outline" : "shield-outline"),
+        			label: label,
+        			short: t(policy),
+        			lines: lines,
+        			title: t("hover").replace("{label}", label) + "\n" + lines.join("\n")
+        		};
+        		self.agentSandboxViewCache = view;
+        		self.agentSandboxViewKey = key;
+        		return view;
         	}
         	public agentLayoutText(key) {
         		// Labels of the turn line, the live banner, the side column and the status dock, in the four Assistant languages.
@@ -4168,11 +4222,12 @@ scriptContent:
         		var active = !!item && this.local.IsProcessing === true;
         		var plan = active && item.planView ? item.planView : this.local.AgentLastPlanView;
         		var usage = this.local.AgentUsageView;
-        		if (!active && (!this.local.Conversation || (!plan && !usage))) {
+        		var sandbox = this.getAgentSandboxView();
+        		if (!active && (!this.local.Conversation || (!plan && !usage && !sandbox))) {
         			return null;
         		}
         		var steps = active && item.progressItems ? item.progressItems : [];
-        		var key = [active ? item.progressNow + ":" + item.time : "-", active && item.reasoningLive ? item.reasoningLive.chars : 0, steps.length, plan ? plan.title + plan.done : "", usage ? usage.numbers : "", this.agentUiLanguage()].join("|");
+        		var key = [active ? item.progressNow + ":" + item.time : "-", active && item.reasoningLive ? item.reasoningLive.chars : 0, steps.length, plan ? plan.title + plan.done : "", usage ? usage.numbers : "", sandbox ? sandbox.key : "", this.agentUiLanguage()].join("|");
         		var self: any = this;
         		if (self.agentRunViewCache && self.agentRunViewKey === key) {
         			return self.agentRunViewCache;
@@ -4252,14 +4307,15 @@ scriptContent:
         			thought: thought,
         			dockLine: thought.length ? "\u2026 " + thought : planLine,
         			usage: usage,
-        			contextShort: usage ? usage.label : ""
+        			contextShort: usage ? usage.label : "",
+        			sandbox: sandbox
         		};
         		self.agentRunViewCache = view;
         		self.agentRunViewKey = key;
         		return view;
         	}
         	public toggleAgentDock(tab) {
-        		// The status dock above the composer opens on the plan or the context; the same tab closes it.
+        		// The status dock above the composer opens on the plan, the context or the sandbox; the same tab closes it.
         		if (!this.local) {
         			return;
         		}
@@ -4275,14 +4331,13 @@ scriptContent:
         		if (!view) {
         			return "";
         		}
-        		var tab = this.local.AgentDockTab === "context" ? "context" : "plan";
-        		if (tab === "plan" && !view.plan && view.usage) {
-        			return "context";
+        		// The chosen tab while it has something to show, else the plan, the context, then the sandbox.
+        		var shown: any = { plan: !!view.plan, context: !!view.usage, sandbox: !!view.sandbox };
+        		var tab = this.local.AgentDockTab;
+        		if (shown[tab]) {
+        			return tab;
         		}
-        		if (tab === "context" && !view.usage && view.plan) {
-        			return "plan";
-        		}
-        		return tab;
+        		return shown.plan ? "plan" : (shown.context ? "context" : (shown.sandbox ? "sandbox" : "plan"));
         	}
         	public followToolLists() {
         		// An open tool group follows its newest call while its list is at the bottom (within 24 px), like a terminal. Once
@@ -16066,6 +16121,103 @@ title: Tigo
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: plain:
+      ↓HasSandbox [ngx.components.UIControlDirective-1792762839671]: 
+        directiveName: If
+        directiveSource: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getAgentRunView().sandbox
+        ↓SandboxCard [ngx.components.UIDynamicElement-1792762839673]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: div
+          ↓Class [ngx.components.UIAttribute-1792762839675]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:'agent-side-card agent-sandbox-card is-' + this.getAgentRunView().sandbox.level
+          ↓Title [ngx.components.UIAttribute-1792762839677]: 
+            attrName: title
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getAgentRunView().sandbox.title
+          ↓SandboxHead [ngx.components.UIDynamicElement-1792762839679]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1792762839681]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-side-head
+            ↓SandboxLabel [ngx.components.UIDynamicElement-1792762839683]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: span
+              ↓Class [ngx.components.UIAttribute-1792762839685]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-side-label
+              ↓Text [ngx.components.UIText-1792762839687]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.agentSandboxText('title')
+            ↓SandboxChip [ngx.components.UIDynamicElement-1792762839689]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: span
+              ↓Class [ngx.components.UIAttribute-1792762839691]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:'agent-sandbox-chip is-' + this.getAgentRunView().sandbox.level
+              ↓SandboxIcon [ngx.components.UIDynamicElement-1792762839693]: 
+                beanData: '{"ionBean":"Icon","IconName":"script:this.getAgentRunView().sandbox.icon"}'
+                tagName: ion-icon
+                ↓Hidden [ngx.components.UIAttribute-1792762839695]: 
+                  attrName: aria-hidden
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:true
+              ↓Text [ngx.components.UIText-1792762839697]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getAgentRunView().sandbox.label
+          ↓SandboxLines [ngx.components.UIDynamicElement-1792762839699]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: div
+            ↓Class [ngx.components.UIAttribute-1792762839701]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-sandbox-lines
+            ↓Lines [ngx.components.UIControlDirective-1792762839703]: 
+              directiveIndexName: lineIndex
+              directiveItemName: line
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getAgentRunView().sandbox.lines
+              ↓Line [ngx.components.UIDynamicElement-1792762839705]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: p
+                ↓Class [ngx.components.UIAttribute-1792762839707]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-sandbox-line
+                ↓Text [ngx.components.UIText-1792762839709]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:line
       ↓Slot [ngx.components.UIAttribute-1792255467159]: 
         attrName: slot
         attrValue: 
@@ -17281,6 +17433,10 @@ title: Tigo
             		if (page.getAgentUsageView && state.threadid) {
             			page.local.AgentUsageView = page.getAgentUsageView(state.usage);
             			page.local.AgentCommands = state.commands && state.commands.length ? state.commands : (page.local.AgentCommands || []);
+            		}
+            		// The sandbox badge follows it too, as the Bridge started its agent session.
+            		if (state.threadid && state.sandbox) {
+            			page.local.AgentSandbox = { threadid: state.threadid, sandbox: state.sandbox };
             		}
                     if(state.quota && page.applyAgentQuotaSnapshot){page.applyAgentQuotaSnapshot(state.quota,state.provider||page.getAgentProvider());}
                     if(!isCompleted && !isFailed && page.requestAgentQuota){page.requestAgentQuota();}
@@ -18665,6 +18821,41 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:agent-dock-gauge
+        ↓HasDockSandbox [ngx.components.UIControlDirective-1792762839711]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getAgentRunView().sandbox
+          ↓DockSandbox [ngx.components.UIDynamicElement-1792762839713]: 
+            beanData: '{"ionBean":"DivTag"}'
+            tagName: span
+            ↓Class [ngx.components.UIAttribute-1792762839715]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:'agent-dock-sandbox agent-sandbox-chip is-' + this.getAgentRunView().sandbox.level
+            ↓Title [ngx.components.UIAttribute-1792762839717]: 
+              attrName: title
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getAgentRunView().sandbox.title
+            ↓DockSandboxIcon [ngx.components.UIDynamicElement-1792762839719]: 
+              beanData: '{"ionBean":"Icon","IconName":"script:this.getAgentRunView().sandbox.icon"}'
+              tagName: ion-icon
+              ↓Hidden [ngx.components.UIAttribute-1792762839721]: 
+                attrName: aria-hidden
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:true
+            ↓Text [ngx.components.UIText-1792762839723]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getAgentRunView().sandbox.short
         ↓DockChevron [ngx.components.UIDynamicElement-1792254390521]: 
           beanData: '{"ionBean":"DivTag"}'
           tagName: span
@@ -18772,6 +18963,41 @@ title: Tigo
                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                         →: |
                           		page.toggleAgentDock('context');
+                          		resolve();
+          ↓HasSandboxTab [ngx.components.UIControlDirective-1792762839725]: 
+            directiveName: If
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getAgentRunView().sandbox
+            ↓SandboxTab [ngx.components.UIDynamicElement-1792762839727]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: button
+              ↓Class [ngx.components.UIAttribute-1792762839729]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:''agent-dock-tab'' + (this.agentDockTab() === ''sandbox'' ? '' is-selected'' : '''')'
+              ↓Type [ngx.components.UIAttribute-1792762839731]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓Text [ngx.components.UIText-1792762839733]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.agentSandboxText('title') + ' · ' + this.getAgentRunView().sandbox.short
+              ↓Event [ngx.components.UIControlEvent-1792762839735]: 
+                ↓Act [ngx.components.UICustomAction-1792762839737]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.toggleAgentDock('sandbox');
                           		resolve();
         ↓DockDrawer [ngx.components.UIDynamicElement-1792254391009]: 
           beanData: '{"ionBean":"DivTag"}'
@@ -18958,6 +19184,42 @@ title: Tigo
                           →: |
                             		page.compactAgentConversation('generic');
                             		resolve();
+          ↓SandboxTabIf [ngx.components.UIControlDirective-1792762839739]: 
+            directiveName: If
+            directiveSource: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.agentDockTab() === 'sandbox' && this.getAgentRunView().sandbox
+            ↓DockSandboxLines [ngx.components.UIDynamicElement-1792762839741]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1792762839743]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-sandbox-lines
+              ↓Lines [ngx.components.UIControlDirective-1792762839745]: 
+                directiveIndexName: lineIndex
+                directiveItemName: line
+                directiveSource: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: script:this.getAgentRunView().sandbox.lines
+                ↓Line [ngx.components.UIDynamicElement-1792762839747]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: p
+                  ↓Class [ngx.components.UIAttribute-1792762839749]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-sandbox-line
+                  ↓Text [ngx.components.UIText-1792762839751]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:line
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]: 
     identifier: chatfooter
     sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.LightRagFooterComponent
@@ -23296,6 +23558,19 @@ title: Tigo
           .agent-now-row > .agent-now-text { flex: 1 1 auto; min-width: 0; }
           .agent-now-row > .agent-now-spin { flex: 0 0 22px; }
           .agent-now-after { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; }
+          /* Sandbox badge: what the agent of the conversation may do (side column card, status dock chip and tab). Each level
+             mixes its color with the text color, so it stays readable in the light and the dark themes. */
+          .agent-sandbox-chip { align-items: center; border-radius: 999px; display: inline-flex; flex: 0 0 auto; font-size: 12px; font-weight: 600; gap: 4px; line-height: 18px; padding: 1px 8px; white-space: nowrap; }
+          .agent-sandbox-chip ion-icon { flex: 0 0 auto; font-size: 13px; }
+          .agent-sandbox-chip.is-confined { background: color-mix(in srgb, #16a34a 14%, transparent 86%); color: color-mix(in srgb, #16a34a 72%, var(--modern-text, #0f172a) 28%); }
+          .agent-sandbox-chip.is-limited { background: color-mix(in srgb, #d97706 15%, transparent 85%); color: color-mix(in srgb, #d97706 75%, var(--modern-text, #0f172a) 25%); }
+          .agent-sandbox-chip.is-open { background: color-mix(in srgb, #dc2626 13%, transparent 87%); color: color-mix(in srgb, #dc2626 75%, var(--modern-text, #0f172a) 25%); }
+          .agent-sandbox-chip.is-studio { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 16%, transparent 84%); color: color-mix(in srgb, var(--modern-muted, #94a3b8) 55%, var(--modern-text, #0f172a) 45%); }
+          .agent-sandbox-card .agent-side-head { align-items: center; gap: 10px; }
+          .agent-sandbox-lines { display: flex; flex-direction: column; gap: 6px; }
+          .agent-sandbox-line { color: var(--modern-text, #0f172a); font-size: 13px; line-height: 18px; margin: 0; }
+          .agent-sandbox-line + .agent-sandbox-line { color: var(--modern-muted, #94a3b8); font-size: 12.5px; }
+          .agent-dock-sandbox { font-size: 11.5px; padding: 0 7px; }
           '
 ↓TigoHistoryListStyle [ngx.components.UIStyle-1792416226627]: 
   styleContent: 
