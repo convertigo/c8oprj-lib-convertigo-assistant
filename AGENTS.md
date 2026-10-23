@@ -327,6 +327,12 @@ rediscovering the same context.
   before that message; the Bridge stops the process after 3 min idle without a
   message and keeps one prewarm per user. Never in the Studio, nor for Codex or
   Claude. Cover with `node --test tests/assistant_prewarm.test.cjs`.
+- AgentWorkspaceImage serves the thumbnails of the agent's image calls: the
+  Studio (WEB_ADMIN) as before; a No Code session the images of its user's own
+  attachments only (agents/<provider>/users/<user>/conversations/<id>/attachments,
+  agents/attachments/<user>/), the user taken from the session, so the images the
+  Agent Bridge describes for a model that cannot see show as in the Studio.
+  Cover with `node --test tests/assistant_workspace_image.test.cjs`.
 
 ## Validation
 
