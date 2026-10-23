@@ -1,6 +1,6 @@
 // The Studio Assistant shows the images its agent looked at; a No Code user saw none: AgentWorkspaceImage served
 // WEB_ADMIN sessions only. A No Code session now gets the images of its user's own attachments, the ones the Agent
-// Bridge describes for a model that cannot see, and nothing else of the server.
+// Bridge describes for a model that cannot see, and of its agent's working folder, and nothing else of the server.
 // node --test tests/assistant_workspace_image.test.cjs
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -59,11 +59,14 @@ test('the user folder name is the Assistant\'s', () => {
   assert.equal(api.userPathSlug(user), 'charlesg_convertigo.com--6f44028bedca0f0f', 'the folder of test-nocode');
 });
 
-test('a No Code session reads its own attachments only', () => {
+test('a No Code session reads its own attachments and its agent\'s working files only', () => {
   const slug = assistantSlug(user);
-  const own = ['/ws/agents/attachments/' + slug + '/shared/form.png', '/ws/agents/convertigo/users/' + slug + '/conversations/agent-1/attachments/scan.png'];
+  const own = ['/ws/agents/attachments/' + slug + '/shared/form.png', '/ws/agents/convertigo/users/' + slug + '/conversations/agent-1/attachments/scan.png',
+    '/ws/agents/vibe/homes-convertigo/users/' + slug + '/scratch/conversation-1/chart.png'];
   const others = ['/ws/agents/attachments/other--0000000000000000/shared/x.png', '/ws/agents/convertigo/users/' + slug + '/conversations/agent-1/transcript.png',
-    '/ws/agents/vibe/homes-convertigo/users/' + slug + '/x.png', '/projects/C8Oforms/x.png', '/ws/agents/attachments/' + slug + '/shared/../../other/shared/x.png'];
+    '/ws/agents/vibe/homes-convertigo/users/' + slug + '/x.png', '/ws/agents/vibe/homes-convertigo/users/' + slug + '/.vibe-home/logs/x.png',
+    '/ws/agents/vibe/homes-convertigo/users/other--0000000000000000/scratch/conversation-1/x.png',
+    '/projects/C8Oforms/x.png', '/ws/agents/attachments/' + slug + '/shared/../../other/shared/x.png'];
   [...own, ...others].forEach(p => files.add(path.resolve(p)));
   const nocode = load({ user: 'google:108792390496318778325:' + user });
   for (const p of own) {

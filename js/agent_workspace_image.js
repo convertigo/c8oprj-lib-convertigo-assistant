@@ -6,9 +6,11 @@
  * projects folder (relative paths are tried in that order, the canonical path is checked), 10 MB at most, and a PNG,
  * JPEG or WebP content (decided by the bytes, never by the name): no other file of the workspace can be read.
  *
- * A No Code user (a session without WEB_ADMIN) gets the images of their own attachments only, the ones the Agent Bridge
- * had described for a model that cannot see: agents/<provider>/users/<user>/conversations/<id>/attachments and
- * agents/attachments/<user>/ of the user workspace, the user being the one of the session, never of the request.
+ * A No Code user (a session without WEB_ADMIN) gets the images of their own conversations only: their attachments (the
+ * ones the Agent Bridge describes for a model that cannot see), agents/<provider>/users/<user>/conversations/<id>/
+ * attachments and agents/attachments/<user>/, and the images their agent made or opened in its working folder,
+ * agents/vibe/homes-<profile>/users/<user>/scratch/<conversation>/, the user being the one of the session, never of
+ * the request.
  */
 var C8O = C8O || {};
 (function (api) {
@@ -73,12 +75,13 @@ var C8O = C8O || {};
     return parts.length > 2 && last.indexOf("@") > 0 ? last : user;
   };
 
-  // a path relative to <user workspace>/agents that holds one of the user's attachments
-  api.isOwnAttachment = function (relative, userId) {
+  // a path relative to <user workspace>/agents that holds one of the user's attachments or agent working files
+  api.isOwnImage = function (relative, userId) {
     var slug = api.userPathSlug(userId).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     var rel = String(relative).replace(/\\/g, "/");
     return new RegExp("^[^/]+/users/" + slug + "/conversations/[^/]+/attachments/[^/]").test(rel)
-      || new RegExp("^attachments/" + slug + "/[^/]+/[^/]").test(rel);
+      || new RegExp("^attachments/" + slug + "/[^/]+/[^/]").test(rel)
+      || new RegExp("^vibe/homes-[^/]+/users/" + slug + "/scratch/[^/]+/[^/]").test(rel);
   };
 
   api.read = function (ctx, args) {
@@ -104,7 +107,7 @@ var C8O = C8O || {};
     var inside = function (file) {
       for (var i = 0; i < roots.length; i++) {
         if (file.toPath().startsWith(roots[i].toPath())) {
-          return admin || api.isOwnAttachment(String(roots[i].toPath().relativize(file.toPath())), userId);
+          return admin || api.isOwnImage(String(roots[i].toPath().relativize(file.toPath())), userId);
         }
       }
       return false;
