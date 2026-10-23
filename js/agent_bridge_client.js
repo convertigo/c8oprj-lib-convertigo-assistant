@@ -2156,7 +2156,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   // A No Code conversation's Vibe took 11 s to start, process and session, before its first answer (test-nocode).
   // Opening the panel starts one in the background for the user's next conversation, whose first message takes it
-  // (takePrewarmedConversation). Nothing of that conversation is saved before its first message; the Bridge stops its
+  // (takePrewarmedConversation) and starts the next one. Nothing of that conversation is saved before its first message; the Bridge stops its
   // process after 3 min idle without one, keeps one prewarm per user, and restarts it on that message if the start
   // asks for another configuration.
   var PREWARM_SESSION_KEY = "lib_ConvertigoAssistant.prewarmedConversation";
@@ -8151,6 +8151,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       saveState(state);
       setStateBuffer(state);
       sendMark("state/save");
+      if (prewarmed.length) {
+        // this conversation took the prewarm: the next one gets its own (the Bridge keeps one per user)
+        prewarmNoCodeConversation(options, provider);
+      }
 
       return {
         ok: true,

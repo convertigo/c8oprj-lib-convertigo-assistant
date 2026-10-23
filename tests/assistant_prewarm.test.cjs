@@ -121,3 +121,57 @@ test('the panel opening prewarms, and a new conversation\'s first message takes 
   const send = source.slice(source.indexOf('C8O.assistantAgentBridge.sendMessage = function'), source.indexOf('C8O.assistantAgentBridge.readResponse = function'));
   assert.match(send, /var prewarmed = takePrewarmedConversation\(options\);\n\s+if \(prewarmed\.length\) \{\n\s+options\.threadid = prewarmed;\n\s+\}\n\s+var threadid = normalizeThreadId\(options\.threadid\);/);
 });
+
+// sendMessage with its collaborators faked (as in assistant_turn_running.test.cjs)
+function sendWith({ taken, prompt }) {
+  const ts = require('./helpers/assistant-source.cjs').ts;
+  const ast = ts.createSourceFile('bridge.js', source, ts.ScriptTarget.Latest, true);
+  let send;
+  (function visit(node) {
+    if (ts.isBinaryExpression(node) && node.left.getText(ast) === 'C8O.assistantAgentBridge.sendMessage') send = node.right.getText(ast);
+    ts.forEachChild(node, visit);
+  })(ast);
+  const events = [];
+  const sandbox = {
+    Engine: { isStudioMode: () => false }, C8O: { assistantAgentBridge: {} }, JSON,
+    trim: v => String(v ?? '').trim(), normalizeProvider: v => v, normalizeModel: (_p, m) => m, normalizeReasoningEffort: v => v,
+    normalizeSkillProfile: () => 'nocode',
+    optionsWithRequestFallbacks: v => v, enrichNoCodePrompt: v => v, extractUserMessage: v => v, buildSequencePrompt: v => v,
+    normalizeThreadId: v => String(v ?? ''), readState: () => null, ensureState: v => v,
+    createState: options => ({ threadid: options.threadid || 'agent-new', handle: options.threadid || 'agent-new', provider: options.provider, status: '' }),
+    clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null, conversationTitleFromText: v => v,
+    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {},
+    addArrayValue: (a, v) => (a || []).concat([v]), agentSlashCommandName: () => '',
+    shouldInstallForRun: () => false, shouldShowAgentPreparingProgress: () => false,
+    isResidentProvider: () => false, isVibeHarness: () => true, providerSequence: (_p, action) => 'agent_vibe_' + action,
+    callAgentSetup: () => ({ result: { ok: true, status: 'ready' } }), publicSetupReport: v => v,
+    codexViewerSessionNeedsFreshThread: () => false, agentStartPayload: () => ({}), revealModeOption: () => '', attachedImagePaths: () => [],
+    codexPromptRequiresStart: () => false, rememberCodexSessionFromResult() {}, existingViewerCdpEndpoint: () => '',
+    lang: () => ({ starting: 'Analyse', thinking: 'Je réfléchis', startFailed: 'Échec' }),
+    appendProgress() {}, appendTranscript() {}, saveState() {}, setStateBuffer() {},
+    now: () => 1000000, makeRunId: v => 'run-' + v, publicState: v => v, cancellationRequested: () => false,
+    recoverableBridgeError: () => false, isCodexAuthenticationError: () => false, responseForState: () => ({ AIData: {} }),
+    submitTigoPrompt: () => { events.push('prompt'); return prompt(); },
+    bridgeCall: (_state, sequence) => { events.push(sequence); return { ok: true, status: 'already_running', state: { sessionId: 's1' } }; },
+    bridgeCallerRefusal: () => null, withCallerUserId: options => options || {}, sendMark() {},
+    takePrewarmedConversation: () => taken,
+    prewarmNoCodeConversation: (options, provider) => { events.push('prewarm:' + provider + ':' + (options.threadid || '')); return null; }
+  };
+  vm.runInNewContext('var sendMessage = ' + send + ';', sandbox);
+  const response = sandbox.sendMessage({ threadid: '', Question: 'OK ?', provider: 'convertigo', userId: 'forms-user' });
+  return { response, events };
+}
+
+test('a message that took the prewarm starts the next conversation\'s, once its prompt is sent', () => {
+  const { response, events } = sendWith({ taken: 'agent-p1', prompt: () => ({ ok: true, requestId: 1, cursor: 3 }) });
+  assert.equal(response.status, 'queued');
+  assert.equal(response.threadid, 'agent-p1', 'the conversation is the prewarmed one');
+  assert.deepEqual(events, ['agent_vibe_start', 'prompt', 'prewarm:convertigo:agent-p1']);
+});
+
+test('no new prewarm for a conversation that did not take one, nor when its prompt failed', () => {
+  assert.deepEqual(sendWith({ taken: '', prompt: () => ({ ok: true, requestId: 1 }) }).events, ['agent_vibe_start', 'prompt']);
+  const failed = sendWith({ taken: 'agent-p1', prompt: () => ({ ok: false, status: 'error', error: 'Vibe died' }) });
+  assert.equal(failed.response.ok, false);
+  assert.ok(!failed.events.some(event => event.startsWith('prewarm')));
+});

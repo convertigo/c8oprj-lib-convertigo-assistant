@@ -322,7 +322,8 @@ rediscovering the same context.
   the Vibe of the user's next conversation: `prewarmNoCodeConversation` posts
   agent_vibe_start with `prewarm` from a background thread (Bridge 0.4.28 and
   later) and keeps the conversation id in the HTTP session; the first message of
-  a new conversation takes it (`takePrewarmedConversation`). Nothing is saved
+  a new conversation takes it (`takePrewarmedConversation`) and, once its prompt
+  is sent, prewarms the next conversation's. Nothing is saved
   before that message; the Bridge stops the process after 3 min idle without a
   message and keeps one prewarm per user. Never in the Studio, nor for Codex or
   Claude. Cover with `node --test tests/assistant_prewarm.test.cjs`.
