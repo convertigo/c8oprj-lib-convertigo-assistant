@@ -6517,10 +6517,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
-  function callAgentSetup(state, options, installOverride) {
+  // Before a message, the setup only checks that the agent is installed (Bridge 0.4.28 and later; its start checks it
+  // again): the full check ran vibe-acp --version twice, 7 to 10 s on every message, warm ones too (test-nocode).
+  function callAgentSetup(state, options, installOverride, presenceOnly) {
     var provider = normalizeProvider(state.provider);
     var setupSequence = providerSequence(provider, "setup");
-    var setup = bridgeCall(state, setupSequence, agentSetupPayload(state, options, installOverride), 900000);
+    var payload = agentSetupPayload(state, options, installOverride);
+    if (presenceOnly === true) {
+      payload.startupPresenceOnly = "true";
+    }
+    var setup = bridgeCall(state, setupSequence, payload, 900000);
     return {
       provider: provider,
       sequence: setupSequence,
@@ -7841,7 +7847,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var closeSequence = providerSequence(provider, "close");
       var installRequested = runInstallRequested;
       if (!isResidentProvider(provider)) {
-        var setupInfo = callAgentSetup(state, options, installRequested);
+        var setupInfo = callAgentSetup(state, options, installRequested, true);
         var setup = setupInfo.result || {};
         if (setup.ok === false) {
           var setupStatus = trim(setup.status).toLowerCase();

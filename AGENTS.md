@@ -313,6 +313,11 @@ rediscovering the same context.
   its sequence. With the Bridge's `agents/vibe/startup-timings.ndjson` it tells
   where a cold start spends its time. Cover with
   `node --test tests/assistant_send_timings.test.cjs`.
+- Before a Vibe message, `callAgentSetup` asks the Bridge for a presence check
+  only (`startupPresenceOnly`, Bridge 0.4.28 and later): the full check ran
+  `vibe-acp --version` twice, 7 to 10 s on every message. The setup screen and an
+  installation keep the full check. Cover with
+  `node --test tests/assistant_setup_presence.test.cjs`.
 
 ## Validation
 
