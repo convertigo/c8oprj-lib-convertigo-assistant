@@ -154,7 +154,7 @@ test('Every Assistant entry point that reaches the Bridge refuses first, before 
     assert.equal(first[name], 'var refused = bridgeCallerRefusal();', name);
     assert.match(second[name], /^options = withCallerUserId\((optionsWithRequestFallbacks\(options( \|\| \{\})?\)|options)\);$/, name);
   }
-  assert.match(source, /function bridgeCall\(options, sequence, params, timeoutMs\) \{\n    requireBridgeCaller\(\);/);
+  assert.match(source, /function bridgeCall\(options, sequence, params, timeoutMs, background\) \{\n    requireBridgeCaller\(\);/);
 });
 
 test('A server user\'s feedback folder and conversations share one key, pinned with lib_ConvertigoMCP reporting.feedbackUserKey', () => {

@@ -1795,6 +1795,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // everything the call needs (url, payload, caller key) is resolved in the request; the thread only posts
+  function startBackgroundPost(urlText, params, timeoutMs, headers) {
+    var thread = new java.lang.Thread(new java.lang.Runnable({
+      run: function () {
+        try {
+          postForm(urlText, params, timeoutMs, headers);
+        } catch (_ignoreBackgroundPost) {}
+      }
+    }), "c8o-assistant-background-call");
+    thread.setDaemon(true);
+    thread.start();
+  }
+
   function postForm(urlText, params, timeoutMs, headers) {
     var conn = new URL(urlText).openConnection();
     conn.setRequestMethod("POST");
@@ -1832,7 +1845,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return JSON.parse(text);
   }
 
-  function bridgeCall(options, sequence, params, timeoutMs) {
+  // background: the request does not wait for the call (the prewarm of a conversation); its answer is dropped
+  function bridgeCall(options, sequence, params, timeoutMs, background) {
     requireBridgeCaller();
     var payload = {
       __connector: "void",
@@ -1873,6 +1887,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       headers[BRIDGE_CALLER_KEY_HEADER] = bridgeCallerKey();
     }
     sendMark(sequence + "/payload");
+    if (background === true) {
+      startBackgroundPost(bridgeUrl, payload, timeoutMs || 70000, headers);
+      return { ok: true, status: "background" };
+    }
     var response = postForm(bridgeUrl, payload, timeoutMs || 70000, headers);
     sendMark(sequence);
     if (response && response.error && /agent_bridge_caller_refused/.test(String(response.error.details || response.error.message || ""))) {
@@ -2134,6 +2152,77 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       mcpCatalogKey: mcpCatalogKey(state),
       requestTimeoutMs: "60000"
     };
+  }
+
+  // A No Code conversation's Vibe took 11 s to start, process and session, before its first answer (test-nocode).
+  // Opening the panel starts one in the background for the user's next conversation, whose first message takes it
+  // (takePrewarmedConversation). Nothing of that conversation is saved before its first message; the Bridge stops its
+  // process after 3 min idle without one, keeps one prewarm per user, and restarts it on that message if the start
+  // asks for another configuration.
+  var PREWARM_SESSION_KEY = "lib_ConvertigoAssistant.prewarmedConversation";
+  var PREWARM_REUSE_MS = 150000;
+  var PREWARM_TAKE_MS = 180000;
+
+  function readPrewarm() {
+    try {
+      var text = context && context.httpSession ? context.httpSession.getAttribute(PREWARM_SESSION_KEY) : null;
+      return text === null || typeof text === "undefined" ? null : JSON.parse(String(text));
+    } catch (_ignoreReadPrewarm) {
+      return null;
+    }
+  }
+
+  function prewarmNoCodeConversation(options, provider) {
+    try {
+      provider = trim(provider);
+      if (!provider.length || provider === "all" || normalizeSkillProfile(options) !== "nocode" || !isVibeHarness(provider)
+          || !context || !context.httpSession) {
+        return null;
+      }
+      provider = normalizeProvider(provider);
+      var current = readPrewarm();
+      if (current !== null && current.provider === provider && now() - Number(current.at || 0) < PREWARM_REUSE_MS) {
+        return current;
+      }
+      var prewarmOptions = {};
+      for (var key in options) {
+        if (Object.prototype.hasOwnProperty.call(options, key)) {
+          prewarmOptions[key] = options[key];
+        }
+      }
+      prewarmOptions.provider = provider;
+      prewarmOptions.threadid = "";
+      var state = ensureState(createState(prewarmOptions));
+      var payload = agentStartPayload(state, prewarmOptions, provider, false);
+      payload.prewarm = "true";
+      bridgeCall(state, providerSequence(provider, "start"), payload, 90000, true);
+      var record = { threadid: state.threadid, provider: provider, userKey: state.userKey, at: Number(now()) };
+      context.httpSession.setAttribute(PREWARM_SESSION_KEY, JSON.stringify(record));
+      sendMark("prewarm");
+      return record;
+    } catch (_ignorePrewarm) {
+      return null;
+    }
+  }
+
+  // the prewarmed conversation a new No Code conversation's first message takes, or ""; offered once
+  function takePrewarmedConversation(options) {
+    var provider = trim(options.provider || options.agentProvider);
+    if (normalizeThreadId(options.threadid).length || !provider.length || normalizeSkillProfile(options) !== "nocode") {
+      return "";
+    }
+    var record = readPrewarm();
+    if (record === null) {
+      return "";
+    }
+    try {
+      context.httpSession.removeAttribute(PREWARM_SESSION_KEY);
+    } catch (_ignoreTakePrewarm) {}
+    if (record.provider !== normalizeProvider(provider) || record.userKey !== normalizeUserKey(options.userId)
+        || now() - Number(record.at || 0) > PREWARM_TAKE_MS) {
+      return "";
+    }
+    return trim(record.threadid);
   }
 
   function prewarmCodexAppServer(state, options) {
@@ -6858,6 +6947,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
       sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
       var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
+      if (previewSettings !== null) {
+        prewarmNoCodeConversation(options, previewDefaults.provider);
+      }
       var resolvedProvider = provider === "all" ? "" : (previewDefaults.provider || provider);
       return {
         ok: true,
@@ -6888,7 +6980,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
       var emptySettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
-      applyAgentSettingsDefaults(options, emptySettings, provider);
+      var emptyDefaults = applyAgentSettingsDefaults(options, emptySettings, provider);
+      if (emptySettings !== null) {
+        prewarmNoCodeConversation(options, emptyDefaults.provider);
+      }
       return {
         ok: true,
         id: "",
@@ -7695,6 +7790,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       };
     }
 
+    var prewarmed = takePrewarmedConversation(options);
+    if (prewarmed.length) {
+      options.threadid = prewarmed;
+    }
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
     if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
