@@ -62,6 +62,28 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   // The no-code tools whose results name the user's forms, pages, fields and Baserow tables; the contract only describes
   // the product.
   var NAMING_TOOLS = /^nocode-(?!form-contract-get$)/;
+  // The codes an agent runtime gives a tool call it could not complete (Vibe's MCP and connector runtime, its code
+  // mode), and what they mean. Vibe answers all of them with "The provided tool call failed": the code is what tells the
+  // cause, so it stays readable in the template and the report says what it means.
+  var RUNTIME_CODES = {
+    mcp_timeout: "the call ran past the tool timeout of the agent",
+    client_tool_timeout: "the call ran past the tool timeout of the agent",
+    mcp_transport_disconnected: "the connection to the MCP closed during the call",
+    mcp_transport_failed: "the MCP client failed on the call or on its answer: a JSON-RPC error of the server, an answer outside the output schema of the tool, or a broken stream",
+    mcp_http_error: "the MCP answered with an HTTP error",
+    mcp_invalid_result: "the answer could not be read as an MCP result",
+    mcp_invalid_payload: "the answer could not be read as an MCP result",
+    mcp_authorization_required: "the MCP refused the token of the agent (HTTP 401), and Vibe then suspends the server for the session",
+    mcp_stale_authorization: "the agent held an outdated authorization for the MCP",
+    mcp_unknown_route: "the tool was not available to the agent: its MCP server was suspended or not discovered yet",
+    mcp_discovery_pending: "the tool was not available to the agent: its MCP server was not discovered yet",
+    mcp_unknown_server: "the MCP server was not configured for the agent",
+    mcp_runtime_closed: "the MCP runtime of the agent was closed",
+    mcp_invalid_configuration: "the MCP server of the agent is misconfigured",
+    connector_invalid_result: "the answer could not be read as a connector result",
+    jsonSchemaArgumentValidationError: "the arguments did not match the input schema of the tool"
+  };
+  var RUNTIME_CODE_PATTERN = new RegExp("\\b(?:" + Object.keys(RUNTIME_CODES).join("|") + ")\\b", "g");
   F.SCHEMA = SCHEMA;
   F.LIMITS = LIMITS;
 
@@ -168,6 +190,12 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return line.length;
     }).slice(0, 2);
     var text = F.redact(lines.join(" / "), names, others, true);
+    // A runtime code (mcp_transport_failed) is a word of the product: it stays as written.
+    var codes = [];
+    text = text.replace(RUNTIME_CODE_PATTERN, function (code) {
+      codes.push(code);
+      return String.fromCharCode(0xE000 + codes.length - 1);
+    });
     text = text.replace(/'[^']*'|"[^"]*"|`[^`]*`|«[^»]*»|“[^”]*”/g, "…");
     // The customer's own names: qualified names (PcaUpdateTracker.pg:Home), snake_case and camelCase identifiers.
     // Product class names (SimpleStep, SqlTransaction) stay readable.
@@ -175,7 +203,49 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     text = text.replace(/\b[a-z][a-z0-9]*(?:_[A-Za-z0-9]+)+\b|\b[a-z]+[A-Z][A-Za-z0-9]*\b/g, "<name>");
     text = text.replace(/\b\d+(?:[.,]\d+)*\b/g, "N");
     text = text.replace(/\s+/g, " ");
+    text = text.replace(/[-]/g, function (mark) {
+      return codes[mark.charCodeAt(0) - 0xE000] || "";
+    });
     return cut(text, LIMITS.template);
+  };
+
+  // The failure an agent runtime gave a tool call, from the Bridge's failure object or from the error of the result
+  // ({"type":"failure",...,"error":{"code":"mcp_transport_failed","retryable":false}}): null for an error of the tool.
+  F.runtimeFailure = function (preview, failure) {
+    var error = failure && typeof failure === "object" ? failure : null;
+    var text = String(preview == null ? "" : preview);
+    if (!error) {
+      try {
+        var value = JSON.parse(text);
+        error = value && typeof value === "object" ? (value.error && typeof value.error === "object" ? value.error : value) : null;
+      } catch (_ignoreCutPreview) {
+        var match = /"code"\s*:\s*"([A-Za-z_]+)"/.exec(text);
+        error = match ? { code: match[1], retryable: /"retryable"\s*:\s*true/.test(text) } : null;
+      }
+    }
+    var code = trim(error && error.code);
+    if (!Object.prototype.hasOwnProperty.call(RUNTIME_CODES, code)) {
+      return null;
+    }
+    return { code: code, retryable: error.retryable === true, details: error.details == null || error.details === "" ? null : error.details };
+  };
+
+  // What a report says of a runtime failure beside its template: the code, whether the runtime retries it, how long the
+  // call took and what the code means, then the details the runtime gave. It is not part of the fingerprint.
+  F.failureSummary = function (failure, durationMs) {
+    if (!failure || !Object.prototype.hasOwnProperty.call(RUNTIME_CODES, failure.code)) {
+      return "";
+    }
+    var parts = [failure.code, failure.retryable === true ? "retryable" : "not retryable"];
+    var ms = durationMs == null || durationMs === "" ? NaN : Number(durationMs);
+    if (isFinite(ms) && ms >= 0) {
+      parts.push("after " + (ms < 10000 ? Math.round(ms / 100) / 10 : Math.round(ms / 1000)) + " s");
+    }
+    var text = parts.join(", ") + ": " + RUNTIME_CODES[failure.code] + ".";
+    if (failure.details != null) {
+      text += " Details: " + (typeof failure.details === "string" ? failure.details : JSON.stringify(failure.details));
+    }
+    return cut(text, LIMITS.summary);
   };
 
   // The MCP tool a Bridge title names, or "" for another tool (shell, files, browser): only Convertigo tools are ours.
@@ -221,6 +291,13 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     if (!isError) {
       return "";
     }
+    var message = namedErrorMessage(text, failed);
+    // An agent runtime that could not complete the call says so in one generic sentence: its code names the cause.
+    var runtime = message.length ? F.runtimeFailure(text) : null;
+    return runtime && message.indexOf(runtime.code) < 0 ? message + " [" + runtime.code + "]" : message;
+  };
+
+  function namedErrorMessage(text, failed) {
     // An answer that names its error says it there: an earlier "message" can be a step of the answer (schema-apply
     // listed "Table already exists." before its error, friction 3615a606fb3f). A cut preview ends inside the message:
     // take what is there.
@@ -243,7 +320,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       }
     }
     return failed === true ? text : "";
-  };
+  }
 
   // TigoAccess's submitFeedback: HTTPS, except a loopback test server (localhost, 127.0.0.1, *.localhost) in plain HTTP.
   F.endpoint = function (host) {
@@ -271,7 +348,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   };
 
   // The pure helpers every bound feedback object shares.
-  var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "endpoint", "provider"];
+  var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "runtimeFailure",
+    "failureSummary", "endpoint", "provider"];
 
   // The feedback API bound to one store: the Studio's (engine-wide), or one server user's.
   function bind(F, store) {
@@ -559,7 +637,13 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       if (!tool.length || !message.length) {
         return null;
       }
-      return F.add("tool_error", { subject: tool, template: F.template(message, store().projectNames(), customerNames()) }, options);
+      var finding = { subject: tool, template: F.template(message, store().projectNames(), customerNames()) };
+      // A runtime failure (Vibe's "The provided tool call failed") also says its code, its duration and what it means.
+      var summary = F.failureSummary(options.failure, options.durationMs);
+      if (summary.length) {
+        finding.summary = summary;
+      }
+      return F.add("tool_error", finding, options);
     };
 
     F.collectRuntimeError = function (options) {
@@ -616,7 +700,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
           continue;
         }
         var message = F.errorMessage(event.detail, event.status === "failed" || event.status === "error");
-        if (message.length && F.collectToolError({ tool: event.toolName || event.title, message: message, provider: provider, model: model, surface: surface })) {
+        var duration = Number(event.completedAt) > 0 && Number(event.at) > 0 ? Number(event.completedAt) - Number(event.at) : null;
+        if (message.length && F.collectToolError({ tool: event.toolName || event.title, message: message, failure: F.runtimeFailure(event.detail),
+          durationMs: duration, provider: provider, model: model, surface: surface })) {
           count++;
         }
       }

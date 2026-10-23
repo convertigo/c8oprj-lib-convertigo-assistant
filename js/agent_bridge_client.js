@@ -4791,9 +4791,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var feedback = feedbackModule(state);
       var message = feedback ? feedback.errorMessage(preview, failed) : "";
       if (message.length) {
-        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+        feedback.collectToolError({ tool: title, message: message, failure: feedback.runtimeFailure(preview, data && data.failure),
+          durationMs: feedbackToolDuration(state, data), provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
+  }
+
+  // How long a failed call took: the Bridge measures it (failure.durationMs), else from when this client saw it start.
+  function feedbackToolDuration(state, data) {
+    var measured = data && data.failure && data.failure.durationMs != null ? Number(data.failure.durationMs) : NaN;
+    if (isFinite(measured) && measured >= 0) {
+      return measured;
+    }
+    var callId = toolCallId(data);
+    for (var i = 0; callId.length && state.progressEvents && i < state.progressEvents.length; i++) {
+      var event = state.progressEvents[i];
+      if (event && event.callId === callId && Number(event.at) > 0) {
+        return Math.max(0, now() - Number(event.at));
+      }
+    }
+    return null;
   }
 
   function collectFeedbackRuntimeError(state, message) {

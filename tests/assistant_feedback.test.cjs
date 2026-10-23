@@ -827,3 +827,52 @@ test('the agent also restarts on its session when the Convertigo MCP is updated:
   sandbox.version = '';
   assert.equal(sandbox.mcpCatalogKey({}), '');
 });
+
+// Low-code friction of Studio 8.4.6 users: 39 reports said only "The provided tool call failed", Vibe's sentence for
+// every tool call it could not complete. Its error code is the cause.
+test('a tool call Vibe could not complete is reported with its code, what the code means and how long the call took', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const vibe = (code, retryable) => JSON.stringify({ type: 'failure', content: [],
+    _meta: { approval: { approvalSource: 'config', approvalType: 'always', decision: 'execute' } },
+    error: { code, message: 'The provided tool call failed', retryable } });
+  assert.equal(F.errorMessage(vibe('mcp_transport_failed', false), true), 'The provided tool call failed [mcp_transport_failed]');
+  assert.deepEqual({ ...F.runtimeFailure(vibe('mcp_timeout', true)) }, { code: 'mcp_timeout', retryable: true, details: null });
+  assert.equal(F.runtimeFailure('{"code":"-1","message":"Database object not found"}'), null, 'an error of the tool itself');
+  const cut = vibe('mcp_timeout', true);
+  assert.equal(F.runtimeFailure(cut.slice(0, cut.indexOf('"message"') + 12)).code, 'mcp_timeout', 'a cut preview');
+  assert.equal(F.errorMessage('{"code":"-1","message":"target: Database object not found"}', false), 'target: Database object not found');
+
+  const collect = (code, durationMs) => F.collectToolError({ tool: 'mcp_Convertigo.databaseobject_tree_get', message: F.errorMessage(vibe(code, false), true),
+    failure: F.runtimeFailure(vibe(code, false)), durationMs, provider: 'convertigo', model: 'glm-5-3' });
+  const first = collect('mcp_transport_failed', 420);
+  assert.equal(first.finding.template, 'The provided tool call failed [mcp_transport_failed]', 'the code stays readable');
+  assert.equal(first.finding.summary, 'mcp_transport_failed, not retryable, after 0.4 s: the MCP client failed on the call or on its answer: '
+    + 'a JSON-RPC error of the server, an answer outside the output schema of the tool, or a broken stream.');
+  assert.equal(collect('mcp_transport_failed', 31000).count, 2, 'the same cause with another duration counts once');
+  const timeout = collect('mcp_timeout', 600000);
+  assert.notEqual(timeout.fingerprint, first.fingerprint, 'another cause, another report');
+  assert.match(timeout.finding.summary, /^mcp_timeout, not retryable, after 600 s: the call ran past the tool timeout of the agent\.$/);
+  assert.equal(F.pending().length, 2);
+
+  // The code is a word of the product; a snake_case name of the customer is still masked.
+  assert.equal(F.template('q_test_dates of PcaUpdateTracker failed [mcp_timeout]', ['PcaUpdateTracker']), '<name> of <project> failed [mcp_timeout]');
+  assert.equal(F.failureSummary({ code: 'mcp_http_error', retryable: false, details: { status: 503 } }, null),
+    'mcp_http_error, not retryable: the MCP answered with an HTTP error. Details: {"status":503}');
+  assert.equal(F.failureSummary({ code: 'other_code' }, 10), '');
+
+  // A turn turned on from the nudge: the saved events give the code and the duration.
+  const { F: nudged } = feedback({ settings: { mode: 'off', decidedAt: 1 } });
+  const events = [{ type: 'tool', toolName: 'mcp_Convertigo.palette_describe', status: 'failed', detail: vibe('mcp_authorization_required', false), at: 1000, completedAt: 1250 }];
+  const result = nudged.run({ action: 'mode', mode: 'ask', events, provider: 'convertigo', model: 'mistral-large-4' });
+  assert.equal(result.pending[0].finding.template, 'The provided tool call failed [mcp_authorization_required]');
+  assert.match(result.pending[0].finding.summary, /^mcp_authorization_required, not retryable, after 0\.3 s: the MCP refused the token/);
+});
+
+test('the duration of a failed call: measured by the Bridge, else from when this client saw the call start', () => {
+  const sandbox = { toolCallId: data => (data && data.toolCallId) || '', now: () => 5000 };
+  vm.runInNewContext(backendParts(['feedbackToolDuration']), sandbox);
+  const state = { progressEvents: [{ callId: 'effect-1', at: 4600 }] };
+  assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-1', failure: { durationMs: 650 } }), 650);
+  assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-1', failure: { durationMs: null } }), 400, 'the Bridge saw no start');
+  assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-2' }), null, 'unknown, not 0');
+});

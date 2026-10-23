@@ -45,7 +45,7 @@ Studio), it needs the server's feedback key (see "On a server") and each signed-
 | Kind | Source | Content |
 | --- | --- | --- |
 | `agent_friction` | the agent, with the MCP tool `report-create` (listed only with consent) | area, subject, severity, summary, suggestion |
-| `tool_error` | a Convertigo MCP tool that fails or answers an error | tool, error template |
+| `tool_error` | a Convertigo MCP tool that fails or answers an error | tool, error template; for a call the agent runtime could not complete, its code, whether it retries it, the duration of the call and what the code means |
 | `runtime_error` | a turn that fails (agent process, gateway, protocol) | provider, error template |
 | `user_report` | `/signaler <comment>` (`/report <comment>`) on the last turn | comment, the turn's tools and their status |
 
@@ -121,6 +121,13 @@ Tigo in the No Code Studio of a server (C8Oforms) offers the same feedback to ea
 ```
 
 `turn` and `comment` are only set for `user_report`; `template` for `tool_error` and `runtime_error`.
+
+Vibe answers every tool call it could not complete with "The provided tool call failed": the cause is its error code
+(`mcp_transport_failed`, `mcp_timeout`, `mcp_authorization_required`...), which the Bridge passes with the tool update
+(`failure`: code, retryable, details, duration). The template of such a `tool_error` ends with the code in brackets, so
+each cause has its own fingerprint, and its `summary` says the code, whether Vibe retries it, the duration of the call
+and what the code means (`mcp_transport_failed, not retryable, after 0.4 s: the MCP client failed on the call or on its
+answer: ...`). Runtime codes are words of the product: they are never masked.
 
 ## Sending
 
