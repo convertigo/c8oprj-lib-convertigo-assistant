@@ -80,6 +80,16 @@ test('an error template keeps the shape of an error, so the same error with othe
   assert.equal(F.errorMessage(result, false), 'Database object not found: PfDelta.sq:nexistepas. QName shape: ...');
   assert.match(F.errorMessage(result.slice(0, 120), false), /^Database object not found: PfDelta\.sq/);
   assert.equal(F.errorMessage('raw failure', true), 'raw failure');
+  // The error the answer names wins over an earlier "message" (schema-apply listed its planned actions first:
+  // friction 3615a606fb3f recorded "Table already exists.").
+  const schemaApply = { status: 'error', actions: [{ type: 'table_exists', message: 'Table already exists.' }], error: { code: 'baserow_schema_apply_failed', message: 'Baserow did not create the view Liste' } };
+  assert.equal(F.errorMessage(JSON.stringify(schemaApply), false), 'Baserow did not create the view Liste');
+  const wrapped = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify(schemaApply) }] });
+  assert.equal(F.errorMessage(wrapped, false), 'Baserow did not create the view Liste');
+  const cut = JSON.stringify(schemaApply);
+  assert.equal(F.errorMessage(cut.slice(0, cut.indexOf('the view')), false), 'Baserow did not create ', 'a cut preview keeps the error, not the action');
+  assert.equal(F.errorMessage('{"status":"error","error":"no table"}', false), 'no table');
+  assert.equal(F.errorMessage('{"status":"error","error":{"code":"x","message":""},"message":"other"}', false), 'other');
 });
 
 test('consent: off by default, the user chooses unless the administrator imposes a mode, Studio only', () => {

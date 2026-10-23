@@ -221,8 +221,20 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     if (!isError) {
       return "";
     }
-    // A cut preview ends inside the message: take what is there.
-    var match = /"message"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/.exec(text);
+    // An answer that names its error says it there: an earlier "message" can be a step of the answer (schema-apply
+    // listed "Table already exists." before its error, friction 3615a606fb3f). A cut preview ends inside the message:
+    // take what is there.
+    var named = null;
+    try {
+      named = JSON.parse(text).error;
+    } catch (_ignoreCutPreview) {}
+    if (typeof named === "string" && trim(named).length) {
+      return named;
+    }
+    if (named && typeof named === "object" && typeof named.message === "string" && trim(named.message).length) {
+      return named.message;
+    }
+    var match = /"error"\s*:\s*\{[^{}]*?"message"\s*:\s*"((?:[^"\\]|\\.)+)(?:"|$)/.exec(text) || /"message"\s*:\s*"((?:[^"\\]|\\.)+)(?:"|$)/.exec(text);
     if (match) {
       try {
         return JSON.parse("\"" + match[1] + "\"");
