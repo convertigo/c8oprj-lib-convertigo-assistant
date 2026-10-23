@@ -3512,6 +3512,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour du traitement.",
       bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
+      turnRunning: "Tigo travaille encore sur votre message pr\u00e9c\u00e9dent dans cette conversation. Attendez la fin de ce tour, ou arr\u00eatez-le, puis renvoyez votre message.",
       codexAuthExpired: "L'authentification du profil local de l'agent a expiré ou est absente. Utilisez le bouton de connexion de la configuration de l'agent pour vous authentifier dans votre navigateur, puis renvoyez la demande.",
       gatewayModelDenied: "Accès au modèle {model} refusé par LiteLLM (HTTP 403). Vérifiez les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
       gatewayKeyRejected: "LiteLLM a refusé la clé d'API (HTTP 401). Vérifiez la clé configurée pour l'agent Convertigo.",
@@ -3552,6 +3553,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "I cannot read the current response.",
       bridgeStateRecover: "I am checking that the task is still running.",
       bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
+      turnRunning: "Tigo is still working on your previous message in this conversation. Wait for this turn to end, or stop it, then send your message again.",
       codexAuthExpired: "The local agent profile authentication has expired or is missing. Use the sign-in button of the agent configuration to authenticate in your browser, then send the request again.",
       gatewayModelDenied: "LiteLLM denied access to model {model} (HTTP 403). Check the models allowed for both the key and its LiteLLM user.",
       gatewayKeyRejected: "LiteLLM rejected the API key (HTTP 401). Check the key configured for the Convertigo agent.",
@@ -7487,6 +7489,46 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return result;
   };
 
+  // One turn at a time in a conversation. A message sent while the agent still worked on the previous one (another view of
+  // the conversation, a page that lost track of the running turn) reached Vibe, which refused it ("A turn is already
+  // running"): the conversation then showed the running turn as failed and its answer was lost. Such a message is now
+  // refused before anything of the conversation changes, and the running turn goes on.
+  function runningTurnOf(state) {
+    var status = trim(state && state.status).toLowerCase();
+    if (!trim(state && state.runid).length || ["starting", "queued", "in_progress", "running"].indexOf(status) === -1) {
+      return null;
+    }
+    // A message is being sent: its prompt does not run yet.
+    if (status === "starting" && now() - Number(state.updatedAt || 0) < 120000) {
+      return { runid: state.runid, status: status };
+    }
+    if (!trim(state.handle).length) {
+      return null;
+    }
+    try {
+      var events = bridgeCall(state, "agent_events", { handle: state.handle, cursor: String(Number(state.cursor || 0)), limit: "1", waitMs: "0" }, 15000);
+      var bridgeState = events && events.state || {};
+      return bridgeState.alive === true && bridgeState.turnActive === true ? { runid: state.runid, status: status } : null;
+    } catch (_ignoreBridgeState) {
+      return null;
+    }
+  }
+
+  function turnRunningResponse(state, running) {
+    return {
+      ok: false,
+      id: running.runid,
+      object: "agent.run",
+      status: "turn_running",
+      threadid: state.threadid,
+      error: {
+        code: "turn_running",
+        message: lang(state).turnRunning
+      },
+      state: publicState(state)
+    };
+  }
+
   C8O.assistantAgentBridge.sendMessage = function (options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
@@ -7531,6 +7573,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state: null
       };
     }
+    var running = state !== null ? runningTurnOf(state) : null;
+    if (running !== null) {
+      return turnRunningResponse(state, running);
+    }
+    var stateBeforeSend = state !== null ? JSON.stringify(state) : null;
     if (state === null) {
       state = createState(options);
     }
@@ -7770,9 +7817,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             promptPayload.claudeSessionId = "";
           }
           prompt = null;
-        } else if (prompt.ok === false) {
+        } else if (prompt.ok === false && trim(prompt.status) !== "busy") {
           throw new Error(prompt.error || promptSequence + " failed");
-        } else {
+        } else if (prompt.ok !== false) {
           rememberCodexSessionFromResult(state, prompt);
         }
       }
@@ -7818,6 +7865,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           promptPayload.claudeSessionId = promptPayload.sessionId;
         }
         prompt = submitTigoPrompt(state, promptSequence, promptPayload);
+      }
+      if (prompt.ok === false && trim(prompt.status) === "busy" && stateBeforeSend !== null) {
+        // A turn started between the check above and this prompt: the conversation stays as that turn left it.
+        state = JSON.parse(stateBeforeSend);
+        saveState(state);
+        setStateBuffer(state);
+        return turnRunningResponse(state, { runid: state.runid, status: state.status });
       }
       if (prompt.ok === false) {
         throw new Error(prompt.error || promptSequence + " failed");
