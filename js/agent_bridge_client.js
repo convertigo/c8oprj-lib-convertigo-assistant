@@ -388,6 +388,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return json;
   }
 
+  // Refresh the selected access using the authenticated Studio PSC, never a key supplied by the UI.
+  C8O.assistantAgentBridge.refreshTigoAccess = function () {
+    var result = callLocalSequence("lib_ConvertigoAssistant", "TigoAccessBootstrap", {refresh: "true"});
+    result = result && (result.document || result.doc || result);
+    result = result && (result.document || result);
+    var access = result && result.response;
+    if (!access || access.status !== "ok") {
+      return {status:"error", code:String(access && access.code || "service_unavailable"),
+        error:String(access && access.error || "Tigo access is unavailable.")};
+    }
+    return access;
+  };
+
   function unwrapSequenceResult(response) {
     if (response && response.document && response.document.result) {
       return response.document.result;
@@ -7603,6 +7616,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     try {
       var provider = runProvider;
+      if (provider === "convertigo" && normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode()) {
+        var tigoAccess = C8O.assistantAgentBridge.refreshTigoAccess();
+        if (tigoAccess.status !== "ok") { throw new Error("TigoAccess (" + tigoAccess.code + "): " + tigoAccess.error); }
+      }
       var customResources = C8O.tigoResources ? C8O.tigoResources.prepare(state) : null;
       if (customResources) {
         state.resourceHandle = state.resourceHandle || "lib_ConvertigoAssistant.resources." + String(UUID.randomUUID());

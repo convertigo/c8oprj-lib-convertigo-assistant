@@ -32,7 +32,7 @@ responseTimeout: 120
      if(existingKey.length&&(!metadata||metadata.source!=="TigoAccess"||metadata.keyHash!==hashLocal(existingKey))){response={status:"ok",state:"external_key",message:"Une clé configurée manuellement est conservée.",error:""};}
      else{
       var cached=context.httpSession.getAttribute("assistant.tigo.access");if(cached!=null){try{localAccess=JSON.parse(String(cached));}catch(ignored){}}
-      if(String(refresh)!=="true"&&localAccess&&localAccess.email===email&&existingKey.length&&localAccess.keyHash===hashLocal(existingKey)){
+      if(String(refresh)!=="true"&&localAccess&&localAccess.email===email&&existingKey.length&&localAccess.keyHash===hashLocal(existingKey)&&Number(localAccess.updatedAt)>new Date().getTime()-30000){
        response={status:"ok",state:"ready",account:localAccess.account,quota:localAccess.quota,error:""};
       }else{shouldBootstrap=true;context.httpSession.removeAttribute("assistant.tigo.access");}
      }
@@ -83,18 +83,25 @@ responseTimeout: 120
          privateFiles.restrict(directory);
          var publicAccount={subject:remote.account.subject,email:remote.account.email};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
          var keyHash=hashLocal(c.apiKey);var metadata={version:1,source:"TigoAccess",subject:remote.account.subject,email:remote.account.email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().toISOString()};
-         localOperation="write_key";privateFiles.writePrivate(keyPath,String(c.apiKey)+"\n");
+         var keyChanged=!java.nio.file.Files.isRegularFile(keyPath)||hashLocal(String(new java.lang.String(java.nio.file.Files.readAllBytes(keyPath),"UTF-8")).trim())!==keyHash;
+         localOperation="write_key";if(keyChanged){privateFiles.writePrivate(keyPath,String(c.apiKey)+"\n");}
          localOperation="write_metadata";privateFiles.writePrivate(metadataPath,JSON.stringify(metadata));
          localOperation="cache_access";
-         context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:email,keyHash:keyHash,account:publicAccount,quota:remote.quota}));
+         context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().getTime()}));
          response={status:"ok",state:"ready",account:publicAccount,quota:remote.quota,message:"Accès Tigo configuré.",error:""};
         }catch(ignored){
+         // A failed metadata replacement must not make a managed key look manually configured on retry.
+         var restoredKey=true;
+         if(localOperation==="write_metadata"&&keyChanged){
+          try{if(existingKey&&existingKey.length){privateFiles.writePrivate(keyPath,String(existingKey)+"\n");}else{safePath(keyPath);java.nio.file.Files.deleteIfExists(keyPath);}}catch(rollbackError){restoredKey=false;}
+         }
          var diagnostic=typeof TigoAccessFiles!=="undefined"?TigoAccessFiles.failure(ignored,localOperation):{operation:localOperation,cause:"filesystem_error"};
+         diagnostic.previousKeyRestored=restoredKey;
          log.warn("TigoAccess local credential installation failed ("+diagnostic.operation+", "+diagnostic.cause+")");
          response={status:"error",code:"local_installation_failed",error:"La clé Tigo a été obtenue, mais son enregistrement local a échoué. Vérifiez les droits du dossier agents/convertigo du workspace.",diagnostic:diagnostic};
         }
        }
-      }else if(remote&&remote.status==="error"){response={status:"error",code:String(remote.code||"service_unavailable"),error:"L’accès Tigo n’a pas pu être activé. Vérifiez votre compte ou réessayez."};}
+      }else if(remote&&remote.status==="error"){response={status:"error",code:String(remote.code||"service_unavailable"),error:remote.code==="user_budget_migration_required"?"Votre accès personnel doit être migré par Convertigo avant d’utiliser le budget de l’équipe.":"L’accès Tigo n’a pas pu être activé. Vérifiez votre compte ou réessayez."};}
       secret=null;remoteResult=null;localAccess=null;c=null;
       '
 ↓Response [steps.JsonToXmlStep-1791831268158]: 

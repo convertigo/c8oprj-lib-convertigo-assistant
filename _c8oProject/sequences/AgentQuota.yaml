@@ -35,7 +35,7 @@ responseTimeout: 120
   ↓PublicTigoQuota [steps.SimpleStep-1791878663495]: 
     expression: |
       tigoRead=tigoRead&&(tigoRead.document||tigoRead);var t=tigoRead&&tigoRead.response;
-      if(t&&t.status==="ok"&&t.quota){var q=t.quota;response.quota={provider:"convertigo",source:"tigoaccess",kind:"credit",available:true,offerAmountUsd:q.offerAmountUsd,budgetUsd:q.budgetUsd,spentUsd:q.spentUsd,balanceUsd:q.balanceUsd,keyState:q.keyState,expiresAt:q.expiresAt||null,extensionMode:"manual",updatedAt:new Date().getTime(),windows:[]};}
+      if(t&&t.status==="ok"&&t.quota){var q=t.quota;response.quota={provider:"convertigo",source:"tigoaccess",kind:"credit",available:true,activeScope:q.activeScope||"personal",personal:q.personal||null,team:q.team||null,offerAmountUsd:q.offerAmountUsd,budgetUsd:q.budgetUsd,spentUsd:q.spentUsd,balanceUsd:q.balanceUsd,keyState:q.keyState,expiresAt:q.expiresAt||null,extensionMode:"manual",updatedAt:new Date().getTime(),windows:[]};}
       else{response.status=t&&t.status==="ok"?"ok":"error";response.state=t&&t.state||"unavailable";response.code=String(t&&t.code||"service_unavailable");}
       tigoRead=null;
       

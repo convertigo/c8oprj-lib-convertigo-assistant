@@ -428,7 +428,7 @@ rediscovering the same context.
 ## Tigo 1.5 resource library
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
-- Assistant 1.5.4 / Bridge 0.4.26 / MCP 0.2.26 is the stable bundle (the 1.5
+- Assistant 1.5.5 / Bridge 0.4.27 / MCP 0.2.27 is the stable bundle (the 1.5
   line with the opt-in feedback to Convertigo); the preview manifest points at the
   same bundle.
   `stack-release.json` must equal `stack-release-stable.json`; the Page default
@@ -523,3 +523,19 @@ rediscovering the same context.
   the stable resource id and `description` from its translated description (title
   fallback). Preserve other frontmatter keys and untranslated bodies. Accept
   pasted full SKILL.md documents without adding a second header.
+
+## Tigo personal and team access
+
+- TigoAccess chooses a personal or per-user/team credential after PSC validation.
+  Preserve manual keys and never send credentials to the Page or quota DTO.
+- Refresh managed access before each Studio Convertigo-agent turn. Quota can
+  request PSC rebootstrap after membership changes; an exhausted team never
+  silently falls back to personal credit.
+- The quota popup distinguishes active scope, shared team budget, own member
+  usage and preserved personal credit. Respect `member.budgetReported`; unknown
+  budgets/spend must not become zero or an unlimited allowance.
+- When the active scope changes, refresh model metadata without installing a
+  runtime. Keep local file replacement private/atomic and roll back the key if
+  its paired metadata replacement fails.
+- Run `tests/tigo_access_refresh.test.cjs`, `tests/tigo_access_switch.test.cjs`
+  and `tests/tigo_team_quota.test.cjs` with existing quota and setup checks.

@@ -12,14 +12,18 @@ function visit(node) {
 visit(ast);
 assert.ok(send);
 
-function fixture(provider, setupStatus, install = false, userId = 'forms-user') {
+function fixture(provider, setupStatus, install = false, userId = 'forms-user', accessStatus = 'ok') {
   const state = { provider, userId, threadid: 'test-conversation', language: 'fr', model: 'test-model', title: 'Existing', projectNames: [] };
   const report = { ok: false, status: setupStatus,
     authentication: { configured: false, status: 'missing', action: provider === 'convertigo' ? 'convertigo_key' : 'vibe_login' },
     gatewayApiKey: 'NEVER-EXPOSE-THIS', setup: {}, messages: [] };
   const calls = [];
   const sandbox = {
-    C8O: {},
+    Engine: { isStudioMode: () => userId === 'studio' },
+    C8O: { assistantAgentBridge: { refreshTigoAccess() {
+      calls.push('refresh-tigo');
+      return { status: accessStatus, code: 'service_unavailable', error: 'Access verification unavailable' };
+    } } },
     trim: v => String(v ?? '').trim(), normalizeProvider: v => v,
     normalizeSkillProfile: s => s.userId === 'studio' ? 'generalist' : 'nocode',
     optionsWithRequestFallbacks: v => v, enrichNoCodePrompt: v => v, extractUserMessage: v => v,
@@ -74,4 +78,19 @@ test('Studio Convertigo credential guidance retains the Studio workspace instruc
   const response = fixture('convertigo', 'authentication_required', false, 'studio').response;
   assert.equal(response.status, 'setup_required');
   assert.match(response.AIData.explanation, /workspace Studio/);
+});
+
+// Membership is checked before any setup/start can reuse a cached credential.
+test('Studio refreshes the selected Tigo access before setup on every turn', () => {
+  for (let i = 0; i < 2; i++) {
+    const { response, calls } = fixture('convertigo', 'authentication_required', false, 'studio');
+    assert.deepEqual(calls, ['refresh-tigo', 'setup']);
+    assert.equal(response.status, 'setup_required');
+  }
+});
+test('a failed membership refresh stops the turn without starting an agent or falling back', () => {
+  const { response, calls } = fixture('convertigo', 'authentication_required', false, 'studio', 'error');
+  assert.deepEqual(calls, ['refresh-tigo']);
+  assert.equal(response.status, 'failed');
+  assert.match(response.error.message, /TigoAccess/);
 });

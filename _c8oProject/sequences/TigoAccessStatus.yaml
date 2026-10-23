@@ -48,9 +48,12 @@ responseTimeout: 120
     expression: |
       'remoteStatus=remoteStatus&&(remoteStatus.document||remoteStatus);
       var s=remoteStatus&&remoteStatus.HttpInfo&&remoteStatus.HttpInfo.status;var httpCode=Number(s&&((s.attr&&s.attr.code)||s.code));var remote=remoteStatus&&remoteStatus.object&&remoteStatus.object.response;
-      if(httpCode===200&&remote&&remote.status==="ok"&&remote.quota){
+      if(httpCode===200&&remote&&(remote.refreshRequired===true||remote.code==="authentication_failed"||remote.code==="access_revoked")){
+       include("js/agent_bridge_client.js");
+       response=C8O.assistantAgentBridge.refreshTigoAccess();
+      }else if(httpCode===200&&remote&&remote.status==="ok"&&remote.quota){
        var publicAccount={email:localMetadata.email,subject:localMetadata.subject};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
-       response={status:"ok",state:"ready",quota:remote.quota,account:publicAccount,error:""};context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:localMetadata.email,keyHash:localMetadata.keyHash,account:publicAccount,quota:remote.quota}));
+       response={status:"ok",state:"ready",quota:remote.quota,account:publicAccount,error:""};context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:localMetadata.email,keyHash:localMetadata.keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().getTime()}));
       }else{response={status:"error",code:String(remote&&remote.code||"service_unavailable"),error:"Impossible de consulter le quota Tigo."};}
       apiKey=null;remoteStatus=null;localMetadata=null;
       '

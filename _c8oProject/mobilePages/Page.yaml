@@ -1633,9 +1633,9 @@ scriptContent:
                         schemaVersion: 1,
                         channel: "stable",
                         projects: [
-                            { name: "lib_ConvertigoMCP", version: "0.2.26", tag: "v0.2.26", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.26/lib_ConvertigoMCP.car" },
-                            { name: "lib_ConvertigoAgentBridge", version: "0.4.26", tag: "v0.4.26", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.26/lib_ConvertigoAgentBridge.car" },
-                            { name: "lib_ConvertigoAssistant", version: "1.5.4", tag: "v1.5.4", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.4/lib_ConvertigoAssistant.car" }
+                            { name: "lib_ConvertigoMCP", version: "0.2.27", tag: "v0.2.27", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.27/lib_ConvertigoMCP.car" },
+                            { name: "lib_ConvertigoAgentBridge", version: "0.4.27", tag: "v0.4.27", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.27/lib_ConvertigoAgentBridge.car" },
+                            { name: "lib_ConvertigoAssistant", version: "1.5.5", tag: "v1.5.5", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.5/lib_ConvertigoAssistant.car" }
                         ]
                     };
                 }
@@ -5571,6 +5571,12 @@ scriptContent:
                 try { language = String(this.translate.currentLang || language).toLowerCase(); } catch (ignore) {}
                 var fr = language.indexOf(''fr'') === 0;
                 var labels = {
+                    personal:fr ? ''Personnel'' : ''Personal'', team:fr ? ''Équipe'' : ''Team'',
+                    activeAccess:fr ? ''Accès actif'' : ''Active access'', preserved:fr ? ''Conservé'' : ''Preserved'',
+                    ownTeamSpend:fr ? ''Votre consommation dans l’équipe'' : ''Your team usage'',
+                    noLimit:fr ? ''Sans plafond propre'' : ''No individual limit'',
+                    unavailableSpend:fr ? ''Consommation non disponible'' : ''Usage unavailable'',
+                    teamBudget:fr ? ''Budget partagé'' : ''Shared budget'',
                     usage:fr ? ''Utilisation'' : ''Usage'', close:fr ? ''Fermer'' : ''Close'', used:fr ? ''d’utilisation'' : ''used'', credit:fr ? ''Crédit Tigo'' : ''Tigo credit'', resetIn:fr ? ''Réinitialisation dans'' : ''Resets in'', session:fr ? ''Limite de session'' : ''Session limit'', weekly:fr ? ''Hebdomadaire'' : ''Weekly'', expires:fr ? ''Expiration'' : ''Expires'', loading:fr ? ''Chargement du quota…'' : ''Loading quota…'',
                     window:fr ? ''Fenêtre de quota'' : ''Quota window'',
                     overage:fr ? ''Crédits supplémentaires'' : ''Extra usage'',
@@ -5595,11 +5601,15 @@ scriptContent:
                 if (provider !== this.getAgentProvider()) { return; }
                 if (provider === ''convertigo'' && quota && quota.source === ''wrapper'') { return; }
                 this.local = this.local || {};
+                const previousAccess = this.local.AgentQuota;
+                const changedAccess = provider === ''convertigo'' && previousAccess?.activeScope && quota?.activeScope && (previousAccess.activeScope !== quota.activeScope || previousAccess.team?.id !== quota.team?.id);
                 this.local.AgentQuota = quota || {provider:provider, available:false, windows:[]};
                 this.local.AgentQuotaLoading = false;
                 this.local.AgentQuotaMessage = failed ? this.quotaLabel(''error'') : this.quotaLabel(''unknown'');
                 if (quota && quota.available && quota.kind === ''credit'') {
-                    this.local.AgentQuotaMessage = Number(quota.balanceUsd).toFixed(2) + '' $ '' + this.quotaLabel(''remaining'') + '' / '' + Number(quota.budgetUsd).toFixed(2) + '' $ · '' + this.quotaLabel(quota.keyState || ''active'');
+                    const known = value => value != null && value !== '''' && isFinite(Number(value));
+                    const scope = quota.activeScope === ''team'' ? this.quotaLabel(''team'') + '' · '' + String(quota.team?.name || '''') : quota.activeScope === ''personal'' ? this.quotaLabel(''personal'') : '''';
+                    this.local.AgentQuotaMessage = (scope ? scope + '' · '' : '''') + (known(quota.balanceUsd) ? Number(quota.balanceUsd).toFixed(2) + '' $ '' + this.quotaLabel(''remaining'') : this.quotaLabel(''noLimit'')) + (known(quota.budgetUsd) ? '' / '' + Number(quota.budgetUsd).toFixed(2) + '' $'' : '''') + '' · '' + this.quotaLabel(quota.keyState || ''active'');
                 } else if (quota && quota.available && quota.kind === ''limits'') {
                     this.local.AgentQuotaMessage = this.getAgentProviderLabel(provider);
                 }
@@ -5610,6 +5620,7 @@ scriptContent:
                 }
                 if (provider === ''convertigo'' && /^https:\/\/[^?#]+$/.test(String(portalUrl || ''''))) { this.local.AgentQuotaPortalUrl = portalUrl; }
                 else { this.local.AgentQuotaPortalUrl = ''''; }
+                if(changedAccess && typeof this.refreshAgentModelCatalog === ''function'') { this.refreshAgentModelCatalog(); }
                 this.tick();
             }
             public quotaWindowText(window) {
@@ -5661,12 +5672,34 @@ scriptContent:
                 var q = current && current.provider === provider && this.local.AgentQuotaConversation === String(this.local.Conversation || '''') ? current : null;
                 var rows = [], percent = null, state = '''', expiry = '''', summary = this.quotaLabel(this.local && this.local.AgentQuotaLoading ? ''loading'' : ''unknown'');
                 if(q && q.available && q.kind === ''credit'') {
-                    var budget = Number(q.budgetUsd), spent = Number(q.spentUsd), balance = Number(q.balanceUsd);
-                    if(isFinite(budget) && isFinite(spent) && budget > 0) { percent = Math.max(0, Math.min(100, spent / budget * 100)); }
-                    else if(q.keyState === ''exhausted'') { percent = 100; }
-                    state = String(q.keyState || ''active'');
-                    summary = balance.toFixed(2) + '' $ '' + this.quotaLabel(''remaining'') + '' / '' + budget.toFixed(2) + '' $ · '' + this.quotaLabel(state);
-                    rows.push({title:this.quotaLabel(''credit''),usedPercent:percent,usage:spent.toFixed(2)+'' $ / ''+budget.toFixed(2)+'' $'',reset:'''',state:state});
+                    const finiteAmount = value => value != null && value !== '''' && isFinite(Number(value)) && Number(value) >= 0;
+                    const creditRow = (snapshot, title) => {
+                        const budgetKnown = finiteAmount(snapshot.budgetUsd), spentKnown = finiteAmount(snapshot.spentUsd);
+                        const used = budgetKnown && Number(snapshot.budgetUsd) > 0 && spentKnown ? Math.max(0, Math.min(100, Number(snapshot.spentUsd) / Number(snapshot.budgetUsd) * 100)) : snapshot.keyState === ''exhausted'' ? 100 : null;
+                        let usage = spentKnown ? Number(snapshot.spentUsd).toFixed(2) + '' $'' : this.quotaLabel(''unavailableSpend'');
+                        usage += budgetKnown ? '' / '' + Number(snapshot.budgetUsd).toFixed(2) + '' $'' : spentKnown && snapshot.budgetReported !== false ? '' · '' + this.quotaLabel(''noLimit'') : '''';
+                        rows.push({title:title,usedPercent:used,usage:usage,reset:'''',state:String(snapshot.keyState || ''active'')});
+                        return used;
+                    };
+                    const active = q.activeScope === ''team'' && q.team ? q.team : q.personal || q;
+                    state = String(q.keyState || active.keyState || ''active'');
+                    const scopeTitle = q.activeScope === ''team'' ? this.quotaLabel(''team'') + '' · '' + String(q.team?.name || '''') : this.quotaLabel(''personal'');
+                    summary = scopeTitle + '' · '' + this.quotaLabel(''activeAccess'') + '' · '';
+                    summary += finiteAmount(q.balanceUsd) ? Number(q.balanceUsd).toFixed(2) + '' $ '' + this.quotaLabel(''remaining'') : this.quotaLabel(''noLimit'');
+                    summary += finiteAmount(q.budgetUsd) ? '' / '' + Number(q.budgetUsd).toFixed(2) + '' $'' : '''';
+                    summary += '' · '' + this.quotaLabel(state);
+                    if(q.activeScope === ''team'' && q.team) {
+                        percent = creditRow(q.team, scopeTitle + '' · '' + this.quotaLabel(''teamBudget''));
+                        const member = q.team.member || {};
+                        const memberPercent = creditRow(member, this.quotaLabel(''ownTeamSpend''));
+                        if(member.budgetResetAt && isFinite(Date.parse(String(member.budgetResetAt)))) {
+                            rows[rows.length-1].reset = this.quotaLabel(''reset'') + '' · '' + new Date(member.budgetResetAt).toLocaleString();
+                        }
+                        if(memberPercent != null && (percent == null || memberPercent > percent)) { percent = memberPercent; }
+                        if(q.personal) { creditRow(q.personal, this.quotaLabel(''personal'') + '' · '' + this.quotaLabel(''preserved'')); }
+                    } else {
+                        percent = creditRow(active, q.activeScope ? this.quotaLabel(''personal'') + '' · '' + this.quotaLabel(''activeAccess'') : this.quotaLabel(''credit''));
+                    }
                     if(q.expiresAt && isFinite(Date.parse(String(q.expiresAt)))) { expiry = this.quotaLabel(''expires'') + '' · '' + new Date(q.expiresAt).toLocaleString(); }
                 } else if(q && q.kind === ''limits'' && Array.isArray(q.windows)) {
                     for(var i=0;i<q.windows.length;i++) {
@@ -5687,7 +5720,7 @@ scriptContent:
                 }
                 rows.forEach(row => { row.color=this.quotaUsageColor(row.usedPercent,row.state); });
                 var color=this.quotaUsageColor(percent,state);
-                var label=this.quotaLabel(''usage'')+'' · ''+this.getAgentProviderLabel(provider)+'' · ''+(percent == null ? this.quotaLabel(''unknown'') : Math.round(percent)+'' % ''+this.quotaLabel(''used''));
+                var label=this.quotaLabel(''usage'')+'' · ''+this.getAgentProviderLabel(provider)+'' · ''+(q?.activeScope ? this.quotaLabel(q.activeScope === ''team'' ? ''team'' : ''personal'')+'' · '' : '''')+(percent == null ? this.quotaLabel(''unknown'') : Math.round(percent)+'' % ''+this.quotaLabel(''used''));
                 return {title:this.quotaLabel(''usage''),provider:this.getAgentProviderLabel(provider),percent:percent,color:color,
                     background:''conic-gradient(from 225deg, ''+color+'' 0deg ''+(percent == null ? 0 : percent*2.7)+''deg, var(--ion-color-step-300, #64748b) ''+(percent == null ? 0 : percent*2.7)+''deg 270deg, transparent 270deg 360deg)'',
                     label:label,summary:summary,rows:rows,expiry:expiry,cost:cost,costNote:costNote,context:q && this.local && this.local.AgentQuotaContext || '''',
