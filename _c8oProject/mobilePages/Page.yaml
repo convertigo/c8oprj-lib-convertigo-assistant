@@ -5408,14 +5408,17 @@ scriptContent:
         		}
         		// A summary replaces the history of the conversation: the first click arms the button, a second click within
         		// 6 s compacts (a No Code user looking for a summary to read compacted three times in a minute).
+        		// The page renders on tick(): without it the armed label only showed at the next event.
         		if (this.local.AgentCompactArmed !== mode) {
         			this.local.AgentCompactArmed = mode;
         			clearTimeout(this.local.AgentCompactDisarm);
         			this.local.AgentCompactDisarm = setTimeout(() => {
         				if (this.local && this.local.AgentCompactArmed === mode) {
         					this.local.AgentCompactArmed = "";
+        					this.tick();
         				}
         			}, 6000);
+        			this.tick();
         			return;
         		}
         		clearTimeout(this.local.AgentCompactDisarm);

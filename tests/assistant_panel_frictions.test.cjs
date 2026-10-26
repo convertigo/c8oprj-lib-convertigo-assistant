@@ -34,7 +34,8 @@ function page(profile, language) {
   const sent = [];
   view.global = { currentLanguage: () => language || 'fr' };
   view.local = {};
-  view.tick = () => {};
+  view.ticks = 0;
+  view.tick = () => { view.ticks++; };
   view.getAgentSkillProfile = () => profile;
   view.chatfooter = { setQuestionText: (text) => sent.push(text), submitQuestionFromUI: () => sent.push('<submit>') };
   return { view, sent };
@@ -46,10 +47,12 @@ test('a compaction button asks for a second click, says so, and forgets it after
   view.compactAgentConversation('generic');
   assert.deepEqual(sent, [], 'the first click compacts nothing');
   assert.equal(view.compactButtonLabel('generic'), 'Confirmer la compaction');
+  assert.equal(view.ticks, 1, 'the armed label is rendered at once (on test-nocode it only showed at the next event)');
   assert.equal(view.compactButtonLabel('convertigo'), 'Compacter : résumé Convertigo', 'only the clicked button changes');
   const disarm = timers[timers.length - 1];
   assert.equal(disarm.ms, 6000);
   disarm.run();
+  assert.equal(view.ticks, 2, 'and so is its reset');
   assert.equal(view.compactButtonLabel('generic'), 'Compacter : résumé de l\'agent');
   view.compactAgentConversation('generic');
   view.compactAgentConversation('convertigo');
