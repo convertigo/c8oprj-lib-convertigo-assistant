@@ -6,7 +6,7 @@ const { ts, read, backendParts } = require('./helpers/assistant-source.cjs');
 
 const ENTRY_POINTS = ['createConversation', 'settings', 'setupAgent', 'sendMessage', 'readResponse',
   'resumeConversation', 'deleteConversation', 'closeConversation', 'listConversations', 'renameConversation',
-  'runHistory', 'storeAttachments', 'quota'];
+  'runHistory', 'storeAttachments', 'quota', 'hostRequestResult'];
 
 class FakeUri {
   constructor(text) { this.url = new URL(text); }

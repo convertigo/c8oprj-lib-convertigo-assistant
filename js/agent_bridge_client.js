@@ -8265,7 +8265,74 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return { ok: true, threadid: threadid, runid: runid, events: events, plan: details ? details.plan : null };
   };
 
+  // A read of the turn also hands the panel what the MCP asks of its page (js/agent_host_requests.js): the captures of
+  // the No Code preview nocode-form-preview-capture waits for.
   C8O.assistantAgentBridge.readResponse = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    var response = readResponseOf(options);
+    try {
+      var threadid = response && response.ok !== false ? normalizeThreadId(response.threadid) : "";
+      var requests = threadid.length ? hostRequestsModule().take(threadid, options.userId, hostRequestsHost()) : [];
+      if (requests.length) {
+        response.hostRequests = requests;
+      }
+    } catch (_noHostRequests) {}
+    return response;
+  };
+
+  // The page's answer to a request of the MCP (AgentHostRequestResult): the PNG of a preview capture goes in the
+  // conversation's attachments, where image-describe and the panel's thumbnail read it.
+  C8O.assistantAgentBridge.hostRequestResult = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    var threadid = normalizeThreadId(options.threadid);
+    var host = hostRequestsHost();
+    host.write = function (name, bytes) {
+      var directory = attachmentTargetDirectory({ threadid: threadid, userId: options.userId });
+      directory.mkdirs();
+      var target = new File(directory, name);
+      Files.write(target.toPath(), bytes);
+      return filePath(target);
+    };
+    return hostRequestsModule().result({
+      conversationId: threadid,
+      userId: options.userId,
+      requestId: options.requestId,
+      status: options.status,
+      image: options.image,
+      reason: options.reason
+    }, host);
+  };
+
+  function hostRequestsModule() {
+    if (typeof C8O.assistantHostRequests === "undefined" || typeof C8O.assistantHostRequests.take !== "function") {
+      include("js/agent_host_requests.js");
+    }
+    return C8O.assistantHostRequests;
+  }
+
+  function hostRequestsHost() {
+    return {
+      server: function () {
+        return context.server;
+      },
+      now: function () {
+        return Number(java.lang.System.currentTimeMillis());
+      },
+      decodeBase64: function (text) {
+        return java.util.Base64.getDecoder().decode(String(text));
+      }
+    };
+  }
+
+  function readResponseOf(options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
       return refused;
