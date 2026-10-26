@@ -18,7 +18,7 @@ C8O.assistantHostRequests = C8O.assistantHostRequests || {};
   var STORE_KEY = "lib_ConvertigoAssistant.hostRequests";
   var MAX_PNG_BYTES = 5 * 1024 * 1024;
   // what the page answers instead of an image (the reasons nocode-form-preview-capture explains to the agent)
-  var REASONS = { sharing_off: true, declined: true, unsupported: true, unsupported_browser: true, render_timeout: true, capture_failed: true };
+  var REASONS = { sharing_off: true, declined: true, unsupported: true, unsupported_browser: true, render_timeout: true, capture_failed: true, unknown_page: true };
 
   function str(value) {
     return value == null ? "" : String(value).replace(/^\s+|\s+$/g, "");

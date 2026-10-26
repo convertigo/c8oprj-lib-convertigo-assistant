@@ -76,7 +76,7 @@ test('the page\'s PNG is written in the attachments and the request is done, wit
 });
 
 test('a refusal or a failure of the page fails the request with its reason; an unknown reason is capture_failed', () => {
-  for (const [reason, kept] of [['declined', 'declined'], ['unsupported_browser', 'unsupported_browser'], ['<script>', 'capture_failed']]) {
+  for (const [reason, kept] of [['declined', 'declined'], ['unsupported_browser', 'unsupported_browser'], ['unknown_page', 'unknown_page'], ['<script>', 'capture_failed']]) {
     const w = world();
     w.leave({ status: 'taken', takenAt: 1793000000500 });
     assert.equal(w.api.result({ conversationId: 'agent-1', userId: 'gregoryv@convertigo.com', requestId: 'cap-1', status: 'failed', reason }, w.host).ok, true);
