@@ -955,7 +955,7 @@ scriptContent:
         		try {
         			if (!context || typeof context !== ''object'') { return; }
         			var next: any = {};
-        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''claudeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAssistantVersion'',''localMcpVersion'',''localAgentBridgeVersion'',''localAgentStackUpdateAllowed'',''localAgentStackAvailable'',''localAgentStackState'',''localAgentStackLoading'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl'',''contextVersion'',''embedMode'',''hostOrigin'',''currentFormName'',''formName'',''currentFormRevision'',''formRevision'',''pageName'',''elementId'',''elementName'',''elementType'',''parentElementId'',''selectionKind''];
+        			var keys = [''assistantSurface'',''assistantContext'',''agentProfile'',''skillProfile'',''projectContext'',''defaultProject'',''projectScope'',''userId'',''codexHomeScope'',''vibeHomeScope'',''claudeHomeScope'',''homeScope'',''language'',''locale'',''assistantLanguage'',''theme'',''darkTheme'',''dark-theme'',''currentUrl'',''nocodeCurrentUrl'',''currentRoute'',''nocodeCurrentRoute'',''currentPath'',''currentFormId'',''nocodeCurrentFormId'',''formId'',''applicationId'',''currentPage'',''pageId'',''agentOnboardingFeatureVersion'',''studioVersion'',''assistantUrl'',''assistantRuntime'',''localConvertigoUrl'',''localAssistantUrl'',''downloadUrl'',''canActivateLocalAgent'',''localAssistantInstalled'',''localMcpInstalled'',''localAgentBridgeInstalled'',''localAssistantVersion'',''localMcpVersion'',''localAgentBridgeVersion'',''localAgentStackUpdateAllowed'',''localAgentStackAvailable'',''localAgentStackState'',''localAgentStackLoading'',''localAgentBridgeAvailable'',''agentBridgeAvailable'',''convertigoAssistantImportUrl'',''convertigoMcpImportUrl'',''convertigoAgentBridgeImportUrl'',''contextVersion'',''embedMode'',''hostOrigin'',''currentFormName'',''formName'',''currentFormRevision'',''formRevision'',''pageName'',''elementId'',''elementName'',''elementType'',''parentElementId'',''selectionKind'',''previewSharing''];
         			for (var i = 0; i < keys.length; i++) {
         				var key = keys[i];
         				var raw = context[key];
@@ -967,6 +967,8 @@ scriptContent:
         				var value = this.normalizeAgentHostContextValue(raw);
         				if (value.length) { next[key] = value; }
         			}
+        			// What the host page can do for the agent: preview-capture (nocode-form-preview-capture).
+        			if (Array.isArray(context.capabilities)) { next.capabilities = context.capabilities.map((capability: any) => this.normalizeAgentHostContextValue(capability)); }
         			this.agentHostContext = next;
         			if (!this.local) { this.local = {}; }
         			this.local.AgentHostContext = next;
@@ -1425,6 +1427,10 @@ scriptContent:
         						this.applyAgentActivationStatus(data.payload || data.context || data);
         						return;
         					}
+        					if (type === ''ConvertigoAssistant.preview-capture.result'') {
+        						this.onPreviewCaptureResult(data.payload || {});
+        						return;
+        					}
         				} catch (e) {}
         			};
         			this.ensureAgentNativeContextBridge();
@@ -1472,6 +1478,133 @@ scriptContent:
         			}
         		} catch (e) {}
         		return false;
+        	}
+        
+        	public forwardAgentHostRequests(requests, threadid) {
+        		// The captures of the No Code preview the MCP waits for (nocode-form-preview-capture): the No Code Studio page takes
+        		// them when its context declares preview-capture; any other host answers unsupported at once.
+        		var self: any = this;
+        		self.previewRequests = self.previewRequests || {};
+        		for (var i = 0; requests && i < requests.length; i++) {
+        			var request = requests[i] || {};
+        			var requestId = this.normalizeAgentHostContextValue(request.requestId);
+        			if (!requestId.length || request.kind !== "preview-capture" || self.previewRequests[requestId]) {
+        				continue;
+        			}
+        			var entry: any = {
+        				requestId: requestId,
+        				threadid: this.normalizeAgentHostContextValue(threadid),
+        				formId: this.normalizeAgentHostContextValue(request.formId),
+        				formName: this.normalizeAgentHostContextValue(request.formName),
+        				page: this.normalizeAgentHostContextValue(request.page),
+        				device: request.device === "mobile" ? "mobile" : "desktop"
+        			};
+        			self.previewRequests[requestId] = entry;
+        			var capabilities = (this.agentHostContext && this.agentHostContext.capabilities) || [];
+        			var posted = this.isEmbeddedInC8Oforms() && capabilities.indexOf("preview-capture") >= 0
+        				&& this.postAgentHostMessage({ type: "ConvertigoAssistant.preview-capture", payload: { requestId: entry.requestId, formId: entry.formId, formName: entry.formName, page: entry.page, device: entry.device } });
+        			if (!posted) {
+        				delete self.previewRequests[requestId];
+        				this.sendPreviewCaptureResult(entry, { status: "failed", reason: "unsupported" });
+        			}
+        		}
+        	}
+        
+        	public onPreviewCaptureResult(payload) {
+        		// The answer of the No Code Studio page: the PNG of the preview, a refusal, or the wait for the user to allow sharing
+        		// the tab, which a card of the turn asks them.
+        		var self: any = this;
+        		var requestId = this.normalizeAgentHostContextValue(payload && payload.requestId);
+        		var entry = self.previewRequests && self.previewRequests[requestId];
+        		if (!entry) {
+        			return;
+        		}
+        		var status = "" + (payload.status || "");
+        		if (status === "waiting_sharing") {
+        			if (!entry.waiting) {
+        				entry.waiting = true;
+        				this.sendPreviewCaptureResult(entry, { status: "waiting_sharing" });
+        				this.offerPreviewShare(entry);
+        			}
+        			return;
+        		}
+        		delete self.previewRequests[requestId];
+        		var done = status === "done" && /^data:image\/png;base64,/.test("" + (payload.image || ""));
+        		this.sendPreviewCaptureResult(entry, done ? { status: "done", image: "" + payload.image } : { status: "failed", reason: "" + (payload.reason || "capture_failed") });
+        		if (entry.card && !(entry.card.actions && entry.card.actions.length)) {
+        			entry.card.message = this.agentPreviewText(done ? "shared" : (payload.reason === "declined" ? "declined" : "failed"));
+        			this.tick();
+        		}
+        	}
+        
+        	public sendPreviewCaptureResult(entry, result) {
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentHostRequestResult", {
+        				threadid: entry.threadid,
+        				requestId: entry.requestId,
+        				status: result.status,
+        				image: result.image || "",
+        				reason: result.reason || "",
+        				userId: this.getAgentContextUserId ? this.getAgentContextUserId() : ""
+        			}).async().catch(() => {});
+        		} catch (e) {}
+        	}
+        
+        	public offerPreviewShare(entry) {
+        		// One card of the turn asks the user to allow sharing the tab: its click opens the share prompt of the browser in the
+        		// No Code Studio page (a click in the panel activates the parent page too), for the browser session.
+        		var t = (key: any) => this.agentPreviewText(key);
+        		this.local.Messages = this.local.Messages || [];
+        		var list = this.local.Messages;
+        		for (var i = list.length - 1; i >= 0; i--) {
+        			if (list[i] && list[i].type === "feedback" && list[i].variant === "preview" && list[i].actions && list[i].actions.length) {
+        				list[i].previewRequestIds.push(entry.requestId);
+        				entry.card = list[i];
+        				this.tick();
+        				return;
+        			}
+        		}
+        		var card: any = this.feedbackCard("preview", t("title"), t("text").replace("{form}", entry.formName || entry.formId),
+        			[{ id: "allow", label: t("allow"), primary: true }, { id: "decline", label: t("decline") }]);
+        		card.previewRequestIds = [entry.requestId];
+        		entry.card = card;
+        		list.push(card);
+        		this.scrollChatBottom(0, true);
+        		this.tick();
+        	}
+        
+        	public onPreviewShareCta(card, cta) {
+        		// Allow: the page asks the browser to share its tab, then captures what waits. Not now: the waiting captures are declined.
+        		var self: any = this;
+        		var ids = card.previewRequestIds || [];
+        		card.actions = [];
+        		if (cta.id === "allow") {
+        			card.message = this.agentPreviewText("allowing");
+        			this.postAgentHostMessage({ type: "ConvertigoAssistant.preview-share.start", payload: { requestIds: ids } });
+        		} else {
+        			card.message = this.agentPreviewText("declined");
+        			this.postAgentHostMessage({ type: "ConvertigoAssistant.preview-share.decline", payload: { requestIds: ids } });
+        			for (var i = 0; i < ids.length; i++) {
+        				var entry = self.previewRequests && self.previewRequests[ids[i]];
+        				if (entry) {
+        					delete self.previewRequests[ids[i]];
+        					this.sendPreviewCaptureResult(entry, { status: "failed", reason: "declined" });
+        				}
+        			}
+        		}
+        		this.tick();
+        	}
+        
+        	public agentPreviewText(key) {
+        		// Texts of the card that asks to share the preview with Tigo, in the four Assistant languages.
+        		var texts: any = {
+        			fr: { title: "Aperçu pour Tigo", text: "Tigo voudrait voir l’aperçu de « {form} » pour vérifier son rendu. Autorisez le partage de cet onglet : il reste actif pendant la session de votre navigateur, et seule l’image de l’aperçu est envoyée.", allow: "Autoriser l’aperçu", decline: "Pas maintenant", allowing: "Acceptez le partage de cet onglet dans la fenêtre du navigateur.", shared: "Aperçu partagé avec Tigo.", declined: "D’accord, Tigo continue sans voir l’aperçu.", failed: "L’aperçu n’a pas pu être capturé : Tigo continue sans le voir." },
+        			en: { title: "Preview for Tigo", text: "Tigo would like to see the preview of “{form}” to check how it renders. Allow sharing this tab: it stays on for your browser session, and only the image of the preview is sent.", allow: "Allow the preview", decline: "Not now", allowing: "Accept sharing this tab in the browser window.", shared: "Preview shared with Tigo.", declined: "All right, Tigo goes on without seeing the preview.", failed: "The preview could not be captured: Tigo goes on without seeing it." },
+        			it: { title: "Anteprima per Tigo", text: "Tigo vorrebbe vedere l’anteprima di «{form}» per verificarne la resa. Consenti la condivisione di questa scheda: resta attiva per la sessione del browser e viene inviata solo l’immagine dell’anteprima.", allow: "Consenti l’anteprima", decline: "Non ora", allowing: "Accetta la condivisione di questa scheda nella finestra del browser.", shared: "Anteprima condivisa con Tigo.", declined: "D’accordo, Tigo continua senza vedere l’anteprima.", failed: "Non è stato possibile catturare l’anteprima: Tigo continua senza vederla." },
+        			es: { title: "Vista previa para Tigo", text: "Tigo quiere ver la vista previa de «{form}» para comprobar cómo se muestra. Permita compartir esta pestaña: sigue activa durante la sesión del navegador y solo se envía la imagen de la vista previa.", allow: "Permitir la vista previa", decline: "Ahora no", allowing: "Acepte compartir esta pestaña en la ventana del navegador.", shared: "Vista previa compartida con Tigo.", declined: "De acuerdo, Tigo continúa sin ver la vista previa.", failed: "No se pudo capturar la vista previa: Tigo continúa sin verla." }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
         	}
         
         	public getAssistantHostContextParam(name) {
@@ -4772,6 +4905,12 @@ scriptContent:
         			if (path.length) {
         				media = { path: path, question: field(input, "question") || field(input, "prompt"), description: field(detail, "description").replace(/\*\*|__/g, "") };
         			}
+        		} else if (/preview[_-]capture/.test(name)) {
+        			// The capture of the No Code preview: the PNG written in the conversation attachments, described for the agent.
+        			var shot = field(detail, "path");
+        			if (shot.length && /\.png$/i.test(shot)) {
+        				media = { path: shot, question: field(input, "question"), description: field(detail, "description").replace(/\*\*|__/g, "") };
+        			}
         		} else if (/take_screenshot/.test(name)) {
         			var file = field(input, "filename");
         			// Claude Code names no file in the call: its result links the screenshot it saved ("[Screenshot of viewport](./home.png)").
@@ -5046,6 +5185,10 @@ scriptContent:
         		var self: any = this;
         		var t = (key: any) => this.agentFeedbackText(key);
         		if (!card || !cta || card.busy) {
+        			return;
+        		}
+        		if (card.variant === "preview") {
+        			this.onPreviewShareCta(card, cta);
         			return;
         		}
         		if (cta.id === "review") {
@@ -17564,6 +17707,10 @@ title: Tigo
             		var runid = state.runid != null ? state.runid : response.id;
             		if (runid != null && ("" + runid).length) {
             			page.local.RunID = "" + runid;
+            		}
+            		// What the MCP asks of the page that hosts the panel (nocode-form-preview-capture), passed on to it.
+            		if (response.hostRequests && page.forwardAgentHostRequests) {
+            			page.forwardAgentHostRequests([].concat(response.hostRequests), state.threadid || response.threadid || page.local.Conversation);
             		}
             		// Notify saved forms before the running-state early return.
             		var formMutation = (state && state.formMutation) || (aiData && aiData.formMutation) || null;
