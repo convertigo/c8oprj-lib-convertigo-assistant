@@ -95,7 +95,10 @@ exposed: false
                           page.local.FormsConversationContext = restored;
                           host = restored;
                           hostElementId = clean(restored.elementId);
-                          if (pageAny.notifyC8OformsFormUpdated) {
+                          // a conversation opened again after a reload of No Code Studio (quiet, AgentResumeConversation) leaves its page as it is
+                          var quietResume = clean(page.local.FormsResumeQuietConversation);
+                          page.local.FormsResumeQuietConversation = "";
+                          if (pageAny.notifyC8OformsFormUpdated && !(quietResume.length && quietResume === clean(page.local.Conversation))) {
                               pageAny.notifyC8OformsFormUpdated(Object.assign({}, restored, { success: true, changed: false, completedAt: Date.now() }), "resume:" + page.local.Conversation);
                           }
                       }

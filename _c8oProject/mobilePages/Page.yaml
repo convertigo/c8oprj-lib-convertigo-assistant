@@ -40,6 +40,8 @@ scriptContent:
         		this.ensureFooterInputs();
         		this.refreshSpeechRecognitionAvailable(80);
         		this.startAgentElapsedTicker();
+        		this.restoreFormsConversationAfterReload();
+        		this.bindFormsConversationMemory();
         		/*End_c8o_PageInitialization*/
         /*Begin_c8o_PageAfterViewInit*/
         		this.refreshScrollButtons(350);
@@ -49,6 +51,7 @@ scriptContent:
         		this.unbindAgentHostContextListener();
         		this.unbindAgentSettingsNavigationListener();
         		this.stopAgentElapsedTicker();
+        		this.unbindFormsConversationMemory();
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
             public installAgentSessionRecovery() {
@@ -934,6 +937,77 @@ scriptContent:
         			return this.postAgentHostMessage({ type: "ConvertigoAssistant.turn-end", payload: { runid: String(runid == null ? "" : runid) } });
         		} catch (e) {}
         		return false;
+        	}
+        	
+        	// No Code Studio (C8Oforms) keeps the Tigo panel open through a reload of its tab, and says so with restoreConversation=1
+        	// in the address of the panel: the conversation open at the reload opens again, as Resume opens it, and the page of No
+        	// Code Studio stays as it is (no form-updated). The storage of the tab holds that conversation.
+        	public bindFormsConversationMemory() {
+        		var page: any = this;
+        		if (page.formsConversationMemoryTimer || !this.isEmbeddedInC8Oforms()) { return; }
+        		page.formsConversationMemoryOnHide = () => this.rememberFormsConversation();
+        		page.formsConversationMemoryTimer = setInterval(page.formsConversationMemoryOnHide, 1000);
+        		try { window.addEventListener("pagehide", page.formsConversationMemoryOnHide); } catch (e) {}
+        	}
+        
+        	public unbindFormsConversationMemory() {
+        		var page: any = this;
+        		if (!page.formsConversationMemoryTimer) { return; }
+        		this.rememberFormsConversation();
+        		clearInterval(page.formsConversationMemoryTimer);
+        		try { window.removeEventListener("pagehide", page.formsConversationMemoryOnHide); } catch (e) {}
+        		page.formsConversationMemoryTimer = null;
+        		page.formsConversationMemoryOnHide = null;
+        	}
+        
+        	public rememberFormsConversation() {
+        		var page: any = this;
+        		try {
+        			// a conversation still to open again after the reload stays the one of the tab
+        			if (page.formsConversationRestorePending === true) { return; }
+        			var local: any = this.local || {};
+        			var id = local.NewConversationMode === true ? "" : this.normalizeAgentHostContextValue(local.Conversation);
+        			if (id === page.formsConversationRemembered) { return; }
+        			page.formsConversationRemembered = id;
+        			if (id.length) {
+        				window.sessionStorage.setItem("lib_ConvertigoAssistant.FormsOpenConversation", id);
+        			} else {
+        				window.sessionStorage.removeItem("lib_ConvertigoAssistant.FormsOpenConversation");
+        			}
+        		} catch (e) {}
+        	}
+        
+        	public restoreFormsConversationAfterReload() {
+        		var page: any = this;
+        		var id = "";
+        		try { id = this.normalizeAgentHostContextValue(window.sessionStorage.getItem("lib_ConvertigoAssistant.FormsOpenConversation")); } catch (e) {}
+        		page.formsConversationRemembered = id;
+        		if (!id.length || !this.isEmbeddedInC8Oforms() || this.getAssistantQueryParam("restoreConversation") !== "1") { return; }
+        		page.formsConversationRestorePending = true;
+        		var startedAt = Date.now();
+        		var ready = 0;
+        		var attempt = () => {
+        			var local: any = this.local || {};
+        			var list = Array.isArray(local.AgentConversations) ? local.AgentConversations : [];
+        			var conversation = list.filter((item) => item && item.conversationId === id)[0] || null;
+        			// when a click on Resume could open it: the history loaded, no conversation, resume or turn running, the settings
+        			// closed; twice in a row, the start of the page settled
+        			var open = conversation != null && !local.Conversation && local.AgentConversationsLoading === false && local.AgentResumePending !== true
+        				&& local.IsProcessing !== true && local.ShowAgentConfigPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel());
+        			ready = open ? ready + 1 : 0;
+        			if (ready >= 2) {
+        				page.formsConversationRestorePending = false;
+        				this.events.publish("AgentResumeConversation", { scope: { conversation: conversation }, quiet: true });
+        				return;
+        			}
+        			if (local.Conversation || Date.now() - startedAt >= 30000) {
+        				// another conversation opened meanwhile, or this one is no longer in the history: the panel stays as it is
+        				page.formsConversationRestorePending = false;
+        				return;
+        			}
+        			setTimeout(attempt, 250);
+        		};
+        		setTimeout(attempt, 250);
         	}
         
         	public notifyC8OformsFormUpdated(mutation, runid?) {
@@ -12658,343 +12732,14 @@ title: Tigo
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(conversation?.conversationId === this.local.Conversation ? ''active'' : ''resume'') : (conversation?.conversationId === this.local.Conversation ? this.t(''Agent_Conversation_Active'', ''Active'') : this.t(''Agent_Resume'', ''Reprendre''))'
                       ↓Event [ngx.components.UIControlEvent-1781608119135]: 
-                        ↓ResumeConversation [ngx.components.UIDynamicAction-1781608120627]: 
+                        ↓PublishResume [ngx.components.UIDynamicAction-1793035709996]: 
                           beanData: |
                             '{
-                             "ionBean": "CallSequenceAction",
-                             "requestable": "plain:lib_ConvertigoAssistant.AgentResumeConversation",
-                             "noLoading": "plain:true"
+                             "ionBean": "PublishEventAction",
+                             "topic": "plain:AgentResumeConversation",
+                             "data": "script:{scope: {conversation: scope.conversation}}"
                             }'
-                          ↓threadid [ngx.components.UIControlVariable-1781608122133]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.conversationId ? scope.conversation.conversationId : '''''
-                          ↓targetProject [ngx.components.UIControlVariable-1781608122135]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(scope.conversation, this)
-                          ↓provider [ngx.components.UIControlVariable-1781700400002]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')'
-                          ↓model [ngx.components.UIControlVariable-1781700500036]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.model != null) ? scope.conversation.model : (this.getDefaultAgentModel ? this.getDefaultAgentModel((scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')) : '''')'
-                          ↓SetConversation [ngx.components.UIDynamicAction-1781608122137]: 
-                            beanData: |
-                              '{
-                               "ionBean": "SetLocalAction",
-                               "Property": "plain:Conversation",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
-                              }'
-                          ↓SetConversations [ngx.components.UIDynamicAction-1781608122139]: 
-                            beanData: |
-                              '{
-                               "ionBean": "SetLocalAction",
-                               "Property": "plain:AgentConversations",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
-                              }'
-                          ↓SetConversationResumed [ngx.components.UIDynamicAction-1781608122141]: 
-                            beanData: |
-                              '{
-                               "ionBean": "SetLocalAction",
-                               "Property": "plain:AgentConversationResumed",
-                               "Value": "script:true"
-                              }'
-                          ↓LoadHistoryMessages [ngx.components.UICustomAction-1781612471043]: 
-                            actionValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                  →: |
-                                    '		var data = vars.data || {};
-                                    		var state = vars.state || {};
-                                    		var history = data.messages || [];
-                                    		if (page.applyAgentConversationState) {
-                                    			page.applyAgentConversationState(state);
-                                    		}
-                                    		if (!page.local) {
-                                    			page.local = {};
-                                    		}
-                                    		if (page.isEmbeddedInC8Oforms && page.isEmbeddedInC8Oforms()) {
-                                                if (!state.threadid) {
-                                                    page.local.FormsResumeError = true;
-                                                    page.tick(); resolve(); return;
-                                                }
-                                                // Restore resource identity only. Catalog + host perform access checks;
-                                                // a resumed conversation must never replay a create/update action.
-                                                var restored = state.nocodeContext || null;
-                                                page.local.FormsResumeError = false;
-                                                // Do not announce an already observed mutation again when reattaching to a running conversation.
-                                                if (state.formMutation && state.formMutation.success === true) {
-                                                    page.local.LastC8OformsMutationNotificationKey = "" + (state.formMutation.completedAt || "") + ":" + (state.formMutation.formId || "") + ":" + (state.runid || "");
-                                                }
-                                                page.local.FormsConversationContext = restored;
-                                                page.local.FormsContextMissing = !restored || !restored.formId;
-                                                page.local.FormsContextUnavailable = false;
-                                                page.local.FormsContextPartial = false;
-                                                page.local.FormsResumePending = !!(restored && restored.formId);
-                                                page.local.Conversation = state.threadid;
-                                                page.local.NoCodeContextSelectionTouched = false;
-                                                page.local.NoCodeSelectedKind = "";
-                                                page.local.NoCodeSelectedFormId = "";
-                                                page.local.NoCodeSelectedFormName = "";
-                                                page.local.NoCodeSelectedPageId = "";
-                                                page.local.NoCodeSelectedElementId = "";
-                                                page.local.ShowConversationPanel = false;
-                                                page.local.NewConversationMode = false;
-                                                page.events.publish("AgentNoCodeContextReload", { formId: restored ? restored.formId : "", hostContext: restored || {} });
-                                            }
-                                            page.local.NewConversationMode = false;
-                                    		page.local.AgentConversationResumed = true;
-                                    		page.local.ConversationStarted = true;
-                                    		page.local.ShowAgentConfigPanel = false;
-                                    		var trimValue = function(value) {
-                                    			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
-                                    		};
-                                    		var clearLegacyPollers = function() {
-                                    			if (page.local.Buffer && page.local.Buffer.intId) {
-                                    				window.clearInterval(page.local.Buffer.intId);
-                                    			}
-                                    			if (page.local.AgentBufferPollId) {
-                                    				window.clearInterval(page.local.AgentBufferPollId);
-                                    			}
-                                    			page.local.AgentBufferPollId = null;
-                                    		};
-                                    		var clean = function(value) {
-                                    			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
-                                    		};
-                                    		var localize = function(value) {
-                                    			var line = clean(value);
-                                    			var map = {
-                                    				"i am preparing the local agent.": "Je prépare l''agent local.",
-                                    				"i am analyzing the request.": "J''analyse la demande.",
-                                    				"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
-                                    				"i am applying a change in the project.": "J''applique une modification dans le projet.",
-                                    				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
-                                    				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
-                                    				"i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
-                                    				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
-                                    				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
-                                    			};
-                                    			return (page.isFrenchUi && !page.isFrenchUi()) ? line : (map[line.toLowerCase()] || line);
-                                    		};
-                                    		var isGeneric = function(value) {
-                                    			var text = clean(value).toLowerCase();
-                                    			return !text.length || text === ''writing'' || text === ''agent is working'' || text === ''agent is working...'' || text === ''assistant is writing'' || text === ''assistant is writing...'' || text === ''traitement en cours'' || text === ''traitement en cours...'';
-                                    		};
-                                    		var progressLines = function(progress, phase) {
-                                    			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-                                    			var lines = [];
-                                    			var add = function(value) {
-                                    				var line = localize(value);
-                                    				if (!isGeneric(line) && line.indexOf(''Sending data to the AI assistant'') !== 0 && lines.indexOf(line) === -1) {
-                                    					lines.push(line);
-                                    				}
-                                    			};
-                                    			for (var i = 0; i < raw.length; i++) {
-                                    				add(raw[i]);
-                                    			}
-                                    			add(phase);
-                                    			while (lines.length > 12) {
-                                    				lines.shift();
-                                    			}
-                                    			return lines;
-                                    		};
-                                    		var resumedProvider = trimValue(state.provider || data.provider);
-                                    		if (resumedProvider.length) {
-                                    			page.local.AgentProvider = resumedProvider.toLowerCase();
-                                    		}
-                                    		if (state.model != null || data.model != null) {
-                                    			page.local.AgentModel = trimValue(state.model != null ? state.model : data.model);
-                                    		}
-                                    		clearLegacyPollers();
-                                    		page.local.Messages = [];
-                                    		if (history && history.length != null) {
-                                    			for (var i = 0; i < history.length; i++) {
-                                    				var msg = history[i];
-                                    				if (!msg || !msg.msg) {
-                                    					continue;
-                                    				}
-                                    				var type = msg.type || ''assistant'';
-                                    				page.local.Messages.push({
-                                    					type: type,
-                                    					msg: msg.msg || '''',
-                                    					author: msg.author || (type === ''user'' ? ''You'' : ''Assistant''),
-                                    					time: msg.time || '''',
-                                    					id: msg.id || -1,
-                                    					tag1: msg.tag1 || (type === ''assistant'' ? ''History'' : ''''),
-                                    					tag2: msg.tag2 || (type === ''assistant'' ? ''Agent'' : ''''),
-                                    					tag3: msg.tag3 || (type === ''assistant'' ? ''Resume'' : ''''),
-                                    					writing: false,
-                                    					status: msg.status || '''',
-                                    					progressSummary: msg.progressSummary || '''',
-                                    					progressDetails: msg.progressDetails || '''',
-                                    					// The saved events and plan of the turn: its work log stays shown above the answer, as during the turn.
-                                    					runEvents: msg.runEvents || null,
-                                    					runPlan: msg.runPlan || null
-                                    				});
-                                    			}
-                                    		}
-                                    		page.local.RunID = '''';
-                                    		page.local.StreamingIndex = null;
-                                    		page.local.IsProcessing = false;
-                                    		page.local.Buffer = {};
-                                    		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
-                                    		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
-                                    		var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
-                                    		if (active) {
-                                    			page.local.RunID = runid;
-                                    			page.local.IsProcessing = true;
-                                    			var progress = state.progress != null ? state.progress : (data.progress != null ? data.progress : '''');
-                                    			var phase = state.phase != null ? state.phase : (data.phase != null ? data.phase : '''');
-                                    			var lines = progressLines(progress, phase);
-                                    			if (!lines.length) {
-                                    				lines = ["J''analyse la demande."];
-                                    			}
-                                    			var nowDate = new Date();
-                                    			var hh = (''0'' + nowDate.getHours()).slice(-2);
-                                    			var mm = (''0'' + nowDate.getMinutes()).slice(-2);
-                                    			page.local.Messages.push({
-                                    				msg: lines.join(''\n''),
-                                    				type: ''assistant'',
-                                    				author: ''Assistant'',
-                                    				time: hh + '':'' + mm,
-                                    				id: -1,
-                                    				tag1: ''Etapes'',
-                                    				tag2: page.local.AgentProvider || ''Agent'',
-                                    				tag3: ''Progression'',
-                                    				status: lines[lines.length - 1],
-                                    				writing: true
-                                    			});
-                                    			page.local.StreamingIndex = page.local.Messages.length - 1;
-                                    			page.local.Buffer = { progress: progress, phase: phase || lines[lines.length - 1] };
-                                    		}
-                                    		if (!active && page.offerFeedbackOnOpen) {
-                                    			page.offerFeedbackOnOpen();
-                                    		}
-                                    		page.tick();
-                                    		page.scrollChatBottom(0);
-                                    		if (page.refreshScrollButtons) {
-                                    			page.refreshScrollButtons(120);
-                                    			page.refreshScrollButtons(500);
-                                    		}
-                                    		resolve();
-                                    '
-                            ↓data [ngx.components.UIControlVariable-1781612472549]: 
-                              varValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
-                            ↓state [ngx.components.UIControlVariable-1781621339608]: 
-                              varValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
-                          ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
-                            beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}"}'
-                            ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
-                              beanData: |
-                                '{
-                                 "ionBean": "CallSequenceAction",
-                                 "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
-                                 "noLoading": "plain:true"
-                                }'
-                              ↓threadid [ngx.components.UIControlVariable-1781621341118]: 
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
-                              ↓runid [ngx.components.UIControlVariable-1781621341120]: 
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
-                              ↓provider [ngx.components.UIControlVariable-1781700400003]: 
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
-                              ↓PublishEvent [ngx.components.UIDynamicAction-1781621341122]: 
-                                beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
-                              ↓targetProject [ngx.components.UIControlVariable-1781689577838]: 
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
-                              ↓userId [ngx.components.UIControlVariable-1782407708971]: 
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
-                              ↓agentBridgeOperational [ngx.components.UIControlVariable-1783089400001]: 
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
-                              ↓waitMs [ngx.components.UIControlVariable-1792319257223]: 
-                                comment: The first read of an opened running conversation answers at once with the current state, instead of waiting for the next agent event.
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: plain:0
-                              ↓__context [ngx.components.UIControlVariable-1792321533113]: 
-                                comment: 'In the Studio, the engine runs every read without a "studio_" context name in one context shared by all browsers and serializes them: a read of a second viewer waited behind the long read of the first. One context per tab, made once: a new one per read was never removed and filled the engine (1500 contexts). The engine keeps this first __context over the one the SDK appends.'
-                                varValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
-                          ↓SetConversationProject [ngx.components.UIDynamicAction-1781676328041]: 
-                            beanData: |
-                              '{
-                               "ionBean": "SetLocalAction",
-                               "Property": "plain:ConversationProject",
-                               "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
-                              }'
-                            ↓RefreshEnableChat [ngx.components.UICustomAction-1781676472462]: 
-                              actionValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                    →: |
-                                      		page.setEnableChat();
-                                      		page.closeConversationsPanel();
-                                      		resolve();
-                          ↓userId [ngx.components.UIControlVariable-1782407698247]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
-                          ↓codexHomeScope [ngx.components.UIControlVariable-1782407700033]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''codex'') : ''user'''
-                          ↓vibeHomeScope [ngx.components.UIControlVariable-1782407701821]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''vibe'') : ''user'''
-                          ↓homeScope [ngx.components.UIControlVariable-1782407703611]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope((this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ''codex'')) : ''user'''
-                          ↓agentProfile [ngx.components.UIControlVariable-1782407705403]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
-                          ↓skillProfile [ngx.components.UIControlVariable-1782407707197]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+                          comment: The conversation of the row opens in AgentResumeConversation, as after a reload of No Code Studio.
                     ↓DeleteButton [ngx.components.UIDynamicElement-1781608122143]: 
                       beanData: |
                         '{
@@ -22503,6 +22248,354 @@ title: Tigo
           - xmlizable: 
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: script:(stack && stack['root'] && stack['root'].out && stack['root'].out.formId) || (this.local && this.local.NoCodeSelectedFormId) || ''
+↓AgentResumeConversation [ngx.components.UIEventSubscriber-1793035709997]: 
+  comment: Opens a conversation of the history (data.scope.conversation, the item of AgentConversations), on a click on Resume or, with data.quiet, when No Code Studio reloaded with the panel open (restoreFormsConversationAfterReload). A quiet resume leaves the page of No Code Studio as it is.
+  topic: AgentResumeConversation
+  ↓SetResumeQuiet [ngx.components.UIDynamicAction-1793035709998]: 
+    beanData: |
+      '{
+       "ionBean": "SetLocalAction",
+       "Property": "plain:FormsResumeQuietConversation",
+       "Value": "script:(stack[''root''].out && stack[''root''].out.quiet === true && scope.conversation && scope.conversation.conversationId) || ''''"
+      }'
+    comment: ApplyNoCodeAssistantCatalog sends no form-updated for this conversation, the page stays as it is.
+  ↓ResumeConversation [ngx.components.UIDynamicAction-1781608120627]: 
+    beanData: |
+      '{
+       "ionBean": "CallSequenceAction",
+       "requestable": "plain:lib_ConvertigoAssistant.AgentResumeConversation",
+       "noLoading": "plain:true"
+      }'
+    ↓threadid [ngx.components.UIControlVariable-1781608122133]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.conversationId ? scope.conversation.conversationId : '''''
+    ↓targetProject [ngx.components.UIControlVariable-1781608122135]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(scope.conversation, this)
+    ↓provider [ngx.components.UIControlVariable-1781700400002]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')'
+    ↓model [ngx.components.UIControlVariable-1781700500036]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.model != null) ? scope.conversation.model : (this.getDefaultAgentModel ? this.getDefaultAgentModel((scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')) : '''')'
+    ↓SetConversation [ngx.components.UIDynamicAction-1781608122137]: 
+      beanData: |
+        '{
+         "ionBean": "SetLocalAction",
+         "Property": "plain:Conversation",
+         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.id\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+        }'
+    ↓SetConversations [ngx.components.UIDynamicAction-1781608122139]: 
+      beanData: |
+        '{
+         "ionBean": "SetLocalAction",
+         "Property": "plain:AgentConversations",
+         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.conversations\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+        }'
+    ↓SetConversationResumed [ngx.components.UIDynamicAction-1781608122141]: 
+      beanData: |
+        '{
+         "ionBean": "SetLocalAction",
+         "Property": "plain:AgentConversationResumed",
+         "Value": "script:true"
+        }'
+    ↓LoadHistoryMessages [ngx.components.UICustomAction-1781612471043]: 
+      actionValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+            →: |
+              '		var data = vars.data || {};
+              		var state = vars.state || {};
+              		var history = data.messages || [];
+              		if (page.applyAgentConversationState) {
+              			page.applyAgentConversationState(state);
+              		}
+              		if (!page.local) {
+              			page.local = {};
+              		}
+              		if (page.isEmbeddedInC8Oforms && page.isEmbeddedInC8Oforms()) {
+                          if (!state.threadid) {
+                              page.local.FormsResumeError = true;
+                              page.tick(); resolve(); return;
+                          }
+                          // Restore resource identity only. Catalog + host perform access checks;
+                          // a resumed conversation must never replay a create/update action.
+                          var restored = state.nocodeContext || null;
+                          page.local.FormsResumeError = false;
+                          // Do not announce an already observed mutation again when reattaching to a running conversation.
+                          if (state.formMutation && state.formMutation.success === true) {
+                              page.local.LastC8OformsMutationNotificationKey = "" + (state.formMutation.completedAt || "") + ":" + (state.formMutation.formId || "") + ":" + (state.runid || "");
+                          }
+                          page.local.FormsConversationContext = restored;
+                          page.local.FormsContextMissing = !restored || !restored.formId;
+                          page.local.FormsContextUnavailable = false;
+                          page.local.FormsContextPartial = false;
+                          page.local.FormsResumePending = !!(restored && restored.formId);
+                          page.local.Conversation = state.threadid;
+                          page.local.NoCodeContextSelectionTouched = false;
+                          page.local.NoCodeSelectedKind = "";
+                          page.local.NoCodeSelectedFormId = "";
+                          page.local.NoCodeSelectedFormName = "";
+                          page.local.NoCodeSelectedPageId = "";
+                          page.local.NoCodeSelectedElementId = "";
+                          page.local.ShowConversationPanel = false;
+                          page.local.NewConversationMode = false;
+                          page.events.publish("AgentNoCodeContextReload", { formId: restored ? restored.formId : "", hostContext: restored || {} });
+                      }
+                      page.local.NewConversationMode = false;
+              		page.local.AgentConversationResumed = true;
+              		page.local.ConversationStarted = true;
+              		page.local.ShowAgentConfigPanel = false;
+              		var trimValue = function(value) {
+              			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+              		};
+              		var clearLegacyPollers = function() {
+              			if (page.local.Buffer && page.local.Buffer.intId) {
+              				window.clearInterval(page.local.Buffer.intId);
+              			}
+              			if (page.local.AgentBufferPollId) {
+              				window.clearInterval(page.local.AgentBufferPollId);
+              			}
+              			page.local.AgentBufferPollId = null;
+              		};
+              		var clean = function(value) {
+              			return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+              		};
+              		var localize = function(value) {
+              			var line = clean(value);
+              			var map = {
+              				"i am preparing the local agent.": "Je prépare l''agent local.",
+              				"i am analyzing the request.": "J''analyse la demande.",
+              				"i am inspecting the convertigo project structure.": "J''inspecte la structure du projet Convertigo.",
+              				"i am applying a change in the project.": "J''applique une modification dans le projet.",
+              				"i am using a convertigo tool.": "J''utilise un outil Convertigo.",
+              				"a tool attempt failed, i am trying another path.": "Une tentative d''outil a échoué, je cherche une autre piste.",
+              				"i am checking available convertigo components.": "Je vérifie les objets Convertigo disponibles.",
+              				"i am restarting the application to verify the screen.": "Je relance l''application pour vérifier l''écran.",
+              				"i am testing a sequence or transaction.": "Je teste une séquence ou une transaction."
+              			};
+              			return (page.isFrenchUi && !page.isFrenchUi()) ? line : (map[line.toLowerCase()] || line);
+              		};
+              		var isGeneric = function(value) {
+              			var text = clean(value).toLowerCase();
+              			return !text.length || text === ''writing'' || text === ''agent is working'' || text === ''agent is working...'' || text === ''assistant is writing'' || text === ''assistant is writing...'' || text === ''traitement en cours'' || text === ''traitement en cours...'';
+              		};
+              		var progressLines = function(progress, phase) {
+              			var raw = ("" + (progress == null ? "" : progress)).replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+              			var lines = [];
+              			var add = function(value) {
+              				var line = localize(value);
+              				if (!isGeneric(line) && line.indexOf(''Sending data to the AI assistant'') !== 0 && lines.indexOf(line) === -1) {
+              					lines.push(line);
+              				}
+              			};
+              			for (var i = 0; i < raw.length; i++) {
+              				add(raw[i]);
+              			}
+              			add(phase);
+              			while (lines.length > 12) {
+              				lines.shift();
+              			}
+              			return lines;
+              		};
+              		var resumedProvider = trimValue(state.provider || data.provider);
+              		if (resumedProvider.length) {
+              			page.local.AgentProvider = resumedProvider.toLowerCase();
+              		}
+              		if (state.model != null || data.model != null) {
+              			page.local.AgentModel = trimValue(state.model != null ? state.model : data.model);
+              		}
+              		clearLegacyPollers();
+              		page.local.Messages = [];
+              		if (history && history.length != null) {
+              			for (var i = 0; i < history.length; i++) {
+              				var msg = history[i];
+              				if (!msg || !msg.msg) {
+              					continue;
+              				}
+              				var type = msg.type || ''assistant'';
+              				page.local.Messages.push({
+              					type: type,
+              					msg: msg.msg || '''',
+              					author: msg.author || (type === ''user'' ? ''You'' : ''Assistant''),
+              					time: msg.time || '''',
+              					id: msg.id || -1,
+              					tag1: msg.tag1 || (type === ''assistant'' ? ''History'' : ''''),
+              					tag2: msg.tag2 || (type === ''assistant'' ? ''Agent'' : ''''),
+              					tag3: msg.tag3 || (type === ''assistant'' ? ''Resume'' : ''''),
+              					writing: false,
+              					status: msg.status || '''',
+              					progressSummary: msg.progressSummary || '''',
+              					progressDetails: msg.progressDetails || '''',
+              					// The saved events and plan of the turn: its work log stays shown above the answer, as during the turn.
+              					runEvents: msg.runEvents || null,
+              					runPlan: msg.runPlan || null
+              				});
+              			}
+              		}
+              		page.local.RunID = '''';
+              		page.local.StreamingIndex = null;
+              		page.local.IsProcessing = false;
+              		page.local.Buffer = {};
+              		var status = "" + (state.status == null ? (data.status == null ? "" : data.status) : state.status);
+              		var runid = "" + (state.runid == null ? (data.runid == null ? "" : data.runid) : state.runid);
+              		var active = [''starting'', ''queued'', ''running'', ''in_progress''].indexOf(status) !== -1 && runid.length > 0;
+              		if (active) {
+              			page.local.RunID = runid;
+              			page.local.IsProcessing = true;
+              			var progress = state.progress != null ? state.progress : (data.progress != null ? data.progress : '''');
+              			var phase = state.phase != null ? state.phase : (data.phase != null ? data.phase : '''');
+              			var lines = progressLines(progress, phase);
+              			if (!lines.length) {
+              				lines = ["J''analyse la demande."];
+              			}
+              			var nowDate = new Date();
+              			var hh = (''0'' + nowDate.getHours()).slice(-2);
+              			var mm = (''0'' + nowDate.getMinutes()).slice(-2);
+              			page.local.Messages.push({
+              				msg: lines.join(''\n''),
+              				type: ''assistant'',
+              				author: ''Assistant'',
+              				time: hh + '':'' + mm,
+              				id: -1,
+              				tag1: ''Etapes'',
+              				tag2: page.local.AgentProvider || ''Agent'',
+              				tag3: ''Progression'',
+              				status: lines[lines.length - 1],
+              				writing: true
+              			});
+              			page.local.StreamingIndex = page.local.Messages.length - 1;
+              			page.local.Buffer = { progress: progress, phase: phase || lines[lines.length - 1] };
+              		}
+              		if (!active && page.offerFeedbackOnOpen) {
+              			page.offerFeedbackOnOpen();
+              		}
+              		page.tick();
+              		page.scrollChatBottom(0);
+              		if (page.refreshScrollButtons) {
+              			page.refreshScrollButtons(120);
+              			page.refreshScrollButtons(500);
+              		}
+              		resolve();
+              '
+      ↓data [ngx.components.UIControlVariable-1781612472549]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.AIData","prefix":"","suffix":"","custom":"","useCustom":false}}
+      ↓state [ngx.components.UIControlVariable-1781621339608]: 
+        varValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: source:{"filter":"Sequence","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"sequence":"lib_ConvertigoAssistant.AgentResumeConversation","marker":""}],"path":"?.result.state","prefix":"","suffix":"","custom":"","useCustom":false}}
+    ↓PollActiveConversation [ngx.components.UIDynamicAction-1781621341114]: 
+      beanData: '{"ionBean":"IfAction","condition":"source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.status\",\"prefix\":\"[''starting'',''queued'',''running'',''in_progress''].indexOf(\",\"suffix\":\") != -1\",\"custom\":\"\",\"useCustom\":false}}"}'
+      ↓CallSequence [ngx.components.UIDynamicAction-1781621341116]: 
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:lib_ConvertigoAssistant.AgentReadResponseRouter",
+           "noLoading": "plain:true"
+          }'
+        ↓threadid [ngx.components.UIControlVariable-1781621341118]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}}
+        ↓runid [ngx.components.UIControlVariable-1781621341120]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.RunID","prefix":"","suffix":"","custom":"","useCustom":false}}
+        ↓provider [ngx.components.UIControlVariable-1781700400003]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentProvider ? this.getAgentProvider() : ''vibe'''
+        ↓PublishEvent [ngx.components.UIDynamicAction-1781621341122]: 
+          beanData: '{"ionBean":"PublishEventAction","topic":"plain:AssistantResponse"}'
+        ↓targetProject [ngx.components.UIControlVariable-1781689577838]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getEffectiveProjectName ? this.getEffectiveProjectName() : '''''
+        ↓userId [ngx.components.UIControlVariable-1782407708971]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+        ↓agentBridgeOperational [ngx.components.UIControlVariable-1783089400001]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.isAgentBridgeOperational && this.isAgentBridgeOperational() ? ''true'' : ''false'''
+        ↓waitMs [ngx.components.UIControlVariable-1792319257223]: 
+          comment: The first read of an opened running conversation answers at once with the current state, instead of waiting for the next agent event.
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:0
+        ↓__context [ngx.components.UIControlVariable-1792321533113]: 
+          comment: 'In the Studio, the engine runs every read without a "studio_" context name in one context shared by all browsers and serializes them: a read of a second viewer waited behind the long read of the first. One context per tab, made once: a new one per read was never removed and filled the engine (1500 contexts). The engine keeps this first __context over the one the SDK appends.'
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
+    ↓SetConversationProject [ngx.components.UIDynamicAction-1781676328041]: 
+      beanData: |
+        '{
+         "ionBean": "SetLocalAction",
+         "Property": "plain:ConversationProject",
+         "Value": "source:{\"filter\":\"Sequence\",\"project\":\"lib_ConvertigoAssistant\",\"input\":\"\",\"model\":{\"data\":[{\"sequence\":\"lib_ConvertigoAssistant.AgentResumeConversation\",\"marker\":\"\"}],\"path\":\"?.result.state.primaryProject\",\"prefix\":\"\",\"suffix\":\"\",\"custom\":\"\",\"useCustom\":false}}"
+        }'
+      ↓RefreshEnableChat [ngx.components.UICustomAction-1781676472462]: 
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		page.setEnableChat();
+                		page.closeConversationsPanel();
+                		resolve();
+    ↓userId [ngx.components.UIControlVariable-1782407698247]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentContextUserId ? this.getAgentContextUserId() : ''studio'''
+    ↓codexHomeScope [ngx.components.UIControlVariable-1782407700033]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''codex'') : ''user'''
+    ↓vibeHomeScope [ngx.components.UIControlVariable-1782407701821]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope(''vibe'') : ''user'''
+    ↓homeScope [ngx.components.UIControlVariable-1782407703611]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentHomeScope ? this.getAgentHomeScope((this.local && this.local.AgentProvider) ? this.local.AgentProvider : (this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ''codex'')) : ''user'''
+    ↓agentProfile [ngx.components.UIControlVariable-1782407705403]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
+    ↓skillProfile [ngx.components.UIControlVariable-1782407707197]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: 'script:this.getAgentSkillProfile ? this.getAgentSkillProfile() : '''''
 ↓AgentRuntimeSettingsStyle [ngx.components.UIStyle-1785253351143]: 
   styleContent: 
     - xmlizable: 
