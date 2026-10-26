@@ -80,6 +80,14 @@ test('an error template keeps the shape of an error, so the same error with othe
   assert.equal(F.errorMessage(result, false), 'Database object not found: PfDelta.sq:nexistepas. QName shape: ...');
   assert.match(F.errorMessage(result.slice(0, 120), false), /^Database object not found: PfDelta\.sq/);
   assert.equal(F.errorMessage('raw failure', true), 'raw failure');
+  // The plan sync reminder the Bridge appends to a result is never the error (frictions b71cde44, fe4bc4a6).
+  const reminder = '[Convertigo plan sync] 12 tool calls since your last `todo` write. The Convertigo assistant shows the user only your `todo` list as the plan.\n\nCall `todo` now (action "write", the full list).';
+  assert.equal(F.errorMessage(reminder, true), '', 'a failed call whose only text is the reminder is not collected');
+  assert.equal(F.errorMessage(JSON.stringify({ type: 'success', content: [{ type: 'text', text: reminder }] }), true), '');
+  assert.equal(F.errorMessage('raw failure\n\n' + reminder, true), 'raw failure', 'the real failure text, without the reminder');
+  const withReminder = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify({ code: '-1', message: 'Palette entry not found' }) }, { type: 'text', text: reminder }] });
+  assert.equal(F.errorMessage(withReminder, false), 'Palette entry not found');
+  assert.equal(F.errorMessage(JSON.stringify({ type: 'success', content: [{ type: 'text', text: '{"status":"ok"}' }, { type: 'text', text: reminder }] }), false), '', 'a successful call with the reminder is no error');
   // The error the answer names wins over an earlier "message" (schema-apply listed its planned actions first:
   // friction 3615a606fb3f recorded "Table already exists.").
   const schemaApply = { status: 'error', actions: [{ type: 'table_exists', message: 'Table already exists.' }], error: { code: 'baserow_schema_apply_failed', message: 'Baserow did not create the view Liste' } };

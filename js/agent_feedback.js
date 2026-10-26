@@ -285,8 +285,20 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   };
 
   // The message of an MCP error answered as a result ({"code":"-1","message":...} or {"status":"error",...}).
+  // The Bridge's plan sync hook appends "[Convertigo plan sync] ..." to a tool result, for the agent only: it is never the
+  // tool's error. Taken for one, it was reported as the message of failed calls (frictions b71cde44, fe4bc4a6).
+  var PLAN_SYNC_MARK = "[Convertigo plan sync]";
+
+  function withoutPlanSync(text) {
+    var at = text.indexOf(PLAN_SYNC_MARK);
+    return at < 0 ? text : trim(text.substring(0, at));
+  }
+
   F.errorMessage = function (preview, failed) {
-    var text = F.resultText(preview);
+    var text = withoutPlanSync(F.resultText(preview));
+    if (failed === true && !text.length) {
+      return "";
+    }
     var isError = failed === true || /"code"\s*:\s*"-1"/.test(text) || /"status"\s*:\s*"error"/.test(text) || /"isError"\s*:\s*true/.test(text);
     if (!isError) {
       return "";
