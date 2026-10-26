@@ -921,6 +921,21 @@ scriptContent:
         		return this.getC8OformsText ? this.getC8OformsText(''currentForm'', '''') : ''Formulaire courant'';
         	}
         
+        	public endAgentHostTurn(runid) {
+        		// The end of a turn (completed, failed or stopped) ends the share of the No Code Studio tab its previews were
+        		// captured in (nocode-form-preview-capture): the page stops it, once per turn.
+        		try {
+        			var capabilities = (this.agentHostContext && this.agentHostContext.capabilities) || [];
+        			var key = String((this.local && this.local.Conversation) || "") + ":" + String(runid == null ? "" : runid);
+        			if (!this.isEmbeddedInC8Oforms() || capabilities.indexOf("preview-capture") < 0 || this.local.AgentHostTurnEnded === key) {
+        				return false;
+        			}
+        			this.local.AgentHostTurnEnded = key;
+        			return this.postAgentHostMessage({ type: "ConvertigoAssistant.turn-end", payload: { runid: String(runid == null ? "" : runid) } });
+        		} catch (e) {}
+        		return false;
+        	}
+        
         	public notifyC8OformsFormUpdated(mutation, runid?) {
         		try {
         			if (!this.isEmbeddedInC8Oforms || !this.isEmbeddedInC8Oforms() || !mutation || mutation.success !== true) { return false; }
@@ -17707,6 +17722,10 @@ title: Tigo
             		var runid = state.runid != null ? state.runid : response.id;
             		if (runid != null && ("" + runid).length) {
             			page.local.RunID = "" + runid;
+            		}
+            		// The end of a turn ends the share of the No Code Studio tab for the captures of its previews.
+            		if ((isCompleted || isFailed) && page.endAgentHostTurn) {
+            			page.endAgentHostTurn(state.runid != null ? state.runid : response.id);
             		}
             		// What the MCP asks of the page that hosts the panel (nocode-form-preview-capture), passed on to it.
             		if (response.hostRequests && page.forwardAgentHostRequests) {

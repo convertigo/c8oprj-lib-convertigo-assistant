@@ -13,7 +13,7 @@ const pageYaml = fs.readFileSync(path.join(root, '_c8oProject/mobilePages/Page.y
 
 const METHODS = ['forwardAgentHostRequests', 'onPreviewCaptureResult', 'sendPreviewCaptureResult', 'offerPreviewShare', 'onPreviewShareCta',
   'agentPreviewText', 'agentUiLanguage', 'feedbackCard', 'normalizeAgentHostContextValue', 'onFeedbackCta', 'agentFeedbackText', 'toolCallMedia',
-  'applyAgentHostContext'];
+  'applyAgentHostContext', 'endAgentHostTurn'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter((m) => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map((m) => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -128,4 +128,19 @@ test('the host context keeps what the page can do; the read of the turn and the 
   assert.deepEqual(JSON.parse(JSON.stringify(view.local.AgentHostContext)), { embedMode: 'c8oforms', previewSharing: false, capabilities: ['preview-capture', '7'] });
   assert.match(pageYaml, /if \(response\.hostRequests && page\.forwardAgentHostRequests\) \{\n\s+page\.forwardAgentHostRequests\(\[\]\.concat\(response\.hostRequests\), state\.threadid \|\| response\.threadid \|\| page\.local\.Conversation\);/);
   assert.match(pageYaml, /if \(type === ''ConvertigoAssistant\.preview-capture\.result''\) \{\n\s+this\.onPreviewCaptureResult\(data\.payload \|\| \{\}\);/);
+});
+
+test('the end of a turn tells the page that captures previews, once per turn, so that it stops the share of its tab', () => {
+  const { view, posted } = panel();
+  assert.equal(view.endAgentHostTurn('run-1'), true);
+  view.endAgentHostTurn('run-1');
+  assert.deepEqual(posted, [{ type: 'ConvertigoAssistant.turn-end', payload: { runid: 'run-1' } }]);
+  view.endAgentHostTurn(42);
+  assert.deepEqual(posted.at(-1), { type: 'ConvertigoAssistant.turn-end', payload: { runid: '42' } }, 'the next turn too');
+  for (const options of [{ capabilities: [] }, { embedded: false }]) {
+    const other = panel(options);
+    assert.equal(other.view.endAgentHostTurn('run-1'), false);
+    assert.equal(other.posted.length, 0, 'a page that captures nothing hears nothing');
+  }
+  assert.match(pageYaml, /if \(\(isCompleted \|\| isFailed\) && page\.endAgentHostTurn\) \{\n\s+page\.endAgentHostTurn\(state\.runid != null \? state\.runid : response\.id\);/);
 });
