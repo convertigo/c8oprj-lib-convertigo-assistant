@@ -129,6 +129,17 @@ test('the dock gauge hides the moving buffer circles; the suggestions wrap inste
   assert.doesNotMatch(footerYaml, /\.tigo-prompts-row[^{]*\{[^}]*overflow-x:auto/);
 });
 
+test('in C8Oforms the composer fits the panel: no side margin past its edge, its controls wrap, the send button whole', () => {
+  // On test-nocode the form was 100% wide plus an 18 px side margin: the send button was cut at the panel edge.
+  assert.match(footerYaml, /:host-context\(ion-footer\.forms-integrated\.agent-footer-codex\) \.modern-input-form \{ margin: 4px 0 3px !important; max-width: 100%; \}/);
+  assert.match(footerYaml, /\.agent-prompt-controls-right \.codex-prompt-send-btn, [^{]*\{ flex: 0 0 auto; \}/);
+  assert.match(footerYaml, /:host-context\(ion-footer\.agent-footer-codex\) \.agent-prompt-controls \{ flex-wrap: wrap; row-gap: 4px; \}/);
+  assert.match(footerYaml, /:host-context\(ion-footer\.forms-integrated\.agent-footer-codex\) \.tigo-prompts-row > \.modern-suggestion-btn \{ flex: 1 1 140px !important; min-height: 36px !important; \}/);
+  const compact = footerYaml.slice(footerYaml.indexOf('↓TigoComposerCompactStyle'));
+  const body = compact.slice(compact.indexOf("'") + 1, compact.lastIndexOf("'"));
+  assert.doesNotMatch(body.replace(/''/g, ''), /'/, 'no lone quote in the single-quoted style');
+});
+
 test('a Vibe shell or file call reads as a local command, not as the Convertigo MCP', () => {
   const src = fs.readFileSync(path.join(root, 'js/agent_bridge_client.js'), 'utf8');
   const start = src.indexOf('  function progressTextForTool(');
