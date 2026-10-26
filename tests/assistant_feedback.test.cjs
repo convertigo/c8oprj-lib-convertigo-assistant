@@ -80,6 +80,17 @@ test('an error template keeps the shape of an error, so the same error with othe
   assert.equal(F.errorMessage(result, false), 'Database object not found: PfDelta.sq:nexistepas. QName shape: ...');
   assert.match(F.errorMessage(result.slice(0, 120), false), /^Database object not found: PfDelta\.sq/);
   assert.equal(F.errorMessage('raw failure', true), 'raw failure');
+  // A cut preview of a Vibe result holds the MCP answer escaped twice: its message keeps its quoted names (4 frictions on
+  // backend-apps stopped at "Objects named \\" and "There is no sequence named \\").
+  const named = { code: '-1', message: 'target: Database object not found: Pf.sq:x. Objects named "Q3" exist under: Pf.pg:Home' };
+  const vibeResult = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify(named) }] });
+  for (const cutAt of [3, 5]) {
+    assert.equal(F.errorMessage(vibeResult.slice(0, vibeResult.length - cutAt), false), named.message, 'cut ' + cutAt + ' characters before the end');
+  }
+  const sequence = { code: '-1', message: "lib_BaseRow: There is no sequence named 'TableGetData' in project \"lib_BaseRow\"\nat line 3" };
+  const sequenceResult = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify(sequence) }] });
+  assert.equal(F.errorMessage(sequenceResult.slice(0, -4), false), sequence.message, 'quotes, a newline and \\u-escapes undone once');
+  assert.equal(F.template(F.errorMessage(vibeResult.slice(0, -5), false), [], []), 'target: Database object not found: <name>. Objects named … exist under: <name>');
   // The plan sync reminder the Bridge appends to a result is never the error (frictions b71cde44, fe4bc4a6).
   const reminder = '[Convertigo plan sync] 12 tool calls since your last `todo` write. The Convertigo assistant shows the user only your `todo` list as the plan.\n\nCall `todo` now (action "write", the full list).';
   assert.equal(F.errorMessage(reminder, true), '', 'a failed call whose only text is the reminder is not collected');

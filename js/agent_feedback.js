@@ -277,8 +277,17 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         return parts.join("\n");
       }
     } catch (_ignoreParse) {
+      // A cut preview is the JSON text of a result whose text holds the MCP answer as JSON again: undo one level of
+      // escaping, backslashes included. Undoing only the escaped quotes left a backslash before each inner quote, and the
+      // error message stopped at its first quoted name with a trailing backslash ("Objects named", "There is no sequence
+      // named": 4 frictions on backend-apps, 26/10).
       if (/\\"/.test(text)) {
-        return text.replace(/\\n/g, "\n").replace(/\\"/g, "\"");
+        return text.replace(/\\(u[0-9a-fA-F]{4}|["\\\/bfnrt])/g, function (all, code) {
+          if (code.length === 5) {
+            return String.fromCharCode(parseInt(code.substring(1), 16));
+          }
+          return { "\"": "\"", "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[code];
+        });
       }
     }
     return text;
