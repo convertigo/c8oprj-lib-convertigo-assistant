@@ -895,3 +895,140 @@ test('the duration of a failed call: measured by the Bridge, else from when this
   assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-1', failure: { durationMs: null } }), 400, 'the Bridge saw no start');
   assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-2' }), null, 'unknown, not 0');
 });
+
+// GLM 5.3 told a No Code user it could not see the form in a browser nor read the rows of a table, added a diagnostic
+// field to the form, and filed nothing (gregoryv, test-nocode, 26/10). Tigo files the missing capability from the
+// answer and the comments of the turn, with the product's sentences only.
+test('a missing capability an agent tells the user is found in its answer or its comments, in French or English', () => {
+  const { F } = feedback();
+  const found = texts => Array.from(F.missingCapabilities(texts), subject => subject.replace('missing-capability:', ''));
+  assert.deepEqual(found(["Je n'ai pas pu reproduire le calcul moi-même : les outils de test browser ne sont pas disponibles dans cette session, "
+    + "et les outils no-code ne permettent pas de lire les lignes des tables. J'ai donc ajouté un champ de diagnostic."]), ['form-preview', 'table-rows']);
+  assert.deepEqual(found(['Le saut persiste donc la cause est ailleurs. Comme les outils browser de test ne sont pas disponibles dans cette session, '
+    + 'je vais instrumenter le formulaire.']), ['form-preview'], 'a comment of the turn');
+  assert.deepEqual(found(['Je n’ai pas modifié le formulaire : le comportement pointe vers les données des tables, que je ne peux pas lire '
+    + 'directement avec les outils no-code (le catalogue ne retourne que le schéma, pas les lignes).']), ['table-rows']);
+  assert.deepEqual(found(['**Limite** — vérification visuelle non réalisée.']), ['form-preview']);
+  assert.deepEqual(found(['La vérification visuelle dans le navigateur n\'a pas été effectuée.']), ['form-preview']);
+  assert.deepEqual(found(['Aucun outil de validation visuelle : la vérification à l\'écran reste de votre côté.']), ['form-preview']);
+  assert.deepEqual(found(['I could not check the rendering: no browser tools are available in this session.']), ['form-preview']);
+  assert.deepEqual(found(['The no-code tools cannot read the rows of a Baserow table.']), ['table-rows']);
+  // Another lack of a tool: filed alone, under the no-code tool it names, else "other".
+  assert.deepEqual(found(['Les outils no-code ne permettent pas de supprimer une table.']), ['other']);
+  assert.deepEqual(found(['Malheureusement, le tool `nocode-form-get` n\'est pas disponible dans mon environnement actuel.']), ['nocode-form-get']);
+  assert.deepEqual(found(['Les outils no-code ne permettent pas de supprimer une table. Pas d\'outil navigateur dans cette session.']), ['form-preview'],
+    'a known capability wins over another lack');
+  assert.deepEqual(found(["C'est une limite du périmètre no-code actuel, je ne vais pas la contourner par un accès direct à Baserow."]), ['other']);
+});
+
+test('advice to the user, limits by design and work done are not missing capabilities', () => {
+  const { F } = feedback();
+  for (const text of [
+    "L'aperçu ne sera pas disponible tant que le formulaire n'est pas publié.",
+    "Je n'ai pas accès aux logs du serveur : demandez à votre administrateur de les consulter.",
+    "Vous n'avez pas les droits de publication sur ce formulaire.",
+    "J'ai vérifié le rendu avec la capture de l'aperçu : les trois boutons sont sur une ligne.",
+    'Le champ Total ne peut pas être vide.',
+    'Je ne peux pas publier sans votre accord : dites-moi si je publie.',
+    'Je ne peux pas exécuter de commande shell dans ce contexte.',
+    'Vérification visuelle effectuée : la grille affiche les quatre lignes.',
+    'The form cannot be submitted while a required field is empty.'
+  ]) {
+    assert.deepEqual([...F.missingCapabilities([text])], [], text);
+  }
+  assert.deepEqual([...F.missingCapabilities([])], []);
+  assert.deepEqual([...F.missingCapabilities([null, ''])], []);
+});
+
+test('a missing capability is filed with the product\'s sentences only, never the agent\'s words or the user\'s names', () => {
+  const { F, store } = feedback({ settings: { mode: 'ask' } });
+  store.readNames = () => ['Planning des gardes', 'Diagnostic', 'Browser'];
+  store.writeNames = () => {};
+  const answer = "Je n'ai pas pu reproduire le calcul du formulaire Planning des gardes : les outils de test browser ne sont pas disponibles "
+    + "dans cette session, et les outils no-code ne permettent pas de lire les lignes de la table Gardes de jane@acme.fr.";
+  const events = [
+    { type: 'narrative', text: 'Comme les outils browser ne sont pas disponibles dans cette session, je vais instrumenter le formulaire Planning des gardes.' },
+    { type: 'tool', toolName: 'mcp_Convertigo.nocode_form_edit', status: 'completed', detail: '{"status":"ok"}' },
+    { type: 'activity', text: 'Les outils no-code ne permettent pas de supprimer une table.' }
+  ];
+  const filed = F.collectMissingCapabilities({ answer, events, provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
+  assert.deepEqual(Array.from(filed, report => report.finding.subject), ['missing-capability:form-preview', 'missing-capability:table-rows']);
+  const pending = F.pending();
+  assert.equal(pending.length, 2);
+  const sent = JSON.stringify(pending);
+  for (const leak of ['Planning', 'gardes', 'Gardes', 'jane', 'acme', 'reproduire', 'instrumenter']) {
+    assert.ok(!sent.includes(leak), leak + ' leaked in: ' + sent);
+  }
+  const preview = pending.find(report => report.finding.subject === 'missing-capability:form-preview');
+  assert.equal(preview.kind, 'agent_friction');
+  assert.equal(preview.finding.area, 'tool');
+  assert.equal(preview.finding.severity, 'medium');
+  assert.match(preview.finding.summary, /^Detected by Tigo in the No Code agent's answer: it needed to see the saved form in a browser/);
+  assert.match(preview.finding.summary, /a diagnostic field added to the form/, 'a user\'s name equal to a word of the sentence masks nothing');
+  assert.match(preview.finding.suggestion, /Browser|browser/);
+  assert.equal(preview.stack.surface, 'nocode');
+  assert.equal(preview.turn, undefined, 'TigoAccess takes a turn from a user report only');
+  assert.equal(preview.comment, undefined);
+  // The same capability in a later turn is counted, not repeated.
+  F.collectMissingCapabilities({ answer: 'Pas d\'outil navigateur dans cette session.', events: [], provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
+  assert.equal(F.pending().find(report => report.finding.subject === 'missing-capability:form-preview').count, 2);
+  assert.equal(F.pending().length, 2);
+});
+
+test('a missing capability is not filed without consent, or when the agent filed a friction itself in the turn', () => {
+  const answer = 'Pas d\'outil navigateur dans cette session : la vérification visuelle reste à faire.';
+  const off = feedback();
+  assert.deepEqual([...off.F.collectMissingCapabilities({ answer, events: [] })], []);
+  assert.equal(off.store.pending.size, 0);
+  const { F, store } = feedback({ settings: { mode: 'auto' } });
+  const filedByAgent = { type: 'tool', toolName: 'mcp_Convertigo.nocode_report_create', status: 'completed', detail: '{"status":"written"}' };
+  assert.deepEqual([...F.collectMissingCapabilities({ answer, events: [filedByAgent] })], []);
+  assert.equal(store.pending.size, 0);
+  // A report call that failed filed nothing: Tigo files the capability.
+  const failed = { ...filedByAgent, status: 'failed', detail: 'Reporting is disabled' };
+  assert.equal(F.collectMissingCapabilities({ answer, events: [failed] }).length, 1);
+  // Three capabilities in a turn: two reports at most.
+  const { F: many } = feedback({ settings: { mode: 'ask' } });
+  assert.equal(many.collectMissingCapabilities({ answer: 'Pas d\'outil navigateur dans cette session. Les outils ne permettent pas de lire les lignes des tables.',
+    events: [{ type: 'narrative', text: 'Les outils no-code ne permettent pas de supprimer une table.' }] }).length, 2);
+});
+
+test('an agent friction under a missing capability\'s subject says the product\'s sentences; other frictions keep theirs', () => {
+  const raw = { kind: 'agent_friction', finding: { area: 'guide', subject: 'missing-capability:table-rows', severity: 'high', summary: 'rows of Gardes for jane@acme.fr' } };
+  const other = { kind: 'agent_friction', finding: { area: 'tool', subject: 'nocode-form-edit', severity: 'low', summary: 'add_field needs a page key' } };
+  const { F } = feedback({ settings: { mode: 'ask' }, incoming: [{ ...raw, __file: 'a.json' }, { ...other, __file: 'b.json' }] });
+  const pending = F.pending();
+  const rows = pending.find(report => report.finding.subject === 'missing-capability:table-rows');
+  assert.equal(rows.finding.area, 'tool');
+  assert.equal(rows.finding.severity, 'medium');
+  assert.match(rows.finding.summary, /^Detected by Tigo in the No Code agent's answer: it needed the rows of a Baserow table/);
+  assert.equal(pending.find(report => report.finding.subject === 'nocode-form-edit').finding.summary, 'add_field needs a page key');
+  assert.equal(F.missingCapabilityFinding('missing-capability:unknown thing'), null);
+  // A subject names a known no-code tool or nothing: never a name of the user that looks like one.
+  assert.equal(F.missingCapabilityFinding('missing-capability:nocode-planning-des-gardes'), null);
+  assert.deepEqual([...F.missingCapabilities(['Les outils ne permettent pas de lire nocode_planning_des_gardes.'])], ['missing-capability:other']);
+  assert.equal(F.missingCapabilityFinding('missing-capability:nocode-form-get').summary, F.missingCapabilityFinding('missing-capability:other').summary);
+});
+
+test('a finished No Code turn files its missing capabilities, whichever way it ended; the prompt reminds the agent with consent', () => {
+  const calls = [];
+  const feedbackObject = {
+    ingest: options => calls.push(['ingest', options.surface]),
+    collectMissingCapabilities: options => calls.push(['missing', options.answer, options.events.length, options.surface, options.model])
+  };
+  const sandbox = { feedbackModule: () => feedbackObject, feedbackSurface: state => state.profile, feedbackModel: () => 'glm-5-3' };
+  vm.runInNewContext(backendParts(['ingestFeedback']), sandbox);
+  sandbox.ingestFeedback({ status: 'completed', profile: 'nocode', answer: 'done', progressEvents: [{ type: 'narrative' }], provider: 'convertigo' });
+  assert.deepEqual(calls, [['ingest', 'nocode'], ['missing', 'done', 1, 'nocode', 'glm-5-3']]);
+  calls.length = 0;
+  sandbox.ingestFeedback({ status: 'failed', profile: 'nocode', answer: 'error', progressEvents: [] });
+  sandbox.ingestFeedback({ status: 'cancelled', profile: 'nocode', answer: 'stopped', progressEvents: [] });
+  sandbox.ingestFeedback({ status: 'completed', profile: '', answer: 'done', progressEvents: [] });
+  assert.deepEqual(calls, [['ingest', 'nocode'], ['ingest', 'nocode'], ['ingest', '']], 'a failed, stopped or Studio turn: frictions only');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_bridge_client.js'), 'utf8');
+  assert.equal((source.match(/ingestFeedback\(state\);/g) || []).length, 1);
+  assert.match(source, /state\.idleReads = 0;[\s\S]*?\/\/ Whichever way the turn ended[^\n]*\n\s+if \(!wasTerminal && isTerminalStatus\(state\.status\)\) \{\n\s+ingestFeedback\(state\);\n\s+\}\n\s+if \(state\.status !== "completed"/);
+  assert.match(source, /options\.feedbackReportListed = feedbackCatalogKey\(state\) === "feedback:on";\n\s+if \(trim\(options\.rawUserQuestion\)\.length\) \{/);
+  assert.match(source, /if \(isNoCodeSurface && options\.feedbackReportListed === true\) \{/);
+  assert.match(source, /`nocode-report-create` is listed: the user agreed to send Tigo's frictions to Convertigo\. When this turn needs a capability no allowed tool gives/);
+});

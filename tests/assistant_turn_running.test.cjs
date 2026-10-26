@@ -27,7 +27,7 @@ function fixture(state, bridge) {
     optionsWithRequestFallbacks: v => v, enrichNoCodePrompt: v => v, extractUserMessage: v => v, buildSequencePrompt: v => v,
     normalizeThreadId: v => v, readState: () => state, createState: () => ({ threadid: 'new', status: '' }), ensureState: v => v,
     clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null, conversationTitleFromText: v => v,
-    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {},
+    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {}, feedbackCatalogKey: () => '',
     addArrayValue: (a, v) => (a || []).concat([v]), agentSlashCommandName: () => '',
     shouldInstallForRun: () => false, shouldShowAgentPreparingProgress: () => false,
     isResidentProvider: () => true, isVibeHarness: () => true, providerSequence: (_p, action) => 'agent_vibe_' + action,

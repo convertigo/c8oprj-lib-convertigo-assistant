@@ -140,7 +140,7 @@ function sendWith({ taken, prompt }) {
     normalizeThreadId: v => String(v ?? ''), readState: () => null, ensureState: v => v,
     createState: options => ({ threadid: options.threadid || 'agent-new', handle: options.threadid || 'agent-new', provider: options.provider, status: '' }),
     clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null, conversationTitleFromText: v => v,
-    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {},
+    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {}, feedbackCatalogKey: () => '',
     addArrayValue: (a, v) => (a || []).concat([v]), agentSlashCommandName: () => '',
     shouldInstallForRun: () => false, shouldShowAgentPreparingProgress: () => false,
     isResidentProvider: () => false, isVibeHarness: () => true, providerSequence: (_p, action) => 'agent_vibe_' + action,

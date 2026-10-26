@@ -5033,12 +5033,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // At the end of a turn the frictions the agent filed with report-create join the outbox with the conversation's
-  // provider and model, not the ones the agent names itself.
+  // provider and model, not the ones the agent names itself. After a completed No Code turn, so do the capabilities the
+  // agent told the user it lacked (no browser to see the form, no read of table rows) when it filed nothing itself.
   function ingestFeedback(state) {
     try {
       var feedback = feedbackModule(state);
       if (feedback) {
         feedback.ingest({ provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+        if (state.status === "completed" && feedbackSurface(state) === "nocode") {
+          feedback.collectMissingCapabilities({ answer: state.answer, events: state.progressEvents, provider: state.provider,
+            model: feedbackModel(state), surface: "nocode" });
+        }
       }
     } catch (_ignoreFeedback) {}
   }
@@ -7502,6 +7507,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
     promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
     promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
+    if (isNoCodeSurface && options.feedbackReportListed === true) {
+      // The skill's rule is read once per conversation: GLM never filed a missing capability it told the user (26/10).
+      promptParts.push("- `nocode-report-create` is listed: the user agreed to send Tigo's frictions to Convertigo. When this turn needs a capability no allowed tool gives (seeing the saved form run in a browser, reading the rows of a table...) or makes you work around a no-code tool, guide or prompt, file one short report before the final answer, without the user's names or data. Telling the user about the limitation does not replace it.");
+    }
     promptParts.push("- Do not expose secrets, credentials, API keys, or private environment values.");
     promptParts.push("- If installation, credentials, network access, or permissions block the work, explain the blocker and the next action clearly.");
     if (uploadedFiles.length) {
@@ -7907,6 +7916,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     enrichViewerDebugOptions(options, state);
     collectFeedbackContextNames(state, options);
+    // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
+    options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
     if (trim(options.rawUserQuestion).length) {
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
       options.Question = question;
@@ -8583,9 +8594,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
-      if (!wasTerminal && isTerminalStatus(state.status)) {
-        ingestFeedback(state);
-      }
       readEarlyAgentCommands(state);
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
@@ -8632,6 +8640,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           appendTranscript(state, "assistant", state.answer);
           state.answerTranscriptRunid = state.runid;
         }
+      }
+      // Whichever way the turn ended (its turn/end, the agent process gone after its answer, two idle reads).
+      if (!wasTerminal && isTerminalStatus(state.status)) {
+        ingestFeedback(state);
       }
       if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled") {
         state.status = "in_progress";

@@ -84,6 +84,70 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     jsonSchemaArgumentValidationError: "the arguments did not match the input schema of the tool"
   };
   var RUNTIME_CODE_PATTERN = new RegExp("\\b(?:" + Object.keys(RUNTIME_CODES).join("|") + ")\\b", "g");
+  // A No Code agent that tells the user a capability is missing (no browser to see the form, no read of the rows of a
+  // table) and works around it rarely files the friction: GLM took "a friction of a tool you had to work around" for
+  // failing tools only (gregoryv, test-nocode, 26/10). Tigo files it from the answer and the comments of the turn, with
+  // these sentences of the product only: never the agent's words. A subject of its own: an agent filing it gets them too.
+  var MISSING_CAPABILITY = "missing-capability:";
+  var MISSING_CAPABILITIES = {
+    "form-preview": {
+      summary: "Detected by Tigo in the No Code agent's answer: it needed to see the saved form in a browser (its rendering, a "
+        + "calculation or a behaviour) and had no tool for it in the turn, so it told the user and worked around it (reasoning "
+        + "alone, a diagnostic field added to the form, or the user asked to check).",
+      suggestion: "Give the No Code agent a view of the saved form as the user's browser runs it, and name that tool in the No "
+        + "Code prompt and skill wherever a visual or runtime check is needed."
+    },
+    "table-rows": {
+      summary: "Detected by Tigo in the No Code agent's answer: it needed the rows of a Baserow table the form uses and no "
+        + "no-code tool reads them, so it told the user and worked around it (guessing from the schema, a diagnostic field "
+        + "added to the form, or the user asked to check the data).",
+      suggestion: "Give the No Code agent a read-only look at a few rows of a Baserow table the form binds, with the user's own "
+        + "rights."
+    },
+    other: {
+      summary: "Detected by Tigo in the No Code agent's answer: it said that a no-code tool does not allow something it needed, "
+        + "or that a tool it needed is not available in the session, and did not file the friction itself.",
+      suggestion: ""
+    }
+  };
+  // A clause says a capability is missing when it holds a lack, its object, and the agent or its tools as subject:
+  // "l'aperçu ne sera pas disponible avant la publication" is advice to the user. Texts are lowercased, without accents.
+  var LACK = new RegExp([
+    "\\b(?:pas (?:encore )?disponibles?|indisponibles?|non disponibles?|impossible de|aucun outil|pas d'outils?|sans (?:acces|outil)",
+    "pas (?:d')?acces|not available|unavailable|unable to|cannot|can ?not|can't|could ?not|couldn't|without (?:access|a tool)",
+    "only returns?|no (?:\\w+ ){0,2}(?:tools?|access|way to))\\b",
+    "\\bne (?:me |nous |leur |vous )?(?:permet|permettent|peux|peut|peuvent|pouvons|pourrai|pourrais|donne|donnent|retourne|retournent"
+      + "|renvoie|renvoient|lit|lisent|vois|voit) (?:pas|que|aucune?)\\b",
+    "\\bje n'ai pas (?:pu|eu|acces|d'acces|d'outil|les moyens)\\b|\\bn'(?:ai|avons) (?:pas|aucun) (?:acces|outil|moyen)|\\bje n'ai (?:pas|aucun) (?:de |d')",
+    "\\bimpossible (?:en|d')|\\b(?:limite|limitation) du perimetre\\b|\\bhors (?:du )?perimetre\\b|\\boutside (?:the )?no-?code\\b",
+    "\\bn'(?:offre|offrent|expose|exposent) pas\\b|\\b(?:does|do|did)(?:n't| not) (?:let|allow|give|return|expose|provide|read|show)\\b",
+    "\\b(?:don't|do not) have\\b"
+  ].join("|"));
+  var AGENT_SUBJECT = /(?:^|[^a-z0-9_-])(?:outils?|tools?|session|catalogue|catalog|no-?code|nocode-[a-z-]+|je|moi|nous|me|i|my|we)(?=[^a-z0-9_]|$)|(?:^|[^a-z])[jm]'/;
+  // Limits by design (server logs, the user's rights) are told to the user, not filed.
+  var BY_DESIGN = /\b(?:logs?|journaux|log-view|droits?|permissions?|unauthori[sz]ed|proprietaire|owner)\b/;
+  var CAPABILITY_OBJECTS = [
+    { id: "table-rows", pattern: new RegExp("\\b(?:lignes?|rows?|enregistrements?|records?|donnees|data|contenu|valeurs)\\b[^.]{0,40}\\b(?:tables?|baserow)\\b"
+      + "|\\b(?:tables?|baserow)\\b[^.]{0,30}\\b(?:lignes?|rows?|enregistrements?|records?|donnees)\\b"
+      + "|\\bschema\\b[^.]{0,30}\\b(?:pas les lignes|sans les lignes|not (?:the )?rows)\\b") },
+    { id: "form-preview", pattern: new RegExp("\\b(?:browser|navigateur|apercu|preview|rendu|rendering|render|viewer|capture|screenshot|playwright|visuel(?:le)?s?|visual)\\b"
+      + "|\\b(?:controle d'interface|ui control|interface control)\\b"
+      + "|\\breprodu\\w*[^.]{0,40}\\b(?:moi-meme|myself|calcul\\w*|probleme|problem|bug|comportement|behaviou?r|erreur|error|saut|issue)\\b"
+      + "|\\b(?:execut\\w*|run|lancer|tester|test)\\b[^.]{0,20}\\b(?:formulaire|form|calcul|calculation|formule|formula|flux|flow)\\b") }
+  ];
+  var CAPABILITY_TOOL = /\b(?:outils?|tools?)\b|dans cette session|in this session|perimetre no-?code|no-?code scope|nocode-[a-z]/;
+  // The no-code tools a subject may name: a closed list, so that a subject never carries a name of the user.
+  var NOCODE_TOOLS = /^nocode-(?:app-create|form-(?:get|contract-get|compile|validate|create|edit|update|publish|preview-capture)|baserow-(?:catalog-list|schema-apply)|report-create)$/;
+  // A visual check the agent says it did not do: it had no way to see the form, or did not use it.
+  var VISUAL_CHECK_NOT_DONE = new RegExp("\\b(?:verification|controle|test|check) (?:visuel(?:le)?|visual)|\\bvisual (?:check|verification)\\b");
+  var NOT_DONE = new RegExp("\\b(?:non (?:effectuee?|realisee?|faite?)|n'a pas ete (?:effectuee?|realisee?|faite?)|pas (?:ete )?(?:effectuee?|realisee?|faite?)"
+    + "|n'ai pas (?:fait|effectue|realise|pu faire)|reste a (?:faire|confirmer)|not (?:done|performed|run))\\b");
+
+  function folded(text) {
+    return String(text == null ? "" : text).toLowerCase().replace(/[\u2018\u2019\u02bc`]/g, "'").replace(/[\u00a0*]/g, " ")
+      .replace(/[\u00e0\u00e2\u00e4]/g, "a").replace(/[\u00e9\u00e8\u00ea\u00eb]/g, "e").replace(/[\u00ee\u00ef]/g, "i")
+      .replace(/[\u00f4\u00f6]/g, "o").replace(/[\u00f9\u00fb\u00fc]/g, "u").replace(/\u00e7/g, "c");
+  }
   F.SCHEMA = SCHEMA;
   F.LIMITS = LIMITS;
 
@@ -368,9 +432,59 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return cut(provider, 60);
   };
 
+  // The capabilities a No Code agent says it lacks in texts of a turn (its answer, its comments): the subjects of the
+  // frictions Tigo files for it, the known capabilities first. Another lack of a tool is filed alone, under the no-code
+  // tool its clause names or "other".
+  F.missingCapabilities = function (texts) {
+    var found = [];
+    var other = "";
+    for (var t = 0; t < (texts || []).length; t++) {
+      var clauses = folded(String(texts[t] == null ? "" : texts[t]).substring(0, 20000)).split(/[.;:!?()\n\u2026]+|,\s*(?:et|and|mais|but|car|because)\s+/);
+      for (var c = 0; c < clauses.length; c++) {
+        var clause = clauses[c];
+        if (VISUAL_CHECK_NOT_DONE.test(clause) && NOT_DONE.test(clause)) {
+          if (found.indexOf(MISSING_CAPABILITY + "form-preview") === -1) {
+            found.push(MISSING_CAPABILITY + "form-preview");
+          }
+          continue;
+        }
+        if (!LACK.test(clause) || !AGENT_SUBJECT.test(clause) || BY_DESIGN.test(clause)) {
+          continue;
+        }
+        var known = "";
+        for (var o = 0; o < CAPABILITY_OBJECTS.length && !known.length; o++) {
+          known = CAPABILITY_OBJECTS[o].pattern.test(clause) ? MISSING_CAPABILITY + CAPABILITY_OBJECTS[o].id : "";
+        }
+        if (known.length && found.indexOf(known) === -1) {
+          found.push(known);
+        } else if (!known.length && !other.length && CAPABILITY_TOOL.test(clause)) {
+          var tools = [];
+          (clause.match(/\bnocode[-_][a-z_-]*[a-z]/g) || []).forEach(function (tool) {
+            tool = tool.replace(/_/g, "-");
+            if (NOCODE_TOOLS.test(tool) && tools.indexOf(tool) === -1) {
+              tools.push(tool);
+            }
+          });
+          other = MISSING_CAPABILITY + (tools.length === 1 ? tools[0] : "other");
+        }
+      }
+    }
+    return found.length ? found : (other.length ? [other] : []);
+  };
+
+  // The finding of a missing capability's subject, always the product's own sentences; null for another subject.
+  function missingCapabilityFinding(subject) {
+    var text = trim(subject);
+    var id = text.indexOf(MISSING_CAPABILITY) === 0 ? text.substring(MISSING_CAPABILITY.length) : "";
+    var fixed = Object.prototype.hasOwnProperty.call(MISSING_CAPABILITIES, id) ? MISSING_CAPABILITIES[id]
+      : (NOCODE_TOOLS.test(id) ? MISSING_CAPABILITIES.other : null);
+    return fixed ? { area: "tool", subject: text, severity: "medium", summary: fixed.summary, suggestion: fixed.suggestion } : null;
+  }
+  F.missingCapabilityFinding = missingCapabilityFinding;
+
   // The pure helpers every bound feedback object shares.
   var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "runtimeFailure",
-    "failureSummary", "endpoint", "provider"];
+    "failureSummary", "endpoint", "provider", "missingCapabilities", "missingCapabilityFinding"];
 
   // The feedback API bound to one store: the Studio's (engine-wide), or one server user's.
   function bind(F, store) {
@@ -524,11 +638,14 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         finding: {},
         stack: {}
       };
+      // A missing capability says only the product's sentences: nothing to mask, and a user's field named like one of
+      // their words never splits its count.
+      var fixed = out.kind === "agent_friction" ? missingCapabilityFinding(finding.subject) : null;
       var keys = ["area", "subject", "severity", "summary", "suggestion", "template"];
       for (var i = 0; i < keys.length; i++) {
-        var value = trim(finding[keys[i]]);
+        var value = trim(fixed ? fixed[keys[i]] : finding[keys[i]]);
         if (value.length) {
-          out.finding[keys[i]] = cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60);
+          out.finding[keys[i]] = fixed ? value : cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60);
         }
       }
       var stack = report.stack || {};
@@ -755,6 +872,34 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         }
       }
       return { steps: steps, tools: order.map(function (name) { return tools[name]; }) };
+    };
+
+    // After a completed No Code turn: the capabilities the agent told the user it lacked, in its answer or its comments,
+    // when it filed no friction itself in the turn. One report per capability, two at most.
+    F.collectMissingCapabilities = function (options) {
+      options = options || {};
+      if (F.mode() === "off") {
+        return [];
+      }
+      var events = options.events || [];
+      var texts = [trim(options.answer)];
+      for (var i = 0; i < events.length; i++) {
+        var event = events[i] || {};
+        var type = trim(event.type) || "narrative";
+        if (type === "tool" && /report[-_]create/i.test(trim(event.toolName) + " " + trim(event.title))
+          && event.status !== "failed" && event.status !== "error" && !F.errorMessage(event.detail, false).length) {
+          return [];
+        }
+        if (type === "narrative") {
+          texts.push(trim(event.text || event.title));
+        }
+      }
+      var subjects = F.missingCapabilities(texts);
+      var reports = [];
+      for (var s = 0; s < subjects.length && s < 2; s++) {
+        reports.push(F.add("agent_friction", missingCapabilityFinding(subjects[s]), options));
+      }
+      return reports;
     };
 
     // The MCP's report-create leaves raw agent frictions in incoming/: they get the same masking, fingerprint and count

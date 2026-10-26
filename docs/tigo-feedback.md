@@ -45,6 +45,7 @@ Studio), it needs the server's feedback key (see "On a server") and each signed-
 | Kind | Source | Content |
 | --- | --- | --- |
 | `agent_friction` | the agent, with the MCP tool `report-create` (listed only with consent) | area, subject, severity, summary, suggestion |
+| `agent_friction` (`missing-capability:*`) | Tigo, after a completed No Code turn whose answer or comments tell the user a capability is missing, when the agent filed no friction itself | the capability (subject) and the product's fixed sentences for it |
 | `tool_error` | a Convertigo MCP tool that fails or answers an error | tool, error template; for a call the agent runtime could not complete, its code, whether it retries it, the duration of the call and what the code means |
 | `runtime_error` | a turn that fails (agent process, gateway, protocol) | provider, error template |
 | `user_report` | `/signaler <comment>` (`/report <comment>`) on the last turn | comment, the turn's tools and their status |
@@ -89,7 +90,16 @@ Tigo in the No Code Studio of a server (C8Oforms) offers the same feedback to ea
   them.
 - **Agent frictions.** With the user's consent, the MCP lists `nocode-report-create` to the No Code token of that user
   only; its reports land in the user's `incoming/`. A resident agent reads its tool list once: when the user turns
-  feedback on or off, the next turn restarts it on the same session (Bridge `mcpCatalogKey`, Vibe).
+  feedback on or off, the next turn restarts it on the same session (Bridge `mcpCatalogKey`, Vibe). While the tool is
+  listed, the turn's prompt reminds the agent to file a capability it lacked or a workaround, not only a failing tool.
+- **Missing capabilities.** An agent that tells the user it cannot do something (see the saved form in a browser, read
+  the rows of a Baserow table) and works around it rarely files the friction. After a completed No Code turn in which the
+  agent filed none, Tigo looks for such a statement in its answer and comments (French or English: a lack, its object,
+  and the agent or its tools as subject; limits by design such as server logs or the user's rights are left out) and
+  files an `agent_friction` per capability, two at most: `missing-capability:form-preview`,
+  `missing-capability:table-rows`, or alone `missing-capability:<no-code tool>` / `missing-capability:other`. The report
+  holds only the product's fixed summary and suggestion for that subject, never the agent's words; it is counted like
+  the others by its fingerprint and follows the user's mode (reviewed in `ask`, sent after the turn in `auto`).
 
 ## Storage in the Studio
 
