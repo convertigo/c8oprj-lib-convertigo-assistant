@@ -4756,8 +4756,9 @@ scriptContent:
           :host-context(ion-footer.agent-footer-codex) .tigo-manage-button { height:25px; min-height:25px; line-height:1; flex:0 0 28px; }
           @media(max-width:700px) { .tigo-quick-caption { display:none; } .agent-prompt-controls-left .tigo-quick-toggle { width:28px; padding:0; justify-content:center; } }
           
-          .tigo-prompts-row:not([hidden]) { display:flex!important; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none; }
-          .tigo-prompts-row > .modern-suggestion-btn { flex:0 0 auto; align-self:center; vertical-align:middle; }
+          /* The suggestions wrap: on one line that scrolled with a hidden scrollbar, the last one looked cut at the edge of the panel. */
+          .tigo-prompts-row:not([hidden]) { display:flex!important; flex-wrap:wrap; align-items:center; gap:4px; overflow:visible; }
+          .tigo-prompts-row > .modern-suggestion-btn { flex:0 1 auto; max-width:100%; align-self:center; vertical-align:middle; }
           '
 ↓ResourceLanguage [ngx.components.UICompVariable-1792163971494]: 
   value: '''en'''

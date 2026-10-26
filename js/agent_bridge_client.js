@@ -3958,7 +3958,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function progressTextForTool(state, title) {
     var text = String(title || "").toLowerCase();
     var t = lang(state);
-    if (text.indexOf("exec_command") !== -1 ||
+    // Vibe titles its own tools "bash: <command>", "read_file: <path>"...: a Convertigo MCP call is "mcp_Convertigo.<tool>".
+    if (/^(bash|git_bash|powershell|read_file|write_file|edit|grep)(:|\s|$)/.test(text) ||
+        text.indexOf("exec_command") !== -1 ||
         text.indexOf("commande shell") !== -1 ||
         text.indexOf("shell command") !== -1 ||
         text.indexOf("lecture de fichier") !== -1 ||

@@ -3727,10 +3727,10 @@ scriptContent:
         	public agentUiText(key) {
         		// Labels of the plan, context gauge and compaction panel, in the four Assistant languages.
         		var texts: any = {
-        			fr: { plan: "Plan", planTasks: "{done}/{total} tâches", planStale: "Plan établi avant votre dernier message", context: "Contexte", tokens: "jetons", usageContext: "Contexte utilisé / seuil de compaction", usageWindow: "fenêtre", usagePrompt: "Jetons envoyés (session)", usageCompletion: "Jetons générés (session)", usageCached: "Jetons en cache (session)", usageCost: "Coût estimé de la session", usageSteps: "Étapes", usageSpeed: "Vitesse", usageSpeedUnit: "jetons/s", usageLastTurn: "Dernier tour", compactTitle: "Compacter le contexte", compactHelp: "Le résumé remplace l''historique de la conversation pour libérer le contexte.", compactConvertigo: "Résumé Convertigo", compactGeneric: "Résumé par défaut de l''agent", compactCustomLabel: "Consignes pour le résumé", compactCustom: "Compacter avec ces consignes", commands: "Commandes", usageUsedRow: "Contexte utilisé", usageWindowRow: "Fenêtre de contexte", usageAutoCompact: "Compaction automatique à", usageAutoCompactShort: "compaction auto à {value}", usageLastKnown: "valeur du dernier tour", planLastTurn: "dernier tour", notProvided: "non fourni", usageCostJournal: "estimé depuis le journal", usageAgentModel: "Agent · {model}", usageVisionModel: "Vision · {model}", usageCallOne: "1 appel", usageCallMany: "{n} appels", usageSubagentModel: "Sous-agent {profile} · {model}", usageRunOne: "1 lancement", usageRunMany: "{n} lancements", subagentBadge: "Sous-agent · {profile}", profileVerifier: "vérificateur", profileConstructor: "constructeur", subagentRunning: "en cours", subagentDone: "terminé", subagentFailed: "échec", verdictPassed: "Réussi", verdictFailed: "Échec", verdictPartial: "Partiel", verdictDone: "Terminé", subagentCreated: "Créés", subagentModified: "Modifiés", subagentOpen: "Reste", usageSent: "envoyés", usageGenerated: "générés", usageTotal: "Total de la session (tous modèles)", usageCostGateway: "facturé par la passerelle", usageCostSum: "somme des modèles" },
-        			en: { plan: "Plan", planTasks: "{done}/{total} tasks", planStale: "Plan made before your last message", context: "Context", tokens: "tokens", usageContext: "Context used / compaction threshold", usageWindow: "window", usagePrompt: "Prompt tokens (session)", usageCompletion: "Completion tokens (session)", usageCached: "Cached tokens (session)", usageCost: "Estimated session cost", usageSteps: "Steps", usageSpeed: "Speed", usageSpeedUnit: "tokens/s", usageLastTurn: "Last turn", compactTitle: "Compact the context", compactHelp: "The summary replaces the conversation history to free the context.", compactConvertigo: "Convertigo summary", compactGeneric: "Agent''s default summary", compactCustomLabel: "Summary instructions", compactCustom: "Compact with these instructions", commands: "Commands", usageUsedRow: "Context used", usageWindowRow: "Context window", usageAutoCompact: "Automatic compaction at", usageAutoCompactShort: "auto-compaction at {value}", usageLastKnown: "from the last turn", planLastTurn: "last turn", notProvided: "not provided", usageCostJournal: "estimated from the journal", usageAgentModel: "Agent · {model}", usageVisionModel: "Vision · {model}", usageCallOne: "1 call", usageCallMany: "{n} calls", usageSubagentModel: "Sub-agent {profile} · {model}", usageRunOne: "1 run", usageRunMany: "{n} runs", subagentBadge: "Sub-agent · {profile}", profileVerifier: "verifier", profileConstructor: "builder", subagentRunning: "running", subagentDone: "done", subagentFailed: "failed", verdictPassed: "Passed", verdictFailed: "Failed", verdictPartial: "Partial", verdictDone: "Done", subagentCreated: "Created", subagentModified: "Modified", subagentOpen: "Open", usageSent: "sent", usageGenerated: "generated", usageTotal: "Session total (all models)", usageCostGateway: "charged by the gateway", usageCostSum: "sum of the models" },
-        			it: { plan: "Piano", planTasks: "{done}/{total} attività", planStale: "Piano stabilito prima del tuo ultimo messaggio", context: "Contesto", tokens: "token", usageContext: "Contesto usato / soglia di compattazione", usageWindow: "finestra", usagePrompt: "Token inviati (sessione)", usageCompletion: "Token generati (sessione)", usageCached: "Token in cache (sessione)", usageCost: "Costo stimato della sessione", usageSteps: "Passi", usageSpeed: "Velocità", usageSpeedUnit: "token/s", usageLastTurn: "Ultimo turno", compactTitle: "Compatta il contesto", compactHelp: "Il riepilogo sostituisce la cronologia della conversazione per liberare il contesto.", compactConvertigo: "Riepilogo Convertigo", compactGeneric: "Riepilogo predefinito dell''agente", compactCustomLabel: "Istruzioni per il riepilogo", compactCustom: "Compatta con queste istruzioni", commands: "Comandi", usageUsedRow: "Contesto usato", usageWindowRow: "Finestra di contesto", usageAutoCompact: "Compattazione automatica a", usageAutoCompactShort: "compattazione auto a {value}", usageLastKnown: "dall''ultimo turno", planLastTurn: "ultimo turno", notProvided: "non fornito", usageCostJournal: "stimato dal journal", usageAgentModel: "Agente · {model}", usageVisionModel: "Visione · {model}", usageCallOne: "1 chiamata", usageCallMany: "{n} chiamate", usageSubagentModel: "Sotto-agente {profile} · {model}", usageRunOne: "1 avvio", usageRunMany: "{n} avvii", subagentBadge: "Sotto-agente · {profile}", profileVerifier: "verificatore", profileConstructor: "costruttore", subagentRunning: "in corso", subagentDone: "terminato", subagentFailed: "fallito", verdictPassed: "Riuscito", verdictFailed: "Fallito", verdictPartial: "Parziale", verdictDone: "Terminato", subagentCreated: "Creati", subagentModified: "Modificati", subagentOpen: "Aperto", usageSent: "inviati", usageGenerated: "generati", usageTotal: "Totale della sessione (tutti i modelli)", usageCostGateway: "addebitato dal gateway", usageCostSum: "somma dei modelli" },
-        			es: { plan: "Plan", planTasks: "{done}/{total} tareas", planStale: "Plan establecido antes de tu último mensaje", context: "Contexto", tokens: "tokens", usageContext: "Contexto usado / umbral de compactación", usageWindow: "ventana", usagePrompt: "Tokens enviados (sesión)", usageCompletion: "Tokens generados (sesión)", usageCached: "Tokens en caché (sesión)", usageCost: "Coste estimado de la sesión", usageSteps: "Pasos", usageSpeed: "Velocidad", usageSpeedUnit: "tokens/s", usageLastTurn: "Último turno", compactTitle: "Compactar el contexto", compactHelp: "El resumen sustituye el historial de la conversación para liberar el contexto.", compactConvertigo: "Resumen Convertigo", compactGeneric: "Resumen predeterminado del agente", compactCustomLabel: "Instrucciones para el resumen", compactCustom: "Compactar con estas instrucciones", commands: "Comandos", usageUsedRow: "Contexto usado", usageWindowRow: "Ventana de contexto", usageAutoCompact: "Compactación automática a", usageAutoCompactShort: "compactación auto a {value}", usageLastKnown: "del último turno", planLastTurn: "último turno", notProvided: "no proporcionado", usageCostJournal: "estimado desde el registro", usageAgentModel: "Agente · {model}", usageVisionModel: "Visión · {model}", usageCallOne: "1 llamada", usageCallMany: "{n} llamadas", usageSubagentModel: "Subagente {profile} · {model}", usageRunOne: "1 ejecución", usageRunMany: "{n} ejecuciones", subagentBadge: "Subagente · {profile}", profileVerifier: "verificador", profileConstructor: "constructor", subagentRunning: "en curso", subagentDone: "terminado", subagentFailed: "fallido", verdictPassed: "Correcto", verdictFailed: "Fallido", verdictPartial: "Parcial", verdictDone: "Terminado", subagentCreated: "Creados", subagentModified: "Modificados", subagentOpen: "Pendiente", usageSent: "enviados", usageGenerated: "generados", usageTotal: "Total de la sesión (todos los modelos)", usageCostGateway: "facturado por la pasarela", usageCostSum: "suma de los modelos" }
+        			fr: { plan: "Plan", planTasks: "{done}/{total} tâches", planStale: "Plan établi avant votre dernier message", context: "Contexte", tokens: "jetons", usageContext: "Contexte utilisé / seuil de compaction", usageWindow: "fenêtre", usagePrompt: "Jetons envoyés (session)", usageCompletion: "Jetons générés (session)", usageCached: "Jetons en cache (session)", usageCost: "Coût estimé de la session", usageSteps: "Étapes", usageSpeed: "Vitesse", usageSpeedUnit: "jetons/s", usageLastTurn: "Dernier tour", compactTitle: "Compacter le contexte", compactHelp: "Le résumé remplace l''historique de la conversation pour libérer le contexte.", compactConvertigo: "Compacter : résumé Convertigo", compactGeneric: "Compacter : résumé de l''agent", compactConfirm: "Confirmer la compaction", copyMessage: "Copier", copiedMessage: "Copié", compactCustomLabel: "Consignes pour le résumé", compactCustom: "Compacter avec ces consignes", commands: "Commandes", usageUsedRow: "Contexte utilisé", usageWindowRow: "Fenêtre de contexte", usageAutoCompact: "Compaction automatique à", usageAutoCompactShort: "compaction auto à {value}", usageLastKnown: "valeur du dernier tour", planLastTurn: "dernier tour", notProvided: "non fourni", usageCostJournal: "estimé depuis le journal", usageAgentModel: "Agent · {model}", usageVisionModel: "Vision · {model}", usageCallOne: "1 appel", usageCallMany: "{n} appels", usageSubagentModel: "Sous-agent {profile} · {model}", usageRunOne: "1 lancement", usageRunMany: "{n} lancements", subagentBadge: "Sous-agent · {profile}", profileVerifier: "vérificateur", profileConstructor: "constructeur", subagentRunning: "en cours", subagentDone: "terminé", subagentFailed: "échec", verdictPassed: "Réussi", verdictFailed: "Échec", verdictPartial: "Partiel", verdictDone: "Terminé", subagentCreated: "Créés", subagentModified: "Modifiés", subagentOpen: "Reste", usageSent: "envoyés", usageGenerated: "générés", usageTotal: "Total de la session (tous modèles)", usageCostGateway: "facturé par la passerelle", usageCostSum: "somme des modèles" },
+        			en: { plan: "Plan", planTasks: "{done}/{total} tasks", planStale: "Plan made before your last message", context: "Context", tokens: "tokens", usageContext: "Context used / compaction threshold", usageWindow: "window", usagePrompt: "Prompt tokens (session)", usageCompletion: "Completion tokens (session)", usageCached: "Cached tokens (session)", usageCost: "Estimated session cost", usageSteps: "Steps", usageSpeed: "Speed", usageSpeedUnit: "tokens/s", usageLastTurn: "Last turn", compactTitle: "Compact the context", compactHelp: "The summary replaces the conversation history to free the context.", compactConvertigo: "Compact: Convertigo summary", compactGeneric: "Compact: agent''s summary", compactConfirm: "Confirm compaction", copyMessage: "Copy", copiedMessage: "Copied", compactCustomLabel: "Summary instructions", compactCustom: "Compact with these instructions", commands: "Commands", usageUsedRow: "Context used", usageWindowRow: "Context window", usageAutoCompact: "Automatic compaction at", usageAutoCompactShort: "auto-compaction at {value}", usageLastKnown: "from the last turn", planLastTurn: "last turn", notProvided: "not provided", usageCostJournal: "estimated from the journal", usageAgentModel: "Agent · {model}", usageVisionModel: "Vision · {model}", usageCallOne: "1 call", usageCallMany: "{n} calls", usageSubagentModel: "Sub-agent {profile} · {model}", usageRunOne: "1 run", usageRunMany: "{n} runs", subagentBadge: "Sub-agent · {profile}", profileVerifier: "verifier", profileConstructor: "builder", subagentRunning: "running", subagentDone: "done", subagentFailed: "failed", verdictPassed: "Passed", verdictFailed: "Failed", verdictPartial: "Partial", verdictDone: "Done", subagentCreated: "Created", subagentModified: "Modified", subagentOpen: "Open", usageSent: "sent", usageGenerated: "generated", usageTotal: "Session total (all models)", usageCostGateway: "charged by the gateway", usageCostSum: "sum of the models" },
+        			it: { plan: "Piano", planTasks: "{done}/{total} attività", planStale: "Piano stabilito prima del tuo ultimo messaggio", context: "Contesto", tokens: "token", usageContext: "Contesto usato / soglia di compattazione", usageWindow: "finestra", usagePrompt: "Token inviati (sessione)", usageCompletion: "Token generati (sessione)", usageCached: "Token in cache (sessione)", usageCost: "Costo stimato della sessione", usageSteps: "Passi", usageSpeed: "Velocità", usageSpeedUnit: "token/s", usageLastTurn: "Ultimo turno", compactTitle: "Compatta il contesto", compactHelp: "Il riepilogo sostituisce la cronologia della conversazione per liberare il contesto.", compactConvertigo: "Compatta: riepilogo Convertigo", compactGeneric: "Compatta: riepilogo dell''agente", compactConfirm: "Conferma la compattazione", copyMessage: "Copia", copiedMessage: "Copiato", compactCustomLabel: "Istruzioni per il riepilogo", compactCustom: "Compatta con queste istruzioni", commands: "Comandi", usageUsedRow: "Contesto usato", usageWindowRow: "Finestra di contesto", usageAutoCompact: "Compattazione automatica a", usageAutoCompactShort: "compattazione auto a {value}", usageLastKnown: "dall''ultimo turno", planLastTurn: "ultimo turno", notProvided: "non fornito", usageCostJournal: "stimato dal journal", usageAgentModel: "Agente · {model}", usageVisionModel: "Visione · {model}", usageCallOne: "1 chiamata", usageCallMany: "{n} chiamate", usageSubagentModel: "Sotto-agente {profile} · {model}", usageRunOne: "1 avvio", usageRunMany: "{n} avvii", subagentBadge: "Sotto-agente · {profile}", profileVerifier: "verificatore", profileConstructor: "costruttore", subagentRunning: "in corso", subagentDone: "terminato", subagentFailed: "fallito", verdictPassed: "Riuscito", verdictFailed: "Fallito", verdictPartial: "Parziale", verdictDone: "Terminato", subagentCreated: "Creati", subagentModified: "Modificati", subagentOpen: "Aperto", usageSent: "inviati", usageGenerated: "generati", usageTotal: "Totale della sessione (tutti i modelli)", usageCostGateway: "addebitato dal gateway", usageCostSum: "somma dei modelli" },
+        			es: { plan: "Plan", planTasks: "{done}/{total} tareas", planStale: "Plan establecido antes de tu último mensaje", context: "Contexto", tokens: "tokens", usageContext: "Contexto usado / umbral de compactación", usageWindow: "ventana", usagePrompt: "Tokens enviados (sesión)", usageCompletion: "Tokens generados (sesión)", usageCached: "Tokens en caché (sesión)", usageCost: "Coste estimado de la sesión", usageSteps: "Pasos", usageSpeed: "Velocidad", usageSpeedUnit: "tokens/s", usageLastTurn: "Último turno", compactTitle: "Compactar el contexto", compactHelp: "El resumen sustituye el historial de la conversación para liberar el contexto.", compactConvertigo: "Compactar: resumen Convertigo", compactGeneric: "Compactar: resumen del agente", compactConfirm: "Confirmar la compactación", copyMessage: "Copiar", copiedMessage: "Copiado", compactCustomLabel: "Instrucciones para el resumen", compactCustom: "Compactar con estas instrucciones", commands: "Comandos", usageUsedRow: "Contexto usado", usageWindowRow: "Ventana de contexto", usageAutoCompact: "Compactación automática a", usageAutoCompactShort: "compactación auto a {value}", usageLastKnown: "del último turno", planLastTurn: "último turno", notProvided: "no proporcionado", usageCostJournal: "estimado desde el registro", usageAgentModel: "Agente · {model}", usageVisionModel: "Visión · {model}", usageCallOne: "1 llamada", usageCallMany: "{n} llamadas", usageSubagentModel: "Subagente {profile} · {model}", usageRunOne: "1 ejecución", usageRunMany: "{n} ejecuciones", subagentBadge: "Subagente · {profile}", profileVerifier: "verificador", profileConstructor: "constructor", subagentRunning: "en curso", subagentDone: "terminado", subagentFailed: "fallido", verdictPassed: "Correcto", verdictFailed: "Fallido", verdictPartial: "Parcial", verdictDone: "Terminado", subagentCreated: "Creados", subagentModified: "Modificados", subagentOpen: "Pendiente", usageSent: "enviados", usageGenerated: "generados", usageTotal: "Total de la sesión (todos los modelos)", usageCostGateway: "facturado por la pasarela", usageCostSum: "suma de los modelos" }
         		};
         		var language = "en";
         		try {
@@ -5352,15 +5352,29 @@ scriptContent:
         		if (!card || !card.json) {
         			return;
         		}
+        		this.copyAgentClipboard(card.json, card);
+        	}
+        	public copyAgentMessage(item) {
+        		// A question or an answer as it was written (Markdown for an answer), from the button under it.
+        		if (!item || !item.msg) {
+        			return;
+        		}
+        		this.copyAgentClipboard("" + item.msg, item);
+        	}
+        	public agentCopyIcon(item) {
+        		return item && item.copied ? "checkmark-outline" : "copy-outline";
+        	}
+        	public copyAgentClipboard(text, holder) {
+        		// holder.copied makes its button say "copied" for 2 s.
         		var done = () => {
-        			card.copied = true;
+        			holder.copied = true;
         			this.tick();
-        			setTimeout(() => { card.copied = false; this.tick(); }, 2000);
+        			setTimeout(() => { holder.copied = false; this.tick(); }, 2000);
         		};
         		var fallback = () => {
         			try {
         				var area = document.createElement("textarea");
-        				area.value = card.json;
+        				area.value = text;
         				area.style.position = "fixed";
         				area.style.opacity = "0";
         				document.body.appendChild(area);
@@ -5372,17 +5386,40 @@ scriptContent:
         		};
         		try {
         			if (navigator.clipboard && navigator.clipboard.writeText) {
-        				navigator.clipboard.writeText(card.json).then(done).catch(fallback);
+        				navigator.clipboard.writeText(text).then(done).catch(fallback);
         				return;
         			}
         		} catch (e) {}
         		fallback();
+        	}
+        	public compactButtonLabel(mode) {
+        		// The button a first click armed says that the next click compacts.
+        		var keys: any = { convertigo: "compactConvertigo", generic: "compactGeneric", custom: "compactCustom" };
+        		return this.local && this.local.AgentCompactArmed === mode ? this.agentUiText("compactConfirm") : this.agentUiText(keys[mode]);
         	}
         	public compactAgentConversation(mode) {
         		// Sends "/compact [instructions]" through the composer, like a message the user typed.
         		if (!this.local || this.local.IsProcessing === true || !this.chatfooter) {
         			return;
         		}
+        		// The Convertigo handoff speaks of the Studio and PROGRESS.md: a No Code agent writes its own summary.
+        		if (mode === "convertigo" && this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode") {
+        			mode = "generic";
+        		}
+        		// A summary replaces the history of the conversation: the first click arms the button, a second click within
+        		// 6 s compacts (a No Code user looking for a summary to read compacted three times in a minute).
+        		if (this.local.AgentCompactArmed !== mode) {
+        			this.local.AgentCompactArmed = mode;
+        			clearTimeout(this.local.AgentCompactDisarm);
+        			this.local.AgentCompactDisarm = setTimeout(() => {
+        				if (this.local && this.local.AgentCompactArmed === mode) {
+        					this.local.AgentCompactArmed = "";
+        				}
+        			}, 6000);
+        			return;
+        		}
+        		clearTimeout(this.local.AgentCompactDisarm);
+        		this.local.AgentCompactArmed = "";
         		// The agent runtime (Vibe, Claude Code) compacts with its own built-in prompt; "/compact <instructions>" adds instructions to it.
         		var instructions = "";
         		if (mode === "convertigo") {
@@ -13348,6 +13385,44 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:item.time || ''
+            ↓CopyUserMessage [ngx.components.UIDynamicElement-1793020000101]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: button
+              ↓Class [ngx.components.UIAttribute-1793020000103]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:''agent-copy-message is-user'' + (item && item.msg ? '''' : '' agent-hidden'')'
+              ↓Type [ngx.components.UIAttribute-1793020000105]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓Icon [ngx.components.UIDynamicElement-1793020000107]: 
+                beanData: '{"ionBean":"Icon","IconName":"script:this.agentCopyIcon(item)"}'
+                tagName: ion-icon
+                ↓Hidden [ngx.components.UIAttribute-1793020000108]: 
+                  attrName: aria-hidden
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:true
+              ↓Text [ngx.components.UIText-1793020000109]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:item && item.copied ? this.agentUiText(''copiedMessage'') : this.agentUiText(''copyMessage'')'
+              ↓Event [ngx.components.UIControlEvent-1793020000111]: 
+                ↓Copy [ngx.components.UICustomAction-1793020000113]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.copyAgentMessage(props.stack.root.scope.item);
+                          		resolve();
           ↓IsWorklog [ngx.components.UIControlDirective-1782137358861]: 
             directiveName: If
             directiveSource: 
@@ -14766,6 +14841,44 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:true
+            ↓CopyAssistantMessage [ngx.components.UIDynamicElement-1793020000201]: 
+              beanData: '{"ionBean":"DivTag"}'
+              tagName: button
+              ↓Class [ngx.components.UIAttribute-1793020000203]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:''agent-copy-message is-assistant'' + (item && item.msg ? '''' : '' agent-hidden'')'
+              ↓Type [ngx.components.UIAttribute-1793020000205]: 
+                attrName: type
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:button
+              ↓Icon [ngx.components.UIDynamicElement-1793020000207]: 
+                beanData: '{"ionBean":"Icon","IconName":"script:this.agentCopyIcon(item)"}'
+                tagName: ion-icon
+                ↓Hidden [ngx.components.UIAttribute-1793020000208]: 
+                  attrName: aria-hidden
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:true
+              ↓Text [ngx.components.UIText-1793020000209]: 
+                textValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: 'script:item && item.copied ? this.agentUiText(''copiedMessage'') : this.agentUiText(''copyMessage'')'
+              ↓Event [ngx.components.UIControlEvent-1793020000211]: 
+                ↓Copy [ngx.components.UICustomAction-1793020000213]: 
+                  actionValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                        →: |
+                          		page.copyAgentMessage(props.stack.root.scope.item);
+                          		resolve();
           ↓IsMetrics [ngx.components.UIControlDirective-1792267235603]: 
             directiveName: If
             directiveSource: 
@@ -16012,12 +16125,12 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-context-button
+                      - MobileSmartSourceType: 'script:(this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'') ? ''agent-context-button agent-hidden'' : ''agent-context-button'''
                 ↓Label [ngx.components.UIText-1792250178418]: 
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.agentUiText('compactConvertigo')
+                      - MobileSmartSourceType: script:this.compactButtonLabel('convertigo')
                 ↓Event [ngx.components.UIControlEvent-1792250178420]: 
                   ↓Compact [ngx.components.UICustomAction-1792250178866]: 
                     actionValue: 
@@ -16046,7 +16159,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.agentUiText('compactGeneric')
+                      - MobileSmartSourceType: script:this.compactButtonLabel('generic')
                 ↓Event [ngx.components.UIControlEvent-1792250178874]: 
                   ↓Compact [ngx.components.UICustomAction-1792250178876]: 
                     actionValue: 
@@ -16105,7 +16218,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.agentUiText('compactCustom')
+                      - MobileSmartSourceType: script:this.compactButtonLabel('custom')
                 ↓Event [ngx.components.UIControlEvent-1792250178894]: 
                   ↓Compact [ngx.components.UICustomAction-1792250178896]: 
                     actionValue: 
@@ -19140,12 +19253,12 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:agent-context-button
+                      - MobileSmartSourceType: 'script:(this.getAgentSkillProfile && this.getAgentSkillProfile() === ''nocode'') ? ''agent-context-button agent-hidden'' : ''agent-context-button'''
                 ↓Label [ngx.components.UIText-1792254391065]: 
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.agentUiText('compactConvertigo')
+                      - MobileSmartSourceType: script:this.compactButtonLabel('convertigo')
                 ↓Event [ngx.components.UIControlEvent-1792254391067]: 
                   ↓Act [ngx.components.UICustomAction-1792254391069]: 
                     actionValue: 
@@ -19174,7 +19287,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:this.agentUiText('compactGeneric')
+                      - MobileSmartSourceType: script:this.compactButtonLabel('generic')
                 ↓Event [ngx.components.UIControlEvent-1792254391077]: 
                   ↓Act [ngx.components.UICustomAction-1792254391079]: 
                     actionValue: 
@@ -23476,6 +23589,15 @@ title: Tigo
           .agent-dock-plan { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .agent-dock-context { align-items: center; display: inline-flex; gap: 6px; white-space: nowrap; }
           .agent-dock-gauge { --background: color-mix(in srgb, var(--modern-muted, #94a3b8) 24%, transparent 76%); --progress-background: var(--modern-cyan, #06b6d4); border-radius: 3px; height: 5px; width: 60px; }
+          /* Its buffer marks the automatic compaction threshold, and Ionic animates the buffer circles of a bar whose buffer
+             is below 1: the gauge moved by itself. Hidden as on the gauge of the side panel, hatched beyond the threshold. */
+          .agent-dock-gauge { background: repeating-linear-gradient(90deg, rgba(239, 68, 68, 0.38) 0 2px, transparent 2px 5px); }
+          .agent-dock-gauge::part(stream) { display: none; }
+          /* Copy a question or an answer as written: a small button under each message. */
+          .agent-copy-message { align-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--modern-muted, #94a3b8); cursor: pointer; display: flex; font: inherit; font-size: 12px; gap: 4px; margin: -4px 0 8px; padding: 3px 6px; width: fit-content; }
+          .agent-copy-message.is-user { margin-left: auto; }
+          .agent-copy-message:hover, .agent-copy-message:focus-visible { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 14%, transparent 86%); color: var(--modern-text, #0f172a); }
+          .agent-copy-message ion-icon { font-size: 14px; }
           .agent-dock-chevron { color: var(--modern-muted, #94a3b8); transition: transform 160ms ease; }
           .agent-dock.is-open .agent-dock-chevron { transform: rotate(180deg); }
           .agent-dock-tabs { border-top: 1px solid var(--modern-border, #cbd5e1); display: flex; gap: 4px; padding: 0 16px; }
