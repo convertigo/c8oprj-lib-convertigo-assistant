@@ -967,6 +967,9 @@ scriptContent:
         			if (page.formsConversationRestorePending === true) { return; }
         			var local: any = this.local || {};
         			var id = local.NewConversationMode === true ? "" : this.normalizeAgentHostContextValue(local.Conversation);
+        			// a panel with no conversation (its start, a resume under way, a frame replaced, a restore not done yet) keeps the
+        			// one of the tab: only a new conversation started by the user drops it
+        			if (!id.length && local.NewConversationMode !== true) { return; }
         			if (id === page.formsConversationRemembered) { return; }
         			page.formsConversationRemembered = id;
         			if (id.length) {
@@ -982,7 +985,13 @@ scriptContent:
         		var id = "";
         		try { id = this.normalizeAgentHostContextValue(window.sessionStorage.getItem("lib_ConvertigoAssistant.FormsOpenConversation")); } catch (e) {}
         		page.formsConversationRemembered = id;
-        		if (!id.length || !this.isEmbeddedInC8Oforms() || this.getAssistantQueryParam("restoreConversation") !== "1") { return; }
+        		if (!id.length || !this.isEmbeddedInC8Oforms()) { return; }
+        		if (this.getAssistantQueryParam("restoreConversation") !== "1") {
+        			// a panel the user opens shows its home: the conversation of an earlier panel is not to open again
+        			page.formsConversationRemembered = "";
+        			try { window.sessionStorage.removeItem("lib_ConvertigoAssistant.FormsOpenConversation"); } catch (e) {}
+        			return;
+        		}
         		page.formsConversationRestorePending = true;
         		var startedAt = Date.now();
         		var ready = 0;
@@ -990,19 +999,31 @@ scriptContent:
         			var local: any = this.local || {};
         			var list = Array.isArray(local.AgentConversations) ? local.AgentConversations : [];
         			var conversation = list.filter((item) => item && item.conversationId === id)[0] || null;
-        			// when a click on Resume could open it: the history loaded, no conversation, resume or turn running, the settings
-        			// closed; twice in a row, the start of the page settled
-        			var open = conversation != null && !local.Conversation && local.AgentConversationsLoading === false && local.AgentResumePending !== true
-        				&& local.IsProcessing !== true && local.ShowAgentConfigPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel());
+        			// when a click on Resume could open it: the start of the page answered (AgentCreateConversationRouter sets its own
+        			// conversation, AgentStartupDone), the history loaded, no conversation, resume or turn running, the settings closed;
+        			// twice in a row, the start of the page settled
+        			var open = conversation != null && !local.Conversation && local.AgentStartupDone === true && local.AgentConversationsLoading === false
+        				&& local.AgentResumePending !== true && local.IsProcessing !== true && local.ShowAgentConfigPanel !== true
+        				&& !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel());
         			ready = open ? ready + 1 : 0;
         			if (ready >= 2) {
         				page.formsConversationRestorePending = false;
         				this.events.publish("AgentResumeConversation", { scope: { conversation: conversation }, quiet: true });
         				return;
         			}
-        			if (local.Conversation || Date.now() - startedAt >= 30000) {
-        				// another conversation opened meanwhile, or this one is no longer in the history: the panel stays as it is
+        			if (local.Conversation || local.NewConversationMode === true) {
+        				// another conversation opened meanwhile, or a new one started: the panel stays as it is
         				page.formsConversationRestorePending = false;
+        				return;
+        			}
+        			if (Date.now() - startedAt >= 60000) {
+        				page.formsConversationRestorePending = false;
+        				// no longer in the history the page loaded: nothing to open again; a page too slow to open it leaves it to the
+        				// next reload
+        				if (conversation == null && local.AgentStartupDone === true && local.AgentConversationsLoading === false) {
+        					page.formsConversationRemembered = "";
+        					try { window.sessionStorage.removeItem("lib_ConvertigoAssistant.FormsOpenConversation"); } catch (e) {}
+        				}
         				return;
         			}
         			setTimeout(attempt, 250);
@@ -17581,6 +17602,8 @@ title: Tigo
                               page.local = {};
                           }
                           page.local.AgentConversationsLoading = false;
+                          // the start of the page answered: its conversation is set (a quiet resume after a reload waits for it)
+                          page.local.AgentStartupDone = true;
                           page.tick();
                           resolve();
         ↓SetConversationResumed [ngx.components.UIDynamicAction-1781604851703]: 

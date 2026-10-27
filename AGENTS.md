@@ -148,6 +148,14 @@ rediscovering the same context.
   responses by comparing `requestedFormId` with the current intended resource.
 - Run `node --test tests/nocode-*.test.cjs` with TypeScript installed for startup, history,
   context persistence, scoped filtering, access fallback and Studio isolation.
+- A reload of No Code Studio keeps the panel open and asks it, with `restoreConversation=1`,
+  to open again the conversation of the tab (`sessionStorage`
+  `lib_ConvertigoAssistant.FormsOpenConversation`). The quiet resume waits for the answer of
+  the start of the page (`AgentStartupDone`, AgentCreateConversationRouter sets its own
+  conversation) and for the history. Only a new conversation started by the user drops that
+  conversation; an empty panel keeps it. The `Agent` entry page opens the agent at once for
+  the No Code and server surfaces, never How-To. Cover with
+  `node --test tests/nocode-restore-conversation*.test.cjs`.
 - Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.

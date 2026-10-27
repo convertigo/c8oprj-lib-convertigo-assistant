@@ -115,6 +115,7 @@ test('after the reload the conversation opens again, quietly, once a click on Re
   const item = { conversationId: 'agent-42', title: 'Congés', provider: 'vibe', model: 'glm-5.1', nocodeContext: { formId: 'A' } };
   page.local.AgentConversations = [{ conversationId: 'agent-1' }, item];
   page.local.AgentConversationsLoading = false;
+  page.local.AgentStartupDone = true;
   page.local.ShowAgentConfigPanel = true;
   advance(1000);
   assert.deepEqual(page.published, [], 'the settings of the agent come first');
@@ -146,7 +147,8 @@ test('a conversation opened meanwhile, or one gone from the history, is left alo
   gone.page.restoreFormsConversationAfterReload();
   gone.page.local.AgentConversations = [{ conversationId: 'agent-1' }];
   gone.page.local.AgentConversationsLoading = false;
-  gone.advance(29750);
+  gone.page.local.AgentStartupDone = true;
+  gone.advance(59750);
   assert.equal(gone.page.formsConversationRestorePending, true);
   gone.advance(500);
   assert.equal(gone.page.formsConversationRestorePending, false);
