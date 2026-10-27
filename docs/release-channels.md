@@ -37,6 +37,14 @@ connections before returning to a Bridge that does not manage them. Project
 `.tigo/` resources and personal library files are retained; 1.4 does not use them.
 Refresh/reopen the Assistant to fetch the stable catalog again.
 
+A Studio is offered each new stable release: its Assistant panel reads the
+stable manifest at most once a day and, when it is newer than the installed
+projects, shows a card with the versions concerned, "Update" and "Later".
+"Update" installs only the projects older than the stable release, never while a
+turn runs; a pre-release newer than the stable one is kept. Git checkouts and
+`assistant.stack.selfupdate=false` turn the update off with a reason. Servers,
+No Code included, are never offered it: they update from their settings.
+
 The existing v1.5.0 tags and CAR bytes are retained as historical preview
 artifacts. Their embedded fallback still reflects the original publication;
 their normal online manifest now resolves to stable. This correction does not

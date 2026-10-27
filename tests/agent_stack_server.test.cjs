@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 
-function load({ symbol = '', admin = false, user = '', projects = {}, gitCheckouts = [] } = {}) {
+function load({ symbol = '', admin = false, user = '', projects = {}, gitCheckouts = [], studio } = {}) {
   const imported = [];
   const manager = {
     symbolsGetValue: name => (name === 'assistant.stack.selfupdate' ? symbol : null),
@@ -32,7 +32,8 @@ function load({ symbol = '', admin = false, user = '', projects = {}, gitCheckou
                 }
               }
             },
-            authenticatedSessionManager: { hasRole: () => admin }
+            authenticatedSessionManager: { hasRole: () => admin },
+            ...(studio === undefined ? {} : { isStudioMode: () => studio })
           },
           AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN', PROJECTS_CONFIG: 'PROJECTS_CONFIG' } },
           util: {
@@ -71,6 +72,12 @@ test('a pre-release comes before its release, so a server on a preview takes the
   assert.equal(result.status, 'success');
   assert.equal(result.results.map(entry => entry.action).join(','), 'up_to_date,up_to_date,updated');
   assert.equal(preview.projects.lib_ConvertigoAssistant, '1.4.17');
+});
+
+test('the status names its surface: the engine of a Studio, else a server', () => {
+  assert.equal(load({ studio: true }).stack.status().surface, 'studio');
+  assert.equal(load({ studio: false }).stack.status().surface, 'server');
+  assert.equal(load().stack.status().surface, 'server', 'an engine that cannot tell');
 });
 
 test('only official release CARs of the three repositories are accepted', () => {

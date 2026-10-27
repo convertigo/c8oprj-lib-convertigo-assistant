@@ -1067,6 +1067,7 @@ scriptContent:
         			// Only the embedded C8Oforms surface uses the No Code resource catalog.
         			try { if (this.events && this.events.publish && this.isEmbeddedInC8Oforms()) { this.events.publish("AgentNoCodeContextChanged", next); } } catch (eCatalogEvent) {}
         			this.scheduleAgentSettingsRefreshAfterHostContext();
+        			if (this.scheduleAgentStackOfferCheck) { this.scheduleAgentStackOfferCheck(); }
         			this.syncFooterPlaceholder();
         			if (this.tick) { this.tick(); }
         		} catch (e) {}
@@ -2160,6 +2161,248 @@ scriptContent:
         		return true;
         	}
         
+        	// Stable update offer, Studio only (the Eclipse view and the Web Studio, never No Code): when the reviewed stable stack
+        	// is newer than what is installed, one card offers it. The stable manifest is read at most once a day, a few seconds
+        	// after the host context; a preview manifest is never read, and a project newer than the stable one is never replaced.
+        	public agentStackOfferText(key) {
+        		var texts: any = {
+        			fr: { title: "Une mise à jour de Tigo est disponible", update: "Mettre à jour", later: "Plus tard", installing: "Mise à jour de Tigo...", turnRunning: "La mise à jour sera possible à la fin du tour en cours.", disabled: "La mise à jour automatique est désactivée (symbole assistant.stack.selfupdate)." },
+        			en: { title: "A Tigo update is available", update: "Update", later: "Later", installing: "Updating Tigo...", turnRunning: "You can update once the current turn ends.", disabled: "Automatic updates are disabled (symbol assistant.stack.selfupdate)." },
+        			it: { title: "È disponibile un aggiornamento di Tigo", update: "Aggiorna", later: "Più tardi", installing: "Aggiornamento di Tigo...", turnRunning: "Potrai aggiornare al termine del turno in corso.", disabled: "Gli aggiornamenti automatici sono disattivati (simbolo assistant.stack.selfupdate)." },
+        			es: { title: "Hay una actualización de Tigo disponible", update: "Actualizar", later: "Más tarde", installing: "Actualizando Tigo...", turnRunning: "Podrá actualizar cuando termine el turno en curso.", disabled: "Las actualizaciones automáticas están desactivadas (símbolo assistant.stack.selfupdate)." }
+        		};
+        		var table = texts[this.agentUiLanguage ? this.agentUiLanguage() : "en"] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        	}
+        
+        	public isAgentStackOfferSurface() {
+        		try {
+        			if (!this.isAgentBridgeMode || !this.isAgentBridgeMode()) { return false; }
+        			if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) { return false; }
+        			if (this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode") { return false; }
+        			var hint = this.getAssistantSurfaceHint ? this.getAssistantSurfaceHint() : "";
+        			if (hint === "nocode" || hint === "c8oforms" || hint === "forms" || hint === "server") { return false; }
+        			if (!this.isStudioAssistantSurface || !this.isStudioAssistantSurface()) { return false; }
+        			// The Eclipse view installs through its host: only once its local stack runs this panel.
+        			if (!this.isServerManagedAgentStack() && this.getAgentOnboardingState && this.getAgentOnboardingState() !== "ready") { return false; }
+        			return true;
+        		} catch (e) {}
+        		return false;
+        	}
+        
+        	// Same allow-list as validateImportUrl in js/agent_stack_server.js, plus the version: the Eclipse host imports any URL it gets.
+        	public isOfficialAgentStackRelease(project) {
+        		var repositories: any = { lib_ConvertigoMCP: "c8oprj-lib-c8o-mcp", lib_ConvertigoAgentBridge: "c8oprj-lib-convertigo-agent-bridge", lib_ConvertigoAssistant: "c8oprj-lib-convertigo-assistant" };
+        		var name = "" + ((project && project.name) || "");
+        		var version = "" + ((project && project.version) || "");
+        		var url = "" + ((project && project.importUrl) || "");
+        		if (!repositories[name] || !/^[0-9A-Za-z.\-]+$/.test(version)) { return false; }
+        		if (url.indexOf(name + "=") === 0) { url = url.substring(name.length + 1); }
+        		return url === "https://github.com/convertigo/" + repositories[name] + "/releases/download/v" + version + "/" + name + ".car";
+        	}
+        
+        	public normalizeAgentStackStableRelease(value) {
+        		var release: any = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(value) : null;
+        		if (!release || release.channel !== "stable" || !release.projects) { return null; }
+        		var order = ["lib_ConvertigoMCP", "lib_ConvertigoAgentBridge", "lib_ConvertigoAssistant"];
+        		var projects: any = [];
+        		for (var i = 0; i < order.length; i++) {
+        			var found = release.projects.filter((project: any) => project && project.name === order[i]);
+        			if (found.length !== 1 || !this.isOfficialAgentStackRelease(found[0])) { return null; }
+        			projects.push({ name: found[0].name, version: found[0].version, tag: found[0].tag || "", importUrl: found[0].importUrl });
+        		}
+        		return { schemaVersion: release.schemaVersion, channel: "stable", projects: projects };
+        	}
+        
+        	public scheduleAgentStackOfferCheck() {
+        		// From the host context: once a page, then every hour, never before the panel has opened. A later context
+        		// (the Eclipse host sends one as its stack loads) may bring the versions that the engine policy waited for.
+        		try {
+        			if ((this as any).agentStackOfferTimer) { this.refreshAgentStackOfferPolicy(); return; }
+        			if (!this.isAgentStackOfferSurface()) { return; }
+        			if (!this.local) { this.local = {}; }
+        			if (this.local.AgentStackOfferLater == null) {
+        				var later = "";
+        				try { later = "" + (window.localStorage.getItem("lib_ConvertigoAssistant.AgentStackUpdateLater") || ""); } catch (eLater) {}
+        				this.local.AgentStackOfferLater = later;
+        			}
+        			(this as any).agentStackOfferTimer = setTimeout(() => {
+        				try { this.refreshAgentStackStableRelease(); } catch (eFirst) {}
+        				(this as any).agentStackOfferTimer = setInterval(() => { try { this.refreshAgentStackStableRelease(); } catch (eNext) {} }, 3600000);
+        			}, 4000);
+        		} catch (e) {}
+        	}
+        
+        	public refreshAgentStackStableRelease(force = false) {
+        		if (!this.local) { this.local = {}; }
+        		if (!this.isAgentStackOfferSurface()) { return; }
+        		if (this.isServerManagedAgentStack()) {
+        			// The Web Studio reads the versions on its engine, and only the engine of a Studio is offered an update: a server
+        			// (No Code or not) updates its shared stack from its settings, where an administrator knows the turns of its users.
+        			var status: any = this.getAgentStackServerStatus();
+        			if (!status) {
+        				var retry = () => { if (this.getAgentStackServerStatus()) { this.refreshAgentStackStableRelease(force); } };
+        				var pending: any = this.local.AgentStackServerStatusLoading === true ? null : this.refreshAgentStackServerStatus();
+        				if (pending && pending.then) { pending.then(retry); } else { setTimeout(retry, 5000); }
+        				return;
+        			}
+        			if (status.surface !== "studio") { return; }
+        		}
+        		var now = Date.now();
+        		if (force !== true) {
+        			var cached: any = null;
+        			try { cached = JSON.parse(window.localStorage.getItem("lib_ConvertigoAssistant.AgentStackStableCheck") || "null"); } catch (eRead) {}
+        			var checkedAt = Number(cached && cached.checkedAt);
+        			var release = cached ? this.normalizeAgentStackStableRelease(cached.release) : null;
+        			if (release && checkedAt <= now && now - checkedAt < 86400000) {
+        				this.local.AgentStackStableRelease = release;
+        				this.refreshAgentStackOfferPolicy();
+        				this.tick();
+        				return;
+        			}
+        			var failedAt = Number(this.local.AgentStackStableCheckFailedAt || 0);
+        			if (failedAt && now - failedAt < 3600000) { return; }
+        		}
+        		if (this.local.AgentStackStableCheckLoading === true || !this.c8o || !this.c8o.callJsonObject) { return; }
+        		this.local.AgentStackStableCheckLoading = true;
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response: any) => {
+        			var stable = this.normalizeAgentStackStableRelease(response && response.result ? response.result : response);
+        			if (!stable) { throw new Error("invalid_stable_manifest"); }
+        			this.local.AgentStackStableRelease = stable;
+        			this.local.AgentStackStableCheckFailedAt = 0;
+        			try { window.localStorage.setItem("lib_ConvertigoAssistant.AgentStackStableCheck", JSON.stringify({ checkedAt: Date.now(), release: stable })); } catch (eStore) {}
+        			this.refreshAgentStackOfferPolicy();
+        		}).catch(() => {
+        			this.local.AgentStackStableCheckFailedAt = Date.now();
+        		}).then(() => {
+        			this.local.AgentStackStableCheckLoading = false;
+        			this.tick();
+        		});
+        	}
+        
+        	public refreshAgentStackOfferPolicy() {
+        		// The Eclipse host only refuses Git checkouts; the engine symbol assistant.stack.selfupdate turns the offer off too.
+        		// Read once, when there is something to offer. The Web Studio has it in its server status already.
+        		if (!this.local || this.isServerManagedAgentStack() || !this.getAgentStackOfferProjects().length) { return; }
+        		if (this.local.AgentStackOfferPolicy || this.local.AgentStackOfferPolicyLoading === true || !this.c8o || !this.c8o.callJsonObject) { return; }
+        		this.local.AgentStackOfferPolicyLoading = true;
+        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then((response: any) => {
+        			var document: any = response && response.document ? response.document : response;
+        			var result: any = document && document.result ? document.result : document;
+        			this.local.AgentStackOfferPolicy = { reason: "" + ((result && result.localAgentStackUpdateReason) || "") };
+        		}).catch(() => {
+        			// An engine that cannot tell leaves the decision to the host.
+        			this.local.AgentStackOfferPolicy = { reason: "" };
+        		}).then(() => {
+        			this.local.AgentStackOfferPolicyLoading = false;
+        			this.tick();
+        		});
+        	}
+        
+        	public getAgentStackOfferProjects() {
+        		var release: any = this.local && this.local.AgentStackStableRelease;
+        		var projects: any = [];
+        		if (!release || !release.projects) { return projects; }
+        		for (var i = 0; i < release.projects.length; i++) {
+        			var project = release.projects[i];
+        			var installed = this.getInstalledAgentStackVersion(project.name);
+        			// Versions not known yet, or a project missing: the settings deal with it.
+        			if (!installed.length) { return []; }
+        			if (this.compareAgentStackVersions(installed, project.version) < 0) {
+        				projects.push({ name: project.name, version: project.version, tag: project.tag, importUrl: project.importUrl, installedVersion: installed });
+        			}
+        		}
+        		return projects;
+        	}
+        
+        	public getAgentStackOfferKey() {
+        		var release: any = this.local && this.local.AgentStackStableRelease;
+        		return release && release.projects ? release.projects.map((project: any) => project.name + "@" + project.version).join(",") : "";
+        	}
+        
+        	public getAgentStackOfferRestriction() {
+        		if (this.isServerManagedAgentStack()) {
+        			return this.isAgentStackUpdateAllowed() ? "" : this.getAgentStackRestrictedText();
+        		}
+        		var reason = this.local && this.local.AgentStackOfferPolicy ? this.local.AgentStackOfferPolicy.reason : "";
+        		if (!this.isAgentStackUpdateAllowed() || reason === "source_managed") {
+        			return this.t("Agent_Stack_Source_Managed", "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement.");
+        		}
+        		return reason === "disabled" ? this.agentStackOfferText("disabled") : "";
+        	}
+        
+        	public isAgentStackOfferTurnRunning() {
+        		var local: any = this.local || {};
+        		if (local.IsProcessing === true || local.AgentResumePending === true) { return true; }
+        		// A conversation the history shows running, unless its record is old: a Studio closed during a turn leaves one.
+        		var list = Array.isArray(local.AgentConversations) ? local.AgentConversations : [];
+        		var now = Date.now();
+        		for (var i = 0; i < list.length; i++) {
+        			var status = "" + ((list[i] && list[i].status) || "");
+        			var updatedAt = Number(list[i] && (list[i].updatedAt || list[i].createdAt)) || 0;
+        			if (["starting", "queued", "running", "in_progress"].indexOf(status) !== -1 && now - updatedAt < 1800000) { return true; }
+        		}
+        		return false;
+        	}
+        
+        	public getAgentStackOfferView() {
+        		if (!this.local || !this.isAgentStackOfferSurface()) { return null; }
+        		var local: any = this.local;
+        		var projects = this.getAgentStackOfferProjects();
+        		if (!projects.length) { return null; }
+        		var key = this.getAgentStackOfferKey();
+        		var mine = local.AgentStackOfferInstalling === true;
+        		if (local.AgentStackOfferLater === key && !mine) { return null; }
+        		if (this.isServerManagedAgentStack() ? (this.getAgentStackServerStatus() || {}).surface !== "studio" : !local.AgentStackOfferPolicy) { return null; }
+        		var labels: any = { lib_ConvertigoAssistant: "Assistant", lib_ConvertigoMCP: "MCP", lib_ConvertigoAgentBridge: "Bridge" };
+        		var versions = projects.map((project: any) => (labels[project.name] || project.name) + " " + project.installedVersion + " → " + project.version).join(" · ");
+        		var restriction = this.getAgentStackOfferRestriction();
+        		var installing = mine && local.AgentActivationInProgress === true;
+        		var running = this.isAgentStackOfferTurnRunning();
+        		var note = installing ? (local.AgentActivationMessage || this.agentStackOfferText("installing"))
+        			: restriction.length ? restriction
+        			: mine && local.AgentActivationMessage ? "" + local.AgentActivationMessage
+        			: running ? this.agentStackOfferText("turnRunning") : "";
+        		var view: any = {
+        			key: key, title: this.agentStackOfferText("title"), versions: versions, note: note,
+        			error: mine && !installing && ["error", "no_host", "no_response"].indexOf("" + local.AgentActivationStatus) !== -1,
+        			canUpdate: !restriction.length, updateDisabled: installing || running || local.AgentActivationInProgress === true, installing: installing,
+        			updateText: this.agentStackOfferText("update"), laterText: this.agentStackOfferText("later")
+        		};
+        		// One object per state, for change detection.
+        		var stamp = JSON.stringify(view);
+        		var self: any = this;
+        		if (self.agentStackOfferViewCache && self.agentStackOfferViewCache.stamp === stamp) { return self.agentStackOfferViewCache.view; }
+        		self.agentStackOfferViewCache = { stamp: stamp, view: view };
+        		return view;
+        	}
+        
+        	public installAgentStackOffer() {
+        		var view = this.getAgentStackOfferView();
+        		if (!view || !view.canUpdate || view.updateDisabled || this.isAgentStackOfferTurnRunning()) { this.tick(); return false; }
+        		// Only the projects older than the stable release, dependencies first and the Assistant last, as the manifest lists them.
+        		var projects = this.getAgentStackOfferProjects().map((project: any) => ({ name: project.name, version: project.version, tag: project.tag, importUrl: project.importUrl }));
+        		this.local.AgentStackOfferInstalling = true;
+        		this.local.AgentActivationStatus = "";
+        		this.local.AgentActivationMessage = "";
+        		if (this.isServerManagedAgentStack()) {
+        			// The server skips what is already up to date, then the panel reloads.
+        			return this.installAgentStackOnServer({ projects: projects }, false);
+        		}
+        		// The Eclipse host imports these CARs, then reloads this view with the new versions.
+        		this.triggerAgentOnboardingAction(true, projects);
+        		return true;
+        	}
+        
+        	public postponeAgentStackOffer() {
+        		var key = this.getAgentStackOfferKey();
+        		if (!key.length || !this.local) { return; }
+        		this.local.AgentStackOfferLater = key;
+        		this.local.AgentStackOfferInstalling = false;
+        		try { window.localStorage.setItem("lib_ConvertigoAssistant.AgentStackUpdateLater", key); } catch (e) {}
+        		this.tick();
+        	}
+        
         
         public getAgentWindowsDiagnosticText() {
             var settings: any = this.getAgentSettingsRoot();
@@ -2199,7 +2442,7 @@ scriptContent:
         		} catch (e) {}
         	}
         
-        	public triggerAgentOnboardingAction(forceUpdate = false) {
+        	public triggerAgentOnboardingAction(forceUpdate = false, projects = null) {
                     if (!this.global || !this.global.isAssistantAgentReleaseEnabled || !this.global.isAssistantAgentReleaseEnabled()) { return; }
         		try {
         			var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
@@ -2219,7 +2462,7 @@ scriptContent:
         					agentOnboardingFeatureVersion: context.agentOnboardingFeatureVersion || '''',
                             assistantPreferenceUrl: this.global.agentActivationAssistantPath(),
                             localAssistantPath: this.global.agentActivationAssistantPath(),
-        					projects: this.getAgentActivationProjects ? this.getAgentActivationProjects() : [],
+        					projects: projects && projects.length ? projects : (this.getAgentActivationProjects ? this.getAgentActivationProjects() : []),
         					forceUpdate: forceUpdate === true
         				}
         			};
@@ -7348,6 +7591,164 @@ title: Tigo
                    "topic": "plain:AgentNoCodeContextReload",
                    "data": "script:{formId: this.local.FormsConversationContext.formId, hostContext: this.local.FormsConversationContext}"
                   }'
+  ↓StackUpdateOffer [ngx.components.UIControlDirective-1793500000001]: 
+    directiveName: If
+    directiveSource: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: script:!!this.getAgentStackOfferView()
+    ↓Offer [ngx.components.UIDynamicElement-1793500000002]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1793500000003]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: 'script:''agent-stack-offer'' + (this.getAgentStackOfferView()?.error ? '' is-error'' : '''')'
+      ↓Status [ngx.components.UIAttribute-1793500000004]: 
+        attrName: role
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:status
+      ↓Icon [ngx.components.UIDynamicElement-1793500000005]: 
+        beanData: |
+          '{
+           "ionBean": "Icon",
+           "IconName": "plain:cloud-download-outline"
+          }'
+        tagName: ion-icon
+      ↓Body [ngx.components.UIDynamicElement-1793500000006]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1793500000007]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-stack-offer-body
+        ↓Title [ngx.components.UIDynamicElement-1793500000008]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1793500000009]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-stack-offer-title
+          ↓Text [ngx.components.UIText-1793500000010]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getAgentStackOfferView()?.title
+        ↓Versions [ngx.components.UIDynamicElement-1793500000011]: 
+          beanData: '{"ionBean":"Paragraph"}'
+          tagName: p
+          ↓Class [ngx.components.UIAttribute-1793500000012]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-stack-offer-versions
+          ↓Text [ngx.components.UIText-1793500000013]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getAgentStackOfferView()?.versions
+        ↓NoteIf [ngx.components.UIControlDirective-1793500000014]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:!!this.getAgentStackOfferView()?.note
+          ↓Note [ngx.components.UIDynamicElement-1793500000015]: 
+            beanData: '{"ionBean":"Paragraph"}'
+            tagName: p
+            ↓Class [ngx.components.UIAttribute-1793500000016]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-stack-offer-note
+            ↓Text [ngx.components.UIText-1793500000017]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getAgentStackOfferView()?.note
+      ↓Actions [ngx.components.UIDynamicElement-1793500000018]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: div
+        ↓Class [ngx.components.UIAttribute-1793500000019]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:agent-stack-offer-actions
+        ↓UpdateIf [ngx.components.UIControlDirective-1793500000020]: 
+          directiveName: If
+          directiveSource: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: script:this.getAgentStackOfferView()?.canUpdate === true
+          ↓Update [ngx.components.UIDynamicElement-1793500000021]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "Disabled": "script:this.getAgentStackOfferView()?.updateDisabled !== false",
+               "IonFill": "plain:solid",
+               "IonSize": "plain:small"
+              }'
+            tagName: ion-button
+            ↓Class [ngx.components.UIAttribute-1793500000022]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:agent-stack-offer-update
+            ↓Text [ngx.components.UIText-1793500000023]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getAgentStackOfferView()?.updateText
+            ↓Event [ngx.components.UIControlEvent-1793500000024]: 
+              ↓InstallStableStack [ngx.components.UICustomAction-1793500000025]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        if (page.installAgentStackOffer) { page.installAgentStackOffer(); }
+                        resolve();
+        ↓Later [ngx.components.UIDynamicElement-1793500000026]: 
+          beanData: |
+            '{
+             "ionBean": "Button",
+             "Disabled": "script:this.getAgentStackOfferView()?.installing === true",
+             "IonFill": "plain:clear",
+             "IonSize": "plain:small"
+            }'
+          tagName: ion-button
+          ↓Class [ngx.components.UIAttribute-1793500000027]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-stack-offer-later
+          ↓Text [ngx.components.UIText-1793500000028]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.getAgentStackOfferView()?.laterText
+          ↓Event [ngx.components.UIControlEvent-1793500000029]: 
+            ↓PostponeStableStack [ngx.components.UICustomAction-1793500000030]: 
+              actionValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                    →: |
+                      if (page.postponeAgentStackOffer) { page.postponeAgentStackOffer(); }
+                      resolve();
 ↓Content [ngx.components.UIDynamicElement-1772100000030]: 
   beanData: '{"ionBean":"Content","Padding":"plain:ion-no-padding"}'
   identifier: content
@@ -24005,4 +24406,33 @@ title: Tigo
           .agent-history-day { order: 2; }
           .agent-history-more, .agent-history-empty { order: 3; }
           .agent-start-card:has(.agent-history-tools) .agent-conversations-title { display: none; }
+          '
+↓AgentStackOfferStyle [ngx.components.UIStyle-1793500000031]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Stable update offer (Studio): one discreet line under the toolbar, its actions on the right. */
+          .agent-stack-offer {
+            grid-column: 1 / -1;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+            margin: 0; padding: 8px 14px;
+            font-size: 12px; line-height: 1.45;
+            color: var(--modern-text, var(--ion-text-color));
+            background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 9%, transparent 91%);
+            border-bottom: 1px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 28%, transparent 72%);
+          }
+          .agent-stack-offer > ion-icon { flex: 0 0 auto; font-size: 18px; color: var(--modern-cyan, #06b6d4); }
+          .agent-stack-offer-body { flex: 1 1 220px; min-width: 0; }
+          .agent-stack-offer-body p { margin: 0; overflow-wrap: anywhere; }
+          .agent-stack-offer-title { font-weight: 600; }
+          .agent-stack-offer-versions { color: var(--modern-muted, #64748b); font-family: var(--modern-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 11.5px; }
+          .agent-stack-offer-body .agent-stack-offer-note { margin-top: 2px; color: var(--modern-muted, #64748b); }
+          .agent-stack-offer.is-error { background: rgba(239, 68, 68, 0.08); border-bottom-color: rgba(239, 68, 68, 0.35); }
+          .agent-stack-offer.is-error .agent-stack-offer-note { color: #ef4444; }
+          .agent-stack-offer-actions { display: flex; flex: 0 0 auto; gap: 4px; margin-left: auto; }
+          .agent-stack-offer-actions ion-button { margin: 0; height: 28px; font-size: 12px; text-transform: none; letter-spacing: normal; }
+          .agent-stack-offer-update { --background: var(--modern-cyan, #06b6d4); --background-hover: var(--modern-cyan, #06b6d4); --color: #ffffff; }
+          .agent-stack-offer-later { --color: var(--modern-muted, #64748b); }
           '

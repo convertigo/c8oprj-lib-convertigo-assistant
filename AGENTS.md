@@ -180,6 +180,17 @@ rediscovering the same context.
 
 ## UI Expectations
 
+- Studio only (the Eclipse view and the Web Studio of a Studio engine, never No Code
+  or a server engine), a card under the toolbar offers the reviewed stable stack when
+  it is newer than what is installed (`getAgentStackOfferView`). It reads
+  `AgentStackRelease.GetManifest` a few seconds after the host context, at most once a
+  day (localStorage `lib_ConvertigoAssistant.AgentStackStableCheck`), accepts only a
+  stable manifest of official release CARs, and installs only the projects older than
+  it (the Eclipse host imports whatever it is sent). "Later" is remembered per stable
+  release. Never while a turn runs; Git checkouts, `assistant.stack.selfupdate=false`
+  and server session policies show why and offer no update. A Web Studio needs
+  `AgentStackStatus.surface === "studio"`. Cover with
+  `node --test tests/assistant_stack_update_offer.test.cjs`.
 - Forms-only UI uses `forms-integrated` on the page header/content/footer and
   `FormsIntegratedStyle`; leave the Studio layout unaffected. Context expansion
   and history navigation use SetLocal beans. Suggestions only prepare drafts.

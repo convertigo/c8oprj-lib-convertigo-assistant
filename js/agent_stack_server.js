@@ -210,11 +210,17 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
     return ordered;
   }
 
+  // Convertigo Studio runs its engine in Studio mode (its Eclipse view and the Web Studio it serves); anything else is a server.
+  function surface() {
+    try { return engine().isStudioMode() === true ? "studio" : "server"; } catch (_ignoreMode) {}
+    return "server";
+  }
+
   function status(options) {
     options = options || {};
     var access = updateAllowed(options);
     var result = {
-      surface: "server",
+      surface: surface(),
       localAgentStackUpdateAllowed: access.allowed,
       localAgentStackUpdatePolicy: access.policy,
       localAgentStackUpdateReason: access.reason,
