@@ -6,12 +6,12 @@ of each companion project.
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
 | Stable | 1.5.5 | 0.4.27 | 0.2.27 |
-| Preview | 1.5.5 | 0.4.27 | 0.2.27 |
+| Preview | 1.5.6-beta.17 | 0.4.28-beta.16 | 0.2.28-beta.13 |
 
 Tigo 1.5.5 integrates personal/team access, the reviewed NoCode branch and the
 Claude authentication cache fix (see [release 1.5.5](release-1.5.5.md)). It retains
-the Windows credential installation fix from 1.5.4. The preview manifest points
-at the same bundle until the next preview. Both bundles target Convertigo 8.4.6;
+the Windows credential installation fix from 1.5.4. The preview manifest lists
+the pre-releases checked together on the No Code test server. Both bundles target Convertigo 8.4.6;
 compatibility alone does not constitute stable acceptance.
 
 ## Manifests and existing Studios
