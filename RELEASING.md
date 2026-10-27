@@ -68,6 +68,13 @@ For the Assistant, additionally:
   exist**. Pushing `master` earlier publishes a manifest whose `importUrl` returns 404, and
   every stack update fails until the build finishes.
 
+Studios on the **Pre-releases** channel are offered a stack pre-release only once
+`stack-release-preview.json` on `master` lists it. To offer one, after its three CARs exist and
+were checked together, set the three entries of that file (name, version, `tag` `vX.Y.Z-beta.N`,
+official `importUrl`) and update the preview versions pinned in `tests/assistant_stack_ui.test.cjs`.
+Never list a version older than the stable manifest; at a stable release, set it to the stable
+bundle as before. A preview never deploys and never reaches the Stable channel.
+
 Tags publish GitHub pre-releases (see [release channels](docs/release-channels.md)). A stable
 release is promoted once `master` carries its manifests: mark the three releases as non-prerelease
 and Latest (`gh release edit vX.Y.Z --prerelease=false --latest`). Promoting the Assistant release

@@ -27,8 +27,8 @@ file. Its embedded frontend fallback also pins the stable bundle, and a preview
 response cannot replace that fallback. New builds expose
 `AgentStackRelease.GetPreviewManifest` for an explicit preview read; the default
 installation/update path does not call it. Testers can already use the preview
-manifest's exact CAR URLs or the preview bundle ZIP on GitHub. There is no new
-automatic preview subscription or channel selector.
+manifest's exact CAR URLs or the preview bundle ZIP on GitHub. In a Studio, the
+stack settings of the Assistant panel also choose the update channel (below).
 
 Changing these files does not downgrade projects already installed in a Studio.
 To return an existing preview installation to stable, stop active agents and
@@ -37,13 +37,22 @@ connections before returning to a Bridge that does not manage them. Project
 `.tigo/` resources and personal library files are retained; 1.4 does not use them.
 Refresh/reopen the Assistant to fetch the stable catalog again.
 
-A Studio is offered each new stable release: its Assistant panel reads the
-stable manifest at most once a day and, when it is newer than the installed
-projects, shows a card with the versions concerned, "Update" and "Later".
-"Update" installs only the projects older than the stable release, never while a
-turn runs; a pre-release newer than the stable one is kept. Git checkouts and
-`assistant.stack.selfupdate=false` turn the update off with a reason. Servers,
-No Code included, are never offered it: they update from their settings.
+A Studio is offered each new release of its update channel: its Assistant panel
+reads the manifests at most once a day and, when they are newer than the
+installed projects, shows a card with the versions concerned, "Update" and
+"Later". "Update" installs only the projects older than the offered release,
+never while a turn runs; a pre-release newer than the stable one is kept. Git
+checkouts and `assistant.stack.selfupdate=false` turn the update off with a
+reason. Servers, No Code included, are never offered it: they update from their
+settings.
+
+The channel is chosen in the stack settings of the panel, per Studio:
+
+- **Stable** (default): `stack-release-stable.json` only.
+- **Pre-releases**: per project, the higher of `stack-release-stable.json` and
+  `stack-release-preview.json`, so a newer stable still comes. Pre-releases reach
+  this channel only through the preview manifest on `master` (see RELEASING.md).
+  Going back to Stable downgrades nothing: the next newer stable is offered.
 
 The existing v1.5.0 tags and CAR bytes are retained as historical preview
 artifacts. Their embedded fallback still reflects the original publication;

@@ -2161,15 +2161,20 @@ scriptContent:
         		return true;
         	}
         
-        	// Stable update offer, Studio only (the Eclipse view and the Web Studio, never No Code): when the reviewed stable stack
-        	// is newer than what is installed, one card offers it. The stable manifest is read at most once a day, a few seconds
-        	// after the host context; a preview manifest is never read, and a project newer than the stable one is never replaced.
+        	// Update offer, Studio only (the Eclipse view and the Web Studio of a Studio engine, never No Code): when the reviewed stack
+        	// of the chosen channel is newer than what is installed, one card offers it. Stable by default; the pre-release channel adds
+        	// the reviewed preview manifest. Manifests are read at most once a day, a few seconds after the host context, and a project
+        	// newer than the offered one is never replaced.
         	public agentStackOfferText(key) {
         		var texts: any = {
-        			fr: { title: "Une mise à jour de Tigo est disponible", update: "Mettre à jour", later: "Plus tard", installing: "Mise à jour de Tigo...", turnRunning: "La mise à jour sera possible à la fin du tour en cours.", disabled: "La mise à jour automatique est désactivée (symbole assistant.stack.selfupdate)." },
-        			en: { title: "A Tigo update is available", update: "Update", later: "Later", installing: "Updating Tigo...", turnRunning: "You can update once the current turn ends.", disabled: "Automatic updates are disabled (symbol assistant.stack.selfupdate)." },
-        			it: { title: "È disponibile un aggiornamento di Tigo", update: "Aggiorna", later: "Più tardi", installing: "Aggiornamento di Tigo...", turnRunning: "Potrai aggiornare al termine del turno in corso.", disabled: "Gli aggiornamenti automatici sono disattivati (simbolo assistant.stack.selfupdate)." },
-        			es: { title: "Hay una actualización de Tigo disponible", update: "Actualizar", later: "Más tarde", installing: "Actualizando Tigo...", turnRunning: "Podrá actualizar cuando termine el turno en curso.", disabled: "Las actualizaciones automáticas están desactivadas (símbolo assistant.stack.selfupdate)." }
+        			fr: { title: "Une mise à jour de Tigo est disponible", titlePreview: "Une pré-release de Tigo est disponible", update: "Mettre à jour", later: "Plus tard", installing: "Mise à jour de Tigo...", turnRunning: "La mise à jour sera possible à la fin du tour en cours.", disabled: "La mise à jour automatique est désactivée (symbole assistant.stack.selfupdate).",
+        				channel: "Canal de mise à jour", channelStable: "Stable", channelPreview: "Pré-releases", stableHint: "Seules les versions stables sont proposées.", previewHint: "Les pré-releases revues sont proposées avant leur version stable. Revenir au canal stable ne rétrograde rien : la stable suivante sera proposée." },
+        			en: { title: "A Tigo update is available", titlePreview: "A Tigo pre-release is available", update: "Update", later: "Later", installing: "Updating Tigo...", turnRunning: "You can update once the current turn ends.", disabled: "Automatic updates are disabled (symbol assistant.stack.selfupdate).",
+        				channel: "Update channel", channelStable: "Stable", channelPreview: "Pre-releases", stableHint: "Only stable versions are offered.", previewHint: "Reviewed pre-releases are offered before their stable version. Going back to the stable channel downgrades nothing: the next stable version will be offered." },
+        			it: { title: "È disponibile un aggiornamento di Tigo", titlePreview: "È disponibile una pre-release di Tigo", update: "Aggiorna", later: "Più tardi", installing: "Aggiornamento di Tigo...", turnRunning: "Potrai aggiornare al termine del turno in corso.", disabled: "Gli aggiornamenti automatici sono disattivati (simbolo assistant.stack.selfupdate).",
+        				channel: "Canale di aggiornamento", channelStable: "Stabile", channelPreview: "Pre-release", stableHint: "Vengono proposte solo le versioni stabili.", previewHint: "Le pre-release verificate vengono proposte prima della versione stabile. Tornare al canale stabile non riporta indietro nulla: verrà proposta la prossima versione stabile." },
+        			es: { title: "Hay una actualización de Tigo disponible", titlePreview: "Hay una versión preliminar de Tigo disponible", update: "Actualizar", later: "Más tarde", installing: "Actualizando Tigo...", turnRunning: "Podrá actualizar cuando termine el turno en curso.", disabled: "Las actualizaciones automáticas están desactivadas (símbolo assistant.stack.selfupdate).",
+        				channel: "Canal de actualización", channelStable: "Estable", channelPreview: "Versiones preliminares", stableHint: "Solo se ofrecen las versiones estables.", previewHint: "Las versiones preliminares revisadas se ofrecen antes de su versión estable. Volver al canal estable no revierte nada: se ofrecerá la siguiente versión estable." }
         		};
         		var table = texts[this.agentUiLanguage ? this.agentUiLanguage() : "en"] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -2190,6 +2195,43 @@ scriptContent:
         		return false;
         	}
         
+        	public getAgentStackChannel() {
+        		// Kept by this Studio (localStorage): "stable", the default, or "preview" for the reviewed pre-releases too.
+        		if (!this.local) { this.local = {}; }
+        		if (this.local.AgentStackChannel == null) {
+        			var stored = "";
+        			try { stored = "" + (window.localStorage.getItem("lib_ConvertigoAssistant.AgentStackChannel") || ""); } catch (e) {}
+        			this.local.AgentStackChannel = stored === "preview" ? "preview" : "stable";
+        		}
+        		return this.local.AgentStackChannel === "preview" ? "preview" : "stable";
+        	}
+        
+        	public setAgentStackChannel(channel) {
+        		var next = channel === "preview" ? "preview" : "stable";
+        		if (this.getAgentStackChannel() === next) { return; }
+        		this.local.AgentStackChannel = next;
+        		try { window.localStorage.setItem("lib_ConvertigoAssistant.AgentStackChannel", next); } catch (e) {}
+        		// The card follows the new channel at once, from that channel''s daily read when it is fresh.
+        		this.local.AgentStackOfferRelease = null;
+        		this.local.AgentStackOfferCheckFailedAt = 0;
+        		this.refreshAgentStackOfferRelease();
+        		this.tick();
+        	}
+        
+        	public getAgentStackChannelView() {
+        		if (!this.isAgentStackOfferSurface()) { return null; }
+        		var channel = this.getAgentStackChannel();
+        		var view: any = {
+        			channel: channel, label: this.agentStackOfferText("channel"), stableText: this.agentStackOfferText("channelStable"),
+        			previewText: this.agentStackOfferText("channelPreview"), hint: this.agentStackOfferText(channel === "preview" ? "previewHint" : "stableHint")
+        		};
+        		var stamp = JSON.stringify(view);
+        		var self: any = this;
+        		if (self.agentStackChannelViewCache && self.agentStackChannelViewCache.stamp === stamp) { return self.agentStackChannelViewCache.view; }
+        		self.agentStackChannelViewCache = { stamp: stamp, view: view };
+        		return view;
+        	}
+        
         	// Same allow-list as validateImportUrl in js/agent_stack_server.js, plus the version: the Eclipse host imports any URL it gets.
         	public isOfficialAgentStackRelease(project) {
         		var repositories: any = { lib_ConvertigoMCP: "c8oprj-lib-c8o-mcp", lib_ConvertigoAgentBridge: "c8oprj-lib-convertigo-agent-bridge", lib_ConvertigoAssistant: "c8oprj-lib-convertigo-assistant" };
@@ -2201,9 +2243,9 @@ scriptContent:
         		return url === "https://github.com/convertigo/" + repositories[name] + "/releases/download/v" + version + "/" + name + ".car";
         	}
         
-        	public normalizeAgentStackStableRelease(value) {
+        	public normalizeAgentStackOfferRelease(value, channel) {
         		var release: any = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(value) : null;
-        		if (!release || release.channel !== "stable" || !release.projects) { return null; }
+        		if (!release || release.channel !== channel || !release.projects) { return null; }
         		var order = ["lib_ConvertigoMCP", "lib_ConvertigoAgentBridge", "lib_ConvertigoAssistant"];
         		var projects: any = [];
         		for (var i = 0; i < order.length; i++) {
@@ -2211,7 +2253,22 @@ scriptContent:
         			if (found.length !== 1 || !this.isOfficialAgentStackRelease(found[0])) { return null; }
         			projects.push({ name: found[0].name, version: found[0].version, tag: found[0].tag || "", importUrl: found[0].importUrl });
         		}
-        		return { schemaVersion: release.schemaVersion, channel: "stable", projects: projects };
+        		return { schemaVersion: release.schemaVersion, channel: channel, projects: projects };
+        	}
+        
+        	public mergeAgentStackOfferReleases(releases, channel) {
+        		// Pre-release channel: per project the higher of the stable and preview manifests, so that a newer stable comes too.
+        		var valid = (releases || []).filter((release: any) => !!release);
+        		if (!valid.length) { return null; }
+        		var projects = valid[0].projects.map((project: any) => {
+        			var best = project;
+        			for (var i = 1; i < valid.length; i++) {
+        				var other = valid[i].projects.filter((item: any) => item.name === project.name)[0];
+        				if (other && this.compareAgentStackVersions(other.version, best.version) > 0) { best = other; }
+        			}
+        			return { name: best.name, version: best.version, tag: best.tag, importUrl: best.importUrl };
+        		});
+        		return { schemaVersion: 1, channel: channel, projects: projects };
         	}
         
         	public scheduleAgentStackOfferCheck() {
@@ -2227,13 +2284,13 @@ scriptContent:
         				this.local.AgentStackOfferLater = later;
         			}
         			(this as any).agentStackOfferTimer = setTimeout(() => {
-        				try { this.refreshAgentStackStableRelease(); } catch (eFirst) {}
-        				(this as any).agentStackOfferTimer = setInterval(() => { try { this.refreshAgentStackStableRelease(); } catch (eNext) {} }, 3600000);
+        				try { this.refreshAgentStackOfferRelease(); } catch (eFirst) {}
+        				(this as any).agentStackOfferTimer = setInterval(() => { try { this.refreshAgentStackOfferRelease(); } catch (eNext) {} }, 3600000);
         			}, 4000);
         		} catch (e) {}
         	}
         
-        	public refreshAgentStackStableRelease(force = false) {
+        	public refreshAgentStackOfferRelease(force = false) {
         		if (!this.local) { this.local = {}; }
         		if (!this.isAgentStackOfferSurface()) { return; }
         		if (this.isServerManagedAgentStack()) {
@@ -2241,41 +2298,56 @@ scriptContent:
         			// (No Code or not) updates its shared stack from its settings, where an administrator knows the turns of its users.
         			var status: any = this.getAgentStackServerStatus();
         			if (!status) {
-        				var retry = () => { if (this.getAgentStackServerStatus()) { this.refreshAgentStackStableRelease(force); } };
+        				var retry = () => { if (this.getAgentStackServerStatus()) { this.refreshAgentStackOfferRelease(force); } };
         				var pending: any = this.local.AgentStackServerStatusLoading === true ? null : this.refreshAgentStackServerStatus();
         				if (pending && pending.then) { pending.then(retry); } else { setTimeout(retry, 5000); }
         				return;
         			}
         			if (status.surface !== "studio") { return; }
         		}
+        		var channel = this.getAgentStackChannel();
+        		var cacheKey = channel === "preview" ? "lib_ConvertigoAssistant.AgentStackPreviewCheck" : "lib_ConvertigoAssistant.AgentStackStableCheck";
         		var now = Date.now();
         		if (force !== true) {
         			var cached: any = null;
-        			try { cached = JSON.parse(window.localStorage.getItem("lib_ConvertigoAssistant.AgentStackStableCheck") || "null"); } catch (eRead) {}
+        			try { cached = JSON.parse(window.localStorage.getItem(cacheKey) || "null"); } catch (eRead) {}
         			var checkedAt = Number(cached && cached.checkedAt);
-        			var release = cached ? this.normalizeAgentStackStableRelease(cached.release) : null;
+        			var release = cached ? this.normalizeAgentStackOfferRelease(cached.release, channel) : null;
         			if (release && checkedAt <= now && now - checkedAt < 86400000) {
-        				this.local.AgentStackStableRelease = release;
+        				this.local.AgentStackOfferRelease = release;
         				this.refreshAgentStackOfferPolicy();
         				this.tick();
         				return;
         			}
-        			var failedAt = Number(this.local.AgentStackStableCheckFailedAt || 0);
+        			var failedAt = Number(this.local.AgentStackOfferCheckFailedAt || 0);
         			if (failedAt && now - failedAt < 3600000) { return; }
         		}
-        		if (this.local.AgentStackStableCheckLoading === true || !this.c8o || !this.c8o.callJsonObject) { return; }
-        		this.local.AgentStackStableCheckLoading = true;
-        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response: any) => {
-        			var stable = this.normalizeAgentStackStableRelease(response && response.result ? response.result : response);
-        			if (!stable) { throw new Error("invalid_stable_manifest"); }
-        			this.local.AgentStackStableRelease = stable;
-        			this.local.AgentStackStableCheckFailedAt = 0;
-        			try { window.localStorage.setItem("lib_ConvertigoAssistant.AgentStackStableCheck", JSON.stringify({ checkedAt: Date.now(), release: stable })); } catch (eStore) {}
+        		if (this.local.AgentStackOfferCheckLoading === true || !this.c8o || !this.c8o.callJsonObject) { return; }
+        		this.local.AgentStackOfferCheckLoading = true;
+        		// The reviewed stable manifest always, the reviewed preview one too on the pre-release channel.
+        		var read = (name, expected) => this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease." + name, {}).async()
+        			.then((response: any) => this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, expected))
+        			.catch(() => null);
+        		var reads: any = [read("GetManifest", "stable")];
+        		if (channel === "preview") { reads.push(read("GetPreviewManifest", "preview")); }
+        		Promise.all(reads).then((releases: any) => {
+        			var merged = this.mergeAgentStackOfferReleases(releases, channel);
+        			if (!merged) { throw new Error("invalid_manifest"); }
+        			// A manifest that could not be read is read again within the hour; until then the other one stands.
+        			var complete = releases.every((item: any) => !!item);
+        			if (complete) {
+        				try { window.localStorage.setItem(cacheKey, JSON.stringify({ checkedAt: Date.now(), release: merged })); } catch (eStore) {}
+        			}
+        			if (this.getAgentStackChannel() !== channel) { return; }
+        			this.local.AgentStackOfferRelease = merged;
+        			this.local.AgentStackOfferCheckFailedAt = complete ? 0 : Date.now();
         			this.refreshAgentStackOfferPolicy();
         		}).catch(() => {
-        			this.local.AgentStackStableCheckFailedAt = Date.now();
+        			if (this.getAgentStackChannel() === channel) { this.local.AgentStackOfferCheckFailedAt = Date.now(); }
         		}).then(() => {
-        			this.local.AgentStackStableCheckLoading = false;
+        			this.local.AgentStackOfferCheckLoading = false;
+        			// The channel changed during the read: read the new one.
+        			if (this.getAgentStackChannel() !== channel) { this.refreshAgentStackOfferRelease(); }
         			this.tick();
         		});
         	}
@@ -2300,7 +2372,7 @@ scriptContent:
         	}
         
         	public getAgentStackOfferProjects() {
-        		var release: any = this.local && this.local.AgentStackStableRelease;
+        		var release: any = this.local && this.local.AgentStackOfferRelease;
         		var projects: any = [];
         		if (!release || !release.projects) { return projects; }
         		for (var i = 0; i < release.projects.length; i++) {
@@ -2316,7 +2388,7 @@ scriptContent:
         	}
         
         	public getAgentStackOfferKey() {
-        		var release: any = this.local && this.local.AgentStackStableRelease;
+        		var release: any = this.local && this.local.AgentStackOfferRelease;
         		return release && release.projects ? release.projects.map((project: any) => project.name + "@" + project.version).join(",") : "";
         	}
         
@@ -2364,7 +2436,7 @@ scriptContent:
         			: mine && local.AgentActivationMessage ? "" + local.AgentActivationMessage
         			: running ? this.agentStackOfferText("turnRunning") : "";
         		var view: any = {
-        			key: key, title: this.agentStackOfferText("title"), versions: versions, note: note,
+        			key: key, title: this.agentStackOfferText(projects.some((project: any) => project.version.indexOf("-") !== -1) ? "titlePreview" : "title"), versions: versions, note: note,
         			error: mine && !installing && ["error", "no_host", "no_response"].indexOf("" + local.AgentActivationStatus) !== -1,
         			canUpdate: !restriction.length, updateDisabled: installing || running || local.AgentActivationInProgress === true, installing: installing,
         			updateText: this.agentStackOfferText("update"), laterText: this.agentStackOfferText("later")
@@ -2380,7 +2452,7 @@ scriptContent:
         	public installAgentStackOffer() {
         		var view = this.getAgentStackOfferView();
         		if (!view || !view.canUpdate || view.updateDisabled || this.isAgentStackOfferTurnRunning()) { this.tick(); return false; }
-        		// Only the projects older than the stable release, dependencies first and the Assistant last, as the manifest lists them.
+        		// Only the projects older than the offered release, dependencies first and the Assistant last, as the manifest lists them.
         		var projects = this.getAgentStackOfferProjects().map((project: any) => ({ name: project.name, version: project.version, tag: project.tag, importUrl: project.importUrl }));
         		this.local.AgentStackOfferInstalling = true;
         		this.local.AgentActivationStatus = "";
@@ -10149,6 +10221,138 @@ title: Tigo
                                     →: |
                                       if (page.triggerAgentStackUpdate) { page.triggerAgentStackUpdate(); }
                                       resolve();
+                        ↓ChannelIf [ngx.components.UIControlDirective-1793500000032]: 
+                          directiveName: If
+                          directiveSource: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:!!this.getAgentStackChannelView()
+                          ↓Channel [ngx.components.UIDynamicElement-1793500000033]: 
+                            beanData: '{"ionBean":"DivTag"}'
+                            tagName: div
+                            ↓Class [ngx.components.UIAttribute-1793500000034]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-stack-channel
+                            ↓Label [ngx.components.UIDynamicElement-1793500000035]: 
+                              beanData: '{"ionBean":"Paragraph"}'
+                              tagName: p
+                              ↓Class [ngx.components.UIAttribute-1793500000036]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:agent-stack-channel-label
+                              ↓Text [ngx.components.UIText-1793500000037]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.getAgentStackChannelView()?.label
+                            ↓Options [ngx.components.UIDynamicElement-1793500000038]: 
+                              beanData: '{"ionBean":"DivTag"}'
+                              tagName: div
+                              ↓Class [ngx.components.UIAttribute-1793500000039]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:agent-stack-channel-options
+                              ↓Role [ngx.components.UIAttribute-1793500000040]: 
+                                attrName: role
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:group
+                              ↓Aria [ngx.components.UIAttribute-1793500000041]: 
+                                attrName: '[attr.aria-label]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.getAgentStackChannelView()?.label
+                              ↓Stable [ngx.components.UIDynamicElement-1793500000042]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Button",
+                                   "IonFill": "plain:clear",
+                                   "IonSize": "plain:small"
+                                  }'
+                                tagName: ion-button
+                                ↓Class [ngx.components.UIAttribute-1793500000043]: 
+                                  attrName: class
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: 'script:''agent-stack-channel-option'' + (this.getAgentStackChannelView()?.channel === ''stable'' ? '' is-selected'' : '''')'
+                                ↓Pressed [ngx.components.UIAttribute-1793500000044]: 
+                                  attrName: '[attr.aria-pressed]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.channel === 'stable'
+                                ↓Text [ngx.components.UIText-1793500000045]: 
+                                  textValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.stableText
+                                ↓Event [ngx.components.UIControlEvent-1793500000046]: 
+                                  ↓ChooseStable [ngx.components.UICustomAction-1793500000047]: 
+                                    actionValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                          →: |
+                                            if (page.setAgentStackChannel) { page.setAgentStackChannel("stable"); }
+                                            resolve();
+                              ↓Preview [ngx.components.UIDynamicElement-1793500000048]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Button",
+                                   "IonFill": "plain:clear",
+                                   "IonSize": "plain:small"
+                                  }'
+                                tagName: ion-button
+                                ↓Class [ngx.components.UIAttribute-1793500000049]: 
+                                  attrName: class
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: 'script:''agent-stack-channel-option'' + (this.getAgentStackChannelView()?.channel === ''preview'' ? '' is-selected'' : '''')'
+                                ↓Pressed [ngx.components.UIAttribute-1793500000050]: 
+                                  attrName: '[attr.aria-pressed]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.channel === 'preview'
+                                ↓Text [ngx.components.UIText-1793500000051]: 
+                                  textValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.previewText
+                                ↓Event [ngx.components.UIControlEvent-1793500000052]: 
+                                  ↓ChoosePreview [ngx.components.UICustomAction-1793500000053]: 
+                                    actionValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                          →: |
+                                            if (page.setAgentStackChannel) { page.setAgentStackChannel("preview"); }
+                                            resolve();
+                            ↓Hint [ngx.components.UIDynamicElement-1793500000054]: 
+                              beanData: '{"ionBean":"Paragraph"}'
+                              tagName: p
+                              ↓Class [ngx.components.UIAttribute-1793500000055]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:agent-stack-channel-hint
+                              ↓Text [ngx.components.UIText-1793500000056]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.getAgentStackChannelView()?.hint
                       ↓RuntimeSettings [ngx.components.UIDynamicElement-1785253202525]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -24435,4 +24639,11 @@ title: Tigo
           .agent-stack-offer-actions ion-button { margin: 0; height: 28px; font-size: 12px; text-transform: none; letter-spacing: normal; }
           .agent-stack-offer-update { --background: var(--modern-cyan, #06b6d4); --background-hover: var(--modern-cyan, #06b6d4); --color: #ffffff; }
           .agent-stack-offer-later { --color: var(--modern-muted, #64748b); }
+          /* Update channel, in the stack settings (Studio): stable by default, reviewed pre-releases on demand. */
+          .agent-stack-channel { margin-top: 10px; }
+          .agent-stack-channel-label { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--modern-text, var(--ion-text-color)); }
+          .agent-stack-channel-options { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--modern-border, rgba(148, 163, 184, 0.35)); border-radius: 8px; }
+          .agent-stack-channel-options ion-button { margin: 0; height: 26px; font-size: 12px; text-transform: none; letter-spacing: normal; --border-radius: 6px; --color: var(--modern-muted, #64748b); }
+          .agent-stack-channel-options ion-button.is-selected { --background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 16%, transparent 84%); --color: var(--modern-text, var(--ion-text-color)); font-weight: 600; }
+          .agent-stack-channel-hint { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--modern-muted, #64748b); }
           '

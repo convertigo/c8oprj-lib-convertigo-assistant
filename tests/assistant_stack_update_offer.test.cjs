@@ -1,6 +1,7 @@
-// Studio only: when the reviewed stable Tigo stack is newer than what is installed, one card of the panel offers it.
-// The Eclipse view installs through its host (activateLocalAgent), the Web Studio through AgentStackInstall on its engine.
-// The stable manifest here is a fake one: a real check needs a stable release newer than the installed stack.
+// Studio only: when the reviewed Tigo stack of the chosen channel (stable by default, or the reviewed pre-releases too)
+// is newer than what is installed, one card of the panel offers it. The Eclipse view installs through its host
+// (activateLocalAgent), the Web Studio through AgentStackInstall on its engine.
+// The manifests here are fake ones: a real check needs a release newer than the installed stack.
 // node --test tests/assistant_stack_update_offer.test.cjs
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -10,7 +11,8 @@ const { ts, read, pageClass } = require('./helpers/assistant-source.cjs');
 const pageYaml = read('_c8oProject/mobilePages/Page.yaml');
 const ast = ts.createSourceFile('offer.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const names = ['t', 'agentUiLanguage', 'agentStackOfferText', 'isAgentStackOfferSurface', 'isOfficialAgentStackRelease',
-  'normalizeAgentStackRelease', 'normalizeAgentStackStableRelease', 'scheduleAgentStackOfferCheck', 'refreshAgentStackStableRelease',
+  'getAgentStackChannel', 'setAgentStackChannel', 'getAgentStackChannelView', 'mergeAgentStackOfferReleases',
+  'normalizeAgentStackRelease', 'normalizeAgentStackOfferRelease', 'scheduleAgentStackOfferCheck', 'refreshAgentStackOfferRelease',
   'refreshAgentStackOfferPolicy', 'getAgentStackOfferProjects', 'getAgentStackOfferKey', 'getAgentStackOfferRestriction',
   'isAgentStackOfferTurnRunning', 'getAgentStackOfferView', 'installAgentStackOffer', 'postponeAgentStackOffer',
   'compareAgentStackVersions', 'isServerManagedAgentStack', 'getAgentStackServerStatus', 'refreshAgentStackServerStatus',
@@ -42,7 +44,8 @@ const serverStatus = (versions = installed, overrides = {}) => ({
 
 // surface: 'eclipse' (the Studio view, its host installs), 'web' (the Web Studio, serverAgent=1) or 'nocode'.
 function fixture({ surface = 'eclipse', language = 'fr', context = {}, storage = new Map(), clock = { now: 1_800_000_000_000 },
-  stable = manifest(), policy = 'admin', status = serverStatus(), onboarding = 'ready', install } = {}) {
+  stable = manifest(), preview = manifest({ mcp: '0.2.30-beta.1', bridge: '0.4.30-beta.2', assistant: '1.5.8-beta.3' }, 'preview'),
+  policy = 'admin', status = serverStatus(), onboarding = 'ready', install } = {}) {
   const calls = [], posted = [], timers = new Map();
   let timerId = 0, reloads = 0;
   const schedule = repeat => (fn, delay) => { timers.set(++timerId, { fn, delay, repeat }); return timerId; };
@@ -79,6 +82,7 @@ function fixture({ surface = 'eclipse', language = 'fr', context = {}, storage =
       calls.push({ name, payload: plain(payload) });
       return { async: () => {
         if (name.endsWith('.GetManifest')) return typeof stable === 'function' ? stable() : Promise.resolve({ result: stable });
+        if (name.endsWith('.GetPreviewManifest')) return typeof preview === 'function' ? preview() : Promise.resolve({ result: preview });
         if (name.endsWith('.AgentStackStatus')) {
           if (surface === 'eclipse') return Promise.resolve({ result: { ...serverStatus(), localAgentStackUpdateReason: policy, localAgentStackUpdateAllowed: policy !== 'disabled' } });
           return Promise.resolve({ result: status });
@@ -296,7 +300,7 @@ test('a Web Studio served by a server engine (No Code or not) is never offered t
   const f = fixture({ surface: 'web', status: serverStatus(installed, { surface: 'server' }) });
   await f.open();
   assert.deepEqual(f.names(), ['AgentStackStatus'], 'the engine says it is a server: the manifest is not read');
-  f.page.local.AgentStackStableRelease = f.page.normalizeAgentStackStableRelease(manifest());
+  f.page.local.AgentStackOfferRelease = f.page.normalizeAgentStackOfferRelease(manifest(), 'stable');
   assert.equal(f.page.getAgentStackOfferView(), null);
   assert.equal(f.page.installAgentStackOffer(), false);
   assert.equal(f.calls.some(c => c.name.endsWith('.AgentStackInstall')), false);
@@ -318,7 +322,7 @@ test('No Code and a Studio view without its local stack never check nor offer', 
   for (const options of [{ surface: 'nocode' }, { onboarding: 'local-install' }, { onboarding: 'remote-activation' }]) {
     const f = fixture(options);
     await f.open();
-    f.page.refreshAgentStackStableRelease(true);
+    f.page.refreshAgentStackOfferRelease(true);
     await flush();
     assert.deepEqual(f.calls, [], JSON.stringify(options));
     assert.equal(f.page.getAgentStackOfferView(), null);
@@ -326,14 +330,124 @@ test('No Code and a Studio view without its local stack never check nor offer', 
   }
 });
 
-test('the four Assistant languages have every text of the card', () => {
-  const keys = ['title', 'update', 'later', 'installing', 'turnRunning', 'disabled'];
+test('stable is the default channel; the pre-release channel offers the reviewed preview stack, kept by this Studio', async () => {
+  const storage = new Map();
+  let f = fixture({ storage });
+  assert.equal(f.page.getAgentStackChannel(), 'stable');
+  await f.open();
+  assert.equal(f.page.getAgentStackChannelView().hint, 'Seules les versions stables sont proposées.');
+  assert.equal(f.page.getAgentStackOfferView().title, 'Une mise à jour de Tigo est disponible');
+
+  f.page.setAgentStackChannel('preview');
+  await flush();
+  assert.equal(storage.get('lib_ConvertigoAssistant.AgentStackChannel'), 'preview');
+  assert.deepEqual(f.names().slice(-2), ['AgentStackRelease.GetManifest', 'AgentStackRelease.GetPreviewManifest'], 'read at once');
+  const view = f.page.getAgentStackOfferView();
+  assert.equal(view.title, 'Une pré-release de Tigo est disponible');
+  assert.equal(view.versions, 'MCP 0.2.27 → 0.2.30-beta.1 · Bridge 0.4.27 → 0.4.30-beta.2 · Assistant 1.5.5 → 1.5.8-beta.3');
+  const channel = f.page.getAgentStackChannelView();
+  assert.deepEqual([channel.channel, channel.label, channel.stableText, channel.previewText], ['preview', 'Canal de mise à jour', 'Stable', 'Pré-releases']);
+  assert.match(channel.hint, /ne rétrograde rien/);
+  f.page.installAgentStackOffer();
+  assert.deepEqual(f.posted[0].payload.projects.map(p => p.importUrl),
+    [carUrl('lib_ConvertigoMCP', '0.2.30-beta.1'), carUrl('lib_ConvertigoAgentBridge', '0.4.30-beta.2'), carUrl('lib_ConvertigoAssistant', '1.5.8-beta.3')]);
+
+  f = fixture({ storage });
+  assert.equal(f.page.getAgentStackChannel(), 'preview', 'the next panel of this Studio keeps the channel');
+  await f.open();
+  assert.deepEqual(f.names(), ['AgentStackStatus'], 'from the pre-release channel daily read');
+  assert.match(f.page.getAgentStackOfferView().versions, /1\.5\.8-beta\.3/);
+});
+
+test('the pre-release channel takes, per project, the higher of the stable and preview manifests', async () => {
+  // A preview manifest left behind a newer stable: the stable comes.
+  let f = fixture({ preview: manifest({ mcp: '0.2.27', bridge: '0.4.27', assistant: '1.5.5' }, 'preview') });
+  f.page.setAgentStackChannel('preview');
+  await flush();
+  f.page.refreshAgentStackOfferPolicy(); await flush();
+  let view = f.page.getAgentStackOfferView();
+  assert.equal(view.versions, 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.29 · Assistant 1.5.5 → 1.5.7');
+  assert.equal(view.title, 'Une mise à jour de Tigo est disponible', 'only stable versions on the card');
+
+  f = fixture({ preview: manifest({ mcp: '0.2.30-beta.1', bridge: '0.4.27', assistant: '1.5.6' }, 'preview') });
+  f.page.setAgentStackChannel('preview');
+  await flush();
+  view = f.page.getAgentStackOfferView();
+  assert.equal(view.versions, 'MCP 0.2.27 → 0.2.30-beta.1 · Bridge 0.4.27 → 0.4.29 · Assistant 1.5.5 → 1.5.7');
+  assert.equal(view.title, 'Une pré-release de Tigo est disponible');
+});
+
+test('a preview manifest that cannot be read leaves the stable one, without caching, and is read again within the hour', async () => {
+  const storage = new Map(), clock = { now: 1_800_000_000_000 };
+  let failing = true;
+  const f = fixture({ storage, clock, preview: () => (failing ? Promise.reject(new Error('404')) : Promise.resolve({ result: manifest({ assistant: '1.5.8-beta.3' }, 'preview') })) });
+  f.page.setAgentStackChannel('preview');
+  await flush();
+  assert.equal(f.page.getAgentStackOfferView().versions, 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.29 · Assistant 1.5.5 → 1.5.7');
+  assert.equal(storage.has('lib_ConvertigoAssistant.AgentStackPreviewCheck'), false);
+  failing = false;
+  clock.now += 61 * 60000;
+  f.page.refreshAgentStackOfferRelease();
+  await flush();
+  assert.match(f.page.getAgentStackOfferView().versions, /Assistant 1\.5\.5 → 1\.5\.8-beta\.3/);
+  assert.ok(storage.has('lib_ConvertigoAssistant.AgentStackPreviewCheck'));
+
+  const forged = manifest({ assistant: '1.5.8-beta.3' }, 'preview');
+  forged.projects[2].importUrl = 'lib_ConvertigoAssistant=https://evil.example/lib_ConvertigoAssistant.car';
+  for (const preview of [forged, manifest({ assistant: '1.5.8-beta.3' }, 'stable')]) {
+    const g = fixture({ preview });
+    g.page.setAgentStackChannel('preview');
+    await flush();
+    assert.equal(g.page.getAgentStackOfferView().versions, 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.29 · Assistant 1.5.5 → 1.5.7', 'a forged or mislabelled preview is ignored');
+  }
+});
+
+test('back to stable: nothing is downgraded, the next newer stable is offered', async () => {
+  const storage = new Map();
+  storage.set('lib_ConvertigoAssistant.AgentStackChannel', 'preview');
+  const f = fixture({ storage, context: { localMcpVersion: '0.2.30-beta.1', localAgentBridgeVersion: '0.4.30-beta.2', localAssistantVersion: '1.5.8-beta.3' } });
+  await f.open();
+  assert.equal(f.page.getAgentStackOfferView(), null, 'the preview stack is installed');
+  f.page.setAgentStackChannel('stable');
+  await flush();
+  assert.equal(storage.get('lib_ConvertigoAssistant.AgentStackChannel'), 'stable');
+  assert.equal(f.page.getAgentStackOfferView(), null, 'the stable 1.5.7 is older than 1.5.8-beta.3');
+  // Say the Assistant goes back to 1.5.6: its next host context reads the engine policy, then the card shows.
+  f.hostContext.localAssistantVersion = '1.5.6';
+  f.page.scheduleAgentStackOfferCheck();
+  await flush();
+  assert.equal(f.page.getAgentStackOfferView().versions, 'Assistant 1.5.6 → 1.5.7');
+});
+
+test('a channel changed during a read shows the new channel only', async () => {
+  let release;
+  const f = fixture({ stable: () => new Promise(resolve => { release = resolve; }) });
+  await f.open();
+  f.page.setAgentStackChannel('preview');
+  assert.equal(f.names().filter(n => n.endsWith('GetPreviewManifest')).length, 0, 'one read at a time');
+  release({ result: manifest() });
+  await flush();
+  assert.equal(f.storage.has('lib_ConvertigoAssistant.AgentStackStableCheck'), true, 'the stable read is kept for its channel');
+  assert.equal(f.names().filter(n => n.endsWith('GetPreviewManifest')).length, 1, 'then the pre-release channel is read');
+});
+
+test('the channel is a Studio setting: not shown elsewhere', async () => {
+  assert.equal(fixture({ surface: 'nocode' }).page.getAgentStackChannelView(), null);
+  assert.equal(fixture({ onboarding: 'local-install' }).page.getAgentStackChannelView(), null);
+  assert.equal(fixture({ surface: 'web' }).page.getAgentStackChannelView().channel, 'stable');
+});
+
+test('the four Assistant languages have every text of the card and of the channel', () => {
+  const keys = ['title', 'titlePreview', 'update', 'later', 'installing', 'turnRunning', 'disabled',
+    'channel', 'channelStable', 'channelPreview', 'stableHint', 'previewHint'];
   const en = fixture({ language: 'en' }).page;
   for (const language of ['fr', 'it', 'es']) {
     const page = fixture({ language }).page;
     for (const key of keys) {
       assert.notEqual(page.agentStackOfferText(key), key, language + ' ' + key);
-      assert.notEqual(page.agentStackOfferText(key), en.agentStackOfferText(key), language + ' ' + key + ' is translated');
+      if (!(language === 'fr' && key === 'channelStable')) {
+        assert.notEqual(page.agentStackOfferText(key), en.agentStackOfferText(key), language + ' ' + key + ' is translated');
+      }
     }
   }
 });
@@ -352,6 +466,14 @@ test('the page shows the card under the toolbar, wires its buttons and checks fr
   assert.match(pageYaml, /↓AgentStackOfferStyle \[ngx\.components\.UIStyle-1793500000031\]: \n[\s\S]*\.agent-stack-offer \{/);
   assert.match(pageYaml, /this\.scheduleAgentSettingsRefreshAfterHostContext\(\);\n\s+if \(this\.scheduleAgentStackOfferCheck\) \{ this\.scheduleAgentStackOfferCheck\(\); \}/);
   assert.match(pageYaml, /projects: projects && projects\.length \? projects : \(this\.getAgentActivationProjects \? this\.getAgentActivationProjects\(\) : \[\]\),/);
+  const stackAction = pageYaml.indexOf('↓StackAction [ngx.components.UIDynamicElement-1787742888362]: ');
+  const channel = pageYaml.indexOf('↓ChannelIf [ngx.components.UIControlDirective-1793500000032]: ');
+  const runtime = pageYaml.indexOf('↓RuntimeSettings [ngx.components.UIDynamicElement-1785253202525]: ');
+  assert.ok(stackAction > 0 && stackAction < channel && channel < runtime, 'the channel closes the stack settings');
+  assert.match(pageYaml, /\n {24}↓ChannelIf \[ngx\.components\.UIControlDirective-1793500000032\]: \n {26}directiveName: If\n/);
+  assert.match(pageYaml, /if \(page\.setAgentStackChannel\) \{ page\.setAgentStackChannel\("stable"\); \}\n\s+resolve\(\);/);
+  assert.match(pageYaml, /if \(page\.setAgentStackChannel\) \{ page\.setAgentStackChannel\("preview"\); \}\n\s+resolve\(\);/);
+  assert.match(pageYaml, /\.agent-stack-channel-options ion-button\.is-selected \{/);
   // Each bean of the card is new to the project.
   for (const id of pageYaml.match(/-17935000000\d\d\]/g)) assert.equal(pageYaml.split(id).length, 2, id);
 });
