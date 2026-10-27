@@ -429,8 +429,9 @@ rediscovering the same context.
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
 - Assistant 1.5.5 / Bridge 0.4.27 / MCP 0.2.27 is the stable bundle (the 1.5
-  line with the opt-in feedback to Convertigo); the preview manifest points at the
-  same bundle.
+  line with the opt-in feedback to Convertigo); the preview manifest lists the
+  pre-releases checked together on test-nocode, its update being the last step of
+  each such set (RELEASING.md).
   `stack-release.json` must equal `stack-release-stable.json`; the Page default
   fallback pins stable too. Preview uses `stack-release-preview.json` explicitly.
 - `js/tigo_resources.js` owns the portable resource core and its Java host. The

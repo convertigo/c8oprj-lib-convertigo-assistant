@@ -68,6 +68,13 @@ For the Assistant, additionally:
   exist**. Pushing `master` earlier publishes a manifest whose `importUrl` returns 404, and
   every stack update fails until the build finishes.
 
+Studios on the **Pre-releases** channel are offered a stack pre-release only once
+`stack-release-preview.json` on `master` lists it. To offer one, after its three CARs exist and
+were checked together, set the three entries of that file (name, version, `tag` `vX.Y.Z-beta.N`,
+official `importUrl`) and update the preview versions pinned in `tests/assistant_stack_ui.test.cjs`.
+Never list a version older than the stable manifest; at a stable release, set it to the stable
+bundle as before. A preview never deploys and never reaches the Stable channel.
+
 Tags publish GitHub pre-releases (see [release channels](docs/release-channels.md)). A stable
 release is promoted once `master` carries its manifests: mark the three releases as non-prerelease
 and Latest (`gh release edit vX.Y.Z --prerelease=false --latest`). Promoting the Assistant release
@@ -78,6 +85,32 @@ After pushing `master`, check the published manifest and that the three URLs ans
 
 ```bash
 curl -s https://raw.githubusercontent.com/convertigo/c8oprj-lib-convertigo-assistant/refs/heads/master/stack-release.json
+```
+
+## Preview manifest after a checked pre-release set
+
+Since Assistant 1.5.6-beta.17, a pre-release (the stable 1.5.5 has no update offer), the
+Assistant panel of a Studio offers stack updates from its update channel: Stable by default, or
+Pre-releases, which adds what `stack-release-preview.json` on `master` lists. Nothing updates
+that file on its own, and releasing an MCP or Bridge beta never touches this repository.
+
+So when a set of pre-releases has been installed and checked together on test-nocode (the No
+Code test server), its last step, whichever projects changed, is one commit on `master` of this
+repository that:
+
+1. sets the three entries of `stack-release-preview.json`: name, version, `tag`
+   `vX.Y.Z-beta.N` and the official `importUrl` of the release CAR (format above);
+2. updates the preview versions pinned in `tests/assistant_stack_ui.test.cjs`, then runs
+   `node --test tests/assistant_stack_ui.test.cjs`;
+3. updates the Preview row of [release channels](docs/release-channels.md).
+
+List only a set checked together, and never a version older than the stable manifest. Leave
+the stable manifest untouched (`stack-release-stable.json`, its alias `stack-release.json` and
+the fallback in `Page.yaml`). After the push, check the published preview manifest and that its
+three URLs answer 200:
+
+```bash
+curl -s https://raw.githubusercontent.com/convertigo/c8oprj-lib-convertigo-assistant/refs/heads/master/stack-release-preview.json
 ```
 
 ## Tests

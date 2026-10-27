@@ -11,7 +11,12 @@ of each companion project.
 Tigo 1.5.5 integrates personal/team access, the reviewed NoCode branch and the
 Claude authentication cache fix (see [release 1.5.5](release-1.5.5.md)). It retains
 the Windows credential installation fix from 1.5.4. The preview manifest lists
-the pre-releases checked together on the No Code test server. Both bundles target Convertigo 8.4.6;
+the pre-releases checked together on the No Code test server; listing them is
+the last step of each such set (see
+[RELEASING.md](../RELEASING.md#preview-manifest-after-a-checked-pre-release-set)).
+The update offer and its channel selector described below are new in the
+preview Assistant 1.5.6-beta.17: Studios on the stable 1.5.5 have neither and
+read only the stable manifest. Both bundles target Convertigo 8.4.6;
 compatibility alone does not constitute stable acceptance.
 
 ## Manifests and existing Studios
@@ -27,8 +32,8 @@ file. Its embedded frontend fallback also pins the stable bundle, and a preview
 response cannot replace that fallback. New builds expose
 `AgentStackRelease.GetPreviewManifest` for an explicit preview read; the default
 installation/update path does not call it. Testers can already use the preview
-manifest's exact CAR URLs or the preview bundle ZIP on GitHub. There is no new
-automatic preview subscription or channel selector.
+manifest's exact CAR URLs or the preview bundle ZIP on GitHub. In a Studio, the
+stack settings of the Assistant panel also choose the update channel (below).
 
 Changing these files does not downgrade projects already installed in a Studio.
 To return an existing preview installation to stable, stop active agents and
@@ -36,6 +41,23 @@ explicitly reinstall all three stable CARs together. Disable custom MCP
 connections before returning to a Bridge that does not manage them. Project
 `.tigo/` resources and personal library files are retained; 1.4 does not use them.
 Refresh/reopen the Assistant to fetch the stable catalog again.
+
+A Studio is offered each new release of its update channel: its Assistant panel
+reads the manifests at most once a day and, when they are newer than the
+installed projects, shows a card with the versions concerned, "Update" and
+"Later". "Update" installs only the projects older than the offered release,
+never while a turn runs; a pre-release newer than the stable one is kept. Git
+checkouts and `assistant.stack.selfupdate=false` turn the update off with a
+reason. Servers, No Code included, are never offered it: they update from their
+settings.
+
+The channel is chosen in the stack settings of the panel, per Studio:
+
+- **Stable** (default): `stack-release-stable.json` only.
+- **Pre-releases**: per project, the higher of `stack-release-stable.json` and
+  `stack-release-preview.json`, so a newer stable still comes. Pre-releases reach
+  this channel only through the preview manifest on `master` (see RELEASING.md).
+  Going back to Stable downgrades nothing: the next newer stable is offered.
 
 The existing v1.5.0 tags and CAR bytes are retained as historical preview
 artifacts. Their embedded fallback still reflects the original publication;
