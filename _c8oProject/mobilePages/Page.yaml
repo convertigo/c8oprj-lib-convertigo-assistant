@@ -1898,31 +1898,52 @@ scriptContent:
         	public refreshAgentStackRelease(force = false) {
         		if (!this.local) { this.local = {}; }
         		// A cached manifest does not imply that server permissions were checked.
+        		var statusRead: any = null;
         		if (this.refreshAgentStackServerStatus && (force === true || (!this.local.AgentStackServerStatus && !this.local.AgentStackServerStatusError))) {
-        			this.refreshAgentStackServerStatus();
+        			statusRead = this.refreshAgentStackServerStatus();
         		}
         		if (this.local.AgentStackReleaseLoading === true) { return; }
-        		if (force !== true && this.local.AgentStackRelease && this.local.AgentStackRelease.projects && this.local.AgentStackRelease.projects.length) { return; }
-        		this.local.AgentStackRelease = this.local.AgentStackRelease || this.getEmbeddedAgentStackRelease();
-        		if (!this.c8o || !this.c8o.callJsonObject) { return; }
-        		this.local.AgentStackReleaseLoading = true;
-        		this.local.AgentStackReleaseError = "";
-        		this.tick();
-        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async().then((response) => {
-        			var result = response && response.result ? response.result : response;
-        			var release = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(result) : null;
-        			if (release && release.channel === "stable" && release.projects && release.projects.length) {
-        				this.local.AgentStackRelease = release;
-        			} else {
-        				this.local.AgentStackReleaseError = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
-        			}
-        			this.local.AgentStackReleaseLoading = false;
+        		if (!this.c8o || !this.c8o.callJsonObject) { this.local.AgentStackRelease = this.local.AgentStackRelease || this.getEmbeddedAgentStackRelease(); return; }
+        		// The versions of the update channel: a server gives its channel (symbol assistant.stack.channel) with its status,
+        		// so its manifests are read once the status is known; a status that cannot be read leaves the stable channel.
+        		var read = () => {
+        			if (this.local.AgentStackReleaseLoading === true) { return; }
+        			var channel = this.getAgentStackChannel ? this.getAgentStackChannel() : "stable";
+        			var cached: any = this.local.AgentStackRelease;
+        			var checked = this.local.AgentStackReleaseChannel || (cached && cached.projects && cached.projects.length ? cached.channel : "");
+        			if (force !== true && checked === channel) { return; }
+        			this.local.AgentStackRelease = cached || this.getEmbeddedAgentStackRelease();
+        			this.local.AgentStackReleaseChannel = channel;
+        			this.local.AgentStackReleaseLoading = true;
+        			this.local.AgentStackReleaseError = "";
+        			this.local.AgentStackReleasePreviewFailed = false;
         			this.tick();
-        		}).catch((error) => {
-        			this.local.AgentStackReleaseLoading = false;
-        			this.local.AgentStackReleaseError = "" + error;
-        			this.tick();
-        		});
+        			// The stable manifest always; on the preview channel the preview one too, per project the higher version.
+        			var stable = this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async();
+        			var preview: any = channel !== "preview" ? Promise.resolve(null)
+        				: this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetPreviewManifest", {}).async()
+        					.then((response: any) => this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, "preview"))
+        					.catch(() => null);
+        			Promise.all([stable, preview]).then((responses: any) => {
+        				var result = responses[0] && responses[0].result ? responses[0].result : responses[0];
+        				var release = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(result) : null;
+        				if (release && release.channel === "stable" && release.projects && release.projects.length) {
+        					// A preview manifest that cannot be read leaves the stable versions.
+        					this.local.AgentStackRelease = channel === "preview" ? this.mergeAgentStackOfferReleases([release, responses[1]], "preview") : release;
+        					this.local.AgentStackReleasePreviewFailed = channel === "preview" && !responses[1];
+        				} else {
+        					this.local.AgentStackReleaseError = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
+        				}
+        			}).catch((error) => {
+        				this.local.AgentStackReleaseError = "" + error;
+        			}).then(() => {
+        				this.local.AgentStackReleaseLoading = false;
+        				// The channel changed during the read: read the new one.
+        				if (this.getAgentStackChannel && this.getAgentStackChannel() !== channel) { read(); }
+        				this.tick();
+        			});
+        		};
+        		if (statusRead && statusRead.then) { statusRead.then(read, read); } else { read(); }
         	}
         
         	public getAgentActivationProjects() {
@@ -1987,7 +2008,7 @@ scriptContent:
         		if (!this.isServerManagedAgentStack || !this.isServerManagedAgentStack()) { return; }
         		if (!this.c8o || !this.c8o.callJsonObject) { return; }
         		if (!this.local) { this.local = {}; }
-        		if (this.local.AgentStackServerStatusLoading === true) { return; }
+        		if (this.local.AgentStackServerStatusLoading === true) { return (this as any).agentStackServerStatusRequest || null; }
         		this.local.AgentStackServerStatusLoading = true;
         		this.local.AgentStackServerStatusError = false;
         		this.local.AgentStackServerStatus = null;
@@ -1996,7 +2017,7 @@ scriptContent:
         			timer = setTimeout(() => reject(new Error("stack_status_timeout")), 15000);
         			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then(resolve).catch(reject);
         		});
-        		return request.then((response: any) => {
+        		var done = request.then((response: any) => {
         			var document: any = response && response.document ? response.document : response;
         			var result: any = document && document.result ? document.result : document;
         			if (!result || result.error || (document && document.error) || !Array.isArray(result.projects)
@@ -2012,6 +2033,8 @@ scriptContent:
         			this.local.AgentStackServerStatusLoading = false;
         			this.tick();
         		});
+        		(this as any).agentStackServerStatusRequest = done;
+        		return done;
         	}
         
         	public getInstalledAgentStackVersion(projectName) {
@@ -2163,18 +2186,27 @@ scriptContent:
         
         	// Update offer, Studio only (the Eclipse view and the Web Studio of a Studio engine, never No Code): when the reviewed stack
         	// of the chosen channel is newer than what is installed, one card offers it. Stable by default; the pre-release channel adds
-        	// the reviewed preview manifest. Manifests are read at most once a day, a few seconds after the host context, and a project
+        	// the reviewed preview manifest; with no choice in the panel, the engine symbol assistant.stack.channel sets the channel.
+        	// Manifests are read at most once a day, a few seconds after the host context, and a project
         	// newer than the offered one is never replaced.
         	public agentStackOfferText(key) {
         		var texts: any = {
         			fr: { title: "Une mise à jour de Tigo est disponible", titlePreview: "Une pré-release de Tigo est disponible", update: "Mettre à jour", later: "Plus tard", installing: "Mise à jour de Tigo...", turnRunning: "La mise à jour sera possible à la fin du tour en cours.", disabled: "La mise à jour automatique est désactivée (symbole assistant.stack.selfupdate).",
-        				channel: "Canal de mise à jour", channelStable: "Stable", channelPreview: "Pré-releases", stableHint: "Seules les versions stables sont proposées.", previewHint: "Les pré-releases revues sont proposées avant leur version stable. Revenir au canal stable ne rétrograde rien : la stable suivante sera proposée." },
+        				channel: "Canal de mise à jour", channelStable: "Stable", channelPreview: "Pré-releases", stableHint: "Seules les versions stables sont proposées.", previewHint: "Les pré-releases revues sont proposées avant leur version stable. Revenir au canal stable ne rétrograde rien : la stable suivante sera proposée.",
+        				serverChannel: "Réglé pour tout le serveur par son administrateur (symbole {symbol}).", serverDefault: "Canal par défaut du serveur. Son administrateur peut le changer avec le symbole {symbol}.",
+        				studioDefault: "Canal par défaut de ce Studio, réglé par le symbole {symbol}. Un choix fait ici l’emporte.", previewFailed: "Le manifeste des pré-releases n’a pas pu être lu : seules les versions stables sont proposées." },
         			en: { title: "A Tigo update is available", titlePreview: "A Tigo pre-release is available", update: "Update", later: "Later", installing: "Updating Tigo...", turnRunning: "You can update once the current turn ends.", disabled: "Automatic updates are disabled (symbol assistant.stack.selfupdate).",
-        				channel: "Update channel", channelStable: "Stable", channelPreview: "Pre-releases", stableHint: "Only stable versions are offered.", previewHint: "Reviewed pre-releases are offered before their stable version. Going back to the stable channel downgrades nothing: the next stable version will be offered." },
+        				channel: "Update channel", channelStable: "Stable", channelPreview: "Pre-releases", stableHint: "Only stable versions are offered.", previewHint: "Reviewed pre-releases are offered before their stable version. Going back to the stable channel downgrades nothing: the next stable version will be offered.",
+        				serverChannel: "Set for the whole server by its administrator (symbol {symbol}).", serverDefault: "Default channel of the server. Its administrator can change it with the symbol {symbol}.",
+        				studioDefault: "Default channel of this Studio, set by the symbol {symbol}. A choice made here takes precedence.", previewFailed: "The pre-release manifest could not be read: only stable versions are offered." },
         			it: { title: "È disponibile un aggiornamento di Tigo", titlePreview: "È disponibile una pre-release di Tigo", update: "Aggiorna", later: "Più tardi", installing: "Aggiornamento di Tigo...", turnRunning: "Potrai aggiornare al termine del turno in corso.", disabled: "Gli aggiornamenti automatici sono disattivati (simbolo assistant.stack.selfupdate).",
-        				channel: "Canale di aggiornamento", channelStable: "Stabile", channelPreview: "Pre-release", stableHint: "Vengono proposte solo le versioni stabili.", previewHint: "Le pre-release verificate vengono proposte prima della versione stabile. Tornare al canale stabile non riporta indietro nulla: verrà proposta la prossima versione stabile." },
+        				channel: "Canale di aggiornamento", channelStable: "Stabile", channelPreview: "Pre-release", stableHint: "Vengono proposte solo le versioni stabili.", previewHint: "Le pre-release verificate vengono proposte prima della versione stabile. Tornare al canale stabile non riporta indietro nulla: verrà proposta la prossima versione stabile.",
+        				serverChannel: "Impostato per tutto il server dal suo amministratore (simbolo {symbol}).", serverDefault: "Canale predefinito del server. L’amministratore può cambiarlo con il simbolo {symbol}.",
+        				studioDefault: "Canale predefinito di questo Studio, impostato dal simbolo {symbol}. Una scelta fatta qui ha la precedenza.", previewFailed: "Impossibile leggere il manifesto delle pre-release: vengono proposte solo le versioni stabili." },
         			es: { title: "Hay una actualización de Tigo disponible", titlePreview: "Hay una versión preliminar de Tigo disponible", update: "Actualizar", later: "Más tarde", installing: "Actualizando Tigo...", turnRunning: "Podrá actualizar cuando termine el turno en curso.", disabled: "Las actualizaciones automáticas están desactivadas (símbolo assistant.stack.selfupdate).",
-        				channel: "Canal de actualización", channelStable: "Estable", channelPreview: "Versiones preliminares", stableHint: "Solo se ofrecen las versiones estables.", previewHint: "Las versiones preliminares revisadas se ofrecen antes de su versión estable. Volver al canal estable no revierte nada: se ofrecerá la siguiente versión estable." }
+        				channel: "Canal de actualización", channelStable: "Estable", channelPreview: "Versiones preliminares", stableHint: "Solo se ofrecen las versiones estables.", previewHint: "Las versiones preliminares revisadas se ofrecen antes de su versión estable. Volver al canal estable no revierte nada: se ofrecerá la siguiente versión estable.",
+        				serverChannel: "Configurado para todo el servidor por su administrador (símbolo {symbol}).", serverDefault: "Canal predeterminado del servidor. Su administrador puede cambiarlo con el símbolo {symbol}.",
+        				studioDefault: "Canal predeterminado de este Studio, definido por el símbolo {symbol}. Una elección hecha aquí tiene prioridad.", previewFailed: "No se pudo leer el manifiesto de las versiones preliminares: solo se ofrecen las versiones estables." }
         		};
         		var table = texts[this.agentUiLanguage ? this.agentUiLanguage() : "en"] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -2195,36 +2227,82 @@ scriptContent:
         		return false;
         	}
         
-        	public getAgentStackChannel() {
-        		// Kept by this Studio (localStorage): "stable", the default, or "preview" for the reviewed pre-releases too.
+        	public getAgentStackChannelChoice() {
+        		// The channel chosen in the panel of this Studio (localStorage), "" until one is chosen.
         		if (!this.local) { this.local = {}; }
         		if (this.local.AgentStackChannel == null) {
         			var stored = "";
         			try { stored = "" + (window.localStorage.getItem("lib_ConvertigoAssistant.AgentStackChannel") || ""); } catch (e) {}
-        			this.local.AgentStackChannel = stored === "preview" ? "preview" : "stable";
+        			this.local.AgentStackChannel = stored === "preview" || stored === "stable" ? stored : "";
         		}
-        		return this.local.AgentStackChannel === "preview" ? "preview" : "stable";
+        		return this.local.AgentStackChannel === "preview" || this.local.AgentStackChannel === "stable" ? this.local.AgentStackChannel : "";
+        	}
+        
+        	public getAgentStackServerChannel() {
+        		// The channel of the engine, from AgentStackStatus: "stable" unless its administrator set the global symbol
+        		// assistant.stack.channel to "preview". Null until the status is known.
+        		var status: any = this.isServerManagedAgentStack() ? this.getAgentStackServerStatus() : (this.local && this.local.AgentStackEngineStatus);
+        		if (!status || typeof status !== "object") { return null; }
+        		return {
+        			channel: status.localAgentStackChannel === "preview" ? "preview" : "stable",
+        			source: status.localAgentStackChannelSource === "symbol" ? "symbol" : "default",
+        			symbol: "" + (status.localAgentStackChannelSymbol || "assistant.stack.channel")
+        		};
+        	}
+        
+        	public isAgentStackChannelFixed() {
+        		// Only a Studio chooses its channel (its Eclipse view, or a Web Studio served by its engine): a server, No Code
+        		// included, follows the channel its administrator set for every user.
+        		if (!this.isServerManagedAgentStack()) { return false; }
+        		var status: any = this.getAgentStackServerStatus();
+        		return !(status && status.surface === "studio" && this.isAgentStackOfferSurface());
+        	}
+        
+        	public getAgentStackChannel() {
+        		// "stable", the default, or "preview" for the reviewed pre-releases too. A server follows its engine
+        		// (symbol assistant.stack.channel); a Studio takes the choice made in its panel, else its engine''s channel.
+        		var choice = this.isAgentStackChannelFixed() ? "" : this.getAgentStackChannelChoice();
+        		var server: any = choice ? null : this.getAgentStackServerChannel();
+        		return (choice || (server ? server.channel : "stable")) === "preview" ? "preview" : "stable";
         	}
         
         	public setAgentStackChannel(channel) {
+        		if (this.isAgentStackChannelFixed()) { return; }
         		var next = channel === "preview" ? "preview" : "stable";
         		if (this.getAgentStackChannel() === next) { return; }
         		this.local.AgentStackChannel = next;
         		try { window.localStorage.setItem("lib_ConvertigoAssistant.AgentStackChannel", next); } catch (e) {}
-        		// The card follows the new channel at once, from that channel''s daily read when it is fresh.
+        		// The card follows the new channel at once, from that channel''s daily read when it is fresh; read settings follow too.
         		this.local.AgentStackOfferRelease = null;
         		this.local.AgentStackOfferCheckFailedAt = 0;
         		this.refreshAgentStackOfferRelease();
+        		if (this.local.AgentStackReleaseChannel && this.refreshAgentStackRelease) { this.refreshAgentStackRelease(); }
         		this.tick();
         	}
         
         	public getAgentStackChannelView() {
-        		if (!this.isAgentStackOfferSurface()) { return null; }
-        		var channel = this.getAgentStackChannel();
-        		var view: any = {
-        			channel: channel, label: this.agentStackOfferText("channel"), stableText: this.agentStackOfferText("channelStable"),
-        			previewText: this.agentStackOfferText("channelPreview"), hint: this.agentStackOfferText(channel === "preview" ? "previewHint" : "stableHint")
-        		};
+        		var view: any = null;
+        		var server: any = this.getAgentStackServerChannel();
+        		var previewFailed = this.local && this.local.AgentStackReleasePreviewFailed === true ? " " + this.agentStackOfferText("previewFailed") : "";
+        		if (this.isAgentStackChannelFixed()) {
+        			// A server shows, read-only, the channel its administrator set; nothing until its status is known.
+        			if (!server) { return null; }
+        			view = {
+        				readOnly: true, channel: server.channel, label: this.agentStackOfferText("channel"),
+        				valueText: this.agentStackOfferText(server.channel === "preview" ? "channelPreview" : "channelStable"),
+        				hint: this.agentStackOfferText(server.source === "symbol" ? "serverChannel" : "serverDefault").replace("{symbol}", server.symbol) + (server.channel === "preview" ? previewFailed : "")
+        			};
+        		} else {
+        			if (!this.isAgentStackOfferSurface()) { return null; }
+        			var channel = this.getAgentStackChannel();
+        			var fromSymbol = !this.getAgentStackChannelChoice() && server && server.source === "symbol";
+        			view = {
+        				readOnly: false, channel: channel, label: this.agentStackOfferText("channel"), stableText: this.agentStackOfferText("channelStable"),
+        				previewText: this.agentStackOfferText("channelPreview"),
+        				hint: this.agentStackOfferText(channel === "preview" ? "previewHint" : "stableHint")
+        					+ (fromSymbol ? " " + this.agentStackOfferText("studioDefault").replace("{symbol}", server.symbol) : "") + (channel === "preview" ? previewFailed : "")
+        			};
+        		}
         		var stamp = JSON.stringify(view);
         		var self: any = this;
         		if (self.agentStackChannelViewCache && self.agentStackChannelViewCache.stamp === stamp) { return self.agentStackChannelViewCache.view; }
@@ -2304,6 +2382,11 @@ scriptContent:
         				return;
         			}
         			if (status.surface !== "studio") { return; }
+        		} else if (!this.getAgentStackChannelChoice() && !this.local.AgentStackEngineStatus) {
+        			// No channel chosen in this Studio: its engine''s is the default (symbol assistant.stack.channel), read first.
+        			var engine: any = this.refreshAgentStackEngineStatus();
+        			if (engine && engine.then) { engine.then(() => this.refreshAgentStackOfferRelease(force)); }
+        			return;
         		}
         		var channel = this.getAgentStackChannel();
         		var cacheKey = channel === "preview" ? "lib_ConvertigoAssistant.AgentStackPreviewCheck" : "lib_ConvertigoAssistant.AgentStackStableCheck";
@@ -2356,19 +2439,33 @@ scriptContent:
         		// The Eclipse host only refuses Git checkouts; the engine symbol assistant.stack.selfupdate turns the offer off too.
         		// Read once, when there is something to offer. The Web Studio has it in its server status already.
         		if (!this.local || this.isServerManagedAgentStack() || !this.getAgentStackOfferProjects().length) { return; }
-        		if (this.local.AgentStackOfferPolicy || this.local.AgentStackOfferPolicyLoading === true || !this.c8o || !this.c8o.callJsonObject) { return; }
+        		if (this.local.AgentStackOfferPolicy) { return; }
+        		this.refreshAgentStackEngineStatus();
+        	}
+        
+        	public refreshAgentStackEngineStatus() {
+        		// The Eclipse view reads AgentStackStatus on its Studio engine once a page: the engine policy of the card, and the
+        		// default channel of this Studio (symbol assistant.stack.channel) when none was chosen in the panel.
+        		var self: any = this;
+        		if (self.agentStackEngineStatusRequest) { return self.agentStackEngineStatusRequest; }
+        		if (!this.local || !this.c8o || !this.c8o.callJsonObject) { return null; }
         		this.local.AgentStackOfferPolicyLoading = true;
-        		this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then((response: any) => {
+        		self.agentStackEngineStatusRequest = this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then((response: any) => {
         			var document: any = response && response.document ? response.document : response;
         			var result: any = document && document.result ? document.result : document;
+        			this.local.AgentStackEngineStatus = result && typeof result === "object" ? result : {};
         			this.local.AgentStackOfferPolicy = { reason: "" + ((result && result.localAgentStackUpdateReason) || "") };
         		}).catch(() => {
-        			// An engine that cannot tell leaves the decision to the host.
+        			// An engine that cannot tell leaves the decision to the host, on the stable channel.
+        			this.local.AgentStackEngineStatus = {};
         			this.local.AgentStackOfferPolicy = { reason: "" };
         		}).then(() => {
         			this.local.AgentStackOfferPolicyLoading = false;
+        			// Settings read before the default channel was known follow it.
+        			if (this.local.AgentStackReleaseChannel && this.refreshAgentStackRelease) { this.refreshAgentStackRelease(); }
         			this.tick();
         		});
+        		return self.agentStackEngineStatusRequest;
         	}
         
         	public getAgentStackOfferProjects() {
@@ -10250,95 +10347,121 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: script:this.getAgentStackChannelView()?.label
-                            ↓Options [ngx.components.UIDynamicElement-1793500000038]: 
-                              beanData: '{"ionBean":"DivTag"}'
-                              tagName: div
-                              ↓Class [ngx.components.UIAttribute-1793500000039]: 
-                                attrName: class
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: plain:agent-stack-channel-options
-                              ↓Role [ngx.components.UIAttribute-1793500000040]: 
-                                attrName: role
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: plain:group
-                              ↓Aria [ngx.components.UIAttribute-1793500000041]: 
-                                attrName: '[attr.aria-label]'
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: script:this.getAgentStackChannelView()?.label
-                              ↓Stable [ngx.components.UIDynamicElement-1793500000042]: 
-                                beanData: |
-                                  '{
-                                   "ionBean": "Button",
-                                   "IonFill": "plain:clear",
-                                   "IonSize": "plain:small"
-                                  }'
-                                tagName: ion-button
-                                ↓Class [ngx.components.UIAttribute-1793500000043]: 
+                            ↓OptionsIf [ngx.components.UIControlDirective-1793500000057]: 
+                              directiveName: If
+                              directiveSource: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.getAgentStackChannelView()?.readOnly === false
+                              ↓Options [ngx.components.UIDynamicElement-1793500000038]: 
+                                beanData: '{"ionBean":"DivTag"}'
+                                tagName: div
+                                ↓Class [ngx.components.UIAttribute-1793500000039]: 
                                   attrName: class
                                   attrValue: 
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: 'script:''agent-stack-channel-option'' + (this.getAgentStackChannelView()?.channel === ''stable'' ? '' is-selected'' : '''')'
-                                ↓Pressed [ngx.components.UIAttribute-1793500000044]: 
-                                  attrName: '[attr.aria-pressed]'
+                                      - MobileSmartSourceType: plain:agent-stack-channel-options
+                                ↓Role [ngx.components.UIAttribute-1793500000040]: 
+                                  attrName: role
                                   attrValue: 
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.channel === 'stable'
-                                ↓Text [ngx.components.UIText-1793500000045]: 
-                                  textValue: 
+                                      - MobileSmartSourceType: plain:group
+                                ↓Aria [ngx.components.UIAttribute-1793500000041]: 
+                                  attrName: '[attr.aria-label]'
+                                  attrValue: 
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.stableText
-                                ↓Event [ngx.components.UIControlEvent-1793500000046]: 
-                                  ↓ChooseStable [ngx.components.UICustomAction-1793500000047]: 
-                                    actionValue: 
+                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.label
+                                ↓Stable [ngx.components.UIDynamicElement-1793500000042]: 
+                                  beanData: |
+                                    '{
+                                     "ionBean": "Button",
+                                     "IonFill": "plain:clear",
+                                     "IonSize": "plain:small"
+                                    }'
+                                  tagName: ion-button
+                                  ↓Class [ngx.components.UIAttribute-1793500000043]: 
+                                    attrName: class
+                                    attrValue: 
                                       - xmlizable: 
-                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                          →: |
-                                            if (page.setAgentStackChannel) { page.setAgentStackChannel("stable"); }
-                                            resolve();
-                              ↓Preview [ngx.components.UIDynamicElement-1793500000048]: 
-                                beanData: |
-                                  '{
-                                   "ionBean": "Button",
-                                   "IonFill": "plain:clear",
-                                   "IonSize": "plain:small"
-                                  }'
-                                tagName: ion-button
-                                ↓Class [ngx.components.UIAttribute-1793500000049]: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: 'script:''agent-stack-channel-option'' + (this.getAgentStackChannelView()?.channel === ''stable'' ? '' is-selected'' : '''')'
+                                  ↓Pressed [ngx.components.UIAttribute-1793500000044]: 
+                                    attrName: '[attr.aria-pressed]'
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:this.getAgentStackChannelView()?.channel === 'stable'
+                                  ↓Text [ngx.components.UIText-1793500000045]: 
+                                    textValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:this.getAgentStackChannelView()?.stableText
+                                  ↓Event [ngx.components.UIControlEvent-1793500000046]: 
+                                    ↓ChooseStable [ngx.components.UICustomAction-1793500000047]: 
+                                      actionValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                            →: |
+                                              if (page.setAgentStackChannel) { page.setAgentStackChannel("stable"); }
+                                              resolve();
+                                ↓Preview [ngx.components.UIDynamicElement-1793500000048]: 
+                                  beanData: |
+                                    '{
+                                     "ionBean": "Button",
+                                     "IonFill": "plain:clear",
+                                     "IonSize": "plain:small"
+                                    }'
+                                  tagName: ion-button
+                                  ↓Class [ngx.components.UIAttribute-1793500000049]: 
+                                    attrName: class
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: 'script:''agent-stack-channel-option'' + (this.getAgentStackChannelView()?.channel === ''preview'' ? '' is-selected'' : '''')'
+                                  ↓Pressed [ngx.components.UIAttribute-1793500000050]: 
+                                    attrName: '[attr.aria-pressed]'
+                                    attrValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:this.getAgentStackChannelView()?.channel === 'preview'
+                                  ↓Text [ngx.components.UIText-1793500000051]: 
+                                    textValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                        - MobileSmartSourceType: script:this.getAgentStackChannelView()?.previewText
+                                  ↓Event [ngx.components.UIControlEvent-1793500000052]: 
+                                    ↓ChoosePreview [ngx.components.UICustomAction-1793500000053]: 
+                                      actionValue: 
+                                        - xmlizable: 
+                                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                            →: |
+                                              if (page.setAgentStackChannel) { page.setAgentStackChannel("preview"); }
+                                              resolve();
+                            ↓ValueIf [ngx.components.UIControlDirective-1793500000058]: 
+                              directiveName: If
+                              directiveSource: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.getAgentStackChannelView()?.readOnly === true
+                              ↓Value [ngx.components.UIDynamicElement-1793500000059]: 
+                                beanData: '{"ionBean":"Paragraph"}'
+                                tagName: p
+                                ↓Class [ngx.components.UIAttribute-1793500000060]: 
                                   attrName: class
                                   attrValue: 
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: 'script:''agent-stack-channel-option'' + (this.getAgentStackChannelView()?.channel === ''preview'' ? '' is-selected'' : '''')'
-                                ↓Pressed [ngx.components.UIAttribute-1793500000050]: 
-                                  attrName: '[attr.aria-pressed]'
-                                  attrValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.channel === 'preview'
-                                ↓Text [ngx.components.UIText-1793500000051]: 
+                                      - MobileSmartSourceType: plain:agent-stack-channel-value
+                                ↓Text [ngx.components.UIText-1793500000061]: 
                                   textValue: 
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.previewText
-                                ↓Event [ngx.components.UIControlEvent-1793500000052]: 
-                                  ↓ChoosePreview [ngx.components.UICustomAction-1793500000053]: 
-                                    actionValue: 
-                                      - xmlizable: 
-                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                          →: |
-                                            if (page.setAgentStackChannel) { page.setAgentStackChannel("preview"); }
-                                            resolve();
+                                      - MobileSmartSourceType: script:this.getAgentStackChannelView()?.valueText
                             ↓Hint [ngx.components.UIDynamicElement-1793500000054]: 
                               beanData: '{"ionBean":"Paragraph"}'
                               tagName: p
@@ -24639,11 +24762,12 @@ title: Tigo
           .agent-stack-offer-actions ion-button { margin: 0; height: 28px; font-size: 12px; text-transform: none; letter-spacing: normal; }
           .agent-stack-offer-update { --background: var(--modern-cyan, #06b6d4); --background-hover: var(--modern-cyan, #06b6d4); --color: #ffffff; }
           .agent-stack-offer-later { --color: var(--modern-muted, #64748b); }
-          /* Update channel, in the stack settings (Studio): stable by default, reviewed pre-releases on demand. */
+          /* Update channel, in the stack settings: chosen in a Studio, read-only on a server (symbol assistant.stack.channel). */
           .agent-stack-channel { margin-top: 10px; }
           .agent-stack-channel-label { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--modern-text, var(--ion-text-color)); }
           .agent-stack-channel-options { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--modern-border, rgba(148, 163, 184, 0.35)); border-radius: 8px; }
           .agent-stack-channel-options ion-button { margin: 0; height: 26px; font-size: 12px; text-transform: none; letter-spacing: normal; --border-radius: 6px; --color: var(--modern-muted, #64748b); }
           .agent-stack-channel-options ion-button.is-selected { --background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 16%, transparent 84%); --color: var(--modern-text, var(--ion-text-color)); font-weight: 600; }
           .agent-stack-channel-hint { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--modern-muted, #64748b); }
+          .agent-stack-channel-value { margin: 0; font-size: 12px; color: var(--modern-text, var(--ion-text-color)); }
           '

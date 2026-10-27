@@ -17,7 +17,8 @@ const names = ['t', 'agentUiLanguage', 'agentStackOfferText', 'isAgentStackOffer
   'isAgentStackOfferTurnRunning', 'getAgentStackOfferView', 'installAgentStackOffer', 'postponeAgentStackOffer',
   'compareAgentStackVersions', 'isServerManagedAgentStack', 'getAgentStackServerStatus', 'refreshAgentStackServerStatus',
   'getInstalledAgentStackVersion', 'isAgentStackUpdateAllowed', 'getAgentStackRestrictedText', 'installAgentStackOnServer',
-  'triggerAgentOnboardingAction', 'applyAgentActivationStatus'];
+  'triggerAgentOnboardingAction', 'applyAgentActivationStatus', 'getAgentStackChannelChoice', 'getAgentStackServerChannel',
+  'isAgentStackChannelFixed', 'refreshAgentStackEngineStatus'];
 const methods = ast.statements[0].members.filter(m => m.name && names.includes(m.name.getText(ast)));
 assert.deepEqual(methods.map(m => m.name.getText(ast)).sort(), [...names].sort());
 const compiled = ts.transpileModule('class Page {\n' + methods.map(m => m.getText(ast)).join('\n') + '\n}\nthis.Page = Page;', {
@@ -111,7 +112,8 @@ function fixture({ surface = 'eclipse', language = 'fr', context = {}, storage =
 test('the Eclipse view offers a newer stable stack, with the versions concerned, and its host installs it', async () => {
   const f = fixture();
   await f.open();
-  assert.deepEqual(f.names(), ['AgentStackRelease.GetManifest', 'AgentStackStatus'], 'the stable manifest, then the engine symbol once');
+  assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest'],
+    'the engine status once (default channel and policy), then the stable manifest');
   const view = f.page.getAgentStackOfferView();
   assert.equal(view.title, 'Une mise à jour de Tigo est disponible');
   assert.equal(view.versions, 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.29 · Assistant 1.5.5 → 1.5.7');
@@ -181,7 +183,7 @@ test('the comparison is semver: a pre-release newer than the stable one is kept,
   let f = fixture({ stable: manifest({ mcp: '0.2.27', bridge: '0.4.27', assistant: '1.5.5' }), context: { localAssistantVersion: '1.5.6-beta.15', localAgentBridgeVersion: '0.4.28-beta.16', localMcpVersion: '0.2.28-beta.12' } });
   await f.open();
   assert.equal(f.page.getAgentStackOfferView(), null, 'pre-releases newer than the stable stack');
-  assert.deepEqual(f.names(), ['AgentStackRelease.GetManifest'], 'nothing to offer: the engine policy is not read');
+  assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest'], 'nothing to offer: the engine is read once, for its channel');
 
   f = fixture({ stable: manifest({ mcp: '0.2.27', bridge: '0.4.27', assistant: '1.5.5' }), context: { localAssistantVersion: '1.5.6-beta.16', localMcpVersion: '0.2.26' } });
   await f.open();
@@ -210,7 +212,7 @@ test('only a stable manifest of official release CARs is offered', async () => {
     await f.open();
     assert.equal(f.page.getAgentStackOfferView(), null);
     assert.equal(f.storage.has('lib_ConvertigoAssistant.AgentStackStableCheck'), false);
-    assert.equal(f.names().some(n => /Preview|Status/.test(n)), false);
+    assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest'], 'the engine once, never the preview manifest');
   }
   const f = fixture({ stable: { response: { document: manifest() } } });
   await f.open();
@@ -431,10 +433,13 @@ test('a channel changed during a read shows the new channel only', async () => {
   assert.equal(f.names().filter(n => n.endsWith('GetPreviewManifest')).length, 1, 'then the pre-release channel is read');
 });
 
-test('the channel is a Studio setting: not shown elsewhere', async () => {
-  assert.equal(fixture({ surface: 'nocode' }).page.getAgentStackChannelView(), null);
+test('the channel is chosen in a Studio only, once its stack runs this panel', async () => {
+  assert.equal(fixture({ surface: 'nocode' }).page.getAgentStackChannelView(), null, 'a server shows its channel once its status is known');
   assert.equal(fixture({ onboarding: 'local-install' }).page.getAgentStackChannelView(), null);
-  assert.equal(fixture({ surface: 'web' }).page.getAgentStackChannelView().channel, 'stable');
+  const web = fixture({ surface: 'web' });
+  assert.equal(web.page.getAgentStackChannelView(), null, 'the Web Studio waits for the status of its engine');
+  await web.open();
+  assert.deepEqual([web.page.getAgentStackChannelView().channel, web.page.getAgentStackChannelView().readOnly], ['stable', false]);
 });
 
 test('the four Assistant languages have every text of the card and of the channel', () => {

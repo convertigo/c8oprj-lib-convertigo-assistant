@@ -54,6 +54,29 @@ The channel is chosen in the stack settings of the panel, per Studio:
   this channel only through the preview manifest on `master` (see RELEASING.md).
   Going back to Stable downgrades nothing: the next newer stable is offered.
 
+### Server channel: `assistant.stack.channel`
+
+The global symbol `assistant.stack.channel` sets the update channel of a whole
+Convertigo server: `stable` (the default, also when the symbol is empty or holds
+another value) or `preview`. Its administrator sets it once for every user, which
+a browser setting cannot do. `AgentStackStatus` returns it
+(`localAgentStackChannel`, and `localAgentStackChannelSource`: `symbol` or
+`default`).
+
+- On a server, No Code included, the stack settings of the Assistant panel show
+  the versions of that channel: on `preview`, per project the higher of the
+  stable and preview manifests, as in a Studio. The channel is shown read-only,
+  with the symbol name. Users that `assistant.stack.selfupdate` allows can update
+  from there. A server is still never offered the update card.
+- In a Studio, the symbol gives the default channel until a channel is chosen in
+  the panel; that choice, kept by the Studio, then takes precedence. The stack
+  settings follow the same channel as the card.
+- A manifest that cannot be read leaves the stable versions.
+- The channel never limits `AgentStackInstall`: an official release CAR can still
+  be installed by its URL when no manifest lists it, which is how a beta is checked
+  on a test server before the preview manifest lists it.
+  `assistant.stack.selfupdate` and the official-CAR allow-list still apply.
+
 The existing v1.5.0 tags and CAR bytes are retained as historical preview
 artifacts. Their embedded fallback still reflects the original publication;
 their normal online manifest now resolves to stable. This correction does not

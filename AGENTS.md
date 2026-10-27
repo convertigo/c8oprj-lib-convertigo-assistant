@@ -193,6 +193,20 @@ rediscovering the same context.
   and server session policies show why and offer no update. A Web Studio needs
   `AgentStackStatus.surface === "studio"`. Cover with
   `node --test tests/assistant_stack_update_offer.test.cjs`.
+- The global symbol `assistant.stack.channel` (`stable` by default, also when empty
+  or unknown, or `preview`) is the update channel of a whole server: `channelSetting`
+  in `js/agent_stack_server.js`, returned by `AgentStackStatus`
+  (`localAgentStackChannel`, `localAgentStackChannelSource`). On a server, No Code
+  included (`isAgentStackChannelFixed`), `refreshAgentStackRelease` reads the
+  manifests of that channel once the status is known (preview: per project the
+  higher version; a preview read that fails leaves stable), and the stack settings
+  show the channel read-only with the symbol (`getAgentStackChannelView().readOnly`);
+  never a card. In a Studio the symbol is the default of `getAgentStackChannel`
+  until the panel keeps a choice, and the settings follow the same channel; the
+  Eclipse view reads it with the engine policy, once a page
+  (`refreshAgentStackEngineStatus`). The channel never limits `AgentStackInstall`
+  of an official CAR URL. Cover with
+  `node --test tests/assistant_stack_channel.test.cjs tests/agent_stack_server.test.cjs`.
 - Forms-only UI uses `forms-integrated` on the page header/content/footer and
   `FormsIntegratedStyle`; leave the Studio layout unaffected. Context expansion
   and history navigation use SetLocal beans. Suggestions only prepare drafts.
