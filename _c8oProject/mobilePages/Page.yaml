@@ -1898,21 +1898,28 @@ scriptContent:
         	public refreshAgentStackRelease(force = false) {
         		if (!this.local) { this.local = {}; }
         		// A cached manifest does not imply that server permissions were checked.
-        		var statusRead: any = null;
         		if (this.refreshAgentStackServerStatus && (force === true || (!this.local.AgentStackServerStatus && !this.local.AgentStackServerStatusError))) {
-        			statusRead = this.refreshAgentStackServerStatus();
+        			this.refreshAgentStackServerStatus();
         		}
-        		if (this.local.AgentStackReleaseLoading === true) { return; }
         		if (!this.c8o || !this.c8o.callJsonObject) { this.local.AgentStackRelease = this.local.AgentStackRelease || this.getEmbeddedAgentStackRelease(); return; }
-        		// The versions of the update channel: a server gives its channel (symbol assistant.stack.channel) with its status,
-        		// so its manifests are read once the status is known; a status that cannot be read leaves the stable channel.
-        		var read = () => {
+        		// The versions of the update channel. A server gives its channel (symbol assistant.stack.channel) with its status, and
+        		// a Studio with no choice in its panel takes its engine''s: while that status is read, the manifests wait for it.
+        		var read = (forced) => {
+        			var pending: any = null;
+        			if (this.isServerManagedAgentStack && this.isServerManagedAgentStack()) {
+        				pending = this.local.AgentStackServerStatusLoading === true ? (this as any).agentStackServerStatusRequest : null;
+        			} else if (this.getAgentStackChannelChoice && !this.getAgentStackChannelChoice() && !this.local.AgentStackEngineStatus
+        				&& this.isAgentStackOfferSurface && this.isAgentStackOfferSurface() && this.refreshAgentStackEngineStatus) {
+        				pending = this.refreshAgentStackEngineStatus();
+        			}
+        			if (pending && pending.then) { pending.then(() => read(forced)); return; }
         			if (this.local.AgentStackReleaseLoading === true) { return; }
         			var channel = this.getAgentStackChannel ? this.getAgentStackChannel() : "stable";
         			var cached: any = this.local.AgentStackRelease;
         			var checked = this.local.AgentStackReleaseChannel || (cached && cached.projects && cached.projects.length ? cached.channel : "");
-        			if (force !== true && checked === channel) { return; }
-        			this.local.AgentStackRelease = cached || this.getEmbeddedAgentStackRelease();
+        			if (forced !== true && checked === channel) { return; }
+        			// Until the manifests answer: what was read for this channel, else the reviewed stable fallback.
+        			this.local.AgentStackRelease = cached && cached.channel === channel ? cached : this.getEmbeddedAgentStackRelease();
         			this.local.AgentStackReleaseChannel = channel;
         			this.local.AgentStackReleaseLoading = true;
         			this.local.AgentStackReleaseError = "";
@@ -1938,12 +1945,12 @@ scriptContent:
         				this.local.AgentStackReleaseError = "" + error;
         			}).then(() => {
         				this.local.AgentStackReleaseLoading = false;
-        				// The channel changed during the read: read the new one.
-        				if (this.getAgentStackChannel && this.getAgentStackChannel() !== channel) { read(); }
+        				// The channel changed during the read (a choice, or a status read again): read the new one.
+        				read(false);
         				this.tick();
         			});
         		};
-        		if (statusRead && statusRead.then) { statusRead.then(read, read); } else { read(); }
+        		read(force === true);
         	}
         
         	public getAgentActivationProjects() {
@@ -2450,7 +2457,12 @@ scriptContent:
         		if (self.agentStackEngineStatusRequest) { return self.agentStackEngineStatusRequest; }
         		if (!this.local || !this.c8o || !this.c8o.callJsonObject) { return null; }
         		this.local.AgentStackOfferPolicyLoading = true;
-        		self.agentStackEngineStatusRequest = this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then((response: any) => {
+        		var timer: any = null;
+        		var request = new Promise((resolve, reject) => {
+        			timer = setTimeout(() => reject(new Error("stack_status_timeout")), 15000);
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackStatus", {}).async().then(resolve).catch(reject);
+        		});
+        		self.agentStackEngineStatusRequest = request.then((response: any) => {
         			var document: any = response && response.document ? response.document : response;
         			var result: any = document && document.result ? document.result : document;
         			this.local.AgentStackEngineStatus = result && typeof result === "object" ? result : {};
@@ -2460,6 +2472,7 @@ scriptContent:
         			this.local.AgentStackEngineStatus = {};
         			this.local.AgentStackOfferPolicy = { reason: "" };
         		}).then(() => {
+        			if (timer !== null) { clearTimeout(timer); }
         			this.local.AgentStackOfferPolicyLoading = false;
         			// Settings read before the default channel was known follow it.
         			if (this.local.AgentStackReleaseChannel && this.refreshAgentStackRelease) { this.refreshAgentStackRelease(); }

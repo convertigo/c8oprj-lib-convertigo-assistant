@@ -297,6 +297,46 @@ test('a choice made in the panel takes precedence over the symbol; back to Stabl
   assert.equal(f.page.getAgentStackChannel(), 'stable', 'the next panel of this Studio keeps the choice');
 });
 
+test('settings opened again during a read wait for the new status: the server channel is kept', async () => {
+  const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+  const queue = { status: [], stable: [], preview: [] };
+  const later = name => () => { const d = deferred(); queue[name].push(d); return d.promise; };
+  const f = fixture({ status: later('status'), stable: later('stable'), preview: later('preview') });
+  f.page.refreshAgentStackRelease(); // the host context
+  queue.status[0].resolve({ result: engineStatus({ channel: 'preview' }) }); await flush();
+  f.page.refreshAgentStackRelease(true); // the settings open while both manifests are read
+  queue.stable[0].resolve({ result: manifest() }); queue.preview[0].resolve({ result: manifest(betas, 'preview') }); await flush();
+  assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest', 'AgentStackRelease.GetPreviewManifest', 'AgentStackStatus'],
+    'no stable read while the channel is unknown');
+  queue.status[1].resolve({ result: engineStatus({ channel: 'preview' }) }); await flush();
+  queue.stable[1].resolve({ result: manifest() }); queue.preview[1].resolve({ result: manifest(betas, 'preview') }); await flush();
+  assert.equal(f.page.local.AgentStackReleaseChannel, 'preview');
+  assert.equal(f.page.getAgentStackVersionText(), 'MCP 0.2.27 → 0.2.28-beta.13 · Bridge 0.4.27 → 0.4.28-beta.16 · Assistant 1.5.5 → 1.5.6-beta.17');
+  assert.equal(f.names().length, 6);
+});
+
+test('Studio settings opened before the card check read the engine default first, and a failed read falls back to stable', async () => {
+  const f = fixture({ surface: 'eclipse', status: engineStatus({ surface: 'studio', channel: 'preview' }) });
+  await f.settings(true);
+  assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest', 'AgentStackRelease.GetPreviewManifest']);
+  assert.match(f.page.getAgentStackVersionText(), /Assistant 1\.5\.5 → 1\.5\.6-beta\.17/);
+  await f.open();
+  assert.equal(f.names().filter(n => n === 'AgentStackStatus').length, 1, 'the card reuses the engine status');
+
+  // Back to Stable while the stable manifest cannot be read: the reviewed fallback, never the pre-release targets.
+  let failing = false;
+  const g = fixture({ surface: 'eclipse', storage: new Map([['lib_ConvertigoAssistant.AgentStackChannel', 'preview']]),
+    stable: () => (failing ? Promise.reject(new Error('offline')) : Promise.resolve({ result: manifest() })) });
+  await g.settings(true);
+  assert.match(g.page.getAgentStackVersionText(), /→ 1\.5\.6-beta\.17/);
+  failing = true;
+  g.page.setAgentStackChannel('stable');
+  await flush();
+  assert.equal(g.page.getAgentStackVersionText(), 'MCP 0.2.27 · Bridge 0.4.27 · Assistant 1.5.5');
+  assert.equal(g.page.local.AgentStackRelease.channel, 'stable');
+  assert.match(g.page.getAgentStackStatusText(), /Impossible de vérifier la stack publiée/);
+});
+
 test('the stack settings show the Studio options or the server channel read-only', () => {
   const channelIf = pageYaml.indexOf('↓ChannelIf [ngx.components.UIControlDirective-1793500000032]: ');
   const label = pageYaml.indexOf('↓Label [ngx.components.UIDynamicElement-1793500000035]: ');
