@@ -6,7 +6,7 @@ of each companion project.
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
 | Stable | 1.5.5 | 0.4.27 | 0.2.27 |
-| Preview | 1.5.6-beta.18 | 0.4.28-beta.16 | 0.2.28-beta.13 |
+| Preview | 1.5.6-beta.18 | 0.4.28-beta.16 | 0.2.28-beta.14 |
 
 Tigo 1.5.5 integrates personal/team access, the reviewed NoCode branch and the
 Claude authentication cache fix (see [release 1.5.5](release-1.5.5.md)). It retains
