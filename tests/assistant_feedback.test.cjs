@@ -80,6 +80,25 @@ test('an error template keeps the shape of an error, so the same error with othe
   assert.equal(F.errorMessage(result, false), 'Database object not found: PfDelta.sq:nexistepas. QName shape: ...');
   assert.match(F.errorMessage(result.slice(0, 120), false), /^Database object not found: PfDelta\.sq/);
   assert.equal(F.errorMessage('raw failure', true), 'raw failure');
+  // A cut preview of a Vibe result holds the MCP answer escaped twice: its message keeps its quoted names (4 frictions on
+  // backend-apps stopped at "Objects named \\" and "There is no sequence named \\").
+  const named = { code: '-1', message: 'target: Database object not found: Pf.sq:x. Objects named "Q3" exist under: Pf.pg:Home' };
+  const vibeResult = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify(named) }] });
+  for (const cutAt of [3, 5]) {
+    assert.equal(F.errorMessage(vibeResult.slice(0, vibeResult.length - cutAt), false), named.message, 'cut ' + cutAt + ' characters before the end');
+  }
+  const sequence = { code: '-1', message: "lib_BaseRow: There is no sequence named 'TableGetData' in project \"lib_BaseRow\"\nat line 3" };
+  const sequenceResult = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify(sequence) }] });
+  assert.equal(F.errorMessage(sequenceResult.slice(0, -4), false), sequence.message, 'quotes, a newline and \\u-escapes undone once');
+  assert.equal(F.template(F.errorMessage(vibeResult.slice(0, -5), false), [], []), 'target: Database object not found: <name>. Objects named … exist under: <name>');
+  // The plan sync reminder the Bridge appends to a result is never the error (frictions b71cde44, fe4bc4a6).
+  const reminder = '[Convertigo plan sync] 12 tool calls since your last `todo` write. The Convertigo assistant shows the user only your `todo` list as the plan.\n\nCall `todo` now (action "write", the full list).';
+  assert.equal(F.errorMessage(reminder, true), '', 'a failed call whose only text is the reminder is not collected');
+  assert.equal(F.errorMessage(JSON.stringify({ type: 'success', content: [{ type: 'text', text: reminder }] }), true), '');
+  assert.equal(F.errorMessage('raw failure\n\n' + reminder, true), 'raw failure', 'the real failure text, without the reminder');
+  const withReminder = JSON.stringify({ type: 'success', content: [{ type: 'text', text: JSON.stringify({ code: '-1', message: 'Palette entry not found' }) }, { type: 'text', text: reminder }] });
+  assert.equal(F.errorMessage(withReminder, false), 'Palette entry not found');
+  assert.equal(F.errorMessage(JSON.stringify({ type: 'success', content: [{ type: 'text', text: '{"status":"ok"}' }, { type: 'text', text: reminder }] }), false), '', 'a successful call with the reminder is no error');
   // The error the answer names wins over an earlier "message" (schema-apply listed its planned actions first:
   // friction 3615a606fb3f recorded "Table already exists.").
   const schemaApply = { status: 'error', actions: [{ type: 'table_exists', message: 'Table already exists.' }], error: { code: 'baserow_schema_apply_failed', message: 'Baserow did not create the view Liste' } };
@@ -826,4 +845,190 @@ test('the agent also restarts on its session when the Convertigo MCP is updated:
   assert.equal(sandbox.mcpCatalogKey({}), 'mcp:0.2.27-beta.3', 'a server user without feedback still gets the MCP version');
   sandbox.version = '';
   assert.equal(sandbox.mcpCatalogKey({}), '');
+});
+
+// Low-code friction of Studio 8.4.6 users: 39 reports said only "The provided tool call failed", Vibe's sentence for
+// every tool call it could not complete. Its error code is the cause.
+test('a tool call Vibe could not complete is reported with its code, what the code means and how long the call took', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const vibe = (code, retryable) => JSON.stringify({ type: 'failure', content: [],
+    _meta: { approval: { approvalSource: 'config', approvalType: 'always', decision: 'execute' } },
+    error: { code, message: 'The provided tool call failed', retryable } });
+  assert.equal(F.errorMessage(vibe('mcp_transport_failed', false), true), 'The provided tool call failed [mcp_transport_failed]');
+  assert.deepEqual({ ...F.runtimeFailure(vibe('mcp_timeout', true)) }, { code: 'mcp_timeout', retryable: true, details: null });
+  assert.equal(F.runtimeFailure('{"code":"-1","message":"Database object not found"}'), null, 'an error of the tool itself');
+  const cut = vibe('mcp_timeout', true);
+  assert.equal(F.runtimeFailure(cut.slice(0, cut.indexOf('"message"') + 12)).code, 'mcp_timeout', 'a cut preview');
+  assert.equal(F.errorMessage('{"code":"-1","message":"target: Database object not found"}', false), 'target: Database object not found');
+
+  const collect = (code, durationMs) => F.collectToolError({ tool: 'mcp_Convertigo.databaseobject_tree_get', message: F.errorMessage(vibe(code, false), true),
+    failure: F.runtimeFailure(vibe(code, false)), durationMs, provider: 'convertigo', model: 'glm-5-3' });
+  const first = collect('mcp_transport_failed', 420);
+  assert.equal(first.finding.template, 'The provided tool call failed [mcp_transport_failed]', 'the code stays readable');
+  assert.equal(first.finding.summary, 'mcp_transport_failed, not retryable, after 0.4 s: the MCP client failed on the call or on its answer: '
+    + 'a JSON-RPC error of the server, an answer outside the output schema of the tool, or a broken stream.');
+  assert.equal(collect('mcp_transport_failed', 31000).count, 2, 'the same cause with another duration counts once');
+  const timeout = collect('mcp_timeout', 600000);
+  assert.notEqual(timeout.fingerprint, first.fingerprint, 'another cause, another report');
+  assert.match(timeout.finding.summary, /^mcp_timeout, not retryable, after 600 s: the call ran past the tool timeout of the agent\.$/);
+  assert.equal(F.pending().length, 2);
+
+  // The code is a word of the product; a snake_case name of the customer is still masked.
+  assert.equal(F.template('q_test_dates of PcaUpdateTracker failed [mcp_timeout]', ['PcaUpdateTracker']), '<name> of <project> failed [mcp_timeout]');
+  assert.equal(F.failureSummary({ code: 'mcp_http_error', retryable: false, details: { status: 503 } }, null),
+    'mcp_http_error, not retryable: the MCP answered with an HTTP error. Details: {"status":503}');
+  assert.equal(F.failureSummary({ code: 'other_code' }, 10), '');
+
+  // A turn turned on from the nudge: the saved events give the code and the duration.
+  const { F: nudged } = feedback({ settings: { mode: 'off', decidedAt: 1 } });
+  const events = [{ type: 'tool', toolName: 'mcp_Convertigo.palette_describe', status: 'failed', detail: vibe('mcp_authorization_required', false), at: 1000, completedAt: 1250 }];
+  const result = nudged.run({ action: 'mode', mode: 'ask', events, provider: 'convertigo', model: 'mistral-large-4' });
+  assert.equal(result.pending[0].finding.template, 'The provided tool call failed [mcp_authorization_required]');
+  assert.match(result.pending[0].finding.summary, /^mcp_authorization_required, not retryable, after 0\.3 s: the MCP refused the token/);
+});
+
+test('the duration of a failed call: measured by the Bridge, else from when this client saw the call start', () => {
+  const sandbox = { toolCallId: data => (data && data.toolCallId) || '', now: () => 5000 };
+  vm.runInNewContext(backendParts(['feedbackToolDuration']), sandbox);
+  const state = { progressEvents: [{ callId: 'effect-1', at: 4600 }] };
+  assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-1', failure: { durationMs: 650 } }), 650);
+  assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-1', failure: { durationMs: null } }), 400, 'the Bridge saw no start');
+  assert.equal(sandbox.feedbackToolDuration(state, { toolCallId: 'effect-2' }), null, 'unknown, not 0');
+});
+
+// GLM 5.3 told a No Code user it could not see the form in a browser nor read the rows of a table, added a diagnostic
+// field to the form, and filed nothing (gregoryv, test-nocode, 26/10). Tigo files the missing capability from the
+// answer and the comments of the turn, with the product's sentences only.
+test('a missing capability an agent tells the user is found in its answer or its comments, in French or English', () => {
+  const { F } = feedback();
+  const found = texts => Array.from(F.missingCapabilities(texts), subject => subject.replace('missing-capability:', ''));
+  assert.deepEqual(found(["Je n'ai pas pu reproduire le calcul moi-même : les outils de test browser ne sont pas disponibles dans cette session, "
+    + "et les outils no-code ne permettent pas de lire les lignes des tables. J'ai donc ajouté un champ de diagnostic."]), ['form-preview', 'table-rows']);
+  assert.deepEqual(found(['Le saut persiste donc la cause est ailleurs. Comme les outils browser de test ne sont pas disponibles dans cette session, '
+    + 'je vais instrumenter le formulaire.']), ['form-preview'], 'a comment of the turn');
+  assert.deepEqual(found(['Je n’ai pas modifié le formulaire : le comportement pointe vers les données des tables, que je ne peux pas lire '
+    + 'directement avec les outils no-code (le catalogue ne retourne que le schéma, pas les lignes).']), ['table-rows']);
+  assert.deepEqual(found(['**Limite** — vérification visuelle non réalisée.']), ['form-preview']);
+  assert.deepEqual(found(['La vérification visuelle dans le navigateur n\'a pas été effectuée.']), ['form-preview']);
+  assert.deepEqual(found(['Aucun outil de validation visuelle : la vérification à l\'écran reste de votre côté.']), ['form-preview']);
+  assert.deepEqual(found(['I could not check the rendering: no browser tools are available in this session.']), ['form-preview']);
+  assert.deepEqual(found(['The no-code tools cannot read the rows of a Baserow table.']), ['table-rows']);
+  // Another lack of a tool: filed alone, under the no-code tool it names, else "other".
+  assert.deepEqual(found(['Les outils no-code ne permettent pas de supprimer une table.']), ['other']);
+  assert.deepEqual(found(['Malheureusement, le tool `nocode-form-get` n\'est pas disponible dans mon environnement actuel.']), ['nocode-form-get']);
+  assert.deepEqual(found(['Les outils no-code ne permettent pas de supprimer une table. Pas d\'outil navigateur dans cette session.']), ['form-preview'],
+    'a known capability wins over another lack');
+  assert.deepEqual(found(["C'est une limite du périmètre no-code actuel, je ne vais pas la contourner par un accès direct à Baserow."]), ['other']);
+});
+
+test('advice to the user, limits by design and work done are not missing capabilities', () => {
+  const { F } = feedback();
+  for (const text of [
+    "L'aperçu ne sera pas disponible tant que le formulaire n'est pas publié.",
+    "Je n'ai pas accès aux logs du serveur : demandez à votre administrateur de les consulter.",
+    "Vous n'avez pas les droits de publication sur ce formulaire.",
+    "J'ai vérifié le rendu avec la capture de l'aperçu : les trois boutons sont sur une ligne.",
+    'Le champ Total ne peut pas être vide.',
+    'Je ne peux pas publier sans votre accord : dites-moi si je publie.',
+    'Je ne peux pas exécuter de commande shell dans ce contexte.',
+    'Vérification visuelle effectuée : la grille affiche les quatre lignes.',
+    'The form cannot be submitted while a required field is empty.'
+  ]) {
+    assert.deepEqual([...F.missingCapabilities([text])], [], text);
+  }
+  assert.deepEqual([...F.missingCapabilities([])], []);
+  assert.deepEqual([...F.missingCapabilities([null, ''])], []);
+});
+
+test('a missing capability is filed with the product\'s sentences only, never the agent\'s words or the user\'s names', () => {
+  const { F, store } = feedback({ settings: { mode: 'ask' } });
+  store.readNames = () => ['Planning des gardes', 'Diagnostic', 'Browser'];
+  store.writeNames = () => {};
+  const answer = "Je n'ai pas pu reproduire le calcul du formulaire Planning des gardes : les outils de test browser ne sont pas disponibles "
+    + "dans cette session, et les outils no-code ne permettent pas de lire les lignes de la table Gardes de jane@acme.fr.";
+  const events = [
+    { type: 'narrative', text: 'Comme les outils browser ne sont pas disponibles dans cette session, je vais instrumenter le formulaire Planning des gardes.' },
+    { type: 'tool', toolName: 'mcp_Convertigo.nocode_form_edit', status: 'completed', detail: '{"status":"ok"}' },
+    { type: 'activity', text: 'Les outils no-code ne permettent pas de supprimer une table.' }
+  ];
+  const filed = F.collectMissingCapabilities({ answer, events, provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
+  assert.deepEqual(Array.from(filed, report => report.finding.subject), ['missing-capability:form-preview', 'missing-capability:table-rows']);
+  const pending = F.pending();
+  assert.equal(pending.length, 2);
+  const sent = JSON.stringify(pending);
+  for (const leak of ['Planning', 'gardes', 'Gardes', 'jane', 'acme', 'reproduire', 'instrumenter']) {
+    assert.ok(!sent.includes(leak), leak + ' leaked in: ' + sent);
+  }
+  const preview = pending.find(report => report.finding.subject === 'missing-capability:form-preview');
+  assert.equal(preview.kind, 'agent_friction');
+  assert.equal(preview.finding.area, 'tool');
+  assert.equal(preview.finding.severity, 'medium');
+  assert.match(preview.finding.summary, /^Detected by Tigo in the No Code agent's answer: it needed to see the saved form in a browser/);
+  assert.match(preview.finding.summary, /a diagnostic field added to the form/, 'a user\'s name equal to a word of the sentence masks nothing');
+  assert.match(preview.finding.suggestion, /Browser|browser/);
+  assert.equal(preview.stack.surface, 'nocode');
+  assert.equal(preview.turn, undefined, 'TigoAccess takes a turn from a user report only');
+  assert.equal(preview.comment, undefined);
+  // The same capability in a later turn is counted, not repeated.
+  F.collectMissingCapabilities({ answer: 'Pas d\'outil navigateur dans cette session.', events: [], provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
+  assert.equal(F.pending().find(report => report.finding.subject === 'missing-capability:form-preview').count, 2);
+  assert.equal(F.pending().length, 2);
+});
+
+test('a missing capability is not filed without consent, or when the agent filed a friction itself in the turn', () => {
+  const answer = 'Pas d\'outil navigateur dans cette session : la vérification visuelle reste à faire.';
+  const off = feedback();
+  assert.deepEqual([...off.F.collectMissingCapabilities({ answer, events: [] })], []);
+  assert.equal(off.store.pending.size, 0);
+  const { F, store } = feedback({ settings: { mode: 'auto' } });
+  const filedByAgent = { type: 'tool', toolName: 'mcp_Convertigo.nocode_report_create', status: 'completed', detail: '{"status":"written"}' };
+  assert.deepEqual([...F.collectMissingCapabilities({ answer, events: [filedByAgent] })], []);
+  assert.equal(store.pending.size, 0);
+  // A report call that failed filed nothing: Tigo files the capability.
+  const failed = { ...filedByAgent, status: 'failed', detail: 'Reporting is disabled' };
+  assert.equal(F.collectMissingCapabilities({ answer, events: [failed] }).length, 1);
+  // Three capabilities in a turn: two reports at most.
+  const { F: many } = feedback({ settings: { mode: 'ask' } });
+  assert.equal(many.collectMissingCapabilities({ answer: 'Pas d\'outil navigateur dans cette session. Les outils ne permettent pas de lire les lignes des tables.',
+    events: [{ type: 'narrative', text: 'Les outils no-code ne permettent pas de supprimer une table.' }] }).length, 2);
+});
+
+test('an agent friction under a missing capability\'s subject says the product\'s sentences; other frictions keep theirs', () => {
+  const raw = { kind: 'agent_friction', finding: { area: 'guide', subject: 'missing-capability:table-rows', severity: 'high', summary: 'rows of Gardes for jane@acme.fr' } };
+  const other = { kind: 'agent_friction', finding: { area: 'tool', subject: 'nocode-form-edit', severity: 'low', summary: 'add_field needs a page key' } };
+  const { F } = feedback({ settings: { mode: 'ask' }, incoming: [{ ...raw, __file: 'a.json' }, { ...other, __file: 'b.json' }] });
+  const pending = F.pending();
+  const rows = pending.find(report => report.finding.subject === 'missing-capability:table-rows');
+  assert.equal(rows.finding.area, 'tool');
+  assert.equal(rows.finding.severity, 'medium');
+  assert.match(rows.finding.summary, /^Detected by Tigo in the No Code agent's answer: it needed the rows of a Baserow table/);
+  assert.equal(pending.find(report => report.finding.subject === 'nocode-form-edit').finding.summary, 'add_field needs a page key');
+  assert.equal(F.missingCapabilityFinding('missing-capability:unknown thing'), null);
+  // A subject names a known no-code tool or nothing: never a name of the user that looks like one.
+  assert.equal(F.missingCapabilityFinding('missing-capability:nocode-planning-des-gardes'), null);
+  assert.deepEqual([...F.missingCapabilities(['Les outils ne permettent pas de lire nocode_planning_des_gardes.'])], ['missing-capability:other']);
+  assert.equal(F.missingCapabilityFinding('missing-capability:nocode-form-get').summary, F.missingCapabilityFinding('missing-capability:other').summary);
+});
+
+test('a finished No Code turn files its missing capabilities, whichever way it ended; the prompt reminds the agent with consent', () => {
+  const calls = [];
+  const feedbackObject = {
+    ingest: options => calls.push(['ingest', options.surface]),
+    collectMissingCapabilities: options => calls.push(['missing', options.answer, options.events.length, options.surface, options.model])
+  };
+  const sandbox = { feedbackModule: () => feedbackObject, feedbackSurface: state => state.profile, feedbackModel: () => 'glm-5-3' };
+  vm.runInNewContext(backendParts(['ingestFeedback']), sandbox);
+  sandbox.ingestFeedback({ status: 'completed', profile: 'nocode', answer: 'done', progressEvents: [{ type: 'narrative' }], provider: 'convertigo' });
+  assert.deepEqual(calls, [['ingest', 'nocode'], ['missing', 'done', 1, 'nocode', 'glm-5-3']]);
+  calls.length = 0;
+  sandbox.ingestFeedback({ status: 'failed', profile: 'nocode', answer: 'error', progressEvents: [] });
+  sandbox.ingestFeedback({ status: 'cancelled', profile: 'nocode', answer: 'stopped', progressEvents: [] });
+  sandbox.ingestFeedback({ status: 'completed', profile: '', answer: 'done', progressEvents: [] });
+  assert.deepEqual(calls, [['ingest', 'nocode'], ['ingest', 'nocode'], ['ingest', '']], 'a failed, stopped or Studio turn: frictions only');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_bridge_client.js'), 'utf8');
+  assert.equal((source.match(/ingestFeedback\(state\);/g) || []).length, 1);
+  assert.match(source, /state\.idleReads = 0;[\s\S]*?\/\/ Whichever way the turn ended[^\n]*\n\s+if \(!wasTerminal && isTerminalStatus\(state\.status\)\) \{\n\s+ingestFeedback\(state\);\n\s+\}\n\s+if \(state\.status !== "completed"/);
+  assert.match(source, /options\.feedbackReportListed = feedbackCatalogKey\(state\) === "feedback:on";\n\s+if \(trim\(options\.rawUserQuestion\)\.length\) \{/);
+  assert.match(source, /if \(isNoCodeSurface && options\.feedbackReportListed === true\) \{/);
+  assert.match(source, /`nocode-report-create` is listed: the user agreed to send Tigo's frictions to Convertigo\. When this turn needs a capability no allowed tool gives/);
 });

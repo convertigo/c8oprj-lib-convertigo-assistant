@@ -35,12 +35,12 @@ Fetches the published Tigo stack manifest through the Convertigo HTTP client and
 Returns only the reviewed stable Tigo stack. Legacy clients keep using stack-release.json, a stable alias.
 </p></blockquote></details>
 
-<details><summary><b>GetPreviewManifest</b> : Explicit preview catalog for testers</summary><blockquote><p>
+<details><summary><b>GetPreviewManifest</b> : Reviewed preview catalog, read with the stable one by the Pre-releases channel</summary><blockquote><p>
 
 
 ### ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/transactions/images/jsonhttptransaction_color_16x16.png?raw=true "JsonHttpTransaction") GetPreviewManifest
 
-Explicit preview catalog for testers. Never used by the default stable installation path.
+Reviewed preview catalog, read with the stable one by the Pre-releases channel. That is the choice of a Studio, or of a whole server with the symbol assistant.stack.channel set to preview; the stable channel never reads it.
 </p></blockquote></details>
 </p></blockquote></details>
 </p></blockquote></details>
@@ -3288,7 +3288,7 @@ JSON array of stack projects ({name, version, importUrl}) from the published man
 
 ## ![](https://github.com/convertigo/convertigo/blob/develop/engine/src/com/twinsoft/convertigo/beans/sequences/images/genericsequence_color_16x16.png?raw=true "GenericSequence") AgentStackStatus
 
-Report the agent stack projects installed on this Convertigo server and whether the Assistant may update them (symbol assistant.stack.selfupdate).
+Report the agent stack projects installed on this Convertigo server, whether the Assistant may update them (symbol assistant.stack.selfupdate) and the update channel of the server (symbol assistant.stack.channel, stable by default or preview).
 </p></blockquote></details>
 
 <details><summary><b>AgentWorkspaceImage</b> : WEB_ADMIN only</summary><blockquote><p>

@@ -14,6 +14,11 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
   var SELF_UPDATE_SYMBOL = "assistant.stack.selfupdate";
   var DEFAULT_POLICY = "admin";
   var POLICIES = ["admin", "authenticated", "all", "false"];
+  // Update channel of the whole server, set by its administrator: "stable" (default) or "preview", which also offers the
+  // reviewed pre-releases. A Studio uses it as the default of its own choice in the panel.
+  var CHANNEL_SYMBOL = "assistant.stack.channel";
+  var DEFAULT_CHANNEL = "stable";
+  var CHANNELS = ["stable", "preview"];
   // Install order: dependencies first, the Assistant last because replacing it reloads the
   // project that is running this very sequence.
   var STACK_PROJECTS = [
@@ -70,6 +75,13 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
     if (raw === "true" || raw === "1" || raw === "yes" || raw === "on" || raw === "anonymous") { return "all"; }
     if (raw === "0" || raw === "no" || raw === "off" || raw === "disabled" || raw === "none") { return "false"; }
     return POLICIES.indexOf(raw) >= 0 ? raw : DEFAULT_POLICY;
+  }
+
+  // An empty or unknown value is the default channel, so a typo never leaves the server without updates.
+  function channelSetting() {
+    var raw = symbolValue(CHANNEL_SYMBOL).toLowerCase();
+    if (CHANNELS.indexOf(raw) >= 0) { return { channel: raw, source: "symbol" }; }
+    return { channel: DEFAULT_CHANNEL, source: "default" };
   }
 
   function httpSession(options) {
@@ -210,15 +222,25 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
     return ordered;
   }
 
+  // Convertigo Studio runs its engine in Studio mode (its Eclipse view and the Web Studio it serves); anything else is a server.
+  function surface() {
+    try { return engine().isStudioMode() === true ? "studio" : "server"; } catch (_ignoreMode) {}
+    return "server";
+  }
+
   function status(options) {
     options = options || {};
     var access = updateAllowed(options);
+    var channel = channelSetting();
     var result = {
-      surface: "server",
+      surface: surface(),
       localAgentStackUpdateAllowed: access.allowed,
       localAgentStackUpdatePolicy: access.policy,
       localAgentStackUpdateReason: access.reason,
       localAgentStackSelfUpdateSymbol: SELF_UPDATE_SYMBOL,
+      localAgentStackChannel: channel.channel,
+      localAgentStackChannelSource: channel.source,
+      localAgentStackChannelSymbol: CHANNEL_SYMBOL,
       projects: []
     };
     var allInstalled = true;
@@ -311,6 +333,8 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
   }
 
   C8O.assistantAgentStack.SELF_UPDATE_SYMBOL = SELF_UPDATE_SYMBOL;
+  C8O.assistantAgentStack.CHANNEL_SYMBOL = CHANNEL_SYMBOL;
+  C8O.assistantAgentStack.channelSetting = channelSetting;
   C8O.assistantAgentStack.STACK_PROJECTS = STACK_PROJECTS;
   C8O.assistantAgentStack.selfUpdatePolicy = selfUpdatePolicy;
   C8O.assistantAgentStack.updateAllowed = updateAllowed;

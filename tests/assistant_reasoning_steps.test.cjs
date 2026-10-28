@@ -151,7 +151,7 @@ test('the live line is the end of the reasoning streaming now, about one sentenc
   assert.equal(b.liveReasoning(state), null);
 });
 
-const METHODS = ['stepReasoning', 'getAgentRunView', 'agentLayoutText', 'agentUiLanguage', 'worklogTrim', 'formatAgentDuration'];
+const METHODS = ['stepReasoning', 'getAgentRunView', 'getAgentSandboxView', 'agentSandboxText', 'agentLayoutText', 'agentUiLanguage', 'worklogTrim', 'formatAgentDuration'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter(m => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map(m => m.name.getText(pageAst)).sort(), [...METHODS].sort());

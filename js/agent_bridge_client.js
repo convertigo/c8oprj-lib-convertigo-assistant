@@ -71,6 +71,83 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return System.currentTimeMillis();
   }
 
+  // Send timings, a diagnostic: what each step of sending a message, creating a conversation and reading the settings
+  // takes, one JSON line per call in agents/assistant/send-timings.ndjson (over 512 KB the file becomes
+  // send-timings.ndjson.1); each call to the Bridge is a step named after its sequence. A new No Code conversation waited
+  // 8 to 11 s in the Assistant before the Bridge started Vibe (test-nocode).
+  var SEND_TIMINGS_FILE = "send-timings.ndjson";
+  var SEND_TIMINGS_MAX_BYTES = 524288;
+  var activeSendTimer = null;
+
+  function sendTimer(kind) {
+    var timer = { kind: kind, at: Number(now()), fields: {}, marks: [], last: 0, workspaceRoot: "" };
+    timer.mark = function (step) {
+      var elapsed = Number(now()) - timer.at;
+      timer.marks.push({ step: step, ms: elapsed - timer.last });
+      timer.last = elapsed;
+    };
+    return timer;
+  }
+
+  // a step of the timed call, if any; the state names its conversation and where the line is written
+  function sendMark(step, state) {
+    if (activeSendTimer === null) {
+      return;
+    }
+    try {
+      if (state) {
+        activeSendTimer.fields.threadid = String(state.threadid || "");
+        activeSendTimer.fields.provider = String(state.provider || "");
+        activeSendTimer.workspaceRoot = String(state.workspaceRoot || "");
+      }
+      activeSendTimer.mark(step);
+    } catch (_ignoreSendMark) {}
+  }
+
+  // a call inside a timed one (sendMessage from its sequence) is part of it
+  function timedCall(kind, run) {
+    if (activeSendTimer !== null) {
+      return run();
+    }
+    var timer = sendTimer(kind);
+    activeSendTimer = timer;
+    var outcome = "error";
+    try {
+      var result = run();
+      outcome = result && trim(result.status) || (result && result.ok === false ? "failed" : "ok");
+      return result;
+    } finally {
+      activeSendTimer = null;
+      writeSendTimings(timer, outcome);
+    }
+  }
+
+  function writeSendTimings(timer, outcome) {
+    try {
+      var root = trim(timer.workspaceRoot) || resolveWorkspaceRoot({});
+      if (!root.length) {
+        return;
+      }
+      var dir = new File(new File(root, "agents"), "assistant");
+      ensureDir(dir);
+      var file = new File(dir, SEND_TIMINGS_FILE);
+      if (file.isFile() && file.length() > SEND_TIMINGS_MAX_BYTES) {
+        var previous = new File(dir, SEND_TIMINGS_FILE + ".1");
+        previous["delete"]();
+        file.renameTo(previous);
+      }
+      var line = { at: new Date(timer.at).toISOString(), kind: timer.kind, totalMs: Number(now()) - timer.at, outcome: trim(outcome) };
+      for (var key in timer.fields) {
+        if (Object.prototype.hasOwnProperty.call(timer.fields, key)) {
+          line[key] = timer.fields[key];
+        }
+      }
+      line.steps = timer.marks;
+      var bytes = new java.lang.String(JSON.stringify(line) + "\n").getBytes(StandardCharsets.UTF_8);
+      Files.write(file.toPath(), bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND, StandardOpenOption.WRITE);
+    } catch (_ignoreSendTimings) {}
+  }
+
   function makeRunId(requestId) {
     return String(now()) + "-" + String(requestId || 0);
   }
@@ -1718,6 +1795,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // everything the call needs (url, payload, caller key) is resolved in the request; the thread only posts
+  function startBackgroundPost(urlText, params, timeoutMs, headers) {
+    var thread = new java.lang.Thread(new java.lang.Runnable({
+      run: function () {
+        try {
+          postForm(urlText, params, timeoutMs, headers);
+        } catch (_ignoreBackgroundPost) {}
+      }
+    }), "c8o-assistant-background-call");
+    thread.setDaemon(true);
+    thread.start();
+  }
+
   function postForm(urlText, params, timeoutMs, headers) {
     var conn = new URL(urlText).openConnection();
     conn.setRequestMethod("POST");
@@ -1755,7 +1845,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return JSON.parse(text);
   }
 
-  function bridgeCall(options, sequence, params, timeoutMs) {
+  // background: the request does not wait for the call (the prewarm of a conversation); its answer is dropped
+  function bridgeCall(options, sequence, params, timeoutMs, background) {
     requireBridgeCaller();
     var payload = {
       __connector: "void",
@@ -1795,7 +1886,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (isOwnBridgeUrl(bridgeUrl)) {
       headers[BRIDGE_CALLER_KEY_HEADER] = bridgeCallerKey();
     }
+    sendMark(sequence + "/payload");
+    if (background === true) {
+      startBackgroundPost(bridgeUrl, payload, timeoutMs || 70000, headers);
+      return { ok: true, status: "background" };
+    }
     var response = postForm(bridgeUrl, payload, timeoutMs || 70000, headers);
+    sendMark(sequence);
     if (response && response.error && /agent_bridge_caller_refused/.test(String(response.error.details || response.error.message || ""))) {
       throw new Error("agent_bridge_caller_refused: the agent bridge at " + bridgeUrl + " refused the Assistant");
     }
@@ -1833,6 +1930,39 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (state.resourceContextEpoch === state.provider + ":" && state.externalSessionId) {
       state.resourceContextEpoch = state.provider + ":" + state.externalSessionId;
+    }
+    rememberSessionSandbox(state, result.state);
+  }
+
+  // What the conversation's agent may do, as its Bridge status says (Bridge 0.4.28 and later): kept with the
+  // conversation for the page's sandbox badge. An older Bridge says nothing and the conversation keeps what it had.
+  function publicSessionSandbox(value) {
+    var policies = ["mcp-only", "files", "sandboxed-shell", "full"];
+    if (!value || typeof value !== "object") {
+      return null;
+    }
+    var policy = trim(value.policy);
+    if (policies.indexOf(policy) < 0) {
+      return null;
+    }
+    var scope = trim(value.scope) === "nocode" ? "nocode" : "studio";
+    var source = trim(value.source);
+    var configured = trim(value.configured);
+    var abi = Math.floor(Number(value.landlockAbi));
+    return {
+      scope: scope,
+      policy: scope === "studio" ? "full" : policy,
+      source: scope === "studio" ? "studio" : (source === "harness" ? "harness" : "engine"),
+      configured: scope !== "studio" && policies.indexOf(configured) >= 0 && configured !== policy ? configured : "",
+      confined: scope !== "studio" && value.confined === true,
+      landlockAbi: scope !== "studio" && abi > 0 && abi < 1000 ? abi : 0
+    };
+  }
+
+  function rememberSessionSandbox(state, bridgeState) {
+    var sandbox = publicSessionSandbox(bridgeState && bridgeState.sandbox);
+    if (state && sandbox !== null) {
+      state.sandbox = sandbox;
     }
   }
 
@@ -2022,6 +2152,77 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       mcpCatalogKey: mcpCatalogKey(state),
       requestTimeoutMs: "60000"
     };
+  }
+
+  // A No Code conversation's Vibe took 11 s to start, process and session, before its first answer (test-nocode).
+  // Opening the panel starts one in the background for the user's next conversation, whose first message takes it
+  // (takePrewarmedConversation) and starts the next one. Nothing of that conversation is saved before its first message; the Bridge stops its
+  // process after 3 min idle without one, keeps one prewarm per user, and restarts it on that message if the start
+  // asks for another configuration.
+  var PREWARM_SESSION_KEY = "lib_ConvertigoAssistant.prewarmedConversation";
+  var PREWARM_REUSE_MS = 150000;
+  var PREWARM_TAKE_MS = 180000;
+
+  function readPrewarm() {
+    try {
+      var text = context && context.httpSession ? context.httpSession.getAttribute(PREWARM_SESSION_KEY) : null;
+      return text === null || typeof text === "undefined" ? null : JSON.parse(String(text));
+    } catch (_ignoreReadPrewarm) {
+      return null;
+    }
+  }
+
+  function prewarmNoCodeConversation(options, provider) {
+    try {
+      provider = trim(provider);
+      if (!provider.length || provider === "all" || normalizeSkillProfile(options) !== "nocode" || !isVibeHarness(provider)
+          || !context || !context.httpSession) {
+        return null;
+      }
+      provider = normalizeProvider(provider);
+      var current = readPrewarm();
+      if (current !== null && current.provider === provider && now() - Number(current.at || 0) < PREWARM_REUSE_MS) {
+        return current;
+      }
+      var prewarmOptions = {};
+      for (var key in options) {
+        if (Object.prototype.hasOwnProperty.call(options, key)) {
+          prewarmOptions[key] = options[key];
+        }
+      }
+      prewarmOptions.provider = provider;
+      prewarmOptions.threadid = "";
+      var state = ensureState(createState(prewarmOptions));
+      var payload = agentStartPayload(state, prewarmOptions, provider, false);
+      payload.prewarm = "true";
+      bridgeCall(state, providerSequence(provider, "start"), payload, 90000, true);
+      var record = { threadid: state.threadid, provider: provider, userKey: state.userKey, at: Number(now()) };
+      context.httpSession.setAttribute(PREWARM_SESSION_KEY, JSON.stringify(record));
+      sendMark("prewarm");
+      return record;
+    } catch (_ignorePrewarm) {
+      return null;
+    }
+  }
+
+  // the prewarmed conversation a new No Code conversation's first message takes, or ""; offered once
+  function takePrewarmedConversation(options) {
+    var provider = trim(options.provider || options.agentProvider);
+    if (normalizeThreadId(options.threadid).length || !provider.length || normalizeSkillProfile(options) !== "nocode") {
+      return "";
+    }
+    var record = readPrewarm();
+    if (record === null) {
+      return "";
+    }
+    try {
+      context.httpSession.removeAttribute(PREWARM_SESSION_KEY);
+    } catch (_ignoreTakePrewarm) {}
+    if (record.provider !== normalizeProvider(provider) || record.userKey !== normalizeUserKey(options.userId)
+        || now() - Number(record.at || 0) > PREWARM_TAKE_MS) {
+      return "";
+    }
+    return trim(record.threadid);
   }
 
   function prewarmCodexAppServer(state, options) {
@@ -3512,6 +3713,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "Je n'arrive pas \u00e0 lire le retour du traitement.",
       bridgeStateRecover: "Je v\u00e9rifie que le traitement est toujours en cours.",
       bridgeProcessLost: "La t\u00e2che a \u00e9t\u00e9 interrompue. Vous pouvez relancer une demande dans cette conversation.",
+      turnRunning: "Tigo travaille encore sur votre message pr\u00e9c\u00e9dent dans cette conversation. Attendez la fin de ce tour, ou arr\u00eatez-le, puis renvoyez votre message.",
       codexAuthExpired: "L'authentification du profil local de l'agent a expiré ou est absente. Utilisez le bouton de connexion de la configuration de l'agent pour vous authentifier dans votre navigateur, puis renvoyez la demande.",
       gatewayModelDenied: "Accès au modèle {model} refusé par LiteLLM (HTTP 403). Vérifiez les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
       gatewayKeyRejected: "LiteLLM a refusé la clé d'API (HTTP 401). Vérifiez la clé configurée pour l'agent Convertigo.",
@@ -3552,6 +3754,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       bridgeReadError: "I cannot read the current response.",
       bridgeStateRecover: "I am checking that the task is still running.",
       bridgeProcessLost: "The task was interrupted. You can send a new request in this conversation.",
+      turnRunning: "Tigo is still working on your previous message in this conversation. Wait for this turn to end, or stop it, then send your message again.",
       codexAuthExpired: "The local agent profile authentication has expired or is missing. Use the sign-in button of the agent configuration to authenticate in your browser, then send the request again.",
       gatewayModelDenied: "LiteLLM denied access to model {model} (HTTP 403). Check the models allowed for both the key and its LiteLLM user.",
       gatewayKeyRejected: "LiteLLM rejected the API key (HTTP 401). Check the key configured for the Convertigo agent.",
@@ -3755,7 +3958,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function progressTextForTool(state, title) {
     var text = String(title || "").toLowerCase();
     var t = lang(state);
-    if (text.indexOf("exec_command") !== -1 ||
+    // Vibe titles its own tools "bash: <command>", "read_file: <path>"...: a Convertigo MCP call is "mcp_Convertigo.<tool>".
+    if (/^(bash|git_bash|powershell|read_file|write_file|edit|grep)(:|\s|$)/.test(text) ||
+        text.indexOf("exec_command") !== -1 ||
         text.indexOf("commande shell") !== -1 ||
         text.indexOf("shell command") !== -1 ||
         text.indexOf("lecture de fichier") !== -1 ||
@@ -4791,9 +4996,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var feedback = feedbackModule(state);
       var message = feedback ? feedback.errorMessage(preview, failed) : "";
       if (message.length) {
-        feedback.collectToolError({ tool: title, message: message, provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+        feedback.collectToolError({ tool: title, message: message, failure: feedback.runtimeFailure(preview, data && data.failure),
+          durationMs: feedbackToolDuration(state, data), provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
       }
     } catch (_ignoreFeedback) {}
+  }
+
+  // How long a failed call took: the Bridge measures it (failure.durationMs), else from when this client saw it start.
+  function feedbackToolDuration(state, data) {
+    var measured = data && data.failure && data.failure.durationMs != null ? Number(data.failure.durationMs) : NaN;
+    if (isFinite(measured) && measured >= 0) {
+      return measured;
+    }
+    var callId = toolCallId(data);
+    for (var i = 0; callId.length && state.progressEvents && i < state.progressEvents.length; i++) {
+      var event = state.progressEvents[i];
+      if (event && event.callId === callId && Number(event.at) > 0) {
+        return Math.max(0, now() - Number(event.at));
+      }
+    }
+    return null;
   }
 
   function collectFeedbackRuntimeError(state, message) {
@@ -4811,12 +5033,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // At the end of a turn the frictions the agent filed with report-create join the outbox with the conversation's
-  // provider and model, not the ones the agent names itself.
+  // provider and model, not the ones the agent names itself. After a completed No Code turn, so do the capabilities the
+  // agent told the user it lacked (no browser to see the form, no read of table rows) when it filed nothing itself.
   function ingestFeedback(state) {
     try {
       var feedback = feedbackModule(state);
       if (feedback) {
         feedback.ingest({ provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+        if (state.status === "completed" && feedbackSurface(state) === "nocode") {
+          feedback.collectMissingCapabilities({ answer: state.answer, events: state.progressEvents, provider: state.provider,
+            model: feedbackModel(state), surface: "nocode" });
+        }
       }
     } catch (_ignoreFeedback) {}
   }
@@ -6137,6 +6364,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       commands: agentCommandsFor(state),
       formMutation: state.formMutation || null,
       nocodeContext: savedNoCodeContext(state),
+      sandbox: publicSessionSandbox(state.sandbox),
       setupRequired: state.setupRequired === true,
       setup: state.setupReport || null,
       codexPrewarmStartedAt: state.codexPrewarmStartedAt || 0,
@@ -6385,10 +6613,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
-  function callAgentSetup(state, options, installOverride) {
+  // Before a message, the setup only checks that the agent is installed (Bridge 0.4.28 and later; its start checks it
+  // again): the full check ran vibe-acp --version twice, 7 to 10 s on every message, warm ones too (test-nocode).
+  function callAgentSetup(state, options, installOverride, presenceOnly) {
     var provider = normalizeProvider(state.provider);
     var setupSequence = providerSequence(provider, "setup");
-    var setup = bridgeCall(state, setupSequence, agentSetupPayload(state, options, installOverride), 900000);
+    var payload = agentSetupPayload(state, options, installOverride);
+    if (presenceOnly === true) {
+      payload.startupPresenceOnly = "true";
+    }
+    var setup = bridgeCall(state, setupSequence, payload, 900000);
     return {
       provider: provider,
       sequence: setupSequence,
@@ -6691,6 +6925,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return refused;
     }
     options = withCallerUserId(options);
+    return timedCall("conversation", function () {
+      return createConversationSteps(options);
+    });
+  };
+
+  function createConversationSteps(options) {
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
@@ -6712,7 +6952,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!requestedThreadId.length && !hasQuestion) {
       setBuffer("", "");
       var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
       var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
+      if (previewSettings !== null) {
+        prewarmNoCodeConversation(options, previewDefaults.provider);
+      }
       var resolvedProvider = provider === "all" ? "" : (previewDefaults.provider || provider);
       return {
         ok: true,
@@ -6743,7 +6987,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
       var emptySettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
-      applyAgentSettingsDefaults(options, emptySettings, provider);
+      var emptyDefaults = applyAgentSettingsDefaults(options, emptySettings, provider);
+      if (emptySettings !== null) {
+        prewarmNoCodeConversation(options, emptyDefaults.provider);
+      }
       return {
         ok: true,
         id: "",
@@ -6771,6 +7018,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       };
     }
     var creationSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+    sendMark("settings");
     var creationDefaults = applyAgentSettingsDefaults(options, creationSettings, provider);
     if (creationDefaults.provider.length) {
       provider = creationDefaults.provider;
@@ -6788,6 +7036,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     state.updatedAt = now();
     saveState(state);
+    sendMark("state", state);
     if (!isTerminalStatus(state.status) && trim(state.runid).length && C8O.assistantAgentBridge.readResponse) {
       try {
         C8O.assistantAgentBridge.readResponse({
@@ -6806,6 +7055,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!hasQuestion && (resumedLatest || requestedThreadId.length > 0)) {
       prewarming = prewarmCodexAppServer(state, options);
     }
+    sendMark("read");
     return {
       ok: true,
       id: state.threadid,
@@ -6821,7 +7071,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       settings: includeSettings ? (creationSettings || agentSettingsForOptions(options, state.workspaceRoot, state.userKey, state.primaryProject || state.projectId, state.provider)) : null,
       AIData: conversationAIData(state, options.historyLimit)
     };
-  };
+  }
 
   // Resolve only trusted identity/ownership here. The private native sequence may
   // read account metadata before the first conversation; never create one.
@@ -6847,11 +7097,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return refused;
     }
     options = withCallerUserId(optionsWithRequestFallbacks(options));
+    return timedCall("settings", function () {
+      return settingsSteps(options);
+    });
+  };
+
+  function settingsSteps(options) {
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var settings = agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+    sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
+    var conversations = publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options));
+    sendMark("conversations");
     return {
       ok: settings.ok !== false,
       status: settings.status || (settings.ok === false ? "error" : "ready"),
@@ -6866,10 +7125,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         reasoning: ""
       },
       providers: settings.providers || [],
-      conversations: publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options)),
+      conversations: conversations,
       timestamp: now()
     };
-  };
+  }
 
   C8O.assistantAgentBridge.setupAgent = function (options) {
     var refused = bridgeCallerRefusal();
@@ -7248,6 +7507,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("- If you modify a project, validate with the available Convertigo tools before claiming completion, then summarize the concrete changes.");
     promptParts.push("- Always finish with a concise but useful final summary in the user's language. Never answer only that the task is done.");
     promptParts.push("- In the final summary, mention what changed, what was validated, and any remaining limitation or blocker. If nothing changed, explain what was checked and why.");
+    if (isNoCodeSurface && options.feedbackReportListed === true) {
+      // The skill's rule is read once per conversation: GLM never filed a missing capability it told the user (26/10).
+      promptParts.push("- `nocode-report-create` is listed: the user agreed to send Tigo's frictions to Convertigo. When this turn needs a capability no allowed tool gives (seeing the saved form run in a browser, reading the rows of a table...) or makes you work around a no-code tool, guide or prompt, file one short report before the final answer, without the user's names or data. Telling the user about the limitation does not replace it.");
+    }
     promptParts.push("- Do not expose secrets, credentials, API keys, or private environment values.");
     promptParts.push("- If installation, credentials, network access, or permissions block the work, explain the blocker and the next action clearly.");
     if (uploadedFiles.length) {
@@ -7396,6 +7659,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.sendMessageFromSequenceScope = function (scope) {
+    return timedCall("send", function () {
+      return sendMessageFromScope(scope);
+    });
+  };
+
+  function sendMessageFromScope(scope) {
     var names = [
       "threadid", "provider", "bridgeBaseUrl", "mcpEndpoint", "workspaceRoot", "cwd",
       "vibeHome", "agentHome", "codexHome", "codexHomeScope", "homeScope",
@@ -7424,8 +7693,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options.rawUserQuestion = rawQuestion;
     options.userQuestion = rawQuestion;
     options.Question = buildSequencePrompt(rawQuestion, options);
+    sendMark("sequence-prompt");
     return C8O.assistantAgentBridge.sendMessage(options);
-  };
+  }
 
   C8O.assistantAgentBridge.noCodeContextCatalogFromSequenceScope = function (scope) {
     return noCodeContextCatalogFromScope(scope);
@@ -7434,6 +7704,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   function submitTigoPrompt(state, sequence, payload) {
     if (!C8O.tigoResources || agentSlashCommandName(state, payload.prompt).length) { return bridgeCall(state, sequence, payload, 70000); }
     var resources = C8O.tigoResources.prepare(state);
+    sendMark("resources");
     var enriched = {};
     Object.keys(payload).forEach(function (k) { enriched[k] = payload[k]; });
     enriched.prompt = String(payload.prompt || "") + resources.text;
@@ -7470,6 +7741,46 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return result;
   };
 
+  // One turn at a time in a conversation. A message sent while the agent still worked on the previous one (another view of
+  // the conversation, a page that lost track of the running turn) reached Vibe, which refused it ("A turn is already
+  // running"): the conversation then showed the running turn as failed and its answer was lost. Such a message is now
+  // refused before anything of the conversation changes, and the running turn goes on.
+  function runningTurnOf(state) {
+    var status = trim(state && state.status).toLowerCase();
+    if (!trim(state && state.runid).length || ["starting", "queued", "in_progress", "running"].indexOf(status) === -1) {
+      return null;
+    }
+    // A message is being sent: its prompt does not run yet.
+    if (status === "starting" && now() - Number(state.updatedAt || 0) < 120000) {
+      return { runid: state.runid, status: status };
+    }
+    if (!trim(state.handle).length) {
+      return null;
+    }
+    try {
+      var events = bridgeCall(state, "agent_events", { handle: state.handle, cursor: String(Number(state.cursor || 0)), limit: "1", waitMs: "0" }, 15000);
+      var bridgeState = events && events.state || {};
+      return bridgeState.alive === true && bridgeState.turnActive === true ? { runid: state.runid, status: status } : null;
+    } catch (_ignoreBridgeState) {
+      return null;
+    }
+  }
+
+  function turnRunningResponse(state, running) {
+    return {
+      ok: false,
+      id: running.runid,
+      object: "agent.run",
+      status: "turn_running",
+      threadid: state.threadid,
+      error: {
+        code: "turn_running",
+        message: lang(state).turnRunning
+      },
+      state: publicState(state)
+    };
+  }
+
   C8O.assistantAgentBridge.sendMessage = function (options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
@@ -7479,6 +7790,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
+    sendMark("nocode-context");
     if (!rawUserQuestion.length) {
       return {
         ok: false,
@@ -7489,6 +7801,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       };
     }
 
+    var prewarmed = takePrewarmedConversation(options);
+    if (prewarmed.length) {
+      options.threadid = prewarmed;
+    }
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
     if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
@@ -7514,10 +7830,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         state: null
       };
     }
+    sendMark("state/read");
+    var running = state !== null ? runningTurnOf(state) : null;
+    if (running !== null) {
+      return turnRunningResponse(state, running);
+    }
+    var stateBeforeSend = state !== null ? JSON.stringify(state) : null;
     if (state === null) {
       state = createState(options);
     }
     state = ensureState(state);
+    sendMark("state/create", state);
     var previousMcpEndpoint = trim(state.mcpEndpoint);
     var requestedMcpEndpoint = trim(options.mcpEndpoint);
     var mcpEndpointChanged = previousMcpEndpoint.length > 0 &&
@@ -7593,10 +7916,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     enrichViewerDebugOptions(options, state);
     collectFeedbackContextNames(state, options);
+    // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
+    options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
     if (trim(options.rawUserQuestion).length) {
       question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
       options.Question = question;
     }
+    sendMark("prompt");
     state.slashCommand = agentSlashCommandName(state, rawUserQuestion);
     state.compactError = "";
     if (state.slashCommand.length) {
@@ -7613,24 +7939,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.updatedAt = now();
     saveState(state);
     setStateBuffer(state);
+    sendMark("state/save");
 
     try {
       var provider = runProvider;
       if (provider === "convertigo" && normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode()) {
         var tigoAccess = C8O.assistantAgentBridge.refreshTigoAccess();
         if (tigoAccess.status !== "ok") { throw new Error("TigoAccess (" + tigoAccess.code + "): " + tigoAccess.error); }
+        sendMark("tigo-access");
       }
       var customResources = C8O.tigoResources ? C8O.tigoResources.prepare(state) : null;
       if (customResources) {
         state.resourceHandle = state.resourceHandle || "lib_ConvertigoAssistant.resources." + String(UUID.randomUUID());
         sharedStorage().set(state.resourceHandle, JSON.stringify({expiresAt:Number(now()) + 7200000, connections:customResources.connections}));
       }
+      sendMark("resources");
       var startSequence = providerSequence(provider, "start");
       var promptSequence = providerSequence(provider, "prompt");
       var closeSequence = providerSequence(provider, "close");
       var installRequested = runInstallRequested;
       if (!isResidentProvider(provider)) {
-        var setupInfo = callAgentSetup(state, options, installRequested);
+        var setupInfo = callAgentSetup(state, options, installRequested, true);
         var setup = setupInfo.result || {};
         if (setup.ok === false) {
           var setupStatus = trim(setup.status).toLowerCase();
@@ -7666,6 +7995,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         state.setupRequired = false;
         state.setupReport = publicSetupReport(setup);
+        sendMark("setup");
       } else {
         state.setupRequired = false;
         state.setupReport = null;
@@ -7678,6 +8008,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
 
       var startPayload = agentStartPayload(state, options, provider, installRequested);
+      sendMark("start-payload");
       if (customResources) {
         startPayload.tigoResourcesHandle = state.resourceHandle;
         if (customResources.connections.length) { state.resourceConversationHome = true; }
@@ -7753,9 +8084,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             promptPayload.claudeSessionId = "";
           }
           prompt = null;
-        } else if (prompt.ok === false) {
+        } else if (prompt.ok === false && trim(prompt.status) !== "busy") {
           throw new Error(prompt.error || promptSequence + " failed");
-        } else {
+        } else if (prompt.ok !== false) {
           rememberCodexSessionFromResult(state, prompt);
         }
       }
@@ -7802,6 +8133,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         prompt = submitTigoPrompt(state, promptSequence, promptPayload);
       }
+      if (prompt.ok === false && trim(prompt.status) === "busy" && stateBeforeSend !== null) {
+        // A turn started between the check above and this prompt: the conversation stays as that turn left it.
+        state = JSON.parse(stateBeforeSend);
+        saveState(state);
+        setStateBuffer(state);
+        return turnRunningResponse(state, { runid: state.runid, status: state.status });
+      }
       if (prompt.ok === false) {
         throw new Error(prompt.error || promptSequence + " failed");
       }
@@ -7825,6 +8163,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.updatedAt = now();
       saveState(state);
       setStateBuffer(state);
+      sendMark("state/save");
+      if (prewarmed.length) {
+        // this conversation took the prewarm: the next one gets its own (the Bridge keeps one per user)
+        prewarmNoCodeConversation(options, provider);
+      }
 
       return {
         ok: true,
@@ -7933,7 +8276,74 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return { ok: true, threadid: threadid, runid: runid, events: events, plan: details ? details.plan : null };
   };
 
+  // A read of the turn also hands the panel what the MCP asks of its page (js/agent_host_requests.js): the captures of
+  // the No Code preview nocode-form-preview-capture waits for.
   C8O.assistantAgentBridge.readResponse = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    var response = readResponseOf(options);
+    try {
+      var threadid = response && response.ok !== false ? normalizeThreadId(response.threadid) : "";
+      var requests = threadid.length ? hostRequestsModule().take(threadid, options.userId, hostRequestsHost()) : [];
+      if (requests.length) {
+        response.hostRequests = requests;
+      }
+    } catch (_noHostRequests) {}
+    return response;
+  };
+
+  // The page's answer to a request of the MCP (AgentHostRequestResult): the PNG of a preview capture goes in the
+  // conversation's attachments, where image-describe and the panel's thumbnail read it.
+  C8O.assistantAgentBridge.hostRequestResult = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    var threadid = normalizeThreadId(options.threadid);
+    var host = hostRequestsHost();
+    host.write = function (name, bytes) {
+      var directory = attachmentTargetDirectory({ threadid: threadid, userId: options.userId });
+      directory.mkdirs();
+      var target = new File(directory, name);
+      Files.write(target.toPath(), bytes);
+      return filePath(target);
+    };
+    return hostRequestsModule().result({
+      conversationId: threadid,
+      userId: options.userId,
+      requestId: options.requestId,
+      status: options.status,
+      image: options.image,
+      reason: options.reason
+    }, host);
+  };
+
+  function hostRequestsModule() {
+    if (typeof C8O.assistantHostRequests === "undefined" || typeof C8O.assistantHostRequests.take !== "function") {
+      include("js/agent_host_requests.js");
+    }
+    return C8O.assistantHostRequests;
+  }
+
+  function hostRequestsHost() {
+    return {
+      server: function () {
+        return context.server;
+      },
+      now: function () {
+        return Number(java.lang.System.currentTimeMillis());
+      },
+      decodeBase64: function (text) {
+        return java.util.Base64.getDecoder().decode(String(text));
+      }
+    };
+  }
+
+  function readResponseOf(options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
       return refused;
@@ -8184,9 +8594,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
-      if (!wasTerminal && isTerminalStatus(state.status)) {
-        ingestFeedback(state);
-      }
       readEarlyAgentCommands(state);
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
@@ -8233,6 +8640,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           appendTranscript(state, "assistant", state.answer);
           state.answerTranscriptRunid = state.runid;
         }
+      }
+      // Whichever way the turn ended (its turn/end, the agent process gone after its answer, two idle reads).
+      if (!wasTerminal && isTerminalStatus(state.status)) {
+        ingestFeedback(state);
       }
       if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled") {
         state.status = "in_progress";

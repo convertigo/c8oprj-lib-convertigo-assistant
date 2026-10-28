@@ -4756,8 +4756,9 @@ scriptContent:
           :host-context(ion-footer.agent-footer-codex) .tigo-manage-button { height:25px; min-height:25px; line-height:1; flex:0 0 28px; }
           @media(max-width:700px) { .tigo-quick-caption { display:none; } .agent-prompt-controls-left .tigo-quick-toggle { width:28px; padding:0; justify-content:center; } }
           
-          .tigo-prompts-row:not([hidden]) { display:flex!important; align-items:center; gap:4px; overflow-x:auto; scrollbar-width:none; }
-          .tigo-prompts-row > .modern-suggestion-btn { flex:0 0 auto; align-self:center; vertical-align:middle; }
+          /* The suggestions wrap: on one line that scrolled with a hidden scrollbar, the last one looked cut at the edge of the panel. */
+          .tigo-prompts-row:not([hidden]) { display:flex!important; flex-wrap:wrap; align-items:center; gap:4px; overflow:visible; }
+          .tigo-prompts-row > .modern-suggestion-btn { flex:0 1 auto; max-width:100%; align-self:center; vertical-align:middle; }
           '
 ↓ResourceLanguage [ngx.components.UICompVariable-1792163971494]: 
   value: '''en'''
@@ -4791,4 +4792,13 @@ scriptContent:
           :host-context(ion-footer.agent-footer-codex) .modern-input-field { min-height: 26px !important; }
           :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls { margin-top: 2px !important; }
           :host-context(ion-footer.agent-footer-codex) .modern-suggestions-wrap { padding: 0 10px 4px !important; }
+          /* In C8Oforms the form takes the full width of the footer: the side margin above pushed it 18 px past the panel edge and cut the send button. */
+          :host-context(ion-footer.forms-integrated.agent-footer-codex) .modern-input-form { margin: 4px 0 3px !important; max-width: 100%; }
+          /* A narrow panel (under about 430 px) puts the model, reasoning, voice and send controls on a second row instead of overlapping the left ones: the send button stays whole at the end. */
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls { flex-wrap: wrap; row-gap: 4px; }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right { flex: 0 1 auto; }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right .codex-prompt-icon-btn, :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right .codex-prompt-send-btn, :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right .agent-quota-trigger { flex: 0 0 auto; }
+          /* Wrapped suggestions in C8Oforms: compact, at least two per row in a narrow panel (one card per row took five lines). */
+          :host-context(ion-footer.forms-integrated.agent-footer-codex) .tigo-prompts-row > .modern-suggestion-btn { flex: 1 1 140px !important; min-height: 36px !important; }
+          :host-context(ion-footer.forms-integrated.agent-footer-codex) .tigo-prompts-row > .modern-suggestion-btn::part(native) { min-height: 36px; }
           '

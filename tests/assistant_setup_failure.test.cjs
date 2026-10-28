@@ -29,7 +29,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user', 
     optionsWithRequestFallbacks: v => v, enrichNoCodePrompt: v => v, extractUserMessage: v => v,
     normalizeThreadId: v => v, readState: () => state, ensureState: v => v,
     clearCancellationRequested() {}, firstOptionValue: () => '', noCodeConversationContext: () => null,
-    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {},
+    normalizeAssistantLanguage: () => 'fr', detectLanguage: () => 'fr', enrichViewerDebugOptions() {}, collectFeedbackContextNames() {}, feedbackCatalogKey: () => '',
     shouldInstallForRun: () => install, shouldShowAgentPreparingProgress: () => false,
     isResidentProvider: () => false, isVibeHarness: () => true, isClaudeHarness: () => false, agentCommandsFor: () => [], providerSequence: (p, action) => 'agent_vibe_' + action,
     callAgentSetup: () => { calls.push('setup'); return { result: report, sequence: 'agent_vibe_setup' }; },
@@ -42,9 +42,9 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user', 
     cancellationRequested: () => false, recoverableBridgeError: () => false,
     bridgeCall: () => { calls.push('unexpected-agent-start'); throw new Error('must not start'); },
     bridgeCallerRefusal: () => null,
-    withCallerUserId: options => options || {}
+    withCallerUserId: options => options || {}, sendMark() {}, takePrewarmedConversation: () => ''
   };
-  vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName']) + '\nvar sendMessage = ' + send + ';', sandbox);
+  vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName', 'runningTurnOf', 'turnRunningResponse']) + '\nvar sendMessage = ' + send + ';', sandbox);
   return { response: sandbox.sendMessage({ threadid: state.threadid, Question: 'Bonjour' }), calls };
 }
 

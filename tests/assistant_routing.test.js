@@ -209,6 +209,14 @@ const resumedPrompt = testApi.buildSequencePrompt("Update the existing Flow page
 assert.match(resumedPrompt, /Agent Bridge preflight reports a changed skill bundle/);
 assert.match(resumedPrompt, /exact re-read list takes precedence/);
 
+// A No Code turn reminds the agent to file a missing capability, only while the MCP lists its report tool.
+const noCodeOptions = { userId: "alice@example.com", assistantSurface: "nocode", provider: "vibe", establishedAgentFollowup: true };
+const reportLine = /`nocode-report-create` is listed: the user agreed to send Tigo's frictions to Convertigo\. When this turn needs a capability no allowed tool gives \(seeing the saved form run in a browser, reading the rows of a table\.\.\.\)[^\n]*Telling the user about the limitation does not replace it\./;
+assert.match(testApi.buildSequencePrompt("Pourquoi le tour saute ?", { ...noCodeOptions, feedbackReportListed: true }), reportLine);
+assert.doesNotMatch(testApi.buildSequencePrompt("Pourquoi le tour saute ?", { ...noCodeOptions, feedbackReportListed: false }), /nocode-report-create/);
+assert.doesNotMatch(testApi.buildSequencePrompt("Pourquoi le tour saute ?", { ...noCodeOptions, feedbackReportListed: "true" }), /nocode-report-create/);
+assert.doesNotMatch(testApi.buildSequencePrompt("Create an application", { userId: "studio", assistantSurface: "studio", provider: "vibe", feedbackReportListed: true }), /nocode-report-create/);
+
 const sessionAttributes = new Map();
 global.context = {
   httpSession: {

@@ -100,6 +100,15 @@ rediscovering the same context.
   and opens its editor if needed. On the current form, preserve the active
   page/selection when they still exist, and never replace local editor contents
   for a read-only focus. Keep Studio and collapsed progress/final UI unchanged.
+- The Bridge status of a session carries `sandbox` (`scope`, `policy`, `source`,
+  `configured`, `confined`, `landlockAbi`; Bridge 0.4.28 and later): what the
+  agent may do, as the Bridge applied it at start. `rememberSessionSandbox` keeps
+  it on the conversation, `publicState` hands it to the page, which shows the
+  sandbox badge in the side column (wide) and in the status dock (chip, tab and
+  drawer, narrow), in Studio and C8Oforms alike. A Studio session reads
+  "Unrestricted"; a No Code session on Codex or Claude reads "Full access" (only
+  Vibe applies `agents.tool_policy`). Texts live in `agentSandboxText` (fr, en,
+  it, es). Cover with `node --test tests/assistant_sandbox_badge.test.cjs`.
 - Deduplicate form notifications per run/resource/result, including the terminal
   polling response. Baserow auto-navigation is intentionally out of scope: the
   user does not want changes to the authenticated `/c8o/` gateway.
@@ -139,6 +148,14 @@ rediscovering the same context.
   responses by comparing `requestedFormId` with the current intended resource.
 - Run `node --test tests/nocode-*.test.cjs` with TypeScript installed for startup, history,
   context persistence, scoped filtering, access fallback and Studio isolation.
+- A reload of No Code Studio keeps the panel open and asks it, with `restoreConversation=1`,
+  to open again the conversation of the tab (`sessionStorage`
+  `lib_ConvertigoAssistant.FormsOpenConversation`). The quiet resume waits for the answer of
+  the start of the page (`AgentStartupDone`, AgentCreateConversationRouter sets its own
+  conversation) and for the history. Only a new conversation started by the user drops that
+  conversation; an empty panel keeps it. The `Agent` entry page opens the agent at once for
+  the No Code and server surfaces, never How-To. Cover with
+  `node --test tests/nocode-restore-conversation*.test.cjs`.
 - Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.
@@ -171,6 +188,33 @@ rediscovering the same context.
 
 ## UI Expectations
 
+- Studio only (the Eclipse view and the Web Studio of a Studio engine, never No Code
+  or a server engine), a card under the toolbar offers the reviewed stack of the update
+  channel when it is newer than what is installed (`getAgentStackOfferView`). The
+  channel (`getAgentStackChannel`, localStorage `lib_ConvertigoAssistant.AgentStackChannel`)
+  is stable by default; "preview" also reads `GetPreviewManifest` and takes per project
+  the higher version. Manifests are read a few seconds after the host context, at most
+  once a day per channel (`...AgentStackStableCheck` / `...AgentStackPreviewCheck`); only
+  manifests of their own channel with official release CARs count, and only the projects
+  older than the offer are installed (the Eclipse host imports whatever it is sent).
+  "Later" is remembered per offered release. Never while a turn runs; Git checkouts, `assistant.stack.selfupdate=false`
+  and server session policies show why and offer no update. A Web Studio needs
+  `AgentStackStatus.surface === "studio"`. Cover with
+  `node --test tests/assistant_stack_update_offer.test.cjs`.
+- The global symbol `assistant.stack.channel` (`stable` by default, also when empty
+  or unknown, or `preview`) is the update channel of a whole server: `channelSetting`
+  in `js/agent_stack_server.js`, returned by `AgentStackStatus`
+  (`localAgentStackChannel`, `localAgentStackChannelSource`). On a server, No Code
+  included (`isAgentStackChannelFixed`), `refreshAgentStackRelease` reads the
+  manifests of that channel once the status is known (preview: per project the
+  higher version; a preview read that fails leaves stable), and the stack settings
+  show the channel read-only with the symbol (`getAgentStackChannelView().readOnly`);
+  never a card. In a Studio the symbol is the default of `getAgentStackChannel`
+  until the panel keeps a choice, and the settings follow the same channel; the
+  Eclipse view reads it with the engine policy, once a page
+  (`refreshAgentStackEngineStatus`). The channel never limits `AgentStackInstall`
+  of an official CAR URL. Cover with
+  `node --test tests/assistant_stack_channel.test.cjs tests/agent_stack_server.test.cjs`.
 - Forms-only UI uses `forms-integrated` on the page header/content/footer and
   `FormsIntegratedStyle`; leave the Studio layout unaffected. Context expansion
   and history navigation use SetLocal beans. Suggestions only prepare drafts.
@@ -298,6 +342,34 @@ rediscovering the same context.
   from narrative answer text. Persist the inferred project so resumed prompts
   use the created project as their structured context.
 - Image attachment from files exists; clipboard image paste is a desired feature.
+- Sending a message, creating a conversation and reading the settings write what
+  each step takes to `agents/assistant/send-timings.ndjson` of the workspace (one
+  JSON line per call, rotated at 512 KB); each Bridge call is a step named after
+  its sequence. With the Bridge's `agents/vibe/startup-timings.ndjson` it tells
+  where a cold start spends its time. Cover with
+  `node --test tests/assistant_send_timings.test.cjs`.
+- Before a Vibe message, `callAgentSetup` asks the Bridge for a presence check
+  only (`startupPresenceOnly`, Bridge 0.4.28 and later): the full check ran
+  `vibe-acp --version` twice, 7 to 10 s on every message. The setup screen and an
+  installation keep the full check. Cover with
+  `node --test tests/assistant_setup_presence.test.cjs`.
+- Opening the No Code panel (createConversation without a conversation) prewarms
+  the Vibe of the user's next conversation: `prewarmNoCodeConversation` posts
+  agent_vibe_start with `prewarm` from a background thread (Bridge 0.4.28 and
+  later) and keeps the conversation id in the HTTP session; the first message of
+  a new conversation takes it (`takePrewarmedConversation`) and, once its prompt
+  is sent, prewarms the next conversation's. Nothing is saved
+  before that message; the Bridge stops the process after 3 min idle without a
+  message and keeps one prewarm per user. Never in the Studio, nor for Codex or
+  Claude. Cover with `node --test tests/assistant_prewarm.test.cjs`.
+- AgentWorkspaceImage serves the thumbnails of the agent's image calls: the
+  Studio (WEB_ADMIN) as before; a No Code session the images of its user's own
+  attachments (agents/<provider>/users/<user>/conversations/<id>/attachments,
+  agents/attachments/<user>/) and of its agent's working folder
+  (agents/vibe/homes-<profile>/users/<user>/scratch/<conversation>/), the user
+  taken from the session, so the images the Agent Bridge describes for a model
+  that cannot see, and those the agent makes or opens, show as in the Studio.
+  Cover with `node --test tests/assistant_workspace_image.test.cjs`.
 
 ## Validation
 
@@ -428,10 +500,11 @@ rediscovering the same context.
 ## Tigo 1.5 resource library
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
-- Assistant 1.5.5 / Bridge 0.4.27 / MCP 0.2.27 is the stable bundle (the 1.5
-  line with the opt-in feedback to Convertigo); the preview manifest lists the
-  pre-releases checked together on test-nocode, its update being the last step of
-  each such set (RELEASING.md).
+- Assistant 1.5.6 / Bridge 0.4.28 / MCP 0.2.28 is the stable bundle (the 1.5
+  line with the opt-in feedback to Convertigo and the Studio update offer); the
+  preview manifest lists the pre-releases checked together on test-nocode, its
+  update being the last step of each such set (RELEASING.md), and points at the
+  stable bundle until the next such set.
   `stack-release.json` must equal `stack-release-stable.json`; the Page default
   fallback pins stable too. Preview uses `stack-release-preview.json` explicitly.
 - `js/tigo_resources.js` owns the portable resource core and its Java host. The

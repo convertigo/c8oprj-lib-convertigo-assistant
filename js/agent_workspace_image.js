@@ -5,6 +5,12 @@
  * Same rules as the image-describe MCP tool: a WEB_ADMIN session, a path inside the Studio user workspace or the
  * projects folder (relative paths are tried in that order, the canonical path is checked), 10 MB at most, and a PNG,
  * JPEG or WebP content (decided by the bytes, never by the name): no other file of the workspace can be read.
+ *
+ * A No Code user (a session without WEB_ADMIN) gets the images of their own conversations only: their attachments (the
+ * ones the Agent Bridge describes for a model that cannot see), agents/<provider>/users/<user>/conversations/<id>/
+ * attachments and agents/attachments/<user>/, and the images their agent made or opened in its working folder,
+ * agents/vibe/homes-<profile>/users/<user>/scratch/<conversation>/, the user being the one of the session, never of
+ * the request.
  */
 var C8O = C8O || {};
 (function (api) {
@@ -36,12 +42,56 @@ var C8O = C8O || {};
     return "";
   };
 
+  // the user folder name of the Assistant (userPathSlug of agent_bridge_client.js)
+  api.userPathSlug = function (value) {
+    var text = str(value);
+    if (!text.length || text.toLowerCase() === "studio") {
+      return "studio";
+    }
+    var readable = text.toLowerCase().replace(/[^A-Za-z0-9_.-]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+    if (!readable.length) {
+      readable = "user";
+    }
+    if (readable.length > 80) {
+      readable = readable.substring(0, 80).replace(/[_.-]+$/g, "");
+    }
+    var bytes = java.security.MessageDigest.getInstance("SHA-256").digest(new java.lang.String(text).getBytes("UTF-8"));
+    var hash = "";
+    for (var i = 0; i < 8; i++) {
+      var n = Number(bytes[i]) & 0xff;
+      hash += (n < 16 ? "0" : "") + n.toString(16);
+    }
+    return readable + "--" + hash;
+  };
+
+  // the user of the session, as the Assistant names it (callerUserId): the e-mail of a provider:id:e-mail login
+  api.sessionUserId = function (ctx) {
+    var user = "";
+    try {
+      user = str(ctx.getAuthenticatedUser());
+    } catch (_noAuthenticatedUser) {}
+    var parts = user.split(":");
+    var last = parts[parts.length - 1];
+    return parts.length > 2 && last.indexOf("@") > 0 ? last : user;
+  };
+
+  // a path relative to <user workspace>/agents that holds one of the user's attachments or agent working files
+  api.isOwnImage = function (relative, userId) {
+    var slug = api.userPathSlug(userId).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var rel = String(relative).replace(/\\/g, "/");
+    return new RegExp("^[^/]+/users/" + slug + "/conversations/[^/]+/attachments/[^/]").test(rel)
+      || new RegExp("^attachments/" + slug + "/[^/]+/[^/]").test(rel)
+      || new RegExp("^vibe/homes-[^/]+/users/" + slug + "/scratch/[^/]+/[^/]").test(rel);
+  };
+
   api.read = function (ctx, args) {
     var Engine = Packages.com.twinsoft.convertigo.engine.Engine;
     var File = java.io.File;
     var Files = java.nio.file.Files;
-    if (!Engine.authenticatedSessionManager.hasRole(ctx.httpSession,
-      Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN)) {
+    var admin = Engine.authenticatedSessionManager.hasRole(ctx.httpSession,
+      Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN) === true;
+    var userId = admin ? "" : api.sessionUserId(ctx);
+    if (!admin && (!userId.length || userId.toLowerCase() === "studio")) {
       return { ok: false, error: { code: "authentication_required" } };
     }
     var pathText = str(args && args.path);
@@ -49,7 +99,7 @@ var C8O = C8O || {};
       return { ok: false, error: { code: "invalid_path" } };
     }
     var roots = [];
-    [Engine.USER_WORKSPACE_PATH, Engine.PROJECTS_PATH].forEach(function (root) {
+    (admin ? [Engine.USER_WORKSPACE_PATH, Engine.PROJECTS_PATH] : [str(Engine.USER_WORKSPACE_PATH).length ? Engine.USER_WORKSPACE_PATH + "/agents" : ""]).forEach(function (root) {
       if (str(root).length) {
         roots.push(new File(String(root)).getCanonicalFile());
       }
@@ -57,7 +107,7 @@ var C8O = C8O || {};
     var inside = function (file) {
       for (var i = 0; i < roots.length; i++) {
         if (file.toPath().startsWith(roots[i].toPath())) {
-          return true;
+          return admin || api.isOwnImage(String(roots[i].toPath().relativize(file.toPath())), userId);
         }
       }
       return false;

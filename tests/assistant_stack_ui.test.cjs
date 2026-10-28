@@ -39,8 +39,8 @@ test('default manifest alias and offline fallback pin the reviewed stable bundle
   assert.equal(stable.channel, 'stable');
   assert.equal(preview.channel, 'preview');
   assert.deepEqual(JSON.parse(JSON.stringify(fixture().page.getEmbeddedAgentStackRelease())), stable);
-  assert.deepEqual(stable.projects.map(p => p.version), ['0.2.27', '0.4.27', '1.5.5']);
-  assert.deepEqual(preview.projects.map(p => p.version), ['0.2.28-beta.15', '0.4.28-beta.16', '1.5.6-beta.20']);
+  assert.deepEqual(stable.projects.map(p => p.version), ['0.2.28', '0.4.28', '1.5.6']);
+  assert.deepEqual(preview.projects.map(p => p.version), ['0.2.28', '0.4.28', '1.5.6']);
   for (const manifest of [stable, preview]) {
     assert.equal(new Set(manifest.projects.map(p => p.name)).size, 3);
     for (const project of manifest.projects) {
@@ -58,7 +58,7 @@ test('the default installation path rejects a preview response and retains stabl
   }) : undefined });
   f.page.refreshAgentStackRelease(true); await flush();
   assert.equal(f.page.local.AgentStackRelease.channel, 'stable');
-  assert.equal(f.page.local.AgentStackRelease.projects.find(p => p.name === 'lib_ConvertigoAssistant').version, '1.5.5');
+  assert.equal(f.page.local.AgentStackRelease.projects.find(p => p.name === 'lib_ConvertigoAssistant').version, '1.5.6');
   assert.ok(f.page.local.AgentStackReleaseError);
   assert.equal(f.calls.some(c => c.name.endsWith('.GetPreviewManifest')), false);
 });

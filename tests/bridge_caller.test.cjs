@@ -6,7 +6,7 @@ const { ts, read, backendParts } = require('./helpers/assistant-source.cjs');
 
 const ENTRY_POINTS = ['createConversation', 'settings', 'setupAgent', 'sendMessage', 'readResponse',
   'resumeConversation', 'deleteConversation', 'closeConversation', 'listConversations', 'renameConversation',
-  'runHistory', 'storeAttachments', 'quota'];
+  'runHistory', 'storeAttachments', 'quota', 'hostRequestResult'];
 
 class FakeUri {
   constructor(text) { this.url = new URL(text); }
@@ -43,7 +43,8 @@ function fixture({ studio = true, admin = false, user = '', localPort = 18086, c
     normalizeUserKey: value => 'key:' + value,
     shouldAttachMcpTokenHandle: () => false,
     response: { result: { ok: true } },
-    postForm(...args) { calls.push(args); return sandbox.response; }
+    postForm(...args) { calls.push(args); return sandbox.response; },
+    sendMark() {}
   };
   vm.runInNewContext(backendParts(['requireBridgeCaller', 'bridgeCallerRefusal', 'callerUserId', 'withCallerUserId', 'feedbackUserKey',
     'isOwnBridgeUrl', 'bridgeCall', 'callerSessionId'],
@@ -153,7 +154,7 @@ test('Every Assistant entry point that reaches the Bridge refuses first, before 
     assert.equal(first[name], 'var refused = bridgeCallerRefusal();', name);
     assert.match(second[name], /^options = withCallerUserId\((optionsWithRequestFallbacks\(options( \|\| \{\})?\)|options)\);$/, name);
   }
-  assert.match(source, /function bridgeCall\(options, sequence, params, timeoutMs\) \{\n    requireBridgeCaller\(\);/);
+  assert.match(source, /function bridgeCall\(options, sequence, params, timeoutMs, background\) \{\n    requireBridgeCaller\(\);/);
 });
 
 test('A server user\'s feedback folder and conversations share one key, pinned with lib_ConvertigoMCP reporting.feedbackUserKey', () => {

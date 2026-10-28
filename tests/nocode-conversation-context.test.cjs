@@ -114,7 +114,7 @@ test('legacy and failed resumes preserve messages without inventing a resource',
 
 test('persisted/public context contains resource identity only, and Studio has none', () => {
   const source = sourceFile(read('js/agent_bridge_client.js'));
-  const names = new Set(['noCodeConversationContext', 'savedNoCodeContext', 'writeConversationRecord', 'publicState', 'publicConversation', 'liveReasoning']);
+  const names = new Set(['noCodeConversationContext', 'savedNoCodeContext', 'writeConversationRecord', 'publicState', 'publicConversation', 'liveReasoning', 'publicSessionSandbox']);
   const snippets = [];
   function visit(n) { if (ts.isFunctionDeclaration(n) && names.has(n.name?.text)) snippets.push(n.getText(source)); ts.forEachChild(n, visit); }
   visit(source); assert.equal(snippets.length, names.size);

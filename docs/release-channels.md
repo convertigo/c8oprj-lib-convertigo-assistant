@@ -5,19 +5,20 @@ of each companion project.
 
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
-| Stable | 1.5.5 | 0.4.27 | 0.2.27 |
-| Preview | 1.5.6-beta.20 | 0.4.28-beta.16 | 0.2.28-beta.15 |
+| Stable | 1.5.6 | 0.4.28 | 0.2.28 |
+| Preview | 1.5.6 | 0.4.28 | 0.2.28 |
 
-Tigo 1.5.5 integrates personal/team access, the reviewed NoCode branch and the
-Claude authentication cache fix (see [release 1.5.5](release-1.5.5.md)). It retains
-the Windows credential installation fix from 1.5.4. The preview manifest lists
-the pre-releases checked together on the No Code test server; listing them is
-the last step of each such set (see
+Tigo 1.5.6 adds the Studio update offer and its channel selector, the No Code
+sandbox, faster No Code starts, preview capture and Baserow row reads (see
+[release 1.5.6](release-1.5.6.md)). It retains personal/team access and the NoCode
+integration from [1.5.5](release-1.5.5.md). The preview manifest lists the
+pre-releases checked together on the No Code test server; listing them is the
+last step of each such set (see
 [RELEASING.md](../RELEASING.md#preview-manifest-after-a-checked-pre-release-set)).
-The update offer and its channel selector described below are new in the
-preview Assistant 1.5.6-beta.17: Studios on the stable 1.5.5 have neither and
-read only the stable manifest. Both bundles target Convertigo 8.4.6;
-compatibility alone does not constitute stable acceptance.
+Until the next such set it points at the same bundle as the stable one.
+Studios still on 1.5.5 have no update card and read only the stable manifest:
+they find 1.5.6 in the stack settings of the panel. Both bundles target
+Convertigo 8.4.6; compatibility alone does not constitute stable acceptance.
 
 ## Manifests and existing Studios
 
@@ -59,6 +60,29 @@ The channel is chosen in the stack settings of the panel, per Studio:
   this channel only through the preview manifest on `master` (see RELEASING.md).
   Going back to Stable downgrades nothing: the next newer stable is offered.
 
+### Server channel: `assistant.stack.channel`
+
+The global symbol `assistant.stack.channel` sets the update channel of a whole
+Convertigo server: `stable` (the default, also when the symbol is empty or holds
+another value) or `preview`. Its administrator sets it once for every user, which
+a browser setting cannot do. `AgentStackStatus` returns it
+(`localAgentStackChannel`, and `localAgentStackChannelSource`: `symbol` or
+`default`).
+
+- On a server, No Code included, the stack settings of the Assistant panel show
+  the versions of that channel: on `preview`, per project the higher of the
+  stable and preview manifests, as in a Studio. The channel is shown read-only,
+  with the symbol name. Users that `assistant.stack.selfupdate` allows can update
+  from there. A server is still never offered the update card.
+- In a Studio, the symbol gives the default channel until a channel is chosen in
+  the panel; that choice, kept by the Studio, then takes precedence. The stack
+  settings follow the same channel as the card.
+- A manifest that cannot be read leaves the stable versions.
+- The channel never limits `AgentStackInstall`: an official release CAR can still
+  be installed by its URL when no manifest lists it, which is how a beta is checked
+  on a test server before the preview manifest lists it.
+  `assistant.stack.selfupdate` and the official-CAR allow-list still apply.
+
 The existing v1.5.0 tags and CAR bytes are retained as historical preview
 artifacts. Their embedded fallback still reflects the original publication;
 their normal online manifest now resolves to stable. This correction does not
@@ -74,7 +98,7 @@ release body containing `[skip deploy]` suppresses this automatic deployment.
 
 The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
 its unsuffixed tag. Use beta and release-candidate tags for future preview
-iterations, for example `v1.5.6-beta.1` and `v1.5.6-rc.1`. Keep the preview manifest's three versions
+iterations, for example `v1.5.7-beta.1` and `v1.5.7-rc.1`. Keep the preview manifest's three versions
 coherent with its published CARs.
 
 Stable promotion is an explicit maintainer operation after code review and

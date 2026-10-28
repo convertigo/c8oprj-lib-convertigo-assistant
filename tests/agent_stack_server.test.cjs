@@ -6,10 +6,14 @@ const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 
-function load({ symbol = '', admin = false, user = '', projects = {}, gitCheckouts = [] } = {}) {
+function load({ symbol = '', channel = null, admin = false, user = '', projects = {}, gitCheckouts = [], studio } = {}) {
   const imported = [];
+  const symbols = { 'assistant.stack.selfupdate': symbol, 'assistant.stack.channel': channel };
   const manager = {
-    symbolsGetValue: name => (name === 'assistant.stack.selfupdate' ? symbol : null),
+    symbolsGetValue: name => {
+      if (symbols[name] instanceof Error) throw symbols[name];
+      return Object.prototype.hasOwnProperty.call(symbols, name) ? symbols[name] : null;
+    },
     existsProject: name => Object.prototype.hasOwnProperty.call(projects, name),
     getOriginalProjectByName: name => ({ getVersion: () => projects[name], getName: () => name, getDirFile: () => name })
   };
@@ -32,7 +36,8 @@ function load({ symbol = '', admin = false, user = '', projects = {}, gitCheckou
                 }
               }
             },
-            authenticatedSessionManager: { hasRole: () => admin }
+            authenticatedSessionManager: { hasRole: () => admin },
+            ...(studio === undefined ? {} : { isStudioMode: () => studio })
           },
           AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN', PROJECTS_CONFIG: 'PROJECTS_CONFIG' } },
           util: {
@@ -71,6 +76,45 @@ test('a pre-release comes before its release, so a server on a preview takes the
   assert.equal(result.status, 'success');
   assert.equal(result.results.map(entry => entry.action).join(','), 'up_to_date,up_to_date,updated');
   assert.equal(preview.projects.lib_ConvertigoAssistant, '1.4.17');
+});
+
+test('the status names its surface: the engine of a Studio, else a server', () => {
+  assert.equal(load({ studio: true }).stack.status().surface, 'studio');
+  assert.equal(load({ studio: false }).stack.status().surface, 'server');
+  assert.equal(load().stack.status().surface, 'server', 'an engine that cannot tell');
+});
+
+test('the update channel is the global symbol assistant.stack.channel, stable when empty or unknown', () => {
+  for (const [value, channel, source] of [[null, 'stable', 'default'], ['', 'stable', 'default'], ['  ', 'stable', 'default'],
+    ['stable', 'stable', 'symbol'], ['preview', 'preview', 'symbol'], [' Preview ', 'preview', 'symbol'], ['PREVIEW', 'preview', 'symbol'],
+    ['beta', 'stable', 'default'], ['pre-releases', 'stable', 'default'], ['true', 'stable', 'default']]) {
+    const { stack } = load({ channel: value });
+    assert.deepEqual({ ...stack.channelSetting() }, { channel, source }, JSON.stringify(value));
+    const status = stack.status({});
+    assert.deepEqual([status.localAgentStackChannel, status.localAgentStackChannelSource, status.localAgentStackChannelSymbol],
+      [channel, source, 'assistant.stack.channel'], JSON.stringify(value));
+  }
+  assert.equal(load().stack.CHANNEL_SYMBOL, 'assistant.stack.channel');
+  assert.deepEqual({ ...load({ channel: new Error('engine') }).stack.channelSetting() }, { channel: 'stable', source: 'default' }, 'a symbol that cannot be read');
+  assert.equal(load({ channel: 'preview', studio: true }).stack.status().localAgentStackChannel, 'preview', 'a Studio engine reads it too');
+});
+
+test('the channel never limits an explicit install of an official CAR, and never relaxes the self-update policy', () => {
+  // How betas are installed and checked on a server before the preview manifest lists them.
+  const beta = 'lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.30-beta.1/lib_ConvertigoMCP.car';
+  for (const channel of [null, 'stable', 'preview']) {
+    const { stack, imported, projects } = load({ channel, admin: true, projects: { lib_ConvertigoMCP: '0.2.27' } });
+    const result = stack.install({ projects: [{ name: 'lib_ConvertigoMCP', version: '0.2.30-beta.1', importUrl: beta }] });
+    assert.equal(result.status, 'success', String(channel));
+    assert.deepEqual(imported, [beta]);
+    assert.equal(projects.lib_ConvertigoMCP, '0.2.30-beta.1');
+  }
+  const denied = load({ channel: 'preview', projects: { lib_ConvertigoMCP: '0.2.27' } });
+  assert.equal(denied.stack.install({ projects: [{ name: 'lib_ConvertigoMCP', version: '0.2.30-beta.1', importUrl: beta }] }).status, 'forbidden');
+  assert.equal(denied.imported.length, 0, 'admin by default, whatever the channel');
+  const forged = load({ channel: 'preview', admin: true });
+  assert.equal(forged.stack.install({ projects: [{ name: 'lib_ConvertigoMCP', version: '0.2.30', importUrl: 'lib_ConvertigoMCP=https://evil.example/lib_ConvertigoMCP.car' }] }).results[0].action, 'rejected');
+  assert.equal(forged.imported.length, 0);
 });
 
 test('only official release CARs of the three repositories are accepted', () => {

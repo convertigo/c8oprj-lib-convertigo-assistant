@@ -62,6 +62,92 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   // The no-code tools whose results name the user's forms, pages, fields and Baserow tables; the contract only describes
   // the product.
   var NAMING_TOOLS = /^nocode-(?!form-contract-get$)/;
+  // The codes an agent runtime gives a tool call it could not complete (Vibe's MCP and connector runtime, its code
+  // mode), and what they mean. Vibe answers all of them with "The provided tool call failed": the code is what tells the
+  // cause, so it stays readable in the template and the report says what it means.
+  var RUNTIME_CODES = {
+    mcp_timeout: "the call ran past the tool timeout of the agent",
+    client_tool_timeout: "the call ran past the tool timeout of the agent",
+    mcp_transport_disconnected: "the connection to the MCP closed during the call",
+    mcp_transport_failed: "the MCP client failed on the call or on its answer: a JSON-RPC error of the server, an answer outside the output schema of the tool, or a broken stream",
+    mcp_http_error: "the MCP answered with an HTTP error",
+    mcp_invalid_result: "the answer could not be read as an MCP result",
+    mcp_invalid_payload: "the answer could not be read as an MCP result",
+    mcp_authorization_required: "the MCP refused the token of the agent (HTTP 401), and Vibe then suspends the server for the session",
+    mcp_stale_authorization: "the agent held an outdated authorization for the MCP",
+    mcp_unknown_route: "the tool was not available to the agent: its MCP server was suspended or not discovered yet",
+    mcp_discovery_pending: "the tool was not available to the agent: its MCP server was not discovered yet",
+    mcp_unknown_server: "the MCP server was not configured for the agent",
+    mcp_runtime_closed: "the MCP runtime of the agent was closed",
+    mcp_invalid_configuration: "the MCP server of the agent is misconfigured",
+    connector_invalid_result: "the answer could not be read as a connector result",
+    jsonSchemaArgumentValidationError: "the arguments did not match the input schema of the tool"
+  };
+  var RUNTIME_CODE_PATTERN = new RegExp("\\b(?:" + Object.keys(RUNTIME_CODES).join("|") + ")\\b", "g");
+  // A No Code agent that tells the user a capability is missing (no browser to see the form, no read of the rows of a
+  // table) and works around it rarely files the friction: GLM took "a friction of a tool you had to work around" for
+  // failing tools only (gregoryv, test-nocode, 26/10). Tigo files it from the answer and the comments of the turn, with
+  // these sentences of the product only: never the agent's words. A subject of its own: an agent filing it gets them too.
+  var MISSING_CAPABILITY = "missing-capability:";
+  var MISSING_CAPABILITIES = {
+    "form-preview": {
+      summary: "Detected by Tigo in the No Code agent's answer: it needed to see the saved form in a browser (its rendering, a "
+        + "calculation or a behaviour) and had no tool for it in the turn, so it told the user and worked around it (reasoning "
+        + "alone, a diagnostic field added to the form, or the user asked to check).",
+      suggestion: "Give the No Code agent a view of the saved form as the user's browser runs it, and name that tool in the No "
+        + "Code prompt and skill wherever a visual or runtime check is needed."
+    },
+    "table-rows": {
+      summary: "Detected by Tigo in the No Code agent's answer: it needed the rows of a Baserow table the form uses and no "
+        + "no-code tool reads them, so it told the user and worked around it (guessing from the schema, a diagnostic field "
+        + "added to the form, or the user asked to check the data).",
+      suggestion: "Give the No Code agent a read-only look at a few rows of a Baserow table the form binds, with the user's own "
+        + "rights."
+    },
+    other: {
+      summary: "Detected by Tigo in the No Code agent's answer: it said that a no-code tool does not allow something it needed, "
+        + "or that a tool it needed is not available in the session, and did not file the friction itself.",
+      suggestion: ""
+    }
+  };
+  // A clause says a capability is missing when it holds a lack, its object, and the agent or its tools as subject:
+  // "l'aperçu ne sera pas disponible avant la publication" is advice to the user. Texts are lowercased, without accents.
+  var LACK = new RegExp([
+    "\\b(?:pas (?:encore )?disponibles?|indisponibles?|non disponibles?|impossible de|aucun outil|pas d'outils?|sans (?:acces|outil)",
+    "pas (?:d')?acces|not available|unavailable|unable to|cannot|can ?not|can't|could ?not|couldn't|without (?:access|a tool)",
+    "only returns?|no (?:\\w+ ){0,2}(?:tools?|access|way to))\\b",
+    "\\bne (?:me |nous |leur |vous )?(?:permet|permettent|peux|peut|peuvent|pouvons|pourrai|pourrais|donne|donnent|retourne|retournent"
+      + "|renvoie|renvoient|lit|lisent|vois|voit) (?:pas|que|aucune?)\\b",
+    "\\bje n'ai pas (?:pu|eu|acces|d'acces|d'outil|les moyens)\\b|\\bn'(?:ai|avons) (?:pas|aucun) (?:acces|outil|moyen)|\\bje n'ai (?:pas|aucun) (?:de |d')",
+    "\\bimpossible (?:en|d')|\\b(?:limite|limitation) du perimetre\\b|\\bhors (?:du )?perimetre\\b|\\boutside (?:the )?no-?code\\b",
+    "\\bn'(?:offre|offrent|expose|exposent) pas\\b|\\b(?:does|do|did)(?:n't| not) (?:let|allow|give|return|expose|provide|read|show)\\b",
+    "\\b(?:don't|do not) have\\b"
+  ].join("|"));
+  var AGENT_SUBJECT = /(?:^|[^a-z0-9_-])(?:outils?|tools?|session|catalogue|catalog|no-?code|nocode-[a-z-]+|je|moi|nous|me|i|my|we)(?=[^a-z0-9_]|$)|(?:^|[^a-z])[jm]'/;
+  // Limits by design (server logs, the user's rights) are told to the user, not filed.
+  var BY_DESIGN = /\b(?:logs?|journaux|log-view|droits?|permissions?|unauthori[sz]ed|proprietaire|owner)\b/;
+  var CAPABILITY_OBJECTS = [
+    { id: "table-rows", pattern: new RegExp("\\b(?:lignes?|rows?|enregistrements?|records?|donnees|data|contenu|valeurs)\\b[^.]{0,40}\\b(?:tables?|baserow)\\b"
+      + "|\\b(?:tables?|baserow)\\b[^.]{0,30}\\b(?:lignes?|rows?|enregistrements?|records?|donnees)\\b"
+      + "|\\bschema\\b[^.]{0,30}\\b(?:pas les lignes|sans les lignes|not (?:the )?rows)\\b") },
+    { id: "form-preview", pattern: new RegExp("\\b(?:browser|navigateur|apercu|preview|rendu|rendering|render|viewer|capture|screenshot|playwright|visuel(?:le)?s?|visual)\\b"
+      + "|\\b(?:controle d'interface|ui control|interface control)\\b"
+      + "|\\breprodu\\w*[^.]{0,40}\\b(?:moi-meme|myself|calcul\\w*|probleme|problem|bug|comportement|behaviou?r|erreur|error|saut|issue)\\b"
+      + "|\\b(?:execut\\w*|run|lancer|tester|test)\\b[^.]{0,20}\\b(?:formulaire|form|calcul|calculation|formule|formula|flux|flow)\\b") }
+  ];
+  var CAPABILITY_TOOL = /\b(?:outils?|tools?)\b|dans cette session|in this session|perimetre no-?code|no-?code scope|nocode-[a-z]/;
+  // The no-code tools a subject may name: a closed list, so that a subject never carries a name of the user.
+  var NOCODE_TOOLS = /^nocode-(?:app-create|form-(?:get|contract-get|compile|validate|create|edit|update|publish|preview-capture)|baserow-(?:catalog-list|schema-apply)|report-create)$/;
+  // A visual check the agent says it did not do: it had no way to see the form, or did not use it.
+  var VISUAL_CHECK_NOT_DONE = new RegExp("\\b(?:verification|controle|test|check) (?:visuel(?:le)?|visual)|\\bvisual (?:check|verification)\\b");
+  var NOT_DONE = new RegExp("\\b(?:non (?:effectuee?|realisee?|faite?)|n'a pas ete (?:effectuee?|realisee?|faite?)|pas (?:ete )?(?:effectuee?|realisee?|faite?)"
+    + "|n'ai pas (?:fait|effectue|realise|pu faire)|reste a (?:faire|confirmer)|not (?:done|performed|run))\\b");
+
+  function folded(text) {
+    return String(text == null ? "" : text).toLowerCase().replace(/[\u2018\u2019\u02bc`]/g, "'").replace(/[\u00a0*]/g, " ")
+      .replace(/[\u00e0\u00e2\u00e4]/g, "a").replace(/[\u00e9\u00e8\u00ea\u00eb]/g, "e").replace(/[\u00ee\u00ef]/g, "i")
+      .replace(/[\u00f4\u00f6]/g, "o").replace(/[\u00f9\u00fb\u00fc]/g, "u").replace(/\u00e7/g, "c");
+  }
   F.SCHEMA = SCHEMA;
   F.LIMITS = LIMITS;
 
@@ -168,6 +254,12 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return line.length;
     }).slice(0, 2);
     var text = F.redact(lines.join(" / "), names, others, true);
+    // A runtime code (mcp_transport_failed) is a word of the product: it stays as written.
+    var codes = [];
+    text = text.replace(RUNTIME_CODE_PATTERN, function (code) {
+      codes.push(code);
+      return String.fromCharCode(0xE000 + codes.length - 1);
+    });
     text = text.replace(/'[^']*'|"[^"]*"|`[^`]*`|«[^»]*»|“[^”]*”/g, "…");
     // The customer's own names: qualified names (PcaUpdateTracker.pg:Home), snake_case and camelCase identifiers.
     // Product class names (SimpleStep, SqlTransaction) stay readable.
@@ -175,7 +267,49 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     text = text.replace(/\b[a-z][a-z0-9]*(?:_[A-Za-z0-9]+)+\b|\b[a-z]+[A-Z][A-Za-z0-9]*\b/g, "<name>");
     text = text.replace(/\b\d+(?:[.,]\d+)*\b/g, "N");
     text = text.replace(/\s+/g, " ");
+    text = text.replace(/[-]/g, function (mark) {
+      return codes[mark.charCodeAt(0) - 0xE000] || "";
+    });
     return cut(text, LIMITS.template);
+  };
+
+  // The failure an agent runtime gave a tool call, from the Bridge's failure object or from the error of the result
+  // ({"type":"failure",...,"error":{"code":"mcp_transport_failed","retryable":false}}): null for an error of the tool.
+  F.runtimeFailure = function (preview, failure) {
+    var error = failure && typeof failure === "object" ? failure : null;
+    var text = String(preview == null ? "" : preview);
+    if (!error) {
+      try {
+        var value = JSON.parse(text);
+        error = value && typeof value === "object" ? (value.error && typeof value.error === "object" ? value.error : value) : null;
+      } catch (_ignoreCutPreview) {
+        var match = /"code"\s*:\s*"([A-Za-z_]+)"/.exec(text);
+        error = match ? { code: match[1], retryable: /"retryable"\s*:\s*true/.test(text) } : null;
+      }
+    }
+    var code = trim(error && error.code);
+    if (!Object.prototype.hasOwnProperty.call(RUNTIME_CODES, code)) {
+      return null;
+    }
+    return { code: code, retryable: error.retryable === true, details: error.details == null || error.details === "" ? null : error.details };
+  };
+
+  // What a report says of a runtime failure beside its template: the code, whether the runtime retries it, how long the
+  // call took and what the code means, then the details the runtime gave. It is not part of the fingerprint.
+  F.failureSummary = function (failure, durationMs) {
+    if (!failure || !Object.prototype.hasOwnProperty.call(RUNTIME_CODES, failure.code)) {
+      return "";
+    }
+    var parts = [failure.code, failure.retryable === true ? "retryable" : "not retryable"];
+    var ms = durationMs == null || durationMs === "" ? NaN : Number(durationMs);
+    if (isFinite(ms) && ms >= 0) {
+      parts.push("after " + (ms < 10000 ? Math.round(ms / 100) / 10 : Math.round(ms / 1000)) + " s");
+    }
+    var text = parts.join(", ") + ": " + RUNTIME_CODES[failure.code] + ".";
+    if (failure.details != null) {
+      text += " Details: " + (typeof failure.details === "string" ? failure.details : JSON.stringify(failure.details));
+    }
+    return cut(text, LIMITS.summary);
   };
 
   // The MCP tool a Bridge title names, or "" for another tool (shell, files, browser): only Convertigo tools are ours.
@@ -207,20 +341,48 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         return parts.join("\n");
       }
     } catch (_ignoreParse) {
+      // A cut preview is the JSON text of a result whose text holds the MCP answer as JSON again: undo one level of
+      // escaping, backslashes included. Undoing only the escaped quotes left a backslash before each inner quote, and the
+      // error message stopped at its first quoted name with a trailing backslash ("Objects named", "There is no sequence
+      // named": 4 frictions on backend-apps, 26/10).
       if (/\\"/.test(text)) {
-        return text.replace(/\\n/g, "\n").replace(/\\"/g, "\"");
+        return text.replace(/\\(u[0-9a-fA-F]{4}|["\\\/bfnrt])/g, function (all, code) {
+          if (code.length === 5) {
+            return String.fromCharCode(parseInt(code.substring(1), 16));
+          }
+          return { "\"": "\"", "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[code];
+        });
       }
     }
     return text;
   };
 
   // The message of an MCP error answered as a result ({"code":"-1","message":...} or {"status":"error",...}).
+  // The Bridge's plan sync hook appends "[Convertigo plan sync] ..." to a tool result, for the agent only: it is never the
+  // tool's error. Taken for one, it was reported as the message of failed calls (frictions b71cde44, fe4bc4a6).
+  var PLAN_SYNC_MARK = "[Convertigo plan sync]";
+
+  function withoutPlanSync(text) {
+    var at = text.indexOf(PLAN_SYNC_MARK);
+    return at < 0 ? text : trim(text.substring(0, at));
+  }
+
   F.errorMessage = function (preview, failed) {
-    var text = F.resultText(preview);
+    var text = withoutPlanSync(F.resultText(preview));
+    if (failed === true && !text.length) {
+      return "";
+    }
     var isError = failed === true || /"code"\s*:\s*"-1"/.test(text) || /"status"\s*:\s*"error"/.test(text) || /"isError"\s*:\s*true/.test(text);
     if (!isError) {
       return "";
     }
+    var message = namedErrorMessage(text, failed);
+    // An agent runtime that could not complete the call says so in one generic sentence: its code names the cause.
+    var runtime = message.length ? F.runtimeFailure(text) : null;
+    return runtime && message.indexOf(runtime.code) < 0 ? message + " [" + runtime.code + "]" : message;
+  };
+
+  function namedErrorMessage(text, failed) {
     // An answer that names its error says it there: an earlier "message" can be a step of the answer (schema-apply
     // listed "Table already exists." before its error, friction 3615a606fb3f). A cut preview ends inside the message:
     // take what is there.
@@ -243,7 +405,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       }
     }
     return failed === true ? text : "";
-  };
+  }
 
   // TigoAccess's submitFeedback: HTTPS, except a loopback test server (localhost, 127.0.0.1, *.localhost) in plain HTTP.
   F.endpoint = function (host) {
@@ -270,8 +432,59 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return cut(provider, 60);
   };
 
+  // The capabilities a No Code agent says it lacks in texts of a turn (its answer, its comments): the subjects of the
+  // frictions Tigo files for it, the known capabilities first. Another lack of a tool is filed alone, under the no-code
+  // tool its clause names or "other".
+  F.missingCapabilities = function (texts) {
+    var found = [];
+    var other = "";
+    for (var t = 0; t < (texts || []).length; t++) {
+      var clauses = folded(String(texts[t] == null ? "" : texts[t]).substring(0, 20000)).split(/[.;:!?()\n\u2026]+|,\s*(?:et|and|mais|but|car|because)\s+/);
+      for (var c = 0; c < clauses.length; c++) {
+        var clause = clauses[c];
+        if (VISUAL_CHECK_NOT_DONE.test(clause) && NOT_DONE.test(clause)) {
+          if (found.indexOf(MISSING_CAPABILITY + "form-preview") === -1) {
+            found.push(MISSING_CAPABILITY + "form-preview");
+          }
+          continue;
+        }
+        if (!LACK.test(clause) || !AGENT_SUBJECT.test(clause) || BY_DESIGN.test(clause)) {
+          continue;
+        }
+        var known = "";
+        for (var o = 0; o < CAPABILITY_OBJECTS.length && !known.length; o++) {
+          known = CAPABILITY_OBJECTS[o].pattern.test(clause) ? MISSING_CAPABILITY + CAPABILITY_OBJECTS[o].id : "";
+        }
+        if (known.length && found.indexOf(known) === -1) {
+          found.push(known);
+        } else if (!known.length && !other.length && CAPABILITY_TOOL.test(clause)) {
+          var tools = [];
+          (clause.match(/\bnocode[-_][a-z_-]*[a-z]/g) || []).forEach(function (tool) {
+            tool = tool.replace(/_/g, "-");
+            if (NOCODE_TOOLS.test(tool) && tools.indexOf(tool) === -1) {
+              tools.push(tool);
+            }
+          });
+          other = MISSING_CAPABILITY + (tools.length === 1 ? tools[0] : "other");
+        }
+      }
+    }
+    return found.length ? found : (other.length ? [other] : []);
+  };
+
+  // The finding of a missing capability's subject, always the product's own sentences; null for another subject.
+  function missingCapabilityFinding(subject) {
+    var text = trim(subject);
+    var id = text.indexOf(MISSING_CAPABILITY) === 0 ? text.substring(MISSING_CAPABILITY.length) : "";
+    var fixed = Object.prototype.hasOwnProperty.call(MISSING_CAPABILITIES, id) ? MISSING_CAPABILITIES[id]
+      : (NOCODE_TOOLS.test(id) ? MISSING_CAPABILITIES.other : null);
+    return fixed ? { area: "tool", subject: text, severity: "medium", summary: fixed.summary, suggestion: fixed.suggestion } : null;
+  }
+  F.missingCapabilityFinding = missingCapabilityFinding;
+
   // The pure helpers every bound feedback object shares.
-  var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "endpoint", "provider"];
+  var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "runtimeFailure",
+    "failureSummary", "endpoint", "provider", "missingCapabilities", "missingCapabilityFinding"];
 
   // The feedback API bound to one store: the Studio's (engine-wide), or one server user's.
   function bind(F, store) {
@@ -425,11 +638,14 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         finding: {},
         stack: {}
       };
+      // A missing capability says only the product's sentences: nothing to mask, and a user's field named like one of
+      // their words never splits its count.
+      var fixed = out.kind === "agent_friction" ? missingCapabilityFinding(finding.subject) : null;
       var keys = ["area", "subject", "severity", "summary", "suggestion", "template"];
       for (var i = 0; i < keys.length; i++) {
-        var value = trim(finding[keys[i]]);
+        var value = trim(fixed ? fixed[keys[i]] : finding[keys[i]]);
         if (value.length) {
-          out.finding[keys[i]] = cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60);
+          out.finding[keys[i]] = fixed ? value : cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60);
         }
       }
       var stack = report.stack || {};
@@ -559,7 +775,13 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       if (!tool.length || !message.length) {
         return null;
       }
-      return F.add("tool_error", { subject: tool, template: F.template(message, store().projectNames(), customerNames()) }, options);
+      var finding = { subject: tool, template: F.template(message, store().projectNames(), customerNames()) };
+      // A runtime failure (Vibe's "The provided tool call failed") also says its code, its duration and what it means.
+      var summary = F.failureSummary(options.failure, options.durationMs);
+      if (summary.length) {
+        finding.summary = summary;
+      }
+      return F.add("tool_error", finding, options);
     };
 
     F.collectRuntimeError = function (options) {
@@ -616,7 +838,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
           continue;
         }
         var message = F.errorMessage(event.detail, event.status === "failed" || event.status === "error");
-        if (message.length && F.collectToolError({ tool: event.toolName || event.title, message: message, provider: provider, model: model, surface: surface })) {
+        var duration = Number(event.completedAt) > 0 && Number(event.at) > 0 ? Number(event.completedAt) - Number(event.at) : null;
+        if (message.length && F.collectToolError({ tool: event.toolName || event.title, message: message, failure: F.runtimeFailure(event.detail),
+          durationMs: duration, provider: provider, model: model, surface: surface })) {
           count++;
         }
       }
@@ -648,6 +872,34 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         }
       }
       return { steps: steps, tools: order.map(function (name) { return tools[name]; }) };
+    };
+
+    // After a completed No Code turn: the capabilities the agent told the user it lacked, in its answer or its comments,
+    // when it filed no friction itself in the turn. One report per capability, two at most.
+    F.collectMissingCapabilities = function (options) {
+      options = options || {};
+      if (F.mode() === "off") {
+        return [];
+      }
+      var events = options.events || [];
+      var texts = [trim(options.answer)];
+      for (var i = 0; i < events.length; i++) {
+        var event = events[i] || {};
+        var type = trim(event.type) || "narrative";
+        if (type === "tool" && /report[-_]create/i.test(trim(event.toolName) + " " + trim(event.title))
+          && event.status !== "failed" && event.status !== "error" && !F.errorMessage(event.detail, false).length) {
+          return [];
+        }
+        if (type === "narrative") {
+          texts.push(trim(event.text || event.title));
+        }
+      }
+      var subjects = F.missingCapabilities(texts);
+      var reports = [];
+      for (var s = 0; s < subjects.length && s < 2; s++) {
+        reports.push(F.add("agent_friction", missingCapabilityFinding(subjects[s]), options));
+      }
+      return reports;
     };
 
     // The MCP's report-create leaves raw agent frictions in incoming/: they get the same masking, fingerprint and count
