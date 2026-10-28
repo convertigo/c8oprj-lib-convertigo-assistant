@@ -5,14 +5,17 @@ of each companion project.
 
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
-| Stable | 1.5.5 | 0.4.27 | 0.2.27 |
-| Preview | 1.5.5 | 0.4.27 | 0.2.27 |
+| Stable | 1.5.6 | 0.4.28 | 0.2.28 |
+| Preview | 1.5.6 | 0.4.28 | 0.2.28 |
 
-Tigo 1.5.5 integrates personal/team access, the reviewed NoCode branch and the
-Claude authentication cache fix (see [release 1.5.5](release-1.5.5.md)). It retains
-the Windows credential installation fix from 1.5.4. The preview manifest points
-at the same bundle until the next preview. Both bundles target Convertigo 8.4.6;
-compatibility alone does not constitute stable acceptance.
+Tigo 1.5.6 adds the Studio update offer and its channel selector, the No Code
+sandbox, faster No Code starts, preview capture and Baserow row reads (see
+[release 1.5.6](release-1.5.6.md)). It retains personal/team access and the NoCode
+integration from [1.5.5](release-1.5.5.md). The preview manifest points at the
+same bundle until the next pre-release set checked on the No Code test server.
+Studios still on 1.5.5 have no update card and read only the stable manifest:
+they find 1.5.6 in the stack settings of the panel. Both bundles target
+Convertigo 8.4.6; compatibility alone does not constitute stable acceptance.
 
 ## Manifests and existing Studios
 
@@ -92,7 +95,7 @@ release body containing `[skip deploy]` suppresses this automatic deployment.
 
 The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
 its unsuffixed tag. Use beta and release-candidate tags for future preview
-iterations, for example `v1.5.6-beta.1` and `v1.5.6-rc.1`. Keep the preview manifest's three versions
+iterations, for example `v1.5.7-beta.1` and `v1.5.7-rc.1`. Keep the preview manifest's three versions
 coherent with its published CARs.
 
 Stable promotion is an explicit maintainer operation after code review and

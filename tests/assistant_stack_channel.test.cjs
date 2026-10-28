@@ -332,7 +332,7 @@ test('Studio settings opened before the card check read the engine default first
   failing = true;
   g.page.setAgentStackChannel('stable');
   await flush();
-  assert.equal(g.page.getAgentStackVersionText(), 'MCP 0.2.27 · Bridge 0.4.27 · Assistant 1.5.5');
+  assert.equal(g.page.getAgentStackVersionText(), 'MCP 0.2.27 → 0.2.28 · Bridge 0.4.27 → 0.4.28 · Assistant 1.5.5 → 1.5.6');
   assert.equal(g.page.local.AgentStackRelease.channel, 'stable');
   assert.match(g.page.getAgentStackStatusText(), /Impossible de vérifier la stack publiée/);
 });

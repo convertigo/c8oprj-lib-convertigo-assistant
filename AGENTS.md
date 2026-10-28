@@ -500,9 +500,9 @@ rediscovering the same context.
 ## Tigo 1.5 resource library
 
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
-- Assistant 1.5.5 / Bridge 0.4.27 / MCP 0.2.27 is the stable bundle (the 1.5
-  line with the opt-in feedback to Convertigo); the preview manifest points at the
-  same bundle.
+- Assistant 1.5.6 / Bridge 0.4.28 / MCP 0.2.28 is the stable bundle (the 1.5
+  line with the opt-in feedback to Convertigo and the Studio update offer); the
+  preview manifest points at the same bundle until the next checked pre-release set.
   `stack-release.json` must equal `stack-release-stable.json`; the Page default
   fallback pins stable too. Preview uses `stack-release-preview.json` explicitly.
 - `js/tigo_resources.js` owns the portable resource core and its Java host. The
