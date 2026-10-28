@@ -1613,6 +1613,8 @@ scriptContent:
         		if (status === "waiting_sharing") {
         			if (!entry.waiting) {
         				entry.waiting = true;
+        				// render: a browser that cannot share a tab (Safari, Firefox), whose page draws the preview itself
+        				entry.mode = payload.mode === "render" ? "render" : "tab";
         				this.sendPreviewCaptureResult(entry, { status: "waiting_sharing" });
         				this.offerPreviewShare(entry);
         			}
@@ -1642,7 +1644,8 @@ scriptContent:
         
         	public offerPreviewShare(entry) {
         		// One card of the turn asks the user to allow sharing the tab: its click opens the share prompt of the browser in the
-        		// No Code Studio page (a click in the panel activates the parent page too), for the browser session.
+        		// No Code Studio page (a click in the panel activates the parent page too), until the end of the turn at the latest. A
+        		// browser that cannot share a tab asks nothing: the page draws the preview itself after the same click, and the card says so.
         		var t = (key: any) => this.agentPreviewText(key);
         		this.local.Messages = this.local.Messages || [];
         		var list = this.local.Messages;
@@ -1654,9 +1657,11 @@ scriptContent:
         				return;
         			}
         		}
-        		var card: any = this.feedbackCard("preview", t("title"), t("text").replace("{form}", entry.formName || entry.formId),
+        		var render = entry.mode === "render";
+        		var card: any = this.feedbackCard("preview", t("title"), t(render ? "textRender" : "text").replace("{form}", entry.formName || entry.formId),
         			[{ id: "allow", label: t("allow"), primary: true }, { id: "decline", label: t("decline") }]);
         		card.previewRequestIds = [entry.requestId];
+        		card.previewMode = render ? "render" : "tab";
         		entry.card = card;
         		list.push(card);
         		this.scrollChatBottom(0, true);
@@ -1669,7 +1674,7 @@ scriptContent:
         		var ids = card.previewRequestIds || [];
         		card.actions = [];
         		if (cta.id === "allow") {
-        			card.message = this.agentPreviewText("allowing");
+        			card.message = this.agentPreviewText(card.previewMode === "render" ? "allowingRender" : "allowing");
         			this.postAgentHostMessage({ type: "ConvertigoAssistant.preview-share.start", payload: { requestIds: ids } });
         		} else {
         			card.message = this.agentPreviewText("declined");
@@ -1686,12 +1691,13 @@ scriptContent:
         	}
         
         	public agentPreviewText(key) {
-        		// Texts of the card that asks to share the preview with Tigo, in the four Assistant languages.
+        		// Texts of the card that asks to share the preview with Tigo, in the four Assistant languages. The share of the tab ends
+        		// with the turn at the latest; textRender and allowingRender are for a page that draws the preview itself (no tab shared).
         		var texts: any = {
-        			fr: { title: "Aperçu pour Tigo", text: "Tigo voudrait voir l’aperçu de « {form} » pour vérifier son rendu. Autorisez le partage de cet onglet : il reste actif pendant la session de votre navigateur, et seule l’image de l’aperçu est envoyée.", allow: "Autoriser l’aperçu", decline: "Pas maintenant", allowing: "Acceptez le partage de cet onglet dans la fenêtre du navigateur.", shared: "Aperçu partagé avec Tigo.", declined: "D’accord, Tigo continue sans voir l’aperçu.", failed: "L’aperçu n’a pas pu être capturé : Tigo continue sans le voir." },
-        			en: { title: "Preview for Tigo", text: "Tigo would like to see the preview of “{form}” to check how it renders. Allow sharing this tab: it stays on for your browser session, and only the image of the preview is sent.", allow: "Allow the preview", decline: "Not now", allowing: "Accept sharing this tab in the browser window.", shared: "Preview shared with Tigo.", declined: "All right, Tigo goes on without seeing the preview.", failed: "The preview could not be captured: Tigo goes on without seeing it." },
-        			it: { title: "Anteprima per Tigo", text: "Tigo vorrebbe vedere l’anteprima di «{form}» per verificarne la resa. Consenti la condivisione di questa scheda: resta attiva per la sessione del browser e viene inviata solo l’immagine dell’anteprima.", allow: "Consenti l’anteprima", decline: "Non ora", allowing: "Accetta la condivisione di questa scheda nella finestra del browser.", shared: "Anteprima condivisa con Tigo.", declined: "D’accordo, Tigo continua senza vedere l’anteprima.", failed: "Non è stato possibile catturare l’anteprima: Tigo continua senza vederla." },
-        			es: { title: "Vista previa para Tigo", text: "Tigo quiere ver la vista previa de «{form}» para comprobar cómo se muestra. Permita compartir esta pestaña: sigue activa durante la sesión del navegador y solo se envía la imagen de la vista previa.", allow: "Permitir la vista previa", decline: "Ahora no", allowing: "Acepte compartir esta pestaña en la ventana del navegador.", shared: "Vista previa compartida con Tigo.", declined: "De acuerdo, Tigo continúa sin ver la vista previa.", failed: "No se pudo capturar la vista previa: Tigo continúa sin verla." }
+        			fr: { title: "Aperçu pour Tigo", text: "Tigo voudrait voir l’aperçu de « {form} » pour vérifier son rendu. Autorisez le partage de cet onglet : il prend fin au plus tard avec cette réponse de Tigo, et seule l’image de l’aperçu est envoyée.", textRender: "Tigo voudrait voir l’aperçu de « {form} » pour vérifier son rendu. Si vous l’autorisez, la page en fait elle-même une image, sans partager cet onglet : seule l’image de l’aperçu est envoyée, et votre accord prend fin au plus tard avec cette réponse de Tigo.", allow: "Autoriser l’aperçu", decline: "Pas maintenant", allowing: "Acceptez le partage de cet onglet dans la fenêtre du navigateur.", allowingRender: "La page prépare l’image de l’aperçu…", shared: "Aperçu partagé avec Tigo.", declined: "D’accord, Tigo continue sans voir l’aperçu.", failed: "L’aperçu n’a pas pu être capturé : Tigo continue sans le voir." },
+        			en: { title: "Preview for Tigo", text: "Tigo would like to see the preview of “{form}” to check how it renders. Allow sharing this tab: it ends with this answer of Tigo at the latest, and only the image of the preview is sent.", textRender: "Tigo would like to see the preview of “{form}” to check how it renders. If you allow it, the page makes an image of it itself, without sharing this tab: only the image of the preview is sent, and your consent ends with this answer of Tigo at the latest.", allow: "Allow the preview", decline: "Not now", allowing: "Accept sharing this tab in the browser window.", allowingRender: "The page is making the image of the preview…", shared: "Preview shared with Tigo.", declined: "All right, Tigo goes on without seeing the preview.", failed: "The preview could not be captured: Tigo goes on without seeing it." },
+        			it: { title: "Anteprima per Tigo", text: "Tigo vorrebbe vedere l’anteprima di «{form}» per verificarne la resa. Consenti la condivisione di questa scheda: termina al più tardi con questa risposta di Tigo e viene inviata solo l’immagine dell’anteprima.", textRender: "Tigo vorrebbe vedere l’anteprima di «{form}» per verificarne la resa. Se lo consenti, la pagina ne crea da sola un’immagine, senza condividere questa scheda: viene inviata solo l’immagine dell’anteprima e il tuo consenso termina al più tardi con questa risposta di Tigo.", allow: "Consenti l’anteprima", decline: "Non ora", allowing: "Accetta la condivisione di questa scheda nella finestra del browser.", allowingRender: "La pagina sta creando l’immagine dell’anteprima…", shared: "Anteprima condivisa con Tigo.", declined: "D’accordo, Tigo continua senza vedere l’anteprima.", failed: "Non è stato possibile catturare l’anteprima: Tigo continua senza vederla." },
+        			es: { title: "Vista previa para Tigo", text: "Tigo quiere ver la vista previa de «{form}» para comprobar cómo se muestra. Permita compartir esta pestaña: termina como muy tarde con esta respuesta de Tigo y solo se envía la imagen de la vista previa.", textRender: "Tigo quiere ver la vista previa de «{form}» para comprobar cómo se muestra. Si lo permite, la página crea ella misma una imagen, sin compartir esta pestaña: solo se envía la imagen de la vista previa y su permiso termina como muy tarde con esta respuesta de Tigo.", allow: "Permitir la vista previa", decline: "Ahora no", allowing: "Acepte compartir esta pestaña en la ventana del navegador.", allowingRender: "La página está creando la imagen de la vista previa…", shared: "Vista previa compartida con Tigo.", declined: "De acuerdo, Tigo continúa sin ver la vista previa.", failed: "No se pudo capturar la vista previa: Tigo continúa sin verla." }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);

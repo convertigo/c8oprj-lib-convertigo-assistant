@@ -1,6 +1,7 @@
 // The Tigo panel passes the MCP's preview captures (nocode-form-preview-capture) to the No Code Studio page that hosts
 // it, and brings the page's PNG back to AgentHostRequestResult. A page that cannot capture answers unsupported at once;
-// a page whose tab is not shared yet makes the panel show a card, whose click lets the page ask the browser to share.
+// a page whose tab is not shared yet makes the panel show a card, whose click lets the page ask the browser to share. A page
+// in a browser that cannot share a tab (Safari, Firefox) draws the preview itself after the same click: the card says so.
 // node --test tests/assistant_preview_capture_panel.test.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -84,6 +85,8 @@ test('a tab not shared yet: the request waits and one card of the turn asks the 
   assert.equal(card.variant, 'preview');
   assert.equal(card.title, 'Aperçu pour Tigo');
   assert.match(card.message, /voir l’aperçu de « Congés »/);
+  assert.match(card.message, /Autorisez le partage de cet onglet : il prend fin au plus tard avec cette réponse de Tigo/);
+  assert.doesNotMatch(card.message, /session de votre navigateur/, 'the page stops the share at the end of the turn at the latest');
   assert.deepEqual(JSON.parse(JSON.stringify(card.actions)).map((a) => a.label), ['Autoriser l’aperçu', 'Pas maintenant']);
   assert.deepEqual(JSON.parse(JSON.stringify(card.previewRequestIds)), ['cap-1', 'cap-2']);
   view.onFeedbackCta(card, card.actions[0]);
@@ -143,4 +146,55 @@ test('the end of a turn tells the page that captures previews, once per turn, so
     assert.equal(other.posted.length, 0, 'a page that captures nothing hears nothing');
   }
   assert.match(pageYaml, /if \(\(isCompleted \|\| isFailed\) && page\.endAgentHostTurn\) \{\n\s+page\.endAgentHostTurn\(state\.runid != null \? state\.runid : response\.id\);/);
+});
+
+test('a page that draws the preview itself (Safari, Firefox): the same card, which says that no tab is shared', () => {
+  const { view, posted, calls } = panel();
+  view.forwardAgentHostRequests([request('cap-1'), request('cap-2')], 'agent-1');
+  view.onPreviewCaptureResult({ requestId: 'cap-1', status: 'waiting_sharing', mode: 'render' });
+  view.onPreviewCaptureResult({ requestId: 'cap-2', status: 'waiting_sharing', mode: 'render' });
+  assert.deepEqual(calls.map(([, p]) => [p.requestId, p.status]), [['cap-1', 'waiting_sharing'], ['cap-2', 'waiting_sharing']]);
+  const cards = view.local.Messages.filter((m) => m.type === 'feedback');
+  assert.equal(cards.length, 1);
+  const card = cards[0];
+  assert.equal(card.title, 'Aperçu pour Tigo');
+  assert.equal(card.message, 'Tigo voudrait voir l’aperçu de « Congés » pour vérifier son rendu. Si vous l’autorisez, la page en fait elle-même une image, sans partager cet onglet : seule l’image de l’aperçu est envoyée, et votre accord prend fin au plus tard avec cette réponse de Tigo.');
+  assert.deepEqual(JSON.parse(JSON.stringify(card.actions)).map((a) => a.label), ['Autoriser l’aperçu', 'Pas maintenant'], 'the consent is asked all the same');
+  view.onFeedbackCta(card, card.actions[0]);
+  assert.deepEqual(posted.at(-1), { type: 'ConvertigoAssistant.preview-share.start', payload: { requestIds: ['cap-1', 'cap-2'] } }, 'the page decides how');
+  assert.equal(card.message, 'La page prépare l’image de l’aperçu…', 'no window of the browser to accept');
+  view.onPreviewCaptureResult({ requestId: 'cap-1', status: 'done', image: PNG });
+  assert.equal(card.message, 'Aperçu partagé avec Tigo.');
+  view.onPreviewCaptureResult({ requestId: 'cap-2', status: 'failed', reason: 'unsupported_browser' });
+  assert.equal(calls.at(-1)[1].reason, 'unsupported_browser');
+
+  const declining = panel();
+  declining.view.forwardAgentHostRequests([request('cap-3')], 'agent-1');
+  declining.view.onPreviewCaptureResult({ requestId: 'cap-3', status: 'waiting_sharing', mode: 'render' });
+  const other = declining.view.local.Messages.find((m) => m.variant === 'preview');
+  declining.view.onFeedbackCta(other, other.actions[1]);
+  assert.equal(declining.calls.at(-1)[1].reason, 'declined');
+  assert.equal(other.message, 'D’accord, Tigo continue sans voir l’aperçu.');
+});
+
+test('the card of each mode has its texts in the four languages, and each says how long the consent lasts', () => {
+  const { view } = panel();
+  const texts = {};
+  for (const language of ['fr', 'en', 'it', 'es']) {
+    view.global = { currentLanguage: () => language };
+    texts[language] = Object.fromEntries(['text', 'textRender', 'allowing', 'allowingRender'].map((key) => [key, view.agentPreviewText(key)]));
+  }
+  for (const language of ['fr', 'it', 'es']) {
+    for (const key of ['text', 'textRender', 'allowing', 'allowingRender']) {
+      assert.notEqual(texts[language][key], texts.en[key], language + ' ' + key + ' is translated');
+    }
+  }
+  for (const language of ['fr', 'en', 'it', 'es']) {
+    assert.match(texts[language].text, /\{form\}/);
+    assert.match(texts[language].textRender, /\{form\}/);
+    assert.doesNotMatch(texts[language].text, /session/, language + ': the share does not last the browser session');
+  }
+  assert.match(texts.en.textRender, /without sharing this tab/);
+  assert.match(texts.it.textRender, /senza condividere questa scheda/);
+  assert.match(texts.es.textRender, /sin compartir esta pestaña/);
 });
