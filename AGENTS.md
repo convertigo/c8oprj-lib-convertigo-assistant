@@ -160,7 +160,13 @@ rediscovering the same context.
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.
   No Code settings checks are presence-only by default, bounded to 15 seconds,
-  and settle into an explicit error/configuration state on failure. Never infer
+  and settle into an explicit error/configuration state on failure. The start of a
+  No Code panel (AgentCreateConversationRouter) reads them presence-only too, and in
+  full only when a model catalog is not cached yet; settings reads go to a Bridge
+  context of their own (the shared one orders starts and prompts, and the check
+  waited behind them); a panel that opens again the conversation of a reloaded No
+  Code Studio (`restoreConversation`) prewarms no Vibe. Cover with
+  `node --test tests/nocode-panel-start-cost.test.cjs`. Never infer
   a working project from an unrelated Studio selection for these checks.
   No Code defaults to `lib_ConvertigoAgentBridge`; explicit bridge URLs take
   precedence, and Studio keeps its existing default endpoint. HTTP-200 engine

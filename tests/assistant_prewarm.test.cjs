@@ -116,8 +116,8 @@ test('a background Bridge call returns at once and posts from its own daemon thr
 
 test('the panel opening prewarms, and a new conversation\'s first message takes it before anything is read', () => {
   const conversation = source.slice(source.indexOf('function createConversationSteps(options)'), source.indexOf('C8O.assistantAgentBridge.quota = function'));
-  assert.match(conversation, /var previewDefaults = applyAgentSettingsDefaults\(options, previewSettings, provider\);\n\s+if \(previewSettings !== null\) \{\n\s+prewarmNoCodeConversation\(options, previewDefaults\.provider\);/);
-  assert.match(conversation, /var emptyDefaults = applyAgentSettingsDefaults\(options, emptySettings, provider\);\n\s+if \(emptySettings !== null\) \{\n\s+prewarmNoCodeConversation\(options, emptyDefaults\.provider\);/);
+  assert.match(conversation, /var previewDefaults = applyAgentSettingsDefaults\(options, previewSettings, provider\);\n\s+if \(previewSettings !== null && !boolValue\(options\.restoreConversation, false\)\) \{\n\s+prewarmNoCodeConversation\(options, previewDefaults\.provider\);/);
+  assert.match(conversation, /var emptyDefaults = applyAgentSettingsDefaults\(options, emptySettings, provider\);\n\s+if \(emptySettings !== null && !boolValue\(options\.restoreConversation, false\)\) \{\n\s+prewarmNoCodeConversation\(options, emptyDefaults\.provider\);/);
   const send = source.slice(source.indexOf('C8O.assistantAgentBridge.sendMessage = function'), source.indexOf('C8O.assistantAgentBridge.readResponse = function'));
   assert.match(send, /var prewarmed = takePrewarmedConversation\(options\);\n\s+if \(prewarmed\.length\) \{\n\s+options\.threadid = prewarmed;\n\s+\}\n\s+var threadid = normalizeThreadId\(options\.threadid\);/);
 });

@@ -980,6 +980,12 @@ scriptContent:
         		} catch (e) {}
         	}
         
+        	// the panel opens again the conversation of the tab: its start needs no prewarmed Vibe for a next one
+        	public isRestoringFormsConversation() {
+        		var page: any = this;
+        		return page.formsConversationRestorePending === true;
+        	}
+        
         	public restoreFormsConversationAfterReload() {
         		var page: any = this;
         		var id = "";
@@ -17886,6 +17892,11 @@ title: Tigo
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent() ? ''true'' : ''false'''
+        ↓restoreConversation [ngx.components.UIControlVariable-1793200900001]: 
+          varValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.isRestoringFormsConversation && this.isRestoringFormsConversation() ? ''true'' : ''false'''
   ↓RefreshFooterLocale [ngx.components.UICustomAction-1772036531069]: 
     actionValue: 
       - xmlizable: 

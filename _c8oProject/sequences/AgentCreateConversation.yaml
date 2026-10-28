@@ -35,7 +35,8 @@ comment: Create or reuse a local agent conversation through lib_ConvertigoAgentB
       targetProject: _targetProject,
       projectName: typeof projectName === "undefined" ? "" : projectName,
       userId: typeof userId === "undefined" ? "" : userId,
-      forceNew: typeof forceNew === "undefined" ? "" : forceNew
+      forceNew: typeof forceNew === "undefined" ? "" : forceNew,
+      restoreConversation: typeof restoreConversation === "undefined" ? "" : restoreConversation
     });'
 ↓result [steps.JsonToXmlStep-1781650000102]: 
   jsonObject: 
@@ -127,3 +128,7 @@ comment: Create or reuse a local agent conversation through lib_ConvertigoAgentB
 ↓claudeHomeScope [variables.RequestableVariable-1789370036929]: 
   comment: Optional Claude home scope.
   description: Optional Claude home scope.
+↓restoreConversation [variables.RequestableVariable-1793200900002]: 
+  comment: When true, the panel opens again an existing conversation (No Code Studio reloaded): no Vibe is prewarmed for a next one.
+  description: When true, the panel opens again an existing conversation (No Code Studio reloaded): no Vibe is prewarmed for a next one.
+  schemaType: xsd:boolean

@@ -1881,6 +1881,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var eventsKey = String(params && (params.handle || params.threadid) || "") + "|" + callerSessionId();
       payload.__context = "studio_assistant_events_" + java.lang.Integer.toHexString(new java.lang.String(eventsKey).hashCode());
     }
+    // The settings are only read: they get a context of their own too. On the shared one, a No Code panel's check of the
+    // agent waited 29 s behind the starts of two panels and a prewarmed Vibe, and its 15-s limit opened the settings
+    // (test-nocode, reloads of No Code Studio).
+    if (sequence === "agent_settings") {
+      payload.__context = "studio_assistant_settings_" + java.lang.Integer.toHexString(new java.lang.String(callerSessionId()).hashCode());
+    }
     var bridgeUrl = trim(options.bridgeBaseUrl) || defaultBridgeUrl(options);
     var headers = {};
     if (isOwnBridgeUrl(bridgeUrl)) {
@@ -2155,7 +2161,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // A No Code conversation's Vibe took 11 s to start, process and session, before its first answer (test-nocode).
-  // Opening the panel starts one in the background for the user's next conversation, whose first message takes it
+  // Opening the panel (not a panel that opens again the conversation of a reloaded No Code Studio, restoreConversation)
+  // starts one in the background for the user's next conversation, whose first message takes it
   // (takePrewarmedConversation) and starts the next one. Nothing of that conversation is saved before its first message; the Bridge stops its
   // process after 3 min idle without one, keeps one prewarm per user, and restarts it on that message if the start
   // asks for another configuration.
@@ -6756,6 +6763,31 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // The start of a No Code panel reads the settings as its own check does (presence only: what is installed and the
+  // cached model catalog). The full read probed Codex, Node and Playwright at every opening, 10 s on test-nocode, and
+  // the check waited behind it. It stays for the settings the user opens, and for a catalog not cached yet.
+  function panelStartSettings(options, workspaceRoot, userKey, projectFilter, provider) {
+    if (normalizeSkillProfile(options) !== "nocode" || trim(options.runtimePresenceOnly).length) {
+      return agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+    }
+    var presenceOptions = {};
+    for (var key in options) {
+      if (Object.prototype.hasOwnProperty.call(options, key)) {
+        presenceOptions[key] = options[key];
+      }
+    }
+    presenceOptions.runtimePresenceOnly = true;
+    presenceOptions.checkUpdates = false;
+    var settings = agentSettingsForOptions(presenceOptions, workspaceRoot, userKey, projectFilter, provider);
+    var providers = settings && settings.providers ? settings.providers : [];
+    for (var i = 0; i < providers.length; i++) {
+      if (providers[i] && providers[i].status === "configuration_required") {
+        return agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+      }
+    }
+    return settings;
+  }
+
   function setupRequiredAnswer(state, setup) {
     var t = lang(state);
     var provider = providerLabel(state.provider);
@@ -6951,10 +6983,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!requestedThreadId.length && !hasQuestion) {
       setBuffer("", "");
-      var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      var previewSettings = includeSettings ? panelStartSettings(options, workspaceRoot, userKey, projectFilter, provider) : null;
       sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
       var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
-      if (previewSettings !== null) {
+      if (previewSettings !== null && !boolValue(options.restoreConversation, false)) {
         prewarmNoCodeConversation(options, previewDefaults.provider);
       }
       var resolvedProvider = provider === "all" ? "" : (previewDefaults.provider || provider);
@@ -6986,9 +7018,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
-      var emptySettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      var emptySettings = includeSettings ? panelStartSettings(options, workspaceRoot, userKey, projectFilter, provider) : null;
       var emptyDefaults = applyAgentSettingsDefaults(options, emptySettings, provider);
-      if (emptySettings !== null) {
+      if (emptySettings !== null && !boolValue(options.restoreConversation, false)) {
         prewarmNoCodeConversation(options, emptyDefaults.provider);
       }
       return {
