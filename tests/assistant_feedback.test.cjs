@@ -887,6 +887,34 @@ test('a tool call Vibe could not complete is reported with its code, what the co
   assert.match(result.pending[0].finding.summary, /^mcp_authorization_required, not retryable, after 0\.3 s: the MCP refused the token/);
 });
 
+// Group 3681d23e (28/10): 52 failed calls whose template masked the very values that tell the cause.
+test('a refusal of Vibe\'s Rust core keeps its code, command type and state; its other values are still masked', () => {
+  const { F } = feedback();
+  const refusal = (command, state) => "Core rejected durable input: RustRejectedApplyResult(type='rejected', rejection="
+    + "RustInvalidStateRejection(code='invalid_state', command_type='" + command + "', state='" + state + "'))";
+  assert.equal(F.template(refusal('tool_succeeded', 'compacting')), "Core rejected durable input: RustRejectedApplyResult(type='rejected', "
+    + "rejection=RustInvalidStateRejection(code='invalid_state', command_type='tool_succeeded', state='compacting'))");
+  assert.notEqual(F.template(refusal('tool_succeeded', 'compacting')), F.template(refusal('tool_failed', 'idle')), 'another cause, another report');
+  assert.equal(F.template("Core rejected durable input: RustRejectedApplyResult(type='rejected', rejection=RustInvalidCorrelationRejection("
+    + "code='invalid_correlation', received_action_id='effect-call_PcaUpdateTracker', pending_action_ids=['effect-a1']))", ['PcaUpdateTracker']),
+    "Core rejected durable input: RustRejectedApplyResult(type='rejected', rejection=RustInvalidCorrelationRejection("
+    + "code='invalid_correlation', <name>=…, <name>=[…]))");
+  assert.equal(F.template("Core rejected durable input: RustRejectedApplyResult(type='rejected', rejection=RustInvalidCommandRejection("
+    + "code='invalid_command', error=RustProtocolError(code='bad_input', message='no table Clients VIP')))"),
+    "Core rejected durable input: RustRejectedApplyResult(type='rejected', rejection=RustInvalidCommandRejection("
+    + "code='invalid_command', error=RustProtocolError(code='bad_input', message=…)))", 'a message is never kept');
+  assert.equal(F.template("Invalid state='Clients VIP' code='acme_corp'"), 'Invalid state=… code=…', 'outside a Rust repr, values stay masked');
+
+  // The failed call as Vibe 3.0.2 sends it after a 401 of the MCP, and as the Bridge passes its failure on.
+  const preview = JSON.stringify({ type: 'failure', content: [], error: { code: 'effect_recovery_failed', message: refusal('reconfigure', 'running'), retryable: false } });
+  const { F: asking } = feedback({ settings: { mode: 'ask' } });
+  const report = asking.collectToolError({ tool: 'mcp_Convertigo.databaseobject_tree_get', message: asking.errorMessage(preview, true),
+    failure: asking.runtimeFailure(preview), durationMs: 40, provider: 'convertigo', model: 'mistral-large-4' });
+  assert.equal(report.finding.template, "Core rejected durable input: RustRejectedApplyResult(type='rejected', rejection="
+    + "RustInvalidStateRejection(code='invalid_state', command_type='reconfigure', state='running')) [effect_recovery_failed]");
+  assert.match(report.finding.summary, /^effect_recovery_failed, not retryable, after 0 s: the agent runtime failed while running the call: up to Vibe 3\.0\.2/);
+});
+
 test('the duration of a failed call: measured by the Bridge, else from when this client saw the call start', () => {
   const sandbox = { toolCallId: data => (data && data.toolCallId) || '', now: () => 5000 };
   vm.runInNewContext(backendParts(['feedbackToolDuration']), sandbox);

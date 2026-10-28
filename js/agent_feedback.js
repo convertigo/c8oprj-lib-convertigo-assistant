@@ -76,6 +76,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     mcp_authorization_required: "the MCP refused the token of the agent (HTTP 401), and Vibe then suspends the server for the session",
     mcp_stale_authorization: "the agent held an outdated authorization for the MCP",
     mcp_unknown_route: "the tool was not available to the agent: its MCP server was suspended or not discovered yet",
+    effect_recovery_failed: "the agent runtime failed while running the call: up to Vibe 3.0.2, its core refusing the "
+      + "suspension of an MCP server after an HTTP 401 (command_type reconfigure, state running), or a call cancelled or not "
+      + "resumed after a restart",
     mcp_discovery_pending: "the tool was not available to the agent: its MCP server was not discovered yet",
     mcp_unknown_server: "the MCP server was not configured for the agent",
     mcp_runtime_closed: "the MCP runtime of the agent was closed",
@@ -84,6 +87,11 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     jsonSchemaArgumentValidationError: "the arguments did not match the input schema of the tool"
   };
   var RUNTIME_CODE_PATTERN = new RegExp("\\b(?:" + Object.keys(RUNTIME_CODES).join("|") + ")\\b", "g");
+  // A refusal of Vibe's Rust core is the repr of its result ("Core rejected durable input: RustRejectedApplyResult(
+  // type='rejected', rejection=RustInvalidStateRejection(code='invalid_state', command_type='tool_succeeded',
+  // state='compacting'))"): the enum fields name the core's commands and states, never the customer's, and are the cause.
+  var RUST_REPR_PATTERN = /\bRust[A-Z]\w*\(/;
+  var RUST_ENUM_FIELD_PATTERN = /\b(?:type|code|command_type|state|purpose)=(['"])[a-z][a-z0-9_]{0,48}\1/g;
   // A No Code agent that tells the user a capability is missing (no browser to see the form, no read of the rows of a
   // table) and works around it rarely files the friction: GLM took "a friction of a tool you had to work around" for
   // failing tools only (gregoryv, test-nocode, 26/10). Tigo files it from the answer and the comments of the turn, with
@@ -254,8 +262,15 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return line.length;
     }).slice(0, 2);
     var text = F.redact(lines.join(" / "), names, others, true);
-    // A runtime code (mcp_transport_failed) is a word of the product: it stays as written.
+    // A runtime code (mcp_transport_failed) and the enum fields of a Rust core refusal are words of the product: they
+    // stay as written.
     var codes = [];
+    if (RUST_REPR_PATTERN.test(text)) {
+      text = text.replace(RUST_ENUM_FIELD_PATTERN, function (field) {
+        codes.push(field);
+        return String.fromCharCode(0xE000 + codes.length - 1);
+      });
+    }
     text = text.replace(RUNTIME_CODE_PATTERN, function (code) {
       codes.push(code);
       return String.fromCharCode(0xE000 + codes.length - 1);
