@@ -89,9 +89,9 @@ curl -s https://raw.githubusercontent.com/convertigo/c8oprj-lib-convertigo-assis
 
 ## Preview manifest after a checked pre-release set
 
-Since Assistant 1.5.6-beta.17, a pre-release (the stable 1.5.5 has no update offer), the
-Assistant panel of a Studio offers stack updates from its update channel: Stable by default, or
-Pre-releases, which adds what `stack-release-preview.json` on `master` lists. Nothing updates
+Since Assistant 1.5.6 (Studios still on 1.5.5 have no update offer), the Assistant panel of a
+Studio offers stack updates from its update channel: Stable by default, or Pre-releases, which
+adds what `stack-release-preview.json` on `master` lists. Nothing updates
 that file on its own, and releasing an MCP or Bridge beta never touches this repository.
 
 So when a set of pre-releases has been installed and checked together on test-nocode (the No
