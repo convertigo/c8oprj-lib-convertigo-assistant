@@ -21,6 +21,7 @@ function fixture(record = null) {
     sharedSecretGet: () => 'test-secret',
     postForm: (...args) => { calls.push(args); return { result: { ok: true } }; }, sendMark() {},
     requireBridgeCaller() {}, isOwnBridgeUrl: () => false,
+    callerSessionId: () => 'session', java: { lang: { Integer: { toHexString: value => (value >>> 0).toString(16) }, String: function () { this.hashCode = () => 42; } } },
     resolveWorkspaceRoot: () => '/test-workspace', normalizeUserKey: trim,
     normalizeConversationId: trim, makeConversationId: () => 'new',
     normalizeProvider: trim, readConversationRecord: () => record,
