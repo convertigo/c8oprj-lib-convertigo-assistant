@@ -1085,15 +1085,16 @@ test('an accord already given gets the excerpt, with no invitation, notice or ne
   assert.equal(jane.status().notice, false);
   assert.equal(jane.collectMissingCapabilities({ answer, events: [], surface: 'nocode' })[0].finding.template,
     'Les outils no-code ne permettent pas de dupliquer un formulaire');
-  // The invitation and the notice say what of the agent's answers leaves.
+  // The invitation, the notice and the setting say what of the agent's answers leaves.
   const said = { fr: /des réponses de l'agent, seulement la courte phrase où il signale ce qui lui manque/,
     en: /from the agent's answers, only the short sentence where it says what it lacks/,
     it: /delle risposte dell'agente, solo la breve frase in cui segnala ciò che gli manca/,
     es: /de las respuestas del agente, solo la frase corta en la que indica lo que le falta/ };
   for (const language of Object.keys(said)) {
-    for (const key of ['inviteText', 'noticeText']) {
+    for (const key of ['inviteText', 'noticeText', 'settingText']) {
       assert.match(page(language).agentFeedbackText(key), said[language], language + ' ' + key);
-      assert.doesNotMatch(page(language).agentFeedbackText(key), /ni réponses|no prompts, answers|niente prompt, risposte|sin prompts, respuestas/);
+      assert.doesNotMatch(page(language).agentFeedbackText(key),
+        /ni réponses|vos réponses|prompts, answers|prompt, risposte|prompt, le risposte|prompts, respuestas/, language + ' ' + key);
     }
   }
 });
