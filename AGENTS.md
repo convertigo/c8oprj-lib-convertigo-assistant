@@ -546,7 +546,13 @@ rediscovering the same context.
   resources/preferences/selections/secrets live under `agents/tigo/users`.
   Built-ins are read-only, with Studio/NoCode surfaces and EN/FR translations.
 - Page configuration uses native NGX accordions. Footer favorites remain
-  available during a conversation, append to drafts and never auto-send.
+  available during a conversation, append to drafts and never auto-send. Their
+  row folds once the conversation starts (the page's `hasConversationStarted`:
+  the thread shows a message the user sent, from the send on, or a reopened
+  conversation has one) and shows again for a new or empty conversation; the
+  "Prompts" toggle of the composer opens it in between, and it folds again with
+  the next message. The skills and MCP rows stay as the user left them. Cover
+  with `node --test tests/assistant_hide_suggestions.test.cjs`.
 - Skills are injected once per revision/provider session. Track the accepted
   submission only, and bind a newly returned session ID without reinjection.
   Disabling cannot erase model history. Missing selections must remain visible

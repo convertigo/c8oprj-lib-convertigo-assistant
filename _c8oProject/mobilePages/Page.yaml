@@ -3552,6 +3552,18 @@ scriptContent:
             }
             return this.cleanProjectName(this.local.Conversation).length > 0;
         }
+        public hasConversationStarted() {
+            // The footer folds its suggested prompts from the first message the user sent (or a reopened conversation that has one),
+            // and shows them again for a new or empty conversation: an agent setup or diagnostic message alone starts nothing.
+            var messages = (this.local && this.local.Messages) || [];
+            for (var i = 0; i < messages.length; i++) {
+                var msg = messages[i] || {};
+                if (msg.type === "user" || msg.type === "image") {
+                    return true;
+                }
+            }
+            return false;
+        }
         public shouldShowInitialSuggestions() {
             if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
                 return false;
@@ -21849,6 +21861,11 @@ title: Tigo
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:this.local.AgentCommands || []
+    ↓ConversationStarted [ngx.components.UIUseVariable-1793300000102]: 
+      varValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.hasConversationStarted()
   ↓Class [ngx.components.UIAttribute-1782123550292]: 
     attrName: class
     attrValue: 
