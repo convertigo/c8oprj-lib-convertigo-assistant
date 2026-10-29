@@ -954,7 +954,11 @@ scriptContent:
         
         	public endAgentHostTurn(runid) {
         		// The end of a turn (completed, failed or stopped) ends the share of the No Code Studio tab its previews were
-        		// captured in (nocode-form-preview-capture): the page stops it, once per turn.
+        		// captured in (nocode-form-preview-capture): the page stops it, once per turn. It also closes the cards of the
+        		// changes still waiting for the user ("Confirmer avant de modifier").
+        		try {
+        			this.closeWriteConfirmCards(runid);
+        		} catch (e) {}
         		try {
         			var capabilities = (this.agentHostContext && this.agentHostContext.capabilities) || [];
         			var key = String((this.local && this.local.Conversation) || "") + ":" + String(runid == null ? "" : runid);
@@ -1665,6 +1669,10 @@ scriptContent:
         		for (var i = 0; requests && i < requests.length; i++) {
         			var request = requests[i] || {};
         			var requestId = this.normalizeAgentHostContextValue(request.requestId);
+        			if (request.kind === "write-confirm") {
+        				this.offerWriteConfirm(request, threadid);
+        				continue;
+        			}
         			if (!requestId.length || request.kind !== "preview-capture" || self.previewRequests[requestId]) {
         				continue;
         			}
@@ -5893,7 +5901,8 @@ scriptContent:
         		// The thread keeps one open feedback card: an older one nobody answered leaves.
         		var list = (this.local && this.local.Messages) || [];
         		for (var i = list.length - 1; i >= 0; i--) {
-        			if (list[i] && list[i].type === "feedback" && list[i].actions && list[i].actions.length && (!variant || list[i].variant === variant)) {
+        			if (list[i] && list[i].type === "feedback" && list[i].actions && list[i].actions.length && (!variant || list[i].variant === variant)
+        				&& ("" + list[i].variant).indexOf("confirm") !== 0) {
         				list.splice(i, 1);
         			}
         		}
@@ -5977,6 +5986,10 @@ scriptContent:
         		}
         		if (card.variant === "preview") {
         			this.onPreviewShareCta(card, cta);
+        			return;
+        		}
+        		if (card.variant === "confirm" || card.variant === "confirm-offer") {
+        			this.onWriteConfirmCta(card, cta);
         			return;
         		}
         		if (cta.id === "review") {
@@ -6152,11 +6165,401 @@ scriptContent:
         			self.feedbackModeSaving = false;
         		});
         	}
+        	public agentConfirmText(key) {
+        		// Texts of "Confirmer avant de modifier" (No Code): the switch above the input bar, its setting, /confirmer, the card of a
+        		// change waiting for the user''s answer and the card that offers the switch, in the four Assistant languages.
+        		var texts: any = {
+        			fr: { title: "Confirmer la modification", introForm: "Tigo veut modifier « {form} » :", introCreate: "Tigo veut créer :", introBase: "Tigo veut modifier la base Baserow « {form} » :",
+        				allow: "Autoriser", allowTurn: "Tout autoriser pour ce tour", refuse: "Refuser",
+        				allowed: "Autorisé : Tigo fait la modification.", allowedTurn: "Autorisé, et les prochaines modifications de ce tour aussi.",
+        				refused: "Refusé : rien n’a été modifié. Tigo va vous demander ce que vous voulez.", expired: "Sans réponse à temps : rien n’a été modifié.",
+        				turnEnd: "Le tour s’est terminé : rien n’a été modifié.", replaced: "Remplacée par la demande suivante : rien n’a été modifié.",
+        				answered: "Cette demande n’attend plus de réponse.", answerError: "Votre réponse n’a pas pu être transmise. Réessayez.",
+        				offNote: "Les prochaines modifications ne demanderont plus votre accord ; celle-ci attend toujours votre réponse.",
+        				switchLabel: "Confirmer avant de modifier", switchOnTitle: "Activé : chaque modification de Tigo attend votre accord. Cliquez pour désactiver.",
+        				switchOffTitle: "Désactivé : Tigo modifie sans demander. Cliquez pour que chaque modification attende votre accord.",
+        				settingLabel: "Confirmer avant de modifier", settingText: "Chaque modification de vos formulaires, de vos données ou de leur publication attend votre accord sur une carte de la conversation. Les lectures et les vérifications ne demandent rien. Aussi : l’interrupteur au-dessus de la zone de saisie, ou /confirmer.",
+        				off: "Désactivé", on: "Activé", help: "Confirmer avant de modifier : chaque modification attend votre accord", hint: "on · off", saving: "Enregistrement…",
+        				modeOn: "Confirmer avant de modifier : activé. Chaque modification de Tigo attendra votre accord, dès la prochaine.",
+        				modeOff: "Confirmer avant de modifier : désactivé. Tigo modifie sans demander.", saveError: "Le réglage n’a pas pu être enregistré.",
+        				unknownCommand: "Commande inconnue : /confirmer, /confirmer on ou /confirmer off.", unavailable: "Confirmer avant de modifier n’existe que dans No Code Studio.",
+        				offerTitle: "Confirmer avant de modifier ?", offerText: "Pour que Tigo ne modifie rien sans votre accord, activez « Confirmer avant de modifier » : chaque modification attendra votre clic sur une carte comme celle-ci.",
+        				offerOn: "Activer", offerNo: "Non merci", offerDeclined: "D’accord. L’interrupteur « Confirmer avant de modifier », au-dessus de la zone de saisie, reste disponible.",
+        				labelSuffix: "(« {label} »)", inPage: "dans « {page} »", withTables: "avec les tables {tables}", anonymous: ", accessible sans connexion",
+        				op_add_field: "ajouter le champ {target}", op_update_field: "modifier le champ {target}", op_remove_field: "supprimer le champ {target}", op_move_field: "déplacer le champ {target}",
+        				op_add_page: "ajouter la page « {target} »", op_update_page: "modifier la page « {target} »", op_remove_page: "supprimer la page « {target} »", op_move_page: "déplacer la page « {target} »",
+        				op_add_flow: "ajouter le flow « {target} »", op_update_flow: "modifier le flow « {target} »", op_remove_flow: "supprimer le flow « {target} »",
+        				op_add_flow_element: "ajouter une étape au flow « {flow} »", op_update_flow_element: "modifier une étape du flow « {flow} »", op_remove_flow_element: "supprimer une étape du flow « {flow} »", op_move_flow_element: "déplacer une étape du flow « {flow} »",
+        				op_set_root: "modifier les réglages généraux du formulaire", op_finalize_baserow_bindings: "terminer la liaison aux tables Baserow", op_update_form: "remplacer des parties du formulaire",
+        				op_publish: "publier « {target} »", op_create_form: "créer le formulaire « {target} » ({pages} page(s), {fields} champ(s))", op_create_app: "créer l’application « {target} »",
+        				op_apply_schema: "modifier la structure de la base « {target} »", op_more: "et d’autres modifications", op_change: "une modification", op_other: "{action} {target}" },
+        			en: { title: "Confirm the change", introForm: "Tigo wants to change “{form}”:", introCreate: "Tigo wants to create:", introBase: "Tigo wants to change the Baserow base “{form}”:",
+        				allow: "Allow", allowTurn: "Allow all for this turn", refuse: "Refuse",
+        				allowed: "Allowed: Tigo makes the change.", allowedTurn: "Allowed, and the next changes of this turn too.",
+        				refused: "Refused: nothing was changed. Tigo will ask you what you want.", expired: "No answer in time: nothing was changed.",
+        				turnEnd: "The turn ended: nothing was changed.", replaced: "Replaced by the next request: nothing was changed.",
+        				answered: "This request no longer waits for an answer.", answerError: "Your answer could not be sent. Try again.",
+        				offNote: "The next changes will not ask for your agreement; this one still waits for your answer.",
+        				switchLabel: "Confirm before changing", switchOnTitle: "On: each change of Tigo waits for your agreement. Click to turn it off.",
+        				switchOffTitle: "Off: Tigo changes without asking. Click to make each change wait for your agreement.",
+        				settingLabel: "Confirm before changing", settingText: "Each change to your forms, your data or their publication waits for your agreement on a card of the conversation. Reads and checks ask nothing. Also: the switch above the input bar, or /confirm.",
+        				off: "Off", on: "On", help: "Confirm before changing: each change waits for your agreement", hint: "on · off", saving: "Saving…",
+        				modeOn: "Confirm before changing: on. Each change of Tigo will wait for your agreement, from the next one.",
+        				modeOff: "Confirm before changing: off. Tigo changes without asking.", saveError: "The setting could not be saved.",
+        				unknownCommand: "Unknown command: /confirm, /confirm on or /confirm off.", unavailable: "Confirm before changing exists in No Code Studio only.",
+        				offerTitle: "Confirm before changing?", offerText: "So that Tigo changes nothing without your agreement, turn on “Confirm before changing”: each change will wait for your click on a card like this one.",
+        				offerOn: "Turn on", offerNo: "No thanks", offerDeclined: "All right. The switch “Confirm before changing”, above the input bar, stays available.",
+        				labelSuffix: "(“{label}”)", inPage: "in “{page}”", withTables: "with the tables {tables}", anonymous: ", open without signing in",
+        				op_add_field: "add the field {target}", op_update_field: "change the field {target}", op_remove_field: "delete the field {target}", op_move_field: "move the field {target}",
+        				op_add_page: "add the page “{target}”", op_update_page: "change the page “{target}”", op_remove_page: "delete the page “{target}”", op_move_page: "move the page “{target}”",
+        				op_add_flow: "add the flow “{target}”", op_update_flow: "change the flow “{target}”", op_remove_flow: "delete the flow “{target}”",
+        				op_add_flow_element: "add a step to the flow “{flow}”", op_update_flow_element: "change a step of the flow “{flow}”", op_remove_flow_element: "delete a step of the flow “{flow}”", op_move_flow_element: "move a step of the flow “{flow}”",
+        				op_set_root: "change the general settings of the form", op_finalize_baserow_bindings: "finish the binding to the Baserow tables", op_update_form: "replace parts of the form",
+        				op_publish: "publish “{target}”", op_create_form: "create the form “{target}” ({pages} page(s), {fields} field(s))", op_create_app: "create the application “{target}”",
+        				op_apply_schema: "change the structure of the base “{target}”", op_more: "and other changes", op_change: "a change", op_other: "{action} {target}" },
+        			it: { title: "Conferma la modifica", introForm: "Tigo vuole modificare «{form}»:", introCreate: "Tigo vuole creare:", introBase: "Tigo vuole modificare la base Baserow «{form}»:",
+        				allow: "Consenti", allowTurn: "Consenti tutto per questo turno", refuse: "Rifiuta",
+        				allowed: "Consentito: Tigo esegue la modifica.", allowedTurn: "Consentito, e anche le prossime modifiche di questo turno.",
+        				refused: "Rifiutato: non è stato modificato nulla. Tigo ti chiederà cosa vuoi.", expired: "Nessuna risposta in tempo: non è stato modificato nulla.",
+        				turnEnd: "Il turno è terminato: non è stato modificato nulla.", replaced: "Sostituita dalla richiesta successiva: non è stato modificato nulla.",
+        				answered: "Questa richiesta non attende più una risposta.", answerError: "Non è stato possibile inviare la tua risposta. Riprova.",
+        				offNote: "Le prossime modifiche non chiederanno più il tuo consenso; questa attende ancora la tua risposta.",
+        				switchLabel: "Conferma prima di modificare", switchOnTitle: "Attivo: ogni modifica di Tigo attende il tuo consenso. Clicca per disattivare.",
+        				switchOffTitle: "Disattivato: Tigo modifica senza chiedere. Clicca perché ogni modifica attenda il tuo consenso.",
+        				settingLabel: "Conferma prima di modificare", settingText: "Ogni modifica dei tuoi moduli, dei tuoi dati o della loro pubblicazione attende il tuo consenso su una scheda della conversazione. Letture e verifiche non chiedono nulla. Anche: l’interruttore sopra la barra di inserimento, o /confirm.",
+        				off: "Disattivato", on: "Attivo", help: "Conferma prima di modificare: ogni modifica attende il tuo consenso", hint: "on · off", saving: "Salvataggio…",
+        				modeOn: "Conferma prima di modificare: attivo. Ogni modifica di Tigo attenderà il tuo consenso, a partire dalla prossima.",
+        				modeOff: "Conferma prima di modificare: disattivato. Tigo modifica senza chiedere.", saveError: "Impossibile salvare l’impostazione.",
+        				unknownCommand: "Comando sconosciuto: /confirm, /confirm on o /confirm off.", unavailable: "Conferma prima di modificare esiste solo in No Code Studio.",
+        				offerTitle: "Confermare prima di modificare?", offerText: "Perché Tigo non modifichi nulla senza il tuo consenso, attiva «Conferma prima di modificare»: ogni modifica attenderà il tuo clic su una scheda come questa.",
+        				offerOn: "Attiva", offerNo: "No, grazie", offerDeclined: "D’accordo. L’interruttore «Conferma prima di modificare», sopra la barra di inserimento, resta disponibile.",
+        				labelSuffix: "(«{label}»)", inPage: "in «{page}»", withTables: "con le tabelle {tables}", anonymous: ", accessibile senza accesso",
+        				op_add_field: "aggiungere il campo {target}", op_update_field: "modificare il campo {target}", op_remove_field: "eliminare il campo {target}", op_move_field: "spostare il campo {target}",
+        				op_add_page: "aggiungere la pagina «{target}»", op_update_page: "modificare la pagina «{target}»", op_remove_page: "eliminare la pagina «{target}»", op_move_page: "spostare la pagina «{target}»",
+        				op_add_flow: "aggiungere il flow «{target}»", op_update_flow: "modificare il flow «{target}»", op_remove_flow: "eliminare il flow «{target}»",
+        				op_add_flow_element: "aggiungere un passo al flow «{flow}»", op_update_flow_element: "modificare un passo del flow «{flow}»", op_remove_flow_element: "eliminare un passo del flow «{flow}»", op_move_flow_element: "spostare un passo del flow «{flow}»",
+        				op_set_root: "modificare le impostazioni generali del modulo", op_finalize_baserow_bindings: "completare il collegamento alle tabelle Baserow", op_update_form: "sostituire parti del modulo",
+        				op_publish: "pubblicare «{target}»", op_create_form: "creare il modulo «{target}» ({pages} pagine, {fields} campi)", op_create_app: "creare l’applicazione «{target}»",
+        				op_apply_schema: "modificare la struttura della base «{target}»", op_more: "e altre modifiche", op_change: "una modifica", op_other: "{action} {target}" },
+        			es: { title: "Confirmar el cambio", introForm: "Tigo quiere modificar «{form}»:", introCreate: "Tigo quiere crear:", introBase: "Tigo quiere modificar la base Baserow «{form}»:",
+        				allow: "Permitir", allowTurn: "Permitir todo en este turno", refuse: "Rechazar",
+        				allowed: "Permitido: Tigo hace el cambio.", allowedTurn: "Permitido, y también los próximos cambios de este turno.",
+        				refused: "Rechazado: no se ha modificado nada. Tigo le preguntará qué quiere.", expired: "Sin respuesta a tiempo: no se ha modificado nada.",
+        				turnEnd: "El turno ha terminado: no se ha modificado nada.", replaced: "Sustituido por la solicitud siguiente: no se ha modificado nada.",
+        				answered: "Esta solicitud ya no espera respuesta.", answerError: "No se ha podido enviar su respuesta. Vuelva a intentarlo.",
+        				offNote: "Los próximos cambios ya no pedirán su acuerdo; este sigue esperando su respuesta.",
+        				switchLabel: "Confirmar antes de modificar", switchOnTitle: "Activado: cada cambio de Tigo espera su acuerdo. Haga clic para desactivarlo.",
+        				switchOffTitle: "Desactivado: Tigo modifica sin preguntar. Haga clic para que cada cambio espere su acuerdo.",
+        				settingLabel: "Confirmar antes de modificar", settingText: "Cada cambio de sus formularios, de sus datos o de su publicación espera su acuerdo en una tarjeta de la conversación. Las lecturas y las comprobaciones no piden nada. También: el interruptor encima de la barra de entrada, o /confirm.",
+        				off: "Desactivado", on: "Activado", help: "Confirmar antes de modificar: cada cambio espera su acuerdo", hint: "on · off", saving: "Guardando…",
+        				modeOn: "Confirmar antes de modificar: activado. Cada cambio de Tigo esperará su acuerdo, a partir del próximo.",
+        				modeOff: "Confirmar antes de modificar: desactivado. Tigo modifica sin preguntar.", saveError: "No se ha podido guardar el ajuste.",
+        				unknownCommand: "Comando desconocido: /confirm, /confirm on o /confirm off.", unavailable: "Confirmar antes de modificar solo existe en No Code Studio.",
+        				offerTitle: "¿Confirmar antes de modificar?", offerText: "Para que Tigo no modifique nada sin su acuerdo, active «Confirmar antes de modificar»: cada cambio esperará su clic en una tarjeta como esta.",
+        				offerOn: "Activar", offerNo: "No, gracias", offerDeclined: "De acuerdo. El interruptor «Confirmar antes de modificar», encima de la barra de entrada, sigue disponible.",
+        				labelSuffix: "(«{label}»)", inPage: "en «{page}»", withTables: "con las tablas {tables}", anonymous: ", accesible sin iniciar sesión",
+        				op_add_field: "añadir el campo {target}", op_update_field: "modificar el campo {target}", op_remove_field: "eliminar el campo {target}", op_move_field: "mover el campo {target}",
+        				op_add_page: "añadir la página «{target}»", op_update_page: "modificar la página «{target}»", op_remove_page: "eliminar la página «{target}»", op_move_page: "mover la página «{target}»",
+        				op_add_flow: "añadir el flow «{target}»", op_update_flow: "modificar el flow «{target}»", op_remove_flow: "eliminar el flow «{target}»",
+        				op_add_flow_element: "añadir un paso al flow «{flow}»", op_update_flow_element: "modificar un paso del flow «{flow}»", op_remove_flow_element: "eliminar un paso del flow «{flow}»", op_move_flow_element: "mover un paso del flow «{flow}»",
+        				op_set_root: "modificar los ajustes generales del formulario", op_finalize_baserow_bindings: "terminar el enlace con las tablas Baserow", op_update_form: "sustituir partes del formulario",
+        				op_publish: "publicar «{target}»", op_create_form: "crear el formulario «{target}» ({pages} páginas, {fields} campos)", op_create_app: "crear la aplicación «{target}»",
+        				op_apply_schema: "modificar la estructura de la base «{target}»", op_more: "y otros cambios", op_change: "un cambio", op_other: "{action} {target}" }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        	}
+        	public writeConfirmAvailable() {
+        		// No Code only: the MCP holds the writes of No Code tokens.
+        		return !!(this.isEmbeddedNoCodeAgent && this.isEmbeddedNoCodeAgent());
+        	}
+        	public writeConfirmUserId() {
+        		return this.getAgentContextUserId ? this.getAgentContextUserId() : "";
+        	}
+        	public writeConfirmOn() {
+        		// The user''s choice, read once from AgentWriteConfirm (kept for the user on the server); off until it is known.
+        		var self: any = this;
+        		if (!this.local || !this.writeConfirmAvailable()) {
+        			return false;
+        		}
+        		if (this.local.WriteConfirm === undefined && !self.writeConfirmLoading) {
+        			self.writeConfirmLoading = true;
+        			try {
+        				this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "status", userId: this.writeConfirmUserId() }).async().then((response: any) => {
+        					var result = response && response.response ? response.response : response;
+        					self.writeConfirmLoading = false;
+        					if (this.local.WriteConfirm === undefined) {
+        						this.local.WriteConfirm = result && result.status === "ok" ? { on: result.on === true } : null;
+        					}
+        					this.tick();
+        				}).catch(() => {
+        					self.writeConfirmLoading = false;
+        					this.local.WriteConfirm = null;
+        				});
+        			} catch (e) {
+        				self.writeConfirmLoading = false;
+        				this.local.WriteConfirm = null;
+        			}
+        		}
+        		return !!(this.local.WriteConfirm && this.local.WriteConfirm.on === true);
+        	}
+        	public writeConfirmChoices() {
+        		// A stable list: the template iterates over it at every change detection.
+        		var self: any = this;
+        		return self.writeConfirmChoicesList || (self.writeConfirmChoicesList = ["off", "on"]);
+        	}
+        	public toggleWriteConfirm() {
+        		this.setWriteConfirm(!this.writeConfirmOn(), null);
+        	}
+        	public setWriteConfirm(on, card) {
+        		// Takes effect at the agent''s next write, also in the middle of a turn. Off answers no open card: it waits for the user.
+        		var self: any = this;
+        		var t = (key: any) => this.agentConfirmText(key);
+        		on = on === true;
+        		if (!this.local || self.writeConfirmSaving) {
+        			return;
+        		}
+        		self.writeConfirmSaving = true;
+        		var previous = this.local.WriteConfirm;
+        		this.local.WriteConfirm = { on: on };
+        		var failed = () => {
+        			self.writeConfirmSaving = false;
+        			this.local.WriteConfirm = previous;
+        			if (card) {
+        				card.state = "error";
+        				card.message = t("saveError");
+        			}
+        			this.tick();
+        		};
+        		this.tick();
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "set", enabled: on ? "true" : "false", userId: this.writeConfirmUserId() }).async().then((response: any) => {
+        				var result = response && response.response ? response.response : response;
+        				if (!result || result.status !== "ok") {
+        					failed();
+        					return;
+        				}
+        				self.writeConfirmSaving = false;
+        				this.local.WriteConfirm = { on: result.on === true };
+        				if (card) {
+        					card.state = "ready";
+        					card.actions = [];
+        					card.message = t(result.on === true ? "modeOn" : "modeOff");
+        				}
+        				if (result.on !== true) {
+        					this.noteOpenWriteConfirmCards();
+        				}
+        				this.tick();
+        			}).catch(() => failed());
+        		} catch (e) {
+        			failed();
+        		}
+        	}
+        	public noteOpenWriteConfirmCards() {
+        		// Switched off while a change waits: its card stays; only the next changes go through without one.
+        		var list = (this.local && this.local.Messages) || [];
+        		for (var i = 0; i < list.length; i++) {
+        			var card = list[i];
+        			if (card && card.type === "feedback" && card.variant === "confirm" && card.actions && card.actions.length && !card.offNoted) {
+        				card.offNoted = true;
+        				card.message = card.summary + "\n\n" + this.agentConfirmText("offNote");
+        			}
+        		}
+        	}
+        	public writeConfirmCommand(text) {
+        		// /confirmer and /confirm, with on or off (on without a word): never sent to the agent.
+        		var match = /^\/(confirmer|confirm)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
+        		if (!match || !this.local) {
+        			return false;
+        		}
+        		var arg = ("" + (match[2] || "")).toLowerCase();
+        		var choices: any = { "": true, on: true, oui: true, yes: true, si: true, "sí": true, activer: true, enable: true, attiva: true, activar: true,
+        			off: false, non: false, no: false, desactiver: false, "désactiver": false, disable: false, disattiva: false, desactivar: false };
+        		var card: any = this.feedbackCard("confirm-mode", this.agentConfirmText("switchLabel"), "", []);
+        		this.local.Messages = this.local.Messages || [];
+        		this.local.Messages.push(card);
+        		if (!this.writeConfirmAvailable()) {
+        			card.state = "error";
+        			card.message = this.agentConfirmText("unavailable");
+        		} else if (!Object.prototype.hasOwnProperty.call(choices, arg)) {
+        			card.state = "error";
+        			card.message = this.agentConfirmText("unknownCommand");
+        		} else {
+        			card.message = this.agentConfirmText("saving");
+        			this.setWriteConfirm(choices[arg], card);
+        		}
+        		this.tick();
+        		this.scrollChatBottom(0, true);
+        		return true;
+        	}
+        	public writeConfirmAsked(text) {
+        		// "Ne modifie rien sans mon accord" and its kin, in the four Assistant languages.
+        		var line = ("" + (text == null ? "" : text)).toLowerCase();
+        		return /sans (mon|notre|votre|ton) (accord|autorisation|feu vert|validation|consentement|aval|ok)|sans (me|nous) (le )?demander|demande[sz]?[- ](moi|nous) (avant|d.abord)|ne (modifie|modifiez|change|changez|touche|touchez) (plus )?rien|without (my|our) (approval|consent|permission|agreement|ok|okay|go-ahead)|ask (me|us) (first|before)|(don.?t|do not) (change|modify|touch|edit) anything|senza (il mio|il nostro) (consenso|permesso|accordo|ok)|chiedimi prima|non (modificare|cambiare|toccare) (niente|nulla)|sin (mi|nuestro) (permiso|consentimiento|aprobaci[oó]n|autorizaci[oó]n|acuerdo|ok)|preg[uú]ntame antes|no (modifiques|cambies|toques) nada/.test(line);
+        	}
+        	public offerWriteConfirmFor(text) {
+        		// Asked in words while the switch is off: one card offers it, once per conversation, after the message the user sends.
+        		var self: any = this;
+        		var line = ("" + (text == null ? "" : text)).trim();
+        		if (!this.local || this.local.IsProcessing === true || line.charAt(0) === "/" || !this.writeConfirmAvailable() || this.writeConfirmOn()
+        			|| self.writeConfirmDeclined || !this.writeConfirmAsked(line)) {
+        			return false;
+        		}
+        		var conversation = "" + (this.local.Conversation || "");
+        		if (self.writeConfirmOfferedIn === conversation) {
+        			return false;
+        		}
+        		self.writeConfirmOfferedIn = conversation;
+        		setTimeout(() => {
+        			if (this.writeConfirmOn()) {
+        				return;
+        			}
+        			this.local.Messages = this.local.Messages || [];
+        			this.local.Messages.push(this.feedbackCard("confirm-offer", this.agentConfirmText("offerTitle"), this.agentConfirmText("offerText"),
+        				[{ id: "on", label: this.agentConfirmText("offerOn"), primary: true }, { id: "no", label: this.agentConfirmText("offerNo") }]));
+        			this.scrollChatBottom(0, true);
+        			this.tick();
+        		}, 200);
+        		return true;
+        	}
+        	public offerWriteConfirm(request, threadid) {
+        		// A change of the agent the MCP holds while "Confirmer avant de modifier" is on: one card says which form and what changes,
+        		// in the user''s language. A panel opened again gets the change again and shows its card again; the thread shows it once.
+        		var requestId = this.normalizeAgentHostContextValue(request && request.requestId);
+        		if (!requestId.length || !this.local) {
+        			return null;
+        		}
+        		this.local.Messages = this.local.Messages || [];
+        		var list = this.local.Messages;
+        		for (var i = 0; i < list.length; i++) {
+        			if (list[i] && list[i].confirmRequestId === requestId) {
+        				return list[i];
+        			}
+        		}
+        		var t = (key: any) => this.agentConfirmText(key);
+        		var summary = this.writeConfirmSummary(request);
+        		var card: any = this.feedbackCard("confirm", t("title"), summary,
+        			[{ id: "allow", label: t("allow"), primary: true }, { id: "allow_turn", label: t("allowTurn") }, { id: "refuse", label: t("refuse") }]);
+        		card.summary = summary;
+        		card.confirmRequestId = requestId;
+        		card.confirmThreadId = this.normalizeAgentHostContextValue(threadid);
+        		card.confirmActions = card.actions;
+        		list.push(card);
+        		this.scrollChatBottom(0, true);
+        		this.tick();
+        		return card;
+        	}
+        	public writeConfirmSummary(request) {
+        		var t = (key: any) => this.agentConfirmText(key);
+        		var name = this.normalizeAgentHostContextValue(request.formName) || this.normalizeAgentHostContextValue(request.formId);
+        		var tool = "" + (request.tool || "");
+        		var intro = /create$/.test(tool) ? t("introCreate") : (/schema/.test(tool) ? t("introBase") : t("introForm"));
+        		var lines = [intro.replace("{form}", name)];
+        		var items = request.items || [];
+        		for (var i = 0; i < items.length; i++) {
+        			lines.push("• " + this.writeConfirmItemText(items[i] || {}));
+        		}
+        		return lines.join("\n");
+        	}
+        	public writeConfirmItemText(item) {
+        		// One operation of the change, as the MCP describes it: an action and the names the user knows.
+        		var t = (key: any) => this.agentConfirmText(key);
+        		var value = (text: any) => ("" + (text == null ? "" : text)).trim();
+        		var action = value(item.action);
+        		var template = t("op_" + action);
+        		var text = template === "op_" + action ? t("op_other").replace("{action}", action.replace(/_/g, " ")) : template;
+        		text = text.replace("{target}", value(item.target)).replace("{flow}", value(item.flow))
+        			.replace("{pages}", "" + (item.pages || 0)).replace("{fields}", "" + (item.fields || 0)).replace(/\s+$/, "");
+        		if (value(item.label).length) {
+        			text += " " + t("labelSuffix").replace("{label}", value(item.label));
+        		}
+        		if (value(item.page).length && (action === "add_field" || action === "move_field")) {
+        			text += " " + t("inPage").replace("{page}", value(item.page));
+        		}
+        		if (value(item.kind).length && /_flow_element$/.test(action)) {
+        			text += " (" + value(item.kind) + ")";
+        		}
+        		if (item.keys && item.keys.length) {
+        			text += " (" + item.keys.join(", ") + ")";
+        		}
+        		if (item.tables && item.tables.length) {
+        			text += " " + t("withTables").replace("{tables}", item.tables.join(", "));
+        		}
+        		if (action === "publish" && value(item.access) === "anonymous") {
+        			text += t("anonymous");
+        		}
+        		return text;
+        	}
+        	public onWriteConfirmCta(card, cta) {
+        		// Autoriser, Tout autoriser pour ce tour, Refuser (AgentWriteConfirm answer); or the card that offers the switch.
+        		var t = (key: any) => this.agentConfirmText(key);
+        		if (card.variant === "confirm-offer") {
+        			card.actions = [];
+        			if (cta.id === "on") {
+        				card.message = t("saving");
+        				this.setWriteConfirm(true, card);
+        			} else {
+        				(this as any).writeConfirmDeclined = true;
+        				card.message = t("offerDeclined");
+        			}
+        			this.tick();
+        			return;
+        		}
+        		card.busy = true;
+        		var done = (key: any, keepActions: any) => {
+        			card.busy = false;
+        			card.actions = keepActions ? card.confirmActions : [];
+        			card.state = keepActions ? "error" : "ready";
+        			card.message = card.summary + "\n\n" + t(key);
+        			this.tick();
+        		};
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "answer", threadid: card.confirmThreadId, requestId: card.confirmRequestId,
+        				decision: cta.id, userId: this.writeConfirmUserId() }).async().then((response: any) => {
+        				var result = response && response.response ? response.response : response;
+        				var code = result && result.error ? result.error.code : "";
+        				if (result && result.status === "ok") {
+        					done(cta.id === "allow" ? "allowed" : (cta.id === "allow_turn" ? "allowedTurn" : "refused"), false);
+        				} else if (code === "not_waiting" || code === "unknown_request") {
+        					done(result.state === "expired" ? (result.reason === "turn_end" ? "turnEnd" : (result.reason === "replaced" ? "replaced" : "expired")) : "answered", false);
+        				} else {
+        					done("answerError", true);
+        				}
+        			}).catch(() => done("answerError", true));
+        		} catch (e) {
+        			done("answerError", true);
+        		}
+        	}
+        	public closeWriteConfirmCards(runid) {
+        		// The end of a turn closes the cards still open (the MCP refuses their change) and drops "allow all for this turn".
+        		var self: any = this;
+        		var list = (this.local && this.local.Messages) || [];
+        		var open = false;
+        		for (var i = 0; i < list.length; i++) {
+        			var card = list[i];
+        			if (card && card.type === "feedback" && card.variant === "confirm" && card.actions && card.actions.length) {
+        				card.actions = [];
+        				card.busy = false;
+        				card.message = card.summary + "\n\n" + this.agentConfirmText("turnEnd");
+        				open = true;
+        			}
+        		}
+        		var key = String((this.local && this.local.Conversation) || "") + ":" + String(runid == null ? "" : runid);
+        		if (!this.writeConfirmAvailable() || self.writeConfirmTurnEnded === key || !(open || this.writeConfirmOn())) {
+        			return open;
+        		}
+        		self.writeConfirmTurnEnded = key;
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "turn_end", threadid: String(this.local.Conversation || ""), userId: this.writeConfirmUserId() }).async().catch(() => {});
+        		} catch (e) {}
+        		return open;
+        	}
         	public localSlashCommands() {
         		// Commands of the Assistant itself, listed first in the "/" menu; they never reach the agent.
         		var language = this.agentUiLanguage();
         		var self: any = this;
-        		if (self.localSlashCommandsCache && self.localSlashCommandsLanguage === language) {
+        		var confirm = this.writeConfirmAvailable();
+        		if (self.localSlashCommandsCache && self.localSlashCommandsLanguage === language && self.localSlashCommandsConfirm === confirm) {
         			return self.localSlashCommandsCache;
         		}
         		var help = this.agentMetricsText("help");
@@ -6168,15 +6571,22 @@ scriptContent:
         			{ name: "signaler", description: this.agentFeedbackText("reportHelp"), hint: this.agentFeedbackText("reportHint"), local: true },
         			{ name: "report", description: this.agentFeedbackText("reportHelp"), hint: this.agentFeedbackText("reportHint"), local: true }
         		];
+        		if (confirm) {
+        			self.localSlashCommandsCache.push({ name: "confirmer", description: this.agentConfirmText("help"), hint: this.agentConfirmText("hint"), local: true },
+        				{ name: "confirm", description: this.agentConfirmText("help"), hint: this.agentConfirmText("hint"), local: true });
+        		}
         		self.localSlashCommandsLanguage = language;
+        		self.localSlashCommandsConfirm = confirm;
         		return self.localSlashCommandsCache;
         	}
         	public runLocalCommand(text) {
-        		if (this.feedbackCommand(text)) {
+        		if (this.feedbackCommand(text) || this.writeConfirmCommand(text)) {
         			return true;
         		}
         		var match = /^\/(mesures|metrics)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
         		if (!match) {
+        			// A message sent to the agent: "ne modifie rien sans mon accord" while the switch is off offers it.
+        			this.offerWriteConfirmFor(text);
         			return false;
         		}
         		this.showSessionMetrics(!!match[2] && /^(tour|turn|turno|dernier|last)$/i.test(match[2]));
@@ -10228,6 +10638,93 @@ title: Tigo
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: script:this.feedbackSettingNote()
+                      ↓ConfirmSettings [ngx.components.UIDynamicElement-1793290000241]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1793290000243]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-confirm-setting
+                        ↓Hidden [ngx.components.UIAttribute-1793290000245]: 
+                          attrName: '[hidden]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:!this.writeConfirmAvailable()
+                        ↓ConfirmLabel [ngx.components.UIDynamicElement-1793290000247]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1793290000249]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-create-label
+                          ↓Text [ngx.components.UIText-1793290000251]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.agentConfirmText('settingLabel')
+                        ↓ConfirmDescription [ngx.components.UIDynamicElement-1793290000253]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1793290000255]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-setting-description
+                          ↓Text [ngx.components.UIText-1793290000257]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.agentConfirmText('settingText')
+                        ↓ConfirmChoices [ngx.components.UIDynamicElement-1793290000259]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1793290000261]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-choice-row agent-confirm-control
+                          ↓ConfirmChoicesLoop [ngx.components.UIControlDirective-1793290000263]: 
+                            directiveIndexName: choiceIndex
+                            directiveItemName: choice
+                            directiveSource: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.writeConfirmChoices()
+                            ↓ConfirmChoice [ngx.components.UIDynamicElement-1793290000265]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "Button",
+                                 "IonFill": "plain:clear",
+                                 "IonSize": "plain:small"
+                                }'
+                              tagName: ion-button
+                              ↓Class [ngx.components.UIAttribute-1793290000267]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:''agent-choice-button'' + ((this.writeConfirmOn() ? ''on'' : ''off'') === choice ? '' active'' : '''')'
+                              ↓Text [ngx.components.UIText-1793290000269]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.agentConfirmText(choice)
+                              ↓Event [ngx.components.UIControlEvent-1793290000271]: 
+                                ↓ChooseConfirm [ngx.components.UICustomAction-1793290000273]: 
+                                  actionValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                        →: |
+                                          		page.setWriteConfirm(props.stack.root.scope.choice === 'on', null);
+                                          		resolve();
                       ↓ModelSettings [ngx.components.UIDynamicElement-1787737346772]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -20267,6 +20764,86 @@ title: Tigo
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:line
+  ↓ConfirmSwitchIf [ngx.components.UIControlDirective-1793290000201]: 
+    directiveName: If
+    directiveSource: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+        - MobileSmartSourceType: script:this.writeConfirmAvailable()
+    ↓ConfirmRow [ngx.components.UIDynamicElement-1793290000203]: 
+      beanData: '{"ionBean":"DivTag"}'
+      tagName: div
+      ↓Class [ngx.components.UIAttribute-1793290000205]: 
+        attrName: class
+        attrValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: plain:agent-confirm-row
+      ↓ConfirmSwitch [ngx.components.UIDynamicElement-1793290000207]: 
+        beanData: '{"ionBean":"DivTag"}'
+        tagName: button
+        ↓Class [ngx.components.UIAttribute-1793290000209]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:''agent-confirm-switch'' + (this.writeConfirmOn() ? '' is-on'' : '''')'
+        ↓Type [ngx.components.UIAttribute-1793290000211]: 
+          attrName: type
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:button
+        ↓Role [ngx.components.UIAttribute-1793290000213]: 
+          attrName: role
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: plain:switch
+        ↓Checked [ngx.components.UIAttribute-1793290000215]: 
+          attrName: '[attr.aria-checked]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.writeConfirmOn() ? ''true'' : ''false'''
+        ↓Title [ngx.components.UIAttribute-1793290000217]: 
+          attrName: '[attr.title]'
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:this.agentConfirmText(this.writeConfirmOn() ? ''switchOnTitle'' : ''switchOffTitle'')'
+        ↓Track [ngx.components.UIDynamicElement-1793290000219]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: span
+          ↓Class [ngx.components.UIAttribute-1793290000221]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-confirm-track
+        ↓Label [ngx.components.UIDynamicElement-1793290000223]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: span
+          ↓Class [ngx.components.UIAttribute-1793290000225]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:agent-confirm-label
+          ↓Text [ngx.components.UIText-1793290000227]: 
+            textValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: script:this.agentConfirmText('switchLabel')
+        ↓Event [ngx.components.UIControlEvent-1793290000229]: 
+          ↓Toggle [ngx.components.UICustomAction-1793290000231]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		page.toggleWriteConfirm();
+                    		resolve();
   ↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]: 
     identifier: chatfooter
     sharedcomponent: lib_ConvertigoAssistant.Application.NgxApp.LightRagFooterComponent
@@ -24966,6 +25543,17 @@ title: Tigo
           .agent-not-ready-action:hover { border-color: var(--modern-cyan, #06b6d4); }
           .agent-not-ready-action.is-primary { background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 18%, transparent 82%); border-color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 60%, transparent 40%); font-weight: 600; }
           .agent-not-ready-action[disabled] { cursor: default; opacity: 0.6; }
+          /* "Confirmer avant de modifier" (No Code): the switch above the input bar, the card of a change waiting for the user. */
+          .agent-confirm-row { display: flex; justify-content: flex-end; padding: 2px 12px 0; }
+          .agent-confirm-switch { align-items: center; background: transparent; border: 0; color: var(--modern-muted, #64748b); cursor: pointer; display: inline-flex; font: inherit; font-size: 12px; gap: 6px; line-height: 18px; padding: 2px 4px; }
+          .agent-confirm-switch:hover, .agent-confirm-switch:focus-visible { color: var(--modern-text, #0f172a); }
+          .agent-confirm-track { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 45%, transparent 55%); border-radius: 999px; display: inline-block; flex: 0 0 26px; height: 14px; position: relative; transition: background 160ms ease; width: 26px; }
+          .agent-confirm-track::after { background: #ffffff; border-radius: 50%; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.3); content: ''''; height: 10px; left: 2px; position: absolute; top: 2px; transition: transform 160ms ease; width: 10px; }
+          .agent-confirm-switch.is-on { color: var(--modern-text, #0f172a); font-weight: 600; }
+          .agent-confirm-switch.is-on .agent-confirm-track { background: var(--modern-cyan, #06b6d4); }
+          .agent-confirm-switch.is-on .agent-confirm-track::after { transform: translateX(12px); }
+          .agent-feedback-card.is-confirm { border-color: color-mix(in srgb, #d97706 55%, transparent 45%); }
+          .agent-feedback-card.is-confirm .agent-metrics-card-message, .agent-feedback-card.is-confirm-mode .agent-metrics-card-message { white-space: pre-line; }
           /* Long texts of the side column wrap or shorten inside their card: the column never scrolls sideways. */
           .agent-side { overflow-x: hidden; }
           .agent-side-card, .agent-side .agent-context { min-width: 0; overflow-wrap: anywhere; }

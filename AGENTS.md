@@ -166,6 +166,22 @@ rediscovering the same context.
   conversation; an empty panel keeps it. The `Agent` entry page opens the agent at once for
   the No Code and server surfaces, never How-To. Cover with
   `node --test tests/nocode-restore-conversation*.test.cjs`.
+- "Confirmer avant de modifier" (No Code, off by default): while a user has it on,
+  lib_ConvertigoMCP holds each No Code write (create, edit, update, publish with
+  confirm, app-create, schema-apply in apply mode) until the user answers a card of
+  the conversation, whatever the provider. The choice is kept per user
+  (`agents/nocode/users/<userKey>/write-confirm.json`) and published in the server
+  store `lib_ConvertigoAssistant.writeConfirm` (`user:<owner>`, and `grant:<conversation>`
+  for "Tout autoriser pour ce tour") by `js/agent_write_confirm.js`, at each switch and
+  each message; the held change is a `write-confirm` request of
+  `lib_ConvertigoAssistant.hostRequests` that readResponse hands to the page while it
+  waits, and `AgentWriteConfirm` answers it (allow, allow_turn, refuse), or closes it at
+  the end of the turn (the MCP refuses it). A message drops what the last turn left.
+  Switching off answers no open card. The switch sits above the input bar, the setting
+  after the feedback one, `/confirmer` and `/confirm` turn it on or off, and a message
+  such as "ne modifie rien sans mon accord" while it is off offers it once per
+  conversation. The prompt's No Code block says whether it is on. Texts in
+  `agentConfirmText` (fr, en, it, es). Cover with `node --test tests/nocode-write-confirm.test.cjs`.
 - Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.
