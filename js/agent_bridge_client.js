@@ -3735,6 +3735,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       gatewayModelDenied: "Accès au modèle {model} refusé par LiteLLM (HTTP 403). Vérifiez les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
       gatewayKeyRejected: "LiteLLM a refusé la clé d'API (HTTP 401). Vérifiez la clé configurée pour l'agent Convertigo.",
       gatewayAccessRejected: "LiteLLM a refusé l'accès au modèle {model}. Vérifiez la validité de la clé et les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
+      gatewayUnreachable: "Tigo n'a pas pu joindre la passerelle de modèles Convertigo : la connexion a échoué à chaque nouvel essai. Vérifiez l'accès Internet de ce poste (ou son proxy), puis renvoyez votre message. Le travail déjà fait dans le projet est conservé.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -3776,6 +3777,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       gatewayModelDenied: "LiteLLM denied access to model {model} (HTTP 403). Check the models allowed for both the key and its LiteLLM user.",
       gatewayKeyRejected: "LiteLLM rejected the API key (HTTP 401). Check the key configured for the Convertigo agent.",
       gatewayAccessRejected: "LiteLLM refused access to model {model}. Check the key's validity and the models allowed for both the key and its LiteLLM user.",
+      gatewayUnreachable: "Tigo could not reach the Convertigo model gateway: the connection failed on every retry. Check this computer's Internet access (or its proxy), then send your message again. The work already done in the project is kept.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -3889,6 +3891,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       // for a model permission denial. Do not claim a 401 or an invalid credential.
       if (lower.indexOf("invalid api key") !== -1) {
         return lang(state).gatewayAccessRejected.replace("{model}", model);
+      }
+      // Vibe retries a model call that cannot connect for about five minutes, then fails the turn with httpx's bare
+      // "All connection attempts failed" (usage tests 29/10).
+      if (/all connection attempts failed|connecterror|connection refused|nodename nor servname|name or service not known|failed to establish a new connection/.test(lower)) {
+        return lang(state).gatewayUnreachable;
       }
     }
     if (lower.indexOf("refresh token") !== -1 || lower.indexOf("access token could not be refreshed") !== -1 || lower.indexOf("please log out and sign in again") !== -1) {
