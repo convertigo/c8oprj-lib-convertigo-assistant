@@ -121,6 +121,16 @@ rediscovering the same context.
 - Refresh provider settings after a successful runtime update so model and
   reasoning choices come from the newly installed CLI. Existing agent processes
   may require a restart or a new conversation before using the new runtime.
+- Settings that show are always the settings page (`isAgentSettingsPageShown`), also
+  while the chosen agent is not ready once the page was closed. A note under the agent
+  cards says how to connect that agent (sign-in, install, check running) and offers the
+  way back to a ready agent (`getAgentNotReadyText`, `useReadyAgentProvider`). Closing
+  the settings on an agent that is not ready goes back to the agent in use when they
+  opened, else the saved default, else the first ready one; a runtime install still
+  running keeps its agent (`AgentRuntimeInstallProvider`). The No Code router reads
+  only the agent in use: a card whose agent the panel has not read starts the settings
+  check (`startAgentProviderCheck`), never shows a runtime to install. Cover with
+  `node --test tests/nocode-agent-not-ready.test.cjs`.
 - Settings and runtime discovery may use the visible user-scoped Codex home.
   Studio/generalist conversations that expose the managed JxBrowser viewer use
   a conversation-scoped Codex home so each resident Playwright MCP keeps its own

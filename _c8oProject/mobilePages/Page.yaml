@@ -203,6 +203,13 @@ scriptContent:
                                                 Agent_Auth_Vibe_Waiting: "Complete sign-in in your browser...",
                                                 Agent_Auth_Vibe_Connected: "Vibe is connected to Mistral.",
                                                 Agent_Auth_Vibe_Login_Failed: "Mistral sign-in failed: ",
+                                                Agent_Not_Ready_Checking: "Checking {agent} for your account...",
+                                                Agent_Not_Ready_Sign_In: "{agent} is not connected to your account yet: sign in to use it.",
+                                                Agent_Not_Ready_Install: "The {agent} runtime is not installed: install it in “{section}”.",
+                                                Agent_Not_Ready: "{agent} is not ready: its status is detailed in “{section}”.",
+                                                Agent_Not_Ready_Back: "Otherwise, go back to {agent}: closing the settings goes back to it too.",
+                                                Agent_Not_Ready_No_Back: "No other agent is ready: the settings stay shown until an agent can be used.",
+                                                Agent_Back_To: "Back to {agent}",
         				Agent_Auth_Vibe_Required: "Mistral authentication is required. Use the sign-in button to authenticate in your browser.",
         				Agent_Runtime_Must_Install: "The runtime must be installed.",
         				Agent_Runtime_Install: "Install runtime",
@@ -289,6 +296,13 @@ scriptContent:
                                                 Agent_Auth_Vibe_Waiting: "Terminez la connexion dans votre navigateur...",
                                                 Agent_Auth_Vibe_Connected: "Vibe est connecté à Mistral.",
                                                 Agent_Auth_Vibe_Login_Failed: "Échec de la connexion Mistral : ",
+                                                Agent_Not_Ready_Checking: "Vérification de {agent} pour votre compte...",
+                                                Agent_Not_Ready_Sign_In: "{agent} n’est pas encore connecté à votre compte : connectez-vous pour l’utiliser.",
+                                                Agent_Not_Ready_Install: "Le runtime de {agent} n’est pas installé : installez-le dans « {section} ».",
+                                                Agent_Not_Ready: "{agent} n’est pas prêt : son état est détaillé dans « {section} ».",
+                                                Agent_Not_Ready_Back: "Sinon, revenez à {agent} : fermer la configuration y revient aussi.",
+                                                Agent_Not_Ready_No_Back: "Aucun autre agent n’est prêt : la configuration reste affichée tant qu’aucun agent n’est utilisable.",
+                                                Agent_Back_To: "Revenir à {agent}",
         				Agent_Auth_Vibe_Required: "Authentification Mistral requise. Utilisez le bouton de connexion pour vous authentifier dans votre navigateur.",
         				Agent_Runtime_Must_Install: "Le runtime doit être installé.",
         				Agent_Runtime_Install: "Installer le runtime",
@@ -384,6 +398,13 @@ scriptContent:
                                                 Agent_Auth_Vibe_Waiting: "Completa l’accesso nel browser...",
                                                 Agent_Auth_Vibe_Connected: "Vibe è connesso a Mistral.",
                                                 Agent_Auth_Vibe_Login_Failed: "Accesso a Mistral non riuscito: ",
+                                                Agent_Not_Ready_Checking: "Verifica di {agent} per il tuo account...",
+                                                Agent_Not_Ready_Sign_In: "{agent} non è ancora collegato al tuo account: accedi per usarlo.",
+                                                Agent_Not_Ready_Install: "Il runtime di {agent} non è installato: installalo in «{section}».",
+                                                Agent_Not_Ready: "{agent} non è pronto: il suo stato è descritto in «{section}».",
+                                                Agent_Not_Ready_Back: "Altrimenti, torna a {agent}: anche chiudere la configurazione ci torna.",
+                                                Agent_Not_Ready_No_Back: "Nessun altro agente è pronto: la configurazione resta visibile finché nessun agente è utilizzabile.",
+                                                Agent_Back_To: "Torna a {agent}",
         				Agent_Auth_Vibe_Required: "Autenticazione Mistral richiesta. Usa il pulsante di accesso per autenticarti nel browser.",
         				Agent_Runtime_Must_Install: "Il runtime deve essere installato.",
         				Agent_Runtime_Install: "Installa runtime",
@@ -479,6 +500,13 @@ scriptContent:
                                                 Agent_Auth_Vibe_Waiting: "Complete el inicio de sesión en el navegador...",
                                                 Agent_Auth_Vibe_Connected: "Vibe está conectado a Mistral.",
                                                 Agent_Auth_Vibe_Login_Failed: "Error al iniciar sesión en Mistral: ",
+                                                Agent_Not_Ready_Checking: "Comprobando {agent} para su cuenta...",
+                                                Agent_Not_Ready_Sign_In: "{agent} aún no está conectado a su cuenta: inicie sesión para usarlo.",
+                                                Agent_Not_Ready_Install: "El runtime de {agent} no está instalado: instálelo en «{section}».",
+                                                Agent_Not_Ready: "{agent} no está listo: su estado se detalla en «{section}».",
+                                                Agent_Not_Ready_Back: "Si no, vuelva a {agent}: cerrar la configuración también vuelve a él.",
+                                                Agent_Not_Ready_No_Back: "Ningún otro agente está listo: la configuración sigue visible mientras ningún agente se pueda usar.",
+                                                Agent_Back_To: "Volver a {agent}",
         				Agent_Auth_Vibe_Required: "Se requiere autenticación de Mistral. Use el botón de inicio de sesión para autenticarse en el navegador.",
         				Agent_Runtime_Must_Install: "Debe instalarse el runtime.",
         				Agent_Runtime_Install: "Instalar runtime",
@@ -1433,7 +1461,12 @@ scriptContent:
         		if (this.local.ShowAgentConfigPanel !== true) {
         			this.local.AgentConfigReturnState = {
         				newConversationMode: this.local.NewConversationMode,
-        				showConversationPanel: this.local.ShowConversationPanel
+        				showConversationPanel: this.local.ShowConversationPanel,
+        				// the agent to go back to when the one picked here cannot be used
+        				provider: this.local.AgentProvider,
+        				model: this.local.AgentModel,
+        				reasoning: this.local.AgentReasoningEffort,
+        				serviceTier: this.local.AgentServiceTier
         			};
         		}
         		this.local.AgentConfigExplicitOpen = true;
@@ -1455,6 +1488,12 @@ scriptContent:
         
         	public closeAgentSettingsPage() {
         		if (!this.local) { this.local = {}; }
+        		// An agent picked here that cannot be used yet (to sign in, to install, still being checked) is not kept on close;
+        		// the panel goes back to a ready agent and its composer. An install still running keeps the agent it installs.
+        		var chosen = this.normalizeAgentProviderValue ? this.normalizeAgentProviderValue(this.local.AgentProvider) : "";
+        		if (chosen.length && this.local.AgentRuntimeInstallProvider !== chosen && this.useReadyAgentProvider && this.hasReadyAgentProvider && !this.hasReadyAgentProvider(chosen)) {
+        			this.useReadyAgentProvider();
+        		}
         		this.local.AgentConfigExplicitOpen = false;
         		this.local.AgentSettingsPageSeq = Number(this.local.AgentSettingsPageSeq || 0) + 1;
         		this.local.ShowAgentConfigPanel = false;
@@ -3188,6 +3227,183 @@ scriptContent:
                 return true;
             }
             return !providerReady;
+        }
+        public isAgentSettingsPageShown() {
+            // Settings that show are the settings page, also while the chosen agent is not ready once the page was closed;
+            // shown bare in the start card, their agent cards overlapped and the way back to a ready agent was lost.
+            return !!(this.local && this.local.ShowAgentConfigPanel === true) || !!(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel());
+        }
+        public getAgentProviderTitle(provider) {
+            var p = this.normalizeAgentProviderValue(provider);
+            if (p === "convertigo") {
+                return this.t("Agent_Provider_Convertigo_Title", "Convertigo - Agent intégré");
+            }
+            return p === "vibe" ? "Mistral - Vibe" : (p === "codex" ? "OpenAI - Codex" : (p === "claude" ? "Anthropic - Claude Code" : this.getAgentProviderLabel(p)));
+        }
+        public getReadyAgentFallback() {
+            // The agent to go back to while the chosen one cannot be used: the one in use when the settings opened, the saved
+            // default, else the first ready one (Convertigo, the zero-configuration mode, comes first).
+            if (!this.local) {
+                return "";
+            }
+            var settings: any = this.getAgentSettingsRoot();
+            var back: any = this.local.AgentConfigReturnState || {};
+            var candidates = [back.provider, settings.defaults && settings.defaults.provider];
+            var providers = settings.providers || [];
+            for (var i = 0; i < providers.length; i++) {
+                candidates.push(providers[i] && providers[i].id);
+            }
+            var current = this.normalizeAgentProviderValue(this.local.AgentProvider);
+            for (var c = 0; c < candidates.length; c++) {
+                var id = this.normalizeAgentProviderValue(candidates[c]);
+                if (id.length && id !== current && this.hasReadyAgentProvider(id)) {
+                    return id;
+                }
+            }
+            return "";
+        }
+        public getAgentNotReadyState() {
+            // Why the chosen agent cannot be used yet, for the note under the agent cards; empty once it is ready.
+            if (!this.local || !(this.isAgentBridgeMode && this.isAgentBridgeMode())) {
+                return "";
+            }
+            var provider = this.normalizeAgentProviderValue(this.local.AgentProvider);
+            if (!provider.length || this.hasReadyAgentProvider(provider)) {
+                return "";
+            }
+            var descriptor: any = this.getAgentProviderDescriptor(provider);
+            if (!descriptor) {
+                return this.local.AgentSettingsRefreshRunning === true ? "checking" : "not_ready";
+            }
+            var runtime = descriptor.runtime || {};
+            var authentication = descriptor.authentication || {};
+            var signIn = provider === "vibe" || provider === "codex" || provider === "claude";
+            if (signIn && (descriptor.status === "authentication_required" || (runtime.installed === true && authentication.configured === false))) {
+                return "sign_in";
+            }
+            return runtime.installed === true ? "not_ready" : "install";
+        }
+        public getAgentNotReadyText() {
+            var state = this.getAgentNotReadyState();
+            if (!state.length) {
+                return "";
+            }
+            var fill = (text, provider) => ("" + text).split("{agent}").join(this.getAgentProviderTitle(provider)).split("{section}").join(this.tigoText ? this.tigoText("runtime") : "Runtime");
+            if (state === "checking") {
+                return fill(this.t("Agent_Not_Ready_Checking", "Vérification de {agent} pour votre compte..."), this.local.AgentProvider);
+            }
+            var text = state === "sign_in" ? this.t("Agent_Not_Ready_Sign_In", "{agent} n’est pas encore connecté à votre compte : connectez-vous pour l’utiliser.")
+                : (state === "install" ? this.t("Agent_Not_Ready_Install", "Le runtime de {agent} n’est pas installé : installez-le dans « {section} ».")
+                    : this.t("Agent_Not_Ready", "{agent} n’est pas prêt : son état est détaillé dans « {section} »."));
+            var back = this.getReadyAgentFallback();
+            return fill(text, this.local.AgentProvider) + " " + (back.length
+                ? fill(this.t("Agent_Not_Ready_Back", "Sinon, revenez à {agent} : fermer la configuration y revient aussi."), back)
+                : this.t("Agent_Not_Ready_No_Back", "Aucun autre agent n’est prêt : la configuration reste affichée tant qu’aucun agent n’est utilisable."));
+        }
+        public getAgentBackLabel() {
+            var back = this.getReadyAgentFallback();
+            return back.length ? this.t("Agent_Back_To", "Revenir à {agent}").split("{agent}").join(this.getAgentProviderTitle(back)) : "";
+        }
+        public canConnectSelectedAgent() {
+            // The sign-in of the runtime section, offered in the note while the chosen agent waits for it.
+            var provider = this.local ? this.normalizeAgentProviderValue(this.local.AgentProvider) : "";
+            return this.getAgentNotReadyState() === "sign_in" && this.local.AgentAuthenticationRequired === true
+                && this.normalizeAgentProviderValue(this.local.AgentRuntimeProvider) === provider;
+        }
+        public connectSelectedAgent() {
+            // The runtime section opens to show the sign-in progress, and its own button starts the sign-in.
+            if (!this.canConnectSelectedAgent()) {
+                return;
+            }
+            this.local.ResourceAccordion = "runtime";
+            this.tick();
+            setTimeout(() => { try { var action: any = document.querySelector(".agent-runtime-settings:not(.agent-stack-settings) ion-button.agent-runtime-action"); if (action) { action.click(); } } catch (e) {} }, 60);
+        }
+        public useReadyAgentProvider(provider = null) {
+            // Back to a ready agent, with the model and reasoning it had when the settings opened, else its saved default: the
+            // composer comes back. False when no agent is ready.
+            if (!this.local) {
+                return false;
+            }
+            var p = this.normalizeAgentProviderValue(provider == null ? this.getReadyAgentFallback() : provider);
+            var descriptor: any = p.length ? this.getAgentProviderDescriptor(p) : null;
+            if (!descriptor || !this.isAgentProviderReady(descriptor)) {
+                return false;
+            }
+            var clean = (value: any) => ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+            var back: any = this.local.AgentConfigReturnState || {};
+            var before = this.normalizeAgentProviderValue(back.provider) === p;
+            var models = descriptor.models || [];
+            var find = (id) => {
+                for (var i = 0; i < models.length; i++) {
+                    if (clean(models[i] && models[i].id) === id) {
+                        return models[i];
+                    }
+                }
+                return null;
+            };
+            var model = before ? clean(back.model) : "";
+            if (!find(model)) {
+                model = this.getDefaultAgentModel(p);
+            }
+            var selectedModel: any = find(model);
+            this.local.AgentProvider = p;
+            this.local.AgentProviderSelectionPending = true;
+            this.local.AgentModels = models;
+            this.local.AgentModel = model;
+            this.local.AgentProviderSupportsReasoning = !!(descriptor.supports && descriptor.supports.reasoning === true);
+            this.local.AgentReasoningLevels = this.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
+            this.local.AgentReasoningEffort = this.resolveAgentReasoning([before ? back.reasoning : ""], true);
+            var tiers = selectedModel && selectedModel.serviceTiers ? selectedModel.serviceTiers : [];
+            this.local.AgentServiceTier = before ? clean(back.serviceTier) : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : "");
+            // The runtime section describes that agent again, as the settings check writes a ready one.
+            var runtime = descriptor.runtime || {};
+            var installed = clean(runtime.installedVersion);
+            var latest = clean(runtime.latestVersion);
+            this.local.AgentRuntime = runtime;
+            this.local.AgentRuntimeProvider = p;
+            this.local.AgentAuthenticationRequired = false;
+            this.local.AgentRuntimeError = clean(runtime.error);
+            this.local.AgentRuntimeVersionText = installed.length ? (this.t("Agent_Runtime_Installed_Prefix", "Version installée ") + installed + (latest.length ? this.t("Agent_Runtime_Latest_Infix", " · dernière ") + latest : "")) : this.t("Agent_Runtime_Installed", "Runtime installé");
+            this.local.AgentRuntimeStatusText = runtime.error ? (this.t("Agent_Runtime_Check_Failed", "Vérification impossible : ") + runtime.error) : (runtime.updateAvailable === true ? this.t("Agent_Runtime_Update_Available", "Une mise à jour est disponible.") : (runtime.checked === true ? this.t("Agent_Runtime_Up_To_Date", "Le runtime est à jour.") : this.t("Agent_Runtime_Ready", "Runtime prêt.")));
+            this.local.AgentRuntimeActionText = runtime.updateAvailable === true ? (this.t("Agent_Runtime_Update", "Mettre à jour") + (latest.length ? this.t("Agent_Runtime_Update_To", " vers ") + latest : "")) : this.t("Agent_Runtime_Reinstall", "Réinstaller le runtime");
+            try {
+                if (typeof window !== "undefined" && window.localStorage) {
+                    window.localStorage.setItem("lib_ConvertigoAssistant.AgentProvider", p);
+                }
+            } catch (e) {}
+            if (this.requestAgentQuota) {
+                this.requestAgentQuota(true);
+            }
+            if (this.setEnableChat) {
+                this.setEnableChat();
+            }
+            this.tick();
+            return true;
+        }
+        public startAgentProviderCheck(provider) {
+            // An agent card whose agent the panel has not read: No Code reads only the agent in use when the panel starts,
+            // until the settings check answers. That agent is checked, never shown as a runtime to install.
+            if (!this.local) {
+                return false;
+            }
+            var p = this.normalizeAgentProviderValue(provider);
+            var canCheck = this.isEmbeddedNoCodeAgent() || !!(this.hasLocalAgentBridgeCapability && this.hasLocalAgentBridgeCapability());
+            if (!p.length || this.getAgentProviderDescriptor(p) || (!canCheck && this.local.AgentSettingsRefreshRunning !== true)) {
+                return false;
+            }
+            this.local.AgentRuntime = {};
+            this.local.AgentRuntimeProvider = p;
+            this.local.AgentAuthenticationRequired = false;
+            this.local.AgentRuntimeError = "";
+            this.local.AgentRuntimeVersionText = "";
+            this.local.AgentRuntimeStatusText = this.t("Agent_Runtime_Checking", "Vérification de l’environnement...");
+            this.local.AgentRuntimeActionText = "";
+            if (this.local.AgentSettingsRefreshRunning !== true) {
+                this.refreshAgentSettingsAfterHostContext(true);
+            }
+            this.tick();
+            return true;
         }
         public getAgentModelOptions(provider = null) {
             var p = this.normalizeAgentProviderValue(provider || this.getAgentProvider());
@@ -8064,7 +8280,7 @@ title: Tigo
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ((this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-copy agent-config-intro-copy'' : ''modern-copy agent-hidden'') : ''modern-copy'''
+                - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-copy agent-config-intro-copy'' : ''modern-copy agent-hidden'') : ''modern-copy'''
           ↓Text [ngx.components.UIText-1772100000041]: 
             textValue: 
               - xmlizable: 
@@ -8254,7 +8470,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'''
+              - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'''
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -8266,7 +8482,7 @@ title: Tigo
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-card-title agent-hidden'' : ''modern-card-title'''
+                  - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-card-title agent-hidden'' : ''modern-card-title'''
             ↓Text [ngx.components.UIText-1772100000098]: 
               textValue: 
                 - xmlizable: 
@@ -8280,7 +8496,7 @@ title: Tigo
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''modern-copy agent-hidden'' : ''modern-copy'''
+                  - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-copy agent-hidden'' : ''modern-copy'''
             ↓Text [ngx.components.UIText-1772100000101]: 
               textValue: 
                 - xmlizable: 
@@ -8659,7 +8875,7 @@ title: Tigo
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:this.isFormsRecentHistory() ? ''agent-conversations-panel forms-recent-conversations'' : ((this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-conversations-panel agent-config-surface'' : ''agent-conversations-panel'')'
+                    - MobileSmartSourceType: 'script:this.isFormsRecentHistory() ? ''agent-conversations-panel forms-recent-conversations'' : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''agent-conversations-panel agent-config-surface'' : ''agent-conversations-panel'')'
               ↓Title [ngx.components.UIDynamicElement-1781608119095]: 
                 beanData: '{"ionBean":"Paragraph"}'
                 tagName: p
@@ -8668,12 +8884,12 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-conversations-title agent-hidden'' : ''agent-conversations-title'''
+                      - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''agent-conversations-title agent-hidden'' : ''agent-conversations-title'''
                 ↓Text [ngx.components.UIText-1781608119099]: 
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(this.isFormsRecentHistory() ? ''recent'' : ''history'') : ((this.local && this.local.ShowAgentConfigPanel === true) ? this.t(''Agent_Settings_Title'', ''Configuration de l’agent'') : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? this.t(''New_Conversation'', ''Nouvelle conversation'') : this.t(''Previous_Conversations'', ''Conversations précédentes'')))'
+                      - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(this.isFormsRecentHistory() ? ''recent'' : ''history'') : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? this.t(''Agent_Settings_Title'', ''Configuration de l’agent'') : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? this.t(''New_Conversation'', ''Nouvelle conversation'') : this.t(''Previous_Conversations'', ''Conversations précédentes'')))'
               ↓CloseButton [ngx.components.UIDynamicElement-1781676493781]: 
                 beanData: |
                   '{
@@ -8701,7 +8917,7 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-conversations-close agent-hidden'' : ((this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'') : ((this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'')))'
+                      - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''agent-conversations-close agent-hidden'' : ((this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'') : ((this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'')))'
                 ↓Event [ngx.components.UIControlEvent-1785253485786]: 
                   ↓CloseConversations [ngx.components.UICustomAction-1785253487292]: 
                     actionValue: 
@@ -9151,6 +9367,7 @@ title: Tigo
                                                 for (var i = 0; i < providers.length; i++) {
                                                     if (clean(providers[i] && providers[i].id).toLowerCase() === ''convertigo'') { selected = providers[i]; break; }
                                                 }
+                                                if (!selected && page.startAgentProviderCheck && page.startAgentProviderCheck(''convertigo'')) { resolve(); return; }
                                                 var runtime = selected && selected.runtime ? selected.runtime : {};
                                                 var authentication = selected && selected.authentication ? selected.authentication : {};
                                                 var authenticationRequired = runtime.installed === true && authentication.configured === false;
@@ -9335,6 +9552,7 @@ title: Tigo
                                                 for (var i = 0; i < providers.length; i++) {
                                                     if (clean(providers[i] && providers[i].id).toLowerCase() === ''vibe'') { selected = providers[i]; break; }
                                                 }
+                                                if (!selected && page.startAgentProviderCheck && page.startAgentProviderCheck(''vibe'')) { resolve(); return; }
                                                 var runtime = selected && selected.runtime ? selected.runtime : {};
                                                 var authentication = selected && selected.authentication ? selected.authentication : {};
                                                 var authenticationRequired = runtime.installed === true && authentication.configured === false;
@@ -9519,6 +9737,7 @@ title: Tigo
                                                 for (var i = 0; i < providers.length; i++) {
                                                     if (clean(providers[i] && providers[i].id).toLowerCase() === ''codex'') { selected = providers[i]; break; }
                                                 }
+                                                if (!selected && page.startAgentProviderCheck && page.startAgentProviderCheck(''codex'')) { resolve(); return; }
                                                 var runtime = selected && selected.runtime ? selected.runtime : {};
                                                 var authentication = selected && selected.authentication ? selected.authentication : {};
                                                 var authenticationRequired = runtime.installed === true && authentication.configured === false;
@@ -9703,6 +9922,7 @@ title: Tigo
                                                 for (var i = 0; i < providers.length; i++) {
                                                     if (clean(providers[i] && providers[i].id).toLowerCase() === ''claude'') { selected = providers[i]; break; }
                                                 }
+                                                if (!selected && page.startAgentProviderCheck && page.startAgentProviderCheck(''claude'')) { resolve(); return; }
                                                 var runtime = selected && selected.runtime ? selected.runtime : {};
                                                 var authentication = selected && selected.authentication ? selected.authentication : {};
                                                 var authenticationRequired = runtime.installed === true && authentication.configured === false;
@@ -9798,6 +10018,8 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: plain:agent-provider-check
+                        ↓AgentNotReady [ngx.components.UICustom-1793610000001]: 
+                          htmlTemplate: <div *ngIf="getAgentNotReadyText()" class="agent-provider-not-ready" role="status"><p class="agent-provider-not-ready-text">{{getAgentNotReadyText()}}</p><div class="agent-provider-not-ready-actions"><button type="button" class="agent-not-ready-action is-primary" *ngIf="canConnectSelectedAgent()" [disabled]="local?.AgentRuntimeLoading === true" (click)="connectSelectedAgent()">{{local.AgentRuntimeActionText}}</button><button type="button" class="agent-not-ready-action" *ngIf="getAgentBackLabel()" (click)="useReadyAgentProvider()">{{getAgentBackLabel()}}</button></div></div>
                       ↓RevealSettings [ngx.components.UIDynamicElement-1789580000040]: 
                         beanData: '{"ionBean":"DivTag"}'
                         isEnabled: false
@@ -10787,6 +11009,7 @@ title: Tigo
                                               page.local.AgentProviderSelectionPending = true;
                                               page.local.AgentRuntimeLoading = true;
                                               page.local.AgentRuntimeOperation = ''update'';
+                                              page.local.AgentRuntimeInstallProvider = provider;
                                               page.local.AgentRuntimeError = '''';
                                               page.local.AgentRuntimeStatusText = provider === ''codex'' ? tr(''Agent_Runtime_Updating_Codex'', ''Mise à jour de Codex en cours...'') : (provider === ''claude'' ? tr(''Agent_Runtime_Updating_Claude'', ''Mise à jour de Claude Code en cours...'') : (provider === ''convertigo'' ? tr(''Agent_Runtime_Updating_Convertigo'', ''Préparation de l\''agent Convertigo...'') : tr(''Agent_Runtime_Updating_Vibe'', ''Mise à jour de Vibe en cours...'')));
                                               page.tick();
@@ -10816,6 +11039,7 @@ title: Tigo
                                                       if (provider === ''convertigo'' && installedAuthentication.status === ''rejected'') { page.local.AgentRuntimeStatusText = tr(''Agent_Auth_Convertigo_Rejected'', ''La passerelle Convertigo a refusé la clé d\''agent. Remplacez-la dans le fichier agents/convertigo/llm-api-key du workspace.''); }
                                                       page.local.AgentRuntimeActionText = provider === ''codex'' ? tr(''Agent_Auth_Codex_Connect'', ''Se connecter à Codex'') : (provider === ''claude'' ? tr(''Agent_Auth_Claude_Connect'', ''Se connecter à Claude'') : (provider === ''convertigo'' ? tr(''Agent_Auth_Convertigo_Check'', ''Vérifier la clé'') : tr(''Agent_Auth_Vibe_Connect'', ''Se connecter à Mistral'')));
                                                       page.local.AgentRuntimeLoading = false;
+                                                      page.local.AgentRuntimeInstallProvider = '''';
                                                       page.local.AgentProviderSelectionPending = false;
                                                       page.local.ShowAgentConfigPanel = true;
                                                       page.tick();
@@ -10875,6 +11099,7 @@ title: Tigo
                                                   page.local.AgentRuntimeStatusText = runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Remains'', ''La mise à jour reste disponible.'') : tr(''Agent_Runtime_New_Conversations'', ''Runtime à jour. Les nouvelles conversations utiliseront cette version.'');
                                                   page.local.AgentRuntimeActionText = runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'');
                                                   page.local.AgentRuntimeLoading = false;
+                                                  page.local.AgentRuntimeInstallProvider = '''';
                                                   page.local.AgentProviderChoiceConfirmed = true;
                                                   page.local.AgentProviderSelectionPending = false;
                                                   try {
@@ -10899,6 +11124,7 @@ title: Tigo
                                                   resolve();
                                               }).catch(function(error) {
                                                   page.local.AgentRuntimeLoading = false;
+                                                  page.local.AgentRuntimeInstallProvider = '''';
                                                   page.local.AgentRuntimeError = '''' + error;
                                                   page.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible : '') + error;
                                                   page.tick();
@@ -12054,13 +12280,13 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ((this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-create-settings agent-config-settings'' : ''agent-create-settings'') : ''agent-create-settings agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''agent-create-settings agent-config-settings'' : ''agent-create-settings agent-hidden'''
                 ↓Class1 [ngx.components.UIAttribute-1781700500011]: 
                   attrName: class
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ((this.local && this.local.ShowAgentConfigPanel === true) ? ''agent-create-settings agent-config-settings'' : ''agent-create-settings'') : ''agent-create-settings agent-hidden'''
+                      - MobileSmartSourceType: 'script:(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) ? ''agent-create-settings agent-config-settings'' : ''agent-create-settings agent-hidden'''
                 ↓ResourceEditorIf [ngx.components.UIControlDirective-1792084645101]: 
                   directiveName: If
                   directiveSource: 
@@ -24732,6 +24958,14 @@ title: Tigo
           .agent-worklog-report { background: transparent; border: 0; color: var(--modern-muted, #94a3b8); cursor: pointer; flex: 0 0 auto; font: inherit; font-size: 12px; margin-left: auto; order: 9; padding: 0 2px; text-decoration: underline dotted; text-underline-offset: 3px; }
           .agent-worklog-report:hover, .agent-worklog-report:focus-visible { color: var(--modern-cyan, #06b6d4); }
           .agent-feedback-note { margin-top: 6px; }
+          .agent-provider-not-ready { background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 8%, transparent 92%); border: 1px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 35%, transparent 65%); border-radius: 8px; margin-top: 14px; padding: 10px 12px; }
+          .agent-provider-not-ready-text { color: var(--modern-text, #0f172a); font-size: 13px; line-height: 1.45; margin: 0; }
+          .agent-provider-not-ready-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+          .agent-provider-not-ready-actions:empty { display: none; }
+          .agent-not-ready-action { background: transparent; border: 1px solid var(--modern-border, #cbd5e1); border-radius: 8px; color: var(--modern-text, #0f172a); cursor: pointer; font: inherit; font-size: 12.5px; padding: 5px 12px; }
+          .agent-not-ready-action:hover { border-color: var(--modern-cyan, #06b6d4); }
+          .agent-not-ready-action.is-primary { background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 18%, transparent 82%); border-color: color-mix(in srgb, var(--modern-cyan, #06b6d4) 60%, transparent 40%); font-weight: 600; }
+          .agent-not-ready-action[disabled] { cursor: default; opacity: 0.6; }
           /* Long texts of the side column wrap or shorten inside their card: the column never scrolls sideways. */
           .agent-side { overflow-x: hidden; }
           .agent-side-card, .agent-side .agent-context { min-width: 0; overflow-wrap: anywhere; }
