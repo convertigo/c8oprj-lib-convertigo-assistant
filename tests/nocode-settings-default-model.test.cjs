@@ -1,12 +1,13 @@
 // Choosing a default model in No Code Studio's settings (test-nocode, 29/10, mistral-large-4). The settings page's full
 // check took 21-24 s there (Vibe model discovery, update checks) and the panel gave it 15 s: a user who closed the page
 // meanwhile got it back at the timeout, without composer, and the gear reopened it with a new check, endlessly. Continue
-// stayed disabled while the check ran.
+// stayed disabled while the check ran, and the saved model lost to the gateway default (glm-5-3): the start check kept
+// the first model of the list, the conversation router and its prewarm took the provider's default model.
 // node --test tests/nocode-settings-default-model.test.cjs
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { ts, read, pageClass } = require('./helpers/assistant-source.cjs');
+const { ts, read, formattedBlocks, pageClass, backendParts } = require('./helpers/assistant-source.cjs');
 
 const yaml = read('_c8oProject/mobilePages/Page.yaml');
 const source = pageClass();
@@ -78,6 +79,16 @@ async function loaded(saved, selection) {
   Object.assign(f.page.local, { AgentProvider: 'convertigo', AgentModels: MODELS, AgentProviderSupportsReasoning: true, AgentProviderChoiceConfirmed: true }, selection);
   return f;
 }
+
+test('the start check applies the saved default model while nothing is selected yet', async () => {
+  const f = panel();
+  f.page.refreshAgentSettingsAfterHostContext();
+  assert.equal(f.page.local.AgentRuntimeLoading, true, 'the start check marks the loading itself');
+  assert.deepEqual(f.timeouts(), [15000]);
+  f.pending[0].resolve(answer({ model: 'mistral-large-4', reasoning: 'high' })); await flush();
+  assert.equal(f.page.local.AgentModel, 'mistral-large-4', 'not the first model of the list');
+  assert.equal(f.page.local.AgentReasoningEffort, 'high');
+});
 
 test('a settings page closed before its check answers stays closed, with the choice made there', async () => {
   const f = await loaded({ model: 'glm-5-3', reasoning: 'high' }, { AgentModel: 'glm-5-3', AgentReasoningEffort: 'high' });
@@ -159,4 +170,54 @@ test('Continue saves a choice while the page only refreshes settings already loa
   assert.equal(disabled({ ...base, AgentRuntimeLoading: true, AgentSettingsRefreshRunning: true, AgentRuntimeOperation: 'update' }), true);
   assert.equal(disabled({ ...base, AgentSettings: null, AgentRuntimeLoading: true, AgentSettingsRefreshRunning: true }), true, 'first check');
   assert.equal(disabled({ ...base, ready: false }), true);
+});
+
+test('choosing an agent takes its saved default model and reasoning first', () => {
+  const blocks = formattedBlocks('_c8oProject/mobilePages/Page.yaml').filter(code => code.includes('page.local.AgentProviderSelectionPending = true;') && /^\s*var provider = '\w+';/.test(code));
+  assert.equal(blocks.length, 4);
+  for (const code of blocks) {
+    const provider = /var provider = '(\w+)';/.exec(code)[1];
+    const run = saved => {
+      const local = { AgentReasoningEffort: '' };
+      const settingsRoot = { defaults: saved ? { provider, model: 'mistral-large-4', reasoning: 'high' } : { provider: 'other', model: 'x' },
+        providers: [{ id: provider, defaultModel: 'glm-5-3', models: MODELS, supports: { reasoning: true } }] };
+      local.AgentSettings = settingsRoot;
+      const page = { local, tick() {}, resolveAgentReasoning: candidates => candidates.find(value => clean(value).length) || '' };
+      new Function('page', 'props', 'resolve', code)(page, {}, () => {});
+      return [local.AgentModel, local.AgentReasoningEffort];
+    };
+    assert.deepEqual(run(true), ['mistral-large-4', 'high'], provider);
+    assert.deepEqual(run(false), ['glm-5-3', 'high'], provider);
+  }
+});
+
+test('the default model of a provider is the saved one when it offers it', () => {
+  const f = vm.runInNewContext(pageMethods(['getDefaultAgentModel']) + '; new Probe()', {});
+  const run = (defaults, models = MODELS) => Object.assign(f, {
+    normalizeAgentProviderValue: value => clean(value).toLowerCase(), getAgentProvider: () => 'convertigo',
+    cleanProjectName: clean, getAgentSettingsRoot: () => ({ defaults }),
+    getAgentProviderDescriptor: () => ({ id: 'convertigo', defaultModel: 'glm-5-3' }),
+    getAgentModelOptions: () => models.map(m => ({ id: m.id, label: m.id }))
+  }).getDefaultAgentModel('convertigo');
+  assert.equal(run({ provider: 'convertigo', model: 'mistral-large-4' }), 'mistral-large-4');
+  assert.equal(run({ provider: 'convertigo', model: 'retired-model' }), 'glm-5-3');
+  assert.equal(run({ provider: 'codex', model: 'mistral-large-4' }), 'glm-5-3');
+});
+
+test('the conversation router and its prewarm start on the saved default model', () => {
+  const sandbox = {
+    trim: clean,
+    normalizeProvider: value => clean(value).toLowerCase() || 'vibe',
+    normalizeProviderSelector: value => clean(value).toLowerCase() || 'all'
+  };
+  vm.runInNewContext(backendParts(['providerSettings', 'modelSettings', 'defaultModelForProvider', 'applyAgentSettingsDefaults']), sandbox);
+  const run = (saved, options = {}) => {
+    const resolved = sandbox.applyAgentSettingsDefaults(options, settings(saved), 'all');
+    return [resolved.model, resolved.reasoningEffort, options.model];
+  };
+  assert.deepEqual(run({ model: 'mistral-large-4', reasoning: 'high' }), ['mistral-large-4', 'high', 'mistral-large-4']);
+  assert.deepEqual(run({ model: 'glm-5-2', reasoning: 'low' }), ['glm-5-2', 'low', 'glm-5-2']);
+  assert.deepEqual(run(null), ['glm-5-3', 'high', 'glm-5-3']);
+  assert.deepEqual(run({ model: 'retired-model', reasoning: 'max' }), ['glm-5-3', 'high', 'glm-5-3'], 'a model the gateway no longer offers');
+  assert.deepEqual(run({ model: 'mistral-large-4', reasoning: 'high' }, { model: 'glm-5-2' }), ['glm-5-2', 'high', 'glm-5-2'], 'an explicit model wins');
 });

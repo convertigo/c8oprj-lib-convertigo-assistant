@@ -1329,7 +1329,7 @@ scriptContent:
         						this.local.AgentProvider = provider;
         						this.local.AgentModels = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
         						this.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                                        var model = clean(preserveSelection ? this.local.AgentModel : (preferencesConfirmed ? preferences.model : (this.local.AgentModel || storedModel || result.model || selectedProvider && selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''))));
+                                                        var model = clean(preserveSelection && clean(this.local.AgentModel).length ? this.local.AgentModel : (preferencesConfirmed ? preferences.model : (this.local.AgentModel || storedModel || result.model || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : '''') || selectedProvider && selectedProvider.defaultModel)));
         						if (!model.length && this.local.AgentModels.length) { model = clean(this.local.AgentModels[0] && this.local.AgentModels[0].id); }
         						this.local.AgentModel = model;
         						var selectedModel = null;
@@ -1342,7 +1342,7 @@ scriptContent:
         							this.local.AgentModel = model;
         						}
         						this.local.AgentReasoningLevels = this.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                                                        var preferredReasoning = clean(preserveSelection ? this.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (this.local.AgentReasoningEffort || storedReasoning)));
+                                                        var preferredReasoning = clean(preserveSelection && clean(this.local.AgentReasoningEffort).length ? this.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (this.local.AgentReasoningEffort || storedReasoning)));
         						var reasoningOffered = false;
         						for (var rl = 0; rl < this.local.AgentReasoningLevels.length; rl++) {
         							if (preferredReasoning.length && clean(this.local.AgentReasoningLevels[rl] && this.local.AgentReasoningLevels[rl].id) === preferredReasoning) { reasoningOffered = true; break; }
@@ -3235,18 +3235,22 @@ scriptContent:
             var settings: any = this.getAgentSettingsRoot();
             var descriptor = this.getAgentProviderDescriptor(p);
             var model = "";
+            var candidates = [];
             try {
-                model = this.cleanProjectName(descriptor && descriptor.defaultModel);
-            } catch (e) {}
-            try {
-                if (!model.length && settings.defaults && this.normalizeAgentProviderValue(settings.defaults.provider) === p) {
-                    model = this.cleanProjectName(settings.defaults.model);
+                if (settings.defaults && this.normalizeAgentProviderValue(settings.defaults.provider) === p) {
+                    candidates.push(this.cleanProjectName(settings.defaults.model));
                 }
             } catch (e2) {}
+            try {
+                candidates.push(this.cleanProjectName(descriptor && descriptor.defaultModel));
+            } catch (e) {}
             var options = this.getAgentModelOptions(p);
-            for (var i = 0; model.length && i < options.length; i++) {
-                if (options[i].id === model) {
-                    return model;
+            for (var c = 0; c < candidates.length; c++) {
+                model = candidates[c];
+                for (var i = 0; model.length && i < options.length; i++) {
+                    if (options[i].id === model) {
+                        return model;
+                    }
                 }
             }
             return options.length ? options[0].id : "";
@@ -9098,10 +9102,9 @@ title: Tigo
                                                 var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
                                                 page.local.AgentModels = models;
                                                 page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                                var model = clean(selectedProvider && selectedProvider.defaultModel);
-                                                if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    model = clean(settings.defaults.model);
-                                                }
+                                                var savedDefault = settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider;
+                                                var model = savedDefault ? clean(settings.defaults.model) : '''';
+                                                if (!model.length) { model = clean(selectedProvider && selectedProvider.defaultModel); }
                                                 if (!model.length && models.length) { model = clean(models[0] && models[0].id); }
                                                 var selectedModel = null;
                                                 for (var j = 0; j < models.length; j++) {
@@ -9116,10 +9119,8 @@ title: Tigo
                                                 }
                                                 page.local.AgentModel = model;
                                                 page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                                                var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
-                                                if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    reasoning = clean(settings.defaults.reasoning);
-                                                }
+                                                var reasoning = savedDefault && clean(settings.defaults.model) === model ? clean(settings.defaults.reasoning) : '''';
+                                                if (!reasoning.length) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
@@ -9285,10 +9286,9 @@ title: Tigo
                                                 var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
                                                 page.local.AgentModels = models;
                                                 page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                                var model = clean(selectedProvider && selectedProvider.defaultModel);
-                                                if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    model = clean(settings.defaults.model);
-                                                }
+                                                var savedDefault = settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider;
+                                                var model = savedDefault ? clean(settings.defaults.model) : '''';
+                                                if (!model.length) { model = clean(selectedProvider && selectedProvider.defaultModel); }
                                                 if (!model.length && models.length) { model = clean(models[0] && models[0].id); }
                                                 var selectedModel = null;
                                                 for (var j = 0; j < models.length; j++) {
@@ -9303,10 +9303,8 @@ title: Tigo
                                                 }
                                                 page.local.AgentModel = model;
                                                 page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                                                var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
-                                                if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    reasoning = clean(settings.defaults.reasoning);
-                                                }
+                                                var reasoning = savedDefault && clean(settings.defaults.model) === model ? clean(settings.defaults.reasoning) : '''';
+                                                if (!reasoning.length) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
@@ -9472,10 +9470,9 @@ title: Tigo
                                                 var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
                                                 page.local.AgentModels = models;
                                                 page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                                var model = clean(selectedProvider && selectedProvider.defaultModel);
-                                                if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    model = clean(settings.defaults.model);
-                                                }
+                                                var savedDefault = settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider;
+                                                var model = savedDefault ? clean(settings.defaults.model) : '''';
+                                                if (!model.length) { model = clean(selectedProvider && selectedProvider.defaultModel); }
                                                 if (!model.length && models.length) { model = clean(models[0] && models[0].id); }
                                                 var selectedModel = null;
                                                 for (var j = 0; j < models.length; j++) {
@@ -9490,10 +9487,8 @@ title: Tigo
                                                 }
                                                 page.local.AgentModel = model;
                                                 page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                                                var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
-                                                if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    reasoning = clean(settings.defaults.reasoning);
-                                                }
+                                                var reasoning = savedDefault && clean(settings.defaults.model) === model ? clean(settings.defaults.reasoning) : '''';
+                                                if (!reasoning.length) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
@@ -9659,10 +9654,9 @@ title: Tigo
                                                 var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
                                                 page.local.AgentModels = models;
                                                 page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                                var model = clean(selectedProvider && selectedProvider.defaultModel);
-                                                if (!model.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    model = clean(settings.defaults.model);
-                                                }
+                                                var savedDefault = settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider;
+                                                var model = savedDefault ? clean(settings.defaults.model) : '''';
+                                                if (!model.length) { model = clean(selectedProvider && selectedProvider.defaultModel); }
                                                 if (!model.length && models.length) { model = clean(models[0] && models[0].id); }
                                                 var selectedModel = null;
                                                 for (var j = 0; j < models.length; j++) {
@@ -9677,10 +9671,8 @@ title: Tigo
                                                 }
                                                 page.local.AgentModel = model;
                                                 page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                                                var reasoning = clean(selectedModel && selectedModel.defaultReasoning);
-                                                if (!reasoning.length && settings.defaults && clean(settings.defaults.provider).toLowerCase() === provider) {
-                                                    reasoning = clean(settings.defaults.reasoning);
-                                                }
+                                                var reasoning = savedDefault && clean(settings.defaults.model) === model ? clean(settings.defaults.reasoning) : '''';
+                                                if (!reasoning.length) { reasoning = clean(selectedModel && selectedModel.defaultReasoning); }
                                                 if (page.local.AgentProviderSupportsReasoning !== true) {
                                                     reasoning = '''';
                                                 }
@@ -13030,11 +13022,11 @@ title: Tigo
                                             page.local.AgentModels = models || [];
                                             page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
                                             var modelCandidate = clean(page.local.AgentModel);
-                                            if (!modelCandidate.length) {
-                                                modelCandidate = clean(selectedProvider && selectedProvider.defaultModel);
-                                            }
                                             if (!modelCandidate.length && settings.defaults && normalizeProvider(settings.defaults.provider) === provider) {
                                                 modelCandidate = clean(settings.defaults.model);
+                                            }
+                                            if (!modelCandidate.length) {
+                                                modelCandidate = clean(selectedProvider && selectedProvider.defaultModel);
                                             }
                                             if (!modelCandidate.length && page.local.AgentModels.length) {
                                                 modelCandidate = clean(page.local.AgentModels[0] && page.local.AgentModels[0].id);
@@ -17711,7 +17703,7 @@ title: Tigo
                   } catch (eStored) {}
                   var providers = settings.providers || [];
                   var preserveSelection = page.local.AgentProviderSelectionPending === true || page.local.AgentRuntimeLoading === true;
-                  var provider = normalize(preserveSelection ? page.local.AgentProvider : (preferencesConfirmed ? preferences.provider : (page.local.AgentProvider || state.provider || result.provider || storedProvider)));
+                  var provider = normalize(preserveSelection && clean(page.local.AgentProvider).length ? page.local.AgentProvider : (preferencesConfirmed ? preferences.provider : (page.local.AgentProvider || state.provider || result.provider || storedProvider)));
                   if (!provider.length && page.getAgentProvider) { provider = normalize(page.getAgentProvider()); }
                   if (!provider.length && settings.defaults) { provider = normalize(settings.defaults.provider); }
                   if (!provider.length && providers.length) { provider = normalize(providers[0] && providers[0].id); }
@@ -17738,9 +17730,9 @@ title: Tigo
                   page.local.AgentProvider = provider;
                   page.local.AgentModels = models;
                   page.local.AgentProviderSupportsReasoning = selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                  var model = clean(preserveSelection ? page.local.AgentModel : (preferencesConfirmed ? preferences.model : (state.model || result.model || page.local.AgentModel || storedModel)));
+                  var model = clean(preserveSelection && clean(page.local.AgentModel).length ? page.local.AgentModel : (preferencesConfirmed ? preferences.model : (state.model || result.model || page.local.AgentModel || storedModel)));
                   if (!model.length) {
-                      model = clean(selectedProvider.defaultModel || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : ''''));
+                      model = clean((settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : '''') || selectedProvider.defaultModel);
                   }
                   if (!model.length && models.length) {
                       model = clean(models[0] && models[0].id);
@@ -17758,7 +17750,7 @@ title: Tigo
                   }
                   page.local.AgentModel = model;
                   page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                  var reasoning = clean(preserveSelection ? page.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (state.reasoningEffort || result.reasoningEffort || page.local.AgentReasoningEffort || storedReasoning)));
+                  var reasoning = clean(preserveSelection && clean(page.local.AgentReasoningEffort).length ? page.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (state.reasoningEffort || result.reasoningEffort || page.local.AgentReasoningEffort || storedReasoning)));
                   var reasoningOffered = false;
                   for (var rl = 0; rl < page.local.AgentReasoningLevels.length; rl++) {
                       if (reasoning.length && clean(page.local.AgentReasoningLevels[rl] && page.local.AgentReasoningLevels[rl].id) === reasoning) { reasoningOffered = true; break; }
@@ -21199,7 +21191,7 @@ title: Tigo
                           page.local.AgentReasoningLevels = [];
                           var selectedModel = null;
                           if (selectedProvider) {
-                              if (!page.local.AgentModel.length) { page.local.AgentModel = clean(selectedProvider.defaultModel || (settings.defaults && settings.defaults.provider === page.local.AgentProvider ? settings.defaults.model : "")); }
+                              if (!page.local.AgentModel.length) { page.local.AgentModel = clean((settings.defaults && settings.defaults.provider === page.local.AgentProvider ? settings.defaults.model : "") || selectedProvider.defaultModel); }
                               for (var m = 0; m < page.local.AgentModels.length; m++) {
                                   if (clean(page.local.AgentModels[m] && page.local.AgentModels[m].id) === page.local.AgentModel) { selectedModel = page.local.AgentModels[m]; break; }
                               }

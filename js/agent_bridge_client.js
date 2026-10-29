@@ -2565,9 +2565,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       options.skillProfile = trim(options.skillProfile) || trim(capabilityProfile.id);
     }
     var resolvedProvider = descriptor && descriptor.id ? normalizeProvider(descriptor.id) : normalizeProvider(provider || (settings.defaults && settings.defaults.provider));
+    // settings.defaults is the user's confirmed choice (else the first ready provider's default): for its provider it
+    // comes before the provider's own default model, the gateway default for Convertigo.
+    var savedDefaults = settings.defaults && normalizeProvider(settings.defaults.provider) === resolvedProvider ? settings.defaults : null;
+    var savedModel = trim(savedDefaults && savedDefaults.model);
+    var offeredSavedModel = savedModel.length ? modelSettings(descriptor, savedModel) : null;
+    if (offeredSavedModel && trim(offeredSavedModel.id) !== savedModel) {
+      savedModel = "";
+    }
     var model = trim(options.model || options.agentModel);
     if (!model.length || model.toLowerCase() === "default" || model.toLowerCase() === "auto") {
-      model = trim((descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
+      model = trim(savedModel || (descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
       if (!model.length) {
         var firstModel = modelSettings(descriptor, "");
         model = trim(firstModel && firstModel.id);
@@ -2582,7 +2590,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var selectedModel = modelSettings(descriptor, trim(options.model || options.agentModel || model));
     var reasoning = trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
     if (!reasoning.length || reasoning.toLowerCase() === "default" || reasoning.toLowerCase() === "auto") {
-      reasoning = trim((selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
+      var savedReasoning = savedModel.length && savedModel === trim(selectedModel && selectedModel.id) ? trim(savedDefaults.reasoning) : "";
+      reasoning = trim(savedReasoning || (selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
       if (reasoning.length) {
         options.reasoningEffort = reasoning;
       }
