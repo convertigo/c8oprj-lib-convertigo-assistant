@@ -360,7 +360,7 @@ test('the card buttons choose a mode, snooze, send or open the review card', asy
   assert.equal(card.busy, true);
   p.onFeedbackCta(card, card.actions[1]);
   await settle();
-  assert.deepEqual(p.calls, [{ action: 'mode', mode: 'ask', consentText: 2 }], 'the invitation sends the version of its text');
+  assert.deepEqual(p.calls, [{ action: 'mode', mode: 'ask' }]);
   assert.equal(card.actions.length, 0);
   assert.match(card.message, /^Merci ! Les retours sont préparés ici/);
   assert.equal(p.local.FeedbackStatus.mode, 'ask');
@@ -787,7 +787,7 @@ test('the page: an imposed automatic mode is told once, a rate limit keeps the r
   assert.equal(p.local.Messages.length, 1, 'one notice');
   p.onFeedbackCta(notice, notice.actions[0]);
   await settle();
-  assert.deepEqual(p.calls, [{ action: 'seen', consentText: 2 }], 'the notice sends the version of its text');
+  assert.deepEqual(p.calls, [{ action: 'seen' }]);
   assert.equal(notice.actions.length, 0);
   assert.match(notice.message, /^Votre administrateur/);
   assert.match(p.feedbackErrorText('rate_limited'), /^Trop d'envois/);
@@ -969,7 +969,7 @@ test('advice to the user, limits by design and work done are not missing capabil
 });
 
 test('a missing capability is filed with the product\'s sentences and a masked excerpt of the agent\'s clause', () => {
-  const { F, store } = feedback({ settings: { mode: 'ask', consentText: 2 } });
+  const { F, store } = feedback({ settings: { mode: 'ask' } });
   store.readNames = () => ['Planning des gardes', 'Diagnostic', 'Browser'];
   store.writeNames = () => {};
   const answer = "Je n'ai pas pu reproduire le calcul du formulaire Planning des gardes : les outils de test browser ne sont pas disponibles "
@@ -1010,7 +1010,7 @@ test('a missing capability is filed with the product\'s sentences and a masked e
 // fee7dbe3 (test-nocode, 28/10): missing-capability:other said nothing of what was missing. The excerpt tells it; the
 // fingerprints stay those of the groups already triaged.
 test('a missing capability keeps its fingerprint, and its excerpt tells what the agent lacked', () => {
-  const { F } = feedback({ settings: { mode: 'ask', consentText: 2 } });
+  const { F } = feedback({ settings: { mode: 'ask' } });
   const answer = "Les outils no-code ne permettent pas de dupliquer un formulaire d'un espace de travail à un autre.";
   const [other] = F.collectMissingCapabilities({ answer, events: [], provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
   assert.equal(other.finding.subject, 'missing-capability:other');
@@ -1052,7 +1052,7 @@ test('an excerpt is short and masks the customer, persons, secrets and values, n
 });
 
 test('a waiting missing capability is masked again before it is sent, with names learnt since', () => {
-  const { F, store } = feedback({ settings: { mode: 'ask', consentText: 2 } });
+  const { F, store } = feedback({ settings: { mode: 'ask' } });
   let names = [];
   store.readNames = () => names;
   store.writeNames = () => {};
@@ -1062,101 +1062,40 @@ test('a waiting missing capability is masked again before it is sent, with names
   assert.equal(F.pending()[0].finding.template, 'les outils no-code ne permettent pas de supprimer une table <name>');
   // An agent's own friction under such a subject carries no excerpt: only Tigo's detection writes one.
   const raw = { kind: 'agent_friction', finding: { subject: 'missing-capability:other', summary: 'x', template: 'Martine Dupont needs rows' } };
-  const { F: ingested } = feedback({ settings: { mode: 'ask', consentText: 2 }, incoming: [{ ...raw, __file: 'a.json' }] });
+  const { F: ingested } = feedback({ settings: { mode: 'ask' }, incoming: [{ ...raw, __file: 'a.json' }] });
   assert.equal(ingested.pending()[0].finding.template, undefined);
 });
 
-// The excerpt is named by the consent texts from version 2 (inviteText, noticeText): an accord given before has no
-// version, sends its reports as before without the excerpt, and is never asked again (user decision, 29/10).
-const OTHER = 'fee7dbe3ec38907b9952ae1fc65639795dfb3f9580dd637746bba3293a7fcb67';
-const LACK_SENTENCE = 'Les outils no-code ne permettent pas de dupliquer un formulaire.';
-
-test('an accord given before the excerpt: no excerpt, no invitation, no notice, the same fingerprint', () => {
+// The consent texts name the agent's sentence (user decision, 29/10): an accord already given sends it too, and nobody
+// is asked again.
+test('an accord already given gets the excerpt, with no invitation, notice or new request', () => {
+  const answer = 'Les outils no-code ne permettent pas de dupliquer un formulaire.';
   const { F, store } = feedback({ settings: { mode: 'auto', updatedAt: 1, decidedAt: 1 } });
   const status = F.status();
   assert.deepEqual([status.invite, status.nudge, status.notice, status.offerAuto], [false, false, false, false]);
-  assert.equal(F.consentText(), 0);
-  assert.equal(F.sharesExcerpts(), false);
-  const [report] = F.collectMissingCapabilities({ answer: LACK_SENTENCE, events: [] });
-  assert.equal(report.finding.subject, 'missing-capability:other');
-  assert.equal(report.finding.template, undefined, 'no excerpt stored');
-  assert.equal(report.fingerprint, OTHER);
-  assert.equal(F.pending()[0].finding.template, undefined, 'none sent');
-  assert.match(F.pending()[0].finding.summary, /^Detected by Tigo/);
-  // A mode changed in the setting, or by a command, keeps the accord's version.
-  assert.equal(F.run({ action: 'mode', mode: 'ask' }).result.status, 'ok');
-  assert.equal(store.settings.consentText, undefined);
-  assert.equal(F.sharesExcerpts(), false);
-  assert.equal(F.status().invite, false);
-  // A version the page did not send is no version.
-  for (const consentText of ['', 'abc', '-1', '0', '1e9', null]) {
-    F.run({ action: 'mode', mode: 'ask', consentText });
-    assert.equal(F.consentText(), 0, String(consentText));
-  }
-});
-
-test('an accord given with the texts that name the excerpt sends it; an accord given again with them turns it on', () => {
-  const { F, store } = feedback();
-  assert.equal(F.status().invite, true);
-  F.run({ action: 'mode', mode: 'auto', consentText: '2' });
-  assert.equal(store.settings.consentText, 2);
-  assert.equal(F.sharesExcerpts(), true);
-  const [report] = F.collectMissingCapabilities({ answer: LACK_SENTENCE, events: [] });
+  const [report] = F.collectMissingCapabilities({ answer, events: [] });
   assert.equal(report.finding.template, 'Les outils no-code ne permettent pas de dupliquer un formulaire');
-  assert.equal(report.fingerprint, OTHER, 'the excerpt never changes the fingerprint');
-  assert.equal(F.status().invite, false);
-  // Changed in the setting: still the accord given with the new text.
-  F.run({ action: 'mode', mode: 'ask' });
-  assert.equal(store.settings.consentText, 2);
+  assert.equal(report.fingerprint, 'fee7dbe3ec38907b9952ae1fc65639795dfb3f9580dd637746bba3293a7fcb67');
   assert.equal(F.pending()[0].finding.template, 'Les outils no-code ne permettent pas de dupliquer un formulaire');
-  // Turned off: nothing is collected or sent; turned on again in the setting, the same accord.
-  F.run({ action: 'mode', mode: 'off' });
-  assert.equal(F.sharesExcerpts(), false);
-  F.run({ action: 'mode', mode: 'auto' });
-  assert.equal(F.sharesExcerpts(), true);
-  // An accord given before, then again on a card that shows the new text.
-  const old = feedback({ settings: { mode: 'ask', decidedAt: 1 } });
-  assert.equal(old.F.sharesExcerpts(), false);
-  old.F.run({ action: 'mode', mode: 'ask', consentText: 2 });
-  assert.equal(old.F.sharesExcerpts(), true);
-  assert.equal(old.F.collectMissingCapabilities({ answer: LACK_SENTENCE, events: [] })[0].finding.template.length > 0, true);
-  // A report waiting from the former accord gets no excerpt afterwards: it was stored without one.
-  const waiting = feedback({ settings: { mode: 'ask', decidedAt: 1 } });
-  waiting.F.collectMissingCapabilities({ answer: LACK_SENTENCE, events: [] });
-  waiting.F.run({ action: 'mode', mode: 'ask', consentText: 2 });
-  assert.equal(waiting.F.pending()[0].finding.template, undefined);
-});
-
-test('an imposed automatic mode sends the excerpt only to a user who saw the notice that names it, never told again', () => {
-  const { F, stores } = server({ symbols: { 'assistant.feedback.policy': 'auto' } });
-  // Told before: the notice does not come back and no excerpt leaves.
-  F._storeFor('jane').settings = { noticedAt: 1 };
-  const told = F.forUser('jane');
-  assert.equal(told.status().notice, false);
-  assert.equal(told.sharesExcerpts(), false);
-  assert.equal(told.collectMissingCapabilities({ answer: LACK_SENTENCE, events: [], surface: 'nocode' })[0].finding.template, undefined);
-  // Told now, with the new notice.
-  const paul = F.forUser('paul');
-  assert.equal(paul.status().notice, true);
-  paul.run({ action: 'seen', consentText: '2' });
-  assert.deepEqual([stores.paul.settings.noticeText, paul.status().notice, paul.sharesExcerpts()], [2, false, true]);
-  const [report] = paul.collectMissingCapabilities({ answer: LACK_SENTENCE, events: [], surface: 'nocode' });
-  assert.equal(report.finding.template, 'Les outils no-code ne permettent pas de dupliquer un formulaire');
-  assert.equal(report.fingerprint, OTHER);
-  // A page that sends no version (an older one) records an accord without it.
-  const lea = F.forUser('lea');
-  lea.run({ action: 'seen' });
-  assert.equal(lea.sharesExcerpts(), false);
-  // An imposed review mode shows no text that names the excerpt.
-  const review = server({ symbols: { 'assistant.feedback.policy': 'ask' } }).F.forUser('max');
-  assert.equal(review.status().notice, false);
-  assert.equal(review.sharesExcerpts(), false);
-});
-
-test('AgentFeedback passes the version of the consent text the page sends', () => {
-  const sequence = fs.readFileSync(path.join(__dirname, '..', '_c8oProject', 'sequences', 'AgentFeedback.yaml'), 'utf8');
-  assert.match(sequence, /consentText:String\(consentText\|\|""\)/);
-  assert.match(sequence, /^↓consentText \[variables\.RequestableVariable-1792540000019\]: $/m);
+  assert.deepEqual(store.settings, { mode: 'auto', updatedAt: 1, decidedAt: 1 }, 'the accord is left as it was');
+  // A user told before of an imposed automatic mode: no notice again, the excerpt leaves.
+  const { F: imposed } = server({ symbols: { 'assistant.feedback.policy': 'auto' } });
+  imposed._storeFor('jane').settings = { noticedAt: 1 };
+  const jane = imposed.forUser('jane');
+  assert.equal(jane.status().notice, false);
+  assert.equal(jane.collectMissingCapabilities({ answer, events: [], surface: 'nocode' })[0].finding.template,
+    'Les outils no-code ne permettent pas de dupliquer un formulaire');
+  // The invitation and the notice say what of the agent's answers leaves.
+  const said = { fr: /des réponses de l'agent, seulement la courte phrase où il signale ce qui lui manque/,
+    en: /from the agent's answers, only the short sentence where it says what it lacks/,
+    it: /delle risposte dell'agente, solo la breve frase in cui segnala ciò che gli manca/,
+    es: /de las respuestas del agente, solo la frase corta en la que indica lo que le falta/ };
+  for (const language of Object.keys(said)) {
+    for (const key of ['inviteText', 'noticeText']) {
+      assert.match(page(language).agentFeedbackText(key), said[language], language + ' ' + key);
+      assert.doesNotMatch(page(language).agentFeedbackText(key), /ni réponses|no prompts, answers|niente prompt, risposte|sin prompts, respuestas/);
+    }
+  }
 });
 
 test('a missing capability is not filed without consent, or when the agent filed a friction itself in the turn', () => {

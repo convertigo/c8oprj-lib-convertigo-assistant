@@ -158,10 +158,6 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   // The excerpt of the clause that told a missing capability (feedback group fee7dbe3, 28/10: missing-capability:other
   // with no word of what was missing): short, and masked further than an error template, the text being the agent's.
   var EXCERPT_MAX = 200;
-  // The version of the consent texts (the invitation, inviteText, and the notice of an imposed automatic mode,
-  // noticeText) that name this excerpt. The page sends the version it showed with the answer; an accord without one,
-  // given before, sends no excerpt and is never asked again.
-  var CONSENT_TEXT = 2;
   // Capitalized words an excerpt keeps: the product and the tools it names. Any other one but the first word of the
   // clause may be a person, a customer or a form named in prose: it becomes <name>.
   var PRODUCT_WORDS = {};
@@ -584,15 +580,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return MODES[mode] ? mode : "off";
     };
 
-    // The version of a consent text the page says it showed, or 0.
-    function consentVersion(value) {
-      var version = Math.floor(Number(value));
-      return isFinite(version) && version > 0 && version < 1000 ? version : 0;
-    }
-
-    // consentText: the version of the invitation the user answered. A mode changed elsewhere (the setting, a command)
-    // keeps the version of the accord in force.
-    F.setMode = function (mode, consentText) {
+    F.setMode = function (mode) {
       mode = trim(mode).toLowerCase();
       if (!MODES[mode]) {
         return { status: "error", code: "unknown_mode" };
@@ -604,26 +592,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         return { status: "error", code: "locked_by_policy", mode: F.policy() };
       }
       var now = store().now();
-      var next = { mode: mode, updatedAt: now, decidedAt: now };
-      var version = consentVersion(consentText) || consentVersion((store().readSettings() || {}).consentText);
-      if (version) {
-        next.consentText = version;
-      }
-      store().writeSettings(next);
+      store().writeSettings({ mode: mode, updatedAt: now, decidedAt: now });
       return { status: "ok", mode: mode };
-    };
-
-    // The version of the consent text of the accord in force: the user's (the invitation), or under an imposed automatic
-    // mode the notice the user saw; 0 for an accord given before versions, or none.
-    F.consentText = function () {
-      var policy = F.policy();
-      var settings = store().readSettings() || {};
-      return policy === "user" ? consentVersion(settings.consentText) : (policy === "auto" ? consentVersion(settings.noticeText) : 0);
-    };
-
-    // A missing capability carries the excerpt of the agent's clause only under an accord given with the texts that name it.
-    F.sharesExcerpts = function () {
-      return F.mode() !== "off" && F.consentText() >= CONSENT_TEXT;
     };
 
     // "Not now" on an offer: the invitation and the nudge come back in a week, the offer of "auto" in a month. Choosing a
@@ -688,16 +658,11 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return !Number(settings.noticedAt);
     };
 
-    // consentText: the version of the notice the user saw.
-    F.seen = function (consentText) {
+    F.seen = function () {
       if (!F.available()) {
         return { status: "error", code: "unavailable" };
       }
-      var patch = { noticedAt: store().now() };
-      if (consentVersion(consentText)) {
-        patch.noticeText = consentVersion(consentText);
-      }
-      mergeSettings(patch);
+      mergeSettings({ noticedAt: store().now() });
       return { status: "ok" };
     };
 
@@ -736,12 +701,12 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         stack: {}
       };
       // A missing capability says the product's sentences, and as template the short excerpt of the agent's clause that
-      // told it, masked again as an excerpt, under an accord given with the texts that name it only.
+      // told it, masked again as an excerpt.
       var fixed = out.kind === "agent_friction" ? missingCapabilityFinding(finding.subject) : null;
       var keys = ["area", "subject", "severity", "summary", "suggestion", "template"];
       for (var i = 0; i < keys.length; i++) {
         var own = !fixed || keys[i] === "template";
-        var value = trim(own ? (fixed && !F.sharesExcerpts() ? "" : finding[keys[i]]) : fixed[keys[i]]);
+        var value = trim(own ? finding[keys[i]] : fixed[keys[i]]);
         if (value.length) {
           out.finding[keys[i]] = !own ? value : (fixed ? F.capabilityExcerpt(value, names, others)
             : cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60));
@@ -999,9 +964,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       var reports = [];
       for (var s = 0; s < found.length && s < 2; s++) {
         var finding = missingCapabilityFinding(found[s].subject);
-        if (F.sharesExcerpts()) {
-          finding.template = F.capabilityExcerpt(found[s].clause, store().projectNames(), customerNames());
-        }
+        finding.template = F.capabilityExcerpt(found[s].clause, store().projectNames(), customerNames());
         reports.push(F.add("agent_friction", finding, options));
       }
       return reports;
@@ -1160,7 +1123,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       var action = trim(options.action).toLowerCase() || "status";
       var result;
       if (action === "mode") {
-        result = F.setMode(options.mode, options.consentText);
+        result = F.setMode(options.mode);
         if (result.status === "ok" && result.mode !== "off" && options.events) {
           result.collected = F.collectTurn(options.events, options.provider, options.model, options.surface);
         }
@@ -1173,7 +1136,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       } else if (action === "later") {
         result = F.later(options.topic);
       } else if (action === "seen") {
-        result = F.seen(options.consentText);
+        result = F.seen();
       } else if (action === "report") {
         result = F.userReport(options);
         if (result.status === "ok" && F.mode() === "auto") {

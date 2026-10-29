@@ -5753,11 +5753,6 @@ scriptContent:
         		card.busy = true;
         		var params: any = cta.id === "send" || cta.id === "clear" || cta.id === "seen" ? { action: cta.id }
         			: (cta.id === "later" || cta.id === "keep" ? { action: "later", topic: cta.id === "keep" ? "auto" : (cta.topic || "invite") } : { action: "mode", mode: cta.id });
-        		if ((params.action === "mode" && card.variant === "invite") || (params.action === "seen" && card.variant === "notice")) {
-        			// The version of inviteText and noticeText the user answered: 2 names the excerpt of a missing capability
-        			// (docs/tigo-feedback.md). An accord given before has none and sends no excerpt.
-        			params.consentText = 2;
-        		}
         		if (params.action === "mode" && card.variant === "nudge") {
         			// Turned on from a failed turn: its errors are shared too.
         			params.threadid = ("" + (this.local.Conversation || "")).trim();
