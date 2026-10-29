@@ -521,7 +521,7 @@ scriptContent:
         			fr: {
         				agentCheckTitle: "Vérification de l’agent C8Oforms",
         				agentCheckCopy: "Vérification des agents disponibles sur le serveur C8Oforms.",
-        				agentCheckTimeout: "La vérification a dépassé le délai de 15 secondes. Réessayez depuis la configuration.",
+        				agentCheckTimeout: "La vérification a dépassé le délai de {seconds} secondes. Réessayez depuis la configuration.",
         				agentCheckUserMissing: "La session C8Oforms est indisponible. Reconnectez-vous puis rouvrez l’assistant.",
         				agentCheckFailed: "Impossible de vérifier les agents du serveur. Réessayez depuis la configuration.",
         				currentForm: "Formulaire courant", startTitle: "Contexte :", formMeta: "Formulaire sélectionné : {target}", elementMeta: "Élément ciblé : {target}", contextTitle: "Contexte de la conversation", formLabel: "Application / formulaire", formPlaceholder: "Choisir un formulaire", elementLabel: "Élément précis", wholeForm: "Tout le formulaire", baserowLabel: "Base de données no-code", basePlaceholder: "Choisir une base", tableLabel: "Table", tablePlaceholder: "Toute la base ou choisir une table", chooseContext: "Choisissez un formulaire, un élément ou une source de la base de données no-code.", baseMeta: "Base de données no-code sélectionnée : {target}", tableMeta: "Table sélectionnée : {target}", questionPlaceholder: "Décrivez ce que l’agent doit modifier dans ce contexte…",
@@ -535,7 +535,7 @@ scriptContent:
         			en: {
         				agentCheckTitle: "Checking the C8Oforms agent",
         				agentCheckCopy: "Checking available agents on the C8Oforms server.",
-        				agentCheckTimeout: "The check timed out after 15 seconds. Retry from settings.",
+        				agentCheckTimeout: "The check timed out after {seconds} seconds. Retry from settings.",
         				agentCheckUserMissing: "The C8Oforms session is unavailable. Sign in again and reopen the assistant.",
         				agentCheckFailed: "Unable to check server agents. Retry from settings.",
         				currentForm: "Current form", startTitle: "Context:", formMeta: "Selected form: {target}", elementMeta: "Target element: {target}", contextTitle: "Conversation context", formLabel: "Application / form", formPlaceholder: "Choose a form", elementLabel: "Target element", wholeForm: "Whole form", baserowLabel: "No-code database", basePlaceholder: "Choose a database", tableLabel: "Table", tablePlaceholder: "Whole database or choose a table", chooseContext: "Choose a form, an element, or a no-code database source.", baseMeta: "Selected no-code database: {target}", tableMeta: "Selected table: {target}", questionPlaceholder: "Describe what the agent should change in this context…",
@@ -549,7 +549,7 @@ scriptContent:
         			es: {
         				agentCheckTitle: "Verificación del agente C8Oforms",
         				agentCheckCopy: "Comprobando los agentes disponibles en el servidor C8Oforms.",
-        				agentCheckTimeout: "La comprobación superó los 15 segundos. Reintenta desde la configuración.",
+        				agentCheckTimeout: "La comprobación superó los {seconds} segundos. Reintenta desde la configuración.",
         				agentCheckUserMissing: "La sesión C8Oforms no está disponible. Inicia sesión de nuevo y abre el asistente.",
         				agentCheckFailed: "No se pueden comprobar los agentes del servidor. Reintenta desde la configuración.",
         				currentForm: "Formulario actual", startTitle: "Contexto:", formMeta: "Formulario seleccionado: {target}", elementMeta: "Elemento seleccionado: {target}", contextTitle: "Contexto de la conversación", formLabel: "Aplicación / formulario", formPlaceholder: "Elegir un formulario", elementLabel: "Elemento exacto", wholeForm: "Todo el formulario", baserowLabel: "Base de datos no-code", basePlaceholder: "Elegir una base", tableLabel: "Tabla", tablePlaceholder: "Toda la base o elegir una tabla", chooseContext: "Elige un formulario, un elemento o una fuente de la base de datos no-code.", baseMeta: "Base de datos no-code seleccionada: {target}", tableMeta: "Tabla seleccionada: {target}", questionPlaceholder: "Describe lo que el agente debe modificar en este contexto…",
@@ -563,7 +563,7 @@ scriptContent:
         			it: {
         				agentCheckTitle: "Verifica dell’agente C8Oforms",
         				agentCheckCopy: "Verifica degli agenti disponibili sul server C8Oforms.",
-        				agentCheckTimeout: "La verifica ha superato i 15 secondi. Riprova dalle impostazioni.",
+        				agentCheckTimeout: "La verifica ha superato i {seconds} secondi. Riprova dalle impostazioni.",
         				agentCheckUserMissing: "La sessione C8Oforms non è disponibile. Accedi di nuovo e riapri l’assistente.",
         				agentCheckFailed: "Impossibile verificare gli agenti del server. Riprova dalle impostazioni.",
         				currentForm: "Modulo corrente", startTitle: "Contesto:", formMeta: "Modulo selezionato: {target}", elementMeta: "Elemento selezionato: {target}", contextTitle: "Contesto della conversazione", formLabel: "Applicazione / modulo", formPlaceholder: "Scegli un modulo", elementLabel: "Elemento preciso", wholeForm: "Tutto il modulo", baserowLabel: "Database no-code", basePlaceholder: "Scegli una base", tableLabel: "Tabella", tablePlaceholder: "Tutta la base o scegli una tabella", chooseContext: "Scegli un modulo, un elemento o una sorgente del database no-code.", baseMeta: "Database no-code selezionato: {target}", tableMeta: "Tabella selezionata: {target}", questionPlaceholder: "Descrivi cosa deve modificare l’agente in questo contesto…",
@@ -1209,6 +1209,21 @@ scriptContent:
         			if (forceFullSettings !== true && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded()) { return; }
         			if (!this.isEmbeddedNoCodeAgent() && (!this.hasLocalAgentBridgeCapability || !this.hasLocalAgentBridgeCapability())) { return; }
         			this.local.AgentSettingsRefreshRunning = true;
+        			// A settings page refresh answers for the page that asked. Closed meanwhile (gear or Continue), its late answer or
+        			// failure neither reopens the page, which hides the composer, nor replaces the choice just confirmed.
+        			var settingsPageSeq = this.local.AgentSettingsPageSeq;
+        			var settingsPageLeft = () => forceFullSettings === true && this.local.AgentSettingsPageSeq !== settingsPageSeq;
+        			var dropLeftSettingsPage = () => {
+        				this.local.AgentSettingsRefreshRunning = false;
+        				this.local.AgentSettingsRefreshDone = true;
+        				if (this.local.ShowAgentConfigPanel === true && this.local.AgentConfigExplicitOpen === true) {
+        					this.refreshAgentSettingsAfterHostContext(true);
+        					return;
+        				}
+        				this.local.AgentRuntimeLoading = false;
+        				if (this.setEnableChat) { this.setEnableChat(); }
+        				this.tick();
+        			};
         			if (forceFullSettings === true || noCode) {
         				this.local.AgentRuntimeLoading = true;
         				this.local.AgentRuntimeOperation = '''';
@@ -1249,7 +1264,9 @@ scriptContent:
         			var settingsRequest: any;
         			if (noCode) {
         				settingsRequest = new Promise((resolve, reject) => {
-        					settingsTimer = setTimeout(() => reject(new Error(this.getC8OformsText("agentCheckTimeout"))), 15000);
+        					// The start check only reads presence; a full check (settings page) also rediscovers models and updates.
+        					var settingsTimeoutMs = forceFullSettings === true ? 60000 : 15000;
+        					settingsTimer = setTimeout(() => reject(new Error(this.getC8OformsText("agentCheckTimeout").replace("{seconds}", "" + (settingsTimeoutMs / 1000)))), settingsTimeoutMs);
         					if (!payload.userId || payload.userId === "studio" || payload.userId === "nocode-anonymous") {
         						reject(new Error(this.getC8OformsText("agentCheckUserMissing")));
         						return;
@@ -1261,6 +1278,7 @@ scriptContent:
         			}
         			settingsRequest.then((settingsResponse) => {
         				if (settingsTimer !== null) { clearTimeout(settingsTimer); }
+        				if (settingsPageLeft()) { dropLeftSettingsPage(); return; }
         				if (noCode) {
         					var checked = settingsResponse && settingsResponse.result;
         					var checkedSettings = checked && checked.settings;
@@ -1371,6 +1389,7 @@ scriptContent:
         			}).catch((settingsError) => {
         				if (settingsTimer !== null) { clearTimeout(settingsTimer); }
         				try { this.c8o.log.warn(''[Assistant] Unable to refresh agent settings after host context: '' + settingsError); } catch (eWarn) {}
+        				if (settingsPageLeft()) { dropLeftSettingsPage(); return; }
         				this.local.AgentSettingsRefreshRunning = false;
         				this.local.AgentSettingsRefreshDone = true;
         				this.local.AgentRuntimeLoading = false;
@@ -1418,6 +1437,7 @@ scriptContent:
         			};
         		}
         		this.local.AgentConfigExplicitOpen = true;
+        		this.local.AgentSettingsPageSeq = Number(this.local.AgentSettingsPageSeq || 0) + 1;
         		this.local.ShowConversationPanel = false;
         		this.local.ShowAgentConfigPanel = true;
         		// The settings show above the conversation: bring them into view, with their way back to the conversation.
@@ -1436,6 +1456,7 @@ scriptContent:
         	public closeAgentSettingsPage() {
         		if (!this.local) { this.local = {}; }
         		this.local.AgentConfigExplicitOpen = false;
+        		this.local.AgentSettingsPageSeq = Number(this.local.AgentSettingsPageSeq || 0) + 1;
         		this.local.ShowAgentConfigPanel = false;
         		this.local.AgentRuntimeLoading = false;
         		if (this.local.AgentConfigReturnState) {
@@ -12711,7 +12732,7 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "Button",
-                       "Disabled": "script:!this.local || this.local.AgentRuntimeLoading === true || !this.local.AgentProvider || !this.local.AgentModel || !this.hasReadyAgentProvider || !this.hasReadyAgentProvider(this.local.AgentProvider)",
+                       "Disabled": "script:!this.local || (this.local.AgentRuntimeLoading === true && !(this.local.AgentSettingsRefreshRunning === true && !this.local.AgentRuntimeOperation && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded())) || !this.local.AgentProvider || !this.local.AgentModel || !this.hasReadyAgentProvider || !this.hasReadyAgentProvider(this.local.AgentProvider)",
                        "IonFill": "plain:clear",
                        "IonSize": "plain:small"
                       }'
