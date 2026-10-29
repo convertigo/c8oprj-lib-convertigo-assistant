@@ -55,8 +55,27 @@ Each report carries the versions (Assistant, Bridge, MCP, Studio), the provider 
 checkout, or a project reference that follows a branch) and `release` otherwise (a CAR install, or a clone checked out
 at a tag): Convertigo reads its colleagues' reports apart from its customers'. Reports with the same fingerprint (kind, subject or tool, error template) are counted, not repeated.
 
-Never sent: project files, forms and their data, prompts, agent answers (but the excerpt of a missing capability, below),
-tool arguments or results, credentials, the account email, the name of a server user.
+Never sent: project files, forms and their data, prompts, agent answers, tool arguments or results, credentials, the
+account email, the name of a server user. One exception to agent answers: for a `missing-capability:*` friction, the
+masked sentence of 200 characters at most where the agent says what it lacks (see Masking), and only under an accord
+given with the consent texts that name it (see "Consent text version").
+
+## Consent text version
+
+The invitation (`inviteText`) and the notice of an imposed automatic mode (`noticeText`) name what leaves. From version
+2 they say that of the agent's answers only the short sentence where it says what it lacks is sent. The page sends the
+version of the text the user answered with the answer (`AgentFeedback` `consentText`): the invitation with the chosen
+mode (`settings.json` `consentText`), the notice with "Compris" (`noticeText`). The accord in force is the user's under
+`assistant.feedback.policy` `user`, the notice the user saw under an imposed `auto`; an imposed `ask` shows neither
+text.
+
+- An accord without a version was given before: its reports leave as before, without the excerpt (none is stored), and
+  the user sees no invitation, notice or request again.
+- A mode changed elsewhere (the setting, `/retours`, the nudge, the offer of `auto`) keeps the version of the accord in
+  force; `off` collects nothing.
+- An accord given again on a card that shows the new text (the invitation, the notice) records its version and turns
+  the excerpt on.
+- The fingerprints do not depend on it: a group gets the same fingerprint with or without the excerpt.
 
 ## Masking
 
@@ -105,8 +124,8 @@ Tigo in the No Code Studio of a server (C8Oforms) offers the same feedback to ea
   and the agent or its tools as subject; limits by design such as server logs or the user's rights are left out) and
   files an `agent_friction` per capability, two at most: `missing-capability:form-preview`,
   `missing-capability:table-rows`, or alone `missing-capability:<no-code tool>` / `missing-capability:other`. The report
-  holds the product's fixed summary and suggestion for that subject and, as `template`, the masked excerpt of the
-  clause that told it (see Masking): "other" alone said nothing of what was missing (feedback group `fee7dbe3`, 28/10).
+  holds the product's fixed summary and suggestion for that subject and, under an accord given with the texts that
+  name it (see "Consent text version"), as `template`, the masked excerpt of the clause that told it (see Masking): "other" alone said nothing of what was missing (feedback group `fee7dbe3`, 28/10).
   Its fingerprint stays the subject and the fixed summary, so the excerpt never splits a group; a report counted again
   keeps its first excerpt. It follows the user's mode (reviewed in `ask`, sent after the turn in `auto`). An agent's own
   friction under such a subject gets the fixed sentences and no excerpt.
@@ -115,9 +134,10 @@ Tigo in the No Code Studio of a server (C8Oforms) offers the same feedback to ea
 
 `<engine workspace>/agents/feedback/`:
 
-- `settings.json`: `{ "mode": "off|ask|auto", "updatedAt": ms, "decidedAt": ms, "snoozedUntil": ms, "nudgeUntil": ms,
-  "autoOfferUntil": ms }` (`decidedAt` when the user chose a mode; the three others after "Pas maintenant" on the
-  invitation or the nudge, or "Garder la relecture")
+- `settings.json`: `{ "mode": "off|ask|auto", "updatedAt": ms, "decidedAt": ms, "consentText": 2, "snoozedUntil": ms,
+  "nudgeUntil": ms, "autoOfferUntil": ms, "noticedAt": ms, "noticeText": 2 }` (`decidedAt` when the user chose a mode,
+  `consentText` the version of the invitation answered; the three snoozes after "Pas maintenant" on the invitation or
+  the nudge, or "Garder la relecture"; `noticedAt` and `noticeText` when the user saw the notice of an imposed `auto`)
 - `outbox/<reportId>.json`: reports waiting to be sent (100 at most, the oldest dropped first)
 - `sent.json`: the 50 last reports sent (id, kind, subject, date), for `/retours`
 
