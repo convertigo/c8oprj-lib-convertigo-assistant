@@ -313,6 +313,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (language.length) {
       lines.push("- Reply to the user and write progress/details in " + language + ".");
     }
+    lines.push(writeConfirmModule().promptLine(typeof options.writeConfirmOn === "boolean" ? options.writeConfirmOn : noCodeWriteConfirmOn(options)));
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
     lines.push("- Read the latest saved form with `nocode-form-get` using its document id before auditing, proposing improvements, or editing. The contract tool describes supported components, not this form's content.");
     lines.push("- If a selected element id is provided, locate it in the form returned by `nocode-form-get`. Apply the smallest `nocode-form-edit` operation only when the user requests a change; suggestions and audits are read-only.");
@@ -2565,9 +2566,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       options.skillProfile = trim(options.skillProfile) || trim(capabilityProfile.id);
     }
     var resolvedProvider = descriptor && descriptor.id ? normalizeProvider(descriptor.id) : normalizeProvider(provider || (settings.defaults && settings.defaults.provider));
+    // settings.defaults is the user's confirmed choice (else the first ready provider's default): for its provider it
+    // comes before the provider's own default model, the gateway default for Convertigo.
+    var savedDefaults = settings.defaults && normalizeProvider(settings.defaults.provider) === resolvedProvider ? settings.defaults : null;
+    var savedModel = trim(savedDefaults && savedDefaults.model);
+    var offeredSavedModel = savedModel.length ? modelSettings(descriptor, savedModel) : null;
+    if (offeredSavedModel && trim(offeredSavedModel.id) !== savedModel) {
+      savedModel = "";
+    }
     var model = trim(options.model || options.agentModel);
     if (!model.length || model.toLowerCase() === "default" || model.toLowerCase() === "auto") {
-      model = trim((descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
+      model = trim(savedModel || (descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
       if (!model.length) {
         var firstModel = modelSettings(descriptor, "");
         model = trim(firstModel && firstModel.id);
@@ -2582,7 +2591,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var selectedModel = modelSettings(descriptor, trim(options.model || options.agentModel || model));
     var reasoning = trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
     if (!reasoning.length || reasoning.toLowerCase() === "default" || reasoning.toLowerCase() === "auto") {
-      reasoning = trim((selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
+      var savedReasoning = savedModel.length && savedModel === trim(selectedModel && selectedModel.id) ? trim(savedDefaults.reasoning) : "";
+      reasoning = trim(savedReasoning || (selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
       if (reasoning.length) {
         options.reasoningEffort = reasoning;
       }
@@ -7948,6 +7958,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     enrichViewerDebugOptions(options, state);
     collectFeedbackContextNames(state, options);
+    // A message starts a turn: the user's "Confirmer avant de modifier" is published for the MCP, and what the last turn
+    // left (its cards, its "allow all for this turn") is dropped. Never a reason not to send.
+    if (normalizeSkillProfile(state) === "nocode") {
+      try {
+        options.writeConfirmOn = writeConfirmModule().newTurn(state.threadid, options.userId, writeConfirmHost(options));
+      } catch (_ignoreWriteConfirm) {}
+    }
     // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
     options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
     if (trim(options.rawUserQuestion).length) {
@@ -8373,6 +8390,67 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         return java.util.Base64.getDecoder().decode(String(text));
       }
     };
+  }
+
+  // "Confirmer avant de modifier" of a No Code user (js/agent_write_confirm.js), through AgentWriteConfirm: status, set
+  // (enabled), answer (threadid, requestId, decision: allow, allow_turn or refuse) and turn_end (threadid). Always for the
+  // authenticated user, never the one the page names.
+  C8O.assistantAgentBridge.writeConfirm = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    if (!trim(options.userId).length) {
+      return { status: "error", error: { code: "unavailable", message: "No user to keep the choice for." } };
+    }
+    var module = writeConfirmModule();
+    var host = writeConfirmHost(options);
+    var action = trim(options.action).toLowerCase() || "status";
+    if (action === "set") {
+      return module.choose(options.userId, boolValue(options.enabled, false), host);
+    }
+    if (action === "answer") {
+      return module.answer({ conversationId: normalizeThreadId(options.threadid), userId: options.userId, requestId: options.requestId, decision: options.decision }, host);
+    }
+    if (action === "turn_end") {
+      return module.endTurn(normalizeThreadId(options.threadid), options.userId, host);
+    }
+    var on = module.isOn(host);
+    module.publish(options.userId, on, host);
+    return { status: "ok", on: on };
+  };
+
+  function writeConfirmModule() {
+    if (typeof C8O.assistantWriteConfirm === "undefined" || typeof C8O.assistantWriteConfirm.newTurn !== "function") {
+      include("js/agent_write_confirm.js");
+    }
+    return C8O.assistantWriteConfirm;
+  }
+
+  // The user's choice lives beside their No Code MCP token: agents/nocode/users/<userKey>/write-confirm.json.
+  function writeConfirmHost(options) {
+    var root = new File(resolveWorkspaceRoot(options), "agents");
+    var file = new File(new File(new File(new File(root, "nocode"), "users"), safePathPart(normalizeUserKey(options.userId))), "write-confirm.json");
+    var host = hostRequestsHost();
+    host.newMap = function () {
+      return new java.util.concurrent.ConcurrentHashMap();
+    };
+    host.readChoice = function () {
+      return readJsonFile(file);
+    };
+    host.writeChoice = function (record) {
+      writeJsonFile(file, record);
+    };
+    return host;
+  }
+
+  function noCodeWriteConfirmOn(options) {
+    try {
+      return trim(options && options.userId).length > 0 && writeConfirmModule().isOn(writeConfirmHost(options));
+    } catch (_ignoreChoice) {
+      return false;
+    }
   }
 
   function readResponseOf(options) {

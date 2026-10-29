@@ -1,6 +1,8 @@
 /*
  * Requests the Convertigo MCP leaves for the page that hosts the Tigo panel: nocode-form-preview-capture of
- * lib_ConvertigoMCP (js/nocode_preview_capture.js) asks the open No Code Studio page for an image of a form's preview.
+ * lib_ConvertigoMCP (js/nocode_preview_capture.js) asks the open No Code Studio page for an image of a form's preview,
+ * and a No Code write held while the user has "Confirmer avant de modifier" on (js/nocode_write_confirm.js there) waits
+ * for the user's answer on a card of the panel ("write-confirm", answered through js/agent_write_confirm.js).
  *
  * The MCP keeps them in context.server under lib_ConvertigoAssistant.hostRequests: a map of the Tigo conversations,
  * each one a map of its requests, one JSON string per request. readResponse hands the panel the pending requests of its
@@ -56,7 +58,9 @@ C8O.assistantHostRequests = C8O.assistantHostRequests || {};
     return map.replace(id, JSON.stringify(before), JSON.stringify(next)) ? next : null;
   }
 
-  // The pending requests of the conversation for its user, marked taken: what the panel passes to its page.
+  // The pending requests of the conversation for its user, marked taken: what the panel passes to its page. A change
+  // waiting for the user's confirmation (js/agent_write_confirm.js) comes back while it waits, so a panel opened again
+  // shows its card again; the panel shows each request once.
   api.take = function (conversationId, userId, host) {
     var taken = [];
     var map = requestsOf(host, conversationId);
@@ -68,7 +72,17 @@ C8O.assistantHostRequests = C8O.assistantHostRequests || {};
       var id = String(keys[i]);
       var request = readRequest(map, id);
       var now = host.now();
-      if (!request || request.status !== "pending" || !sameUser(request.user, userId) || now > Number(request.expiresAt || 0)) {
+      if (!request || !sameUser(request.user, userId) || now > Number(request.expiresAt || 0)) {
+        continue;
+      }
+      if (request.kind === "write-confirm" && (request.status === "pending" || request.status === "taken")) {
+        var held = request.status === "pending" ? update(map, id, request, { status: "taken", takenAt: now }) : request;
+        if (held) {
+          taken.push({ requestId: held.id, kind: held.kind, tool: held.tool, formId: held.formId, formName: held.formName, items: held.items || [], expiresAt: held.expiresAt });
+        }
+        continue;
+      }
+      if (request.status !== "pending") {
         continue;
       }
       var next = update(map, id, request, { status: "taken", takenAt: now });

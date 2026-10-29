@@ -22,8 +22,8 @@ const slice = (source, from, to) => {
 
 const pageInit = slice(only('var preferredReasoning ='), 'var preferredReasoning =',
   "this.local.AgentReasoningEffort = this.resolveAgentReasoning([preferredReasoning], true);");
-const settingsAction = slice(only('var reasoning = clean(preserveSelection ? page.local.AgentReasoningEffort'),
-  'var reasoning = clean(preserveSelection ? page.local.AgentReasoningEffort',
+const settingsAction = slice(only('var reasoning = clean(preserveSelection && clean(page.local.AgentReasoningEffort).length ? page.local.AgentReasoningEffort'),
+  'var reasoning = clean(preserveSelection && clean(page.local.AgentReasoningEffort).length ? page.local.AgentReasoningEffort',
   "page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([preserveSelection ? page.local.AgentReasoningEffort : '', state.reasoningEffort, result.reasoningEffort, reasoning], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoning : '');");
 
 // The real resolveAgentReasoning of the page, every reasoning assignment goes through it.

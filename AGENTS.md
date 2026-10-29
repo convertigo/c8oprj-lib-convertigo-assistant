@@ -121,6 +121,16 @@ rediscovering the same context.
 - Refresh provider settings after a successful runtime update so model and
   reasoning choices come from the newly installed CLI. Existing agent processes
   may require a restart or a new conversation before using the new runtime.
+- Settings that show are always the settings page (`isAgentSettingsPageShown`), also
+  while the chosen agent is not ready once the page was closed. A note under the agent
+  cards says how to connect that agent (sign-in, install, check running) and offers the
+  way back to a ready agent (`getAgentNotReadyText`, `useReadyAgentProvider`). Closing
+  the settings on an agent that is not ready goes back to the agent in use when they
+  opened, else the saved default, else the first ready one; a runtime install still
+  running keeps its agent (`AgentRuntimeInstallProvider`). The No Code router reads
+  only the agent in use: a card whose agent the panel has not read starts the settings
+  check (`startAgentProviderCheck`), never shows a runtime to install. Cover with
+  `node --test tests/nocode-agent-not-ready.test.cjs`.
 - Settings and runtime discovery may use the visible user-scoped Codex home.
   Studio/generalist conversations that expose the managed JxBrowser viewer use
   a conversation-scoped Codex home so each resident Playwright MCP keeps its own
@@ -156,6 +166,22 @@ rediscovering the same context.
   conversation; an empty panel keeps it. The `Agent` entry page opens the agent at once for
   the No Code and server surfaces, never How-To. Cover with
   `node --test tests/nocode-restore-conversation*.test.cjs`.
+- "Confirmer avant de modifier" (No Code, off by default): while a user has it on,
+  lib_ConvertigoMCP holds each No Code write (create, edit, update, publish with
+  confirm, app-create, schema-apply in apply mode) until the user answers a card of
+  the conversation, whatever the provider. The choice is kept per user
+  (`agents/nocode/users/<userKey>/write-confirm.json`) and published in the server
+  store `lib_ConvertigoAssistant.writeConfirm` (`user:<owner>`, and `grant:<conversation>`
+  for "Tout autoriser pour ce tour") by `js/agent_write_confirm.js`, at each switch and
+  each message; the held change is a `write-confirm` request of
+  `lib_ConvertigoAssistant.hostRequests` that readResponse hands to the page while it
+  waits, and `AgentWriteConfirm` answers it (allow, allow_turn, refuse), or closes it at
+  the end of the turn (the MCP refuses it). A message drops what the last turn left.
+  Switching off answers no open card. The switch sits above the input bar, the setting
+  after the feedback one, `/confirmer` and `/confirm` turn it on or off, and a message
+  such as "ne modifie rien sans mon accord" while it is off offers it once per
+  conversation. The prompt's No Code block says whether it is on. Texts in
+  `agentConfirmText` (fr, en, it, es). Cover with `node --test tests/nocode-write-confirm.test.cjs`.
 - Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.

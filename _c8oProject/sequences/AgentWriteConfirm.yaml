@@ -1,0 +1,46 @@
+accessibility: Hidden
+comment: '"Confirmer avant de modifier" of a No Code user (js/agent_write_confirm.js): reads (status) or sets (set, with enabled) the user''s choice, kept for them and published for the Convertigo MCP, answers a change waiting for confirmation (answer, with threadid, requestId and decision: allow, allow_turn or refuse), or closes the cards of a turn that ended (turn_end, with threadid). Always for the authenticated user, never one the page names.'
+includeResponseElement: false
+responseTimeout: 30
+↓Run [steps.SimpleStep-1793290000101]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.writeConfirm({
+      action: typeof action === "undefined" ? "" : action,
+      enabled: typeof enabled === "undefined" ? "" : enabled,
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      requestId: typeof requestId === "undefined" ? "" : requestId,
+      decision: typeof decision === "undefined" ? "" : decision,
+      userId: typeof userId === "undefined" ? "" : userId
+    });'
+↓result [steps.JsonToXmlStep-1793290000102]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓action [variables.RequestableVariable-1793290000103]: 
+  comment: status (default), set, answer or turn_end.
+  description: status (default), set, answer or turn_end.
+↓enabled [variables.RequestableVariable-1793290000104]: 
+  comment: For set, true to confirm each change, false to stop.
+  description: For set, true to confirm each change, false to stop.
+↓threadid [variables.RequestableVariable-1793290000105]: 
+  comment: For answer and turn_end, the Tigo conversation of the cards.
+  description: For answer and turn_end, the Tigo conversation of the cards.
+↓requestId [variables.RequestableVariable-1793290000106]: 
+  comment: For answer, the id of the change, as readResponse handed it in hostRequests.
+  description: For answer, the id of the change, as readResponse handed it in hostRequests.
+↓decision [variables.RequestableVariable-1793290000107]: 
+  comment: For answer, allow, allow_turn (the next changes of this turn go on without a card) or refuse.
+  description: For answer, allow, allow_turn (the next changes of this turn go on without a card) or refuse.
+↓userId [variables.RequestableVariable-1793290000108]: 
+  comment: Ignored on a server, where the choice and the cards belong to the authenticated user.
+  description: Ignored on a server, where the choice and the cards belong to the authenticated user.
