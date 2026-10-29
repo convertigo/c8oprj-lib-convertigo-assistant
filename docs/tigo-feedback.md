@@ -45,7 +45,7 @@ Studio), it needs the server's feedback key (see "On a server") and each signed-
 | Kind | Source | Content |
 | --- | --- | --- |
 | `agent_friction` | the agent, with the MCP tool `report-create` (listed only with consent) | area, subject, severity, summary, suggestion |
-| `agent_friction` (`missing-capability:*`) | Tigo, after a completed No Code turn whose answer or comments tell the user a capability is missing, when the agent filed no friction itself | the capability (subject) and the product's fixed sentences for it |
+| `agent_friction` (`missing-capability:*`) | Tigo, after a completed No Code turn whose answer or comments tell the user a capability is missing, when the agent filed no friction itself | the capability (subject), the product's fixed sentences for it, and as template a short masked excerpt of the agent's clause that told it |
 | `tool_error` | a Convertigo MCP tool that fails or answers an error | tool, error template; for a call the agent runtime could not complete, its code, whether it retries it, the duration of the call and what the code means |
 | `runtime_error` | a turn that fails (agent process, gateway, protocol) | provider, error template |
 | `user_report` | `/signaler <comment>` (`/report <comment>`) on the last turn | comment, the turn's tools and their status |
@@ -55,8 +55,8 @@ Each report carries the versions (Assistant, Bridge, MCP, Studio), the provider 
 checkout, or a project reference that follows a branch) and `release` otherwise (a CAR install, or a clone checked out
 at a tag): Convertigo reads its colleagues' reports apart from its customers'. Reports with the same fingerprint (kind, subject or tool, error template) are counted, not repeated.
 
-Never sent: project files, forms and their data, prompts, agent answers, tool arguments or results, credentials, the
-account email, the name of a server user.
+Never sent: project files, forms and their data, prompts, agent answers (but the excerpt of a missing capability, below),
+tool arguments or results, credentials, the account email, the name of a server user.
 
 ## Masking
 
@@ -69,6 +69,13 @@ message is not the column "Position"); generic words (component types, common bu
 "Test", the vocabulary of the product's messages) stay readable. These names are kept with the user's reports
 (`names.json`, 500 at most) only while feedback can be sent. Error templates also replace quoted values and numbers. Texts are cut (summary 500, template 300, comment
 1,000 characters).
+
+The excerpt of a missing capability is the agent's own text, so it is masked further. It is the one clause that told the
+capability (sentences and clauses split at a mark followed by a space, so that an email or a URL stays whole), masked
+as an error template is, then every capitalized word but the first of the clause and the product's own (Tigo,
+Convertigo, C8Oforms, Baserow, Playwright, No Code...) and acronyms becomes `<name>`: a person, a customer or a form
+named in prose. An apostrophe inside a word stays (typographic `’`), where a template would take it for a quote. It is
+cut at 200 characters and masked again before sending, with the names learnt since.
 
 ## On a server
 
@@ -98,8 +105,11 @@ Tigo in the No Code Studio of a server (C8Oforms) offers the same feedback to ea
   and the agent or its tools as subject; limits by design such as server logs or the user's rights are left out) and
   files an `agent_friction` per capability, two at most: `missing-capability:form-preview`,
   `missing-capability:table-rows`, or alone `missing-capability:<no-code tool>` / `missing-capability:other`. The report
-  holds only the product's fixed summary and suggestion for that subject, never the agent's words; it is counted like
-  the others by its fingerprint and follows the user's mode (reviewed in `ask`, sent after the turn in `auto`).
+  holds the product's fixed summary and suggestion for that subject and, as `template`, the masked excerpt of the
+  clause that told it (see Masking): "other" alone said nothing of what was missing (feedback group `fee7dbe3`, 28/10).
+  Its fingerprint stays the subject and the fixed summary, so the excerpt never splits a group; a report counted again
+  keeps its first excerpt. It follows the user's mode (reviewed in `ask`, sent after the turn in `auto`). An agent's own
+  friction under such a subject gets the fixed sentences and no excerpt.
 
 ## Storage in the Studio
 

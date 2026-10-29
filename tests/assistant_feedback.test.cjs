@@ -968,7 +968,7 @@ test('advice to the user, limits by design and work done are not missing capabil
   assert.deepEqual([...F.missingCapabilities([null, ''])], []);
 });
 
-test('a missing capability is filed with the product\'s sentences only, never the agent\'s words or the user\'s names', () => {
+test('a missing capability is filed with the product\'s sentences and a masked excerpt of the agent\'s clause', () => {
   const { F, store } = feedback({ settings: { mode: 'ask' } });
   store.readNames = () => ['Planning des gardes', 'Diagnostic', 'Browser'];
   store.writeNames = () => {};
@@ -984,7 +984,7 @@ test('a missing capability is filed with the product\'s sentences only, never th
   const pending = F.pending();
   assert.equal(pending.length, 2);
   const sent = JSON.stringify(pending);
-  for (const leak of ['Planning', 'gardes', 'Gardes', 'jane', 'acme', 'reproduire', 'instrumenter']) {
+  for (const leak of ['Planning', 'gardes', 'Gardes', 'jane', 'acme', 'instrumenter']) {
     assert.ok(!sent.includes(leak), leak + ' leaked in: ' + sent);
   }
   const preview = pending.find(report => report.finding.subject === 'missing-capability:form-preview');
@@ -994,13 +994,76 @@ test('a missing capability is filed with the product\'s sentences only, never th
   assert.match(preview.finding.summary, /^Detected by Tigo in the No Code agent's answer: it needed to see the saved form in a browser/);
   assert.match(preview.finding.summary, /a diagnostic field added to the form/, 'a user\'s name equal to a word of the sentence masks nothing');
   assert.match(preview.finding.suggestion, /Browser|browser/);
+  // The clause that told it, the first one of the turn for each capability.
+  assert.equal(preview.finding.template, 'Je n’ai pas pu reproduire le calcul du formulaire <name>');
+  const rows = pending.find(report => report.finding.subject === 'missing-capability:table-rows');
+  assert.equal(rows.finding.template, 'les outils no-code ne permettent pas de lire les lignes de la table <name> de <email>');
   assert.equal(preview.stack.surface, 'nocode');
   assert.equal(preview.turn, undefined, 'TigoAccess takes a turn from a user report only');
   assert.equal(preview.comment, undefined);
-  // The same capability in a later turn is counted, not repeated.
+  // The same capability in a later turn is counted, not repeated, whatever its clause says.
   F.collectMissingCapabilities({ answer: 'Pas d\'outil navigateur dans cette session.', events: [], provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
   assert.equal(F.pending().find(report => report.finding.subject === 'missing-capability:form-preview').count, 2);
   assert.equal(F.pending().length, 2);
+});
+
+// fee7dbe3 (test-nocode, 28/10): missing-capability:other said nothing of what was missing. The excerpt tells it; the
+// fingerprints stay those of the groups already triaged.
+test('a missing capability keeps its fingerprint, and its excerpt tells what the agent lacked', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const answer = "Les outils no-code ne permettent pas de dupliquer un formulaire d'un espace de travail à un autre.";
+  const [other] = F.collectMissingCapabilities({ answer, events: [], provider: 'convertigo', model: 'glm-5-3', surface: 'nocode' });
+  assert.equal(other.finding.subject, 'missing-capability:other');
+  assert.equal(other.finding.template, 'Les outils no-code ne permettent pas de dupliquer un formulaire d’un espace de travail à un autre');
+  assert.equal(other.fingerprint, 'fee7dbe3ec38907b9952ae1fc65639795dfb3f9580dd637746bba3293a7fcb67');
+  F.collectMissingCapabilities({ answer: 'Pas d\'outil navigateur dans cette session.', events: [] });
+  F.collectMissingCapabilities({ answer: 'Les outils ne permettent pas de lire les lignes des tables.', events: [] });
+  const byFingerprint = Object.fromEntries(F.pending().map(report => [report.finding.subject, report.fingerprint]));
+  assert.equal(byFingerprint['missing-capability:form-preview'], '6f802b2dcd48c45b0bc880fe846b75c6ec33ef167a79d81bdd019bd78ba31cc5');
+  assert.equal(byFingerprint['missing-capability:table-rows'], '3d7624b54db34f5a327122c2101d1b4d103b261be11a319db2fdf32d6f5e1bef');
+  // Another clause of another turn counts on the same report, which keeps the first excerpt.
+  F.collectMissingCapabilities({ answer: 'Les outils no-code ne permettent pas de renommer une base.', events: [] });
+  const counted = F.pending().find(report => report.finding.subject === 'missing-capability:other');
+  assert.equal(counted.count, 2);
+  assert.match(counted.finding.template, /dupliquer un formulaire/);
+});
+
+test('an excerpt is short and masks the customer, persons, secrets and values, not the product\'s words', () => {
+  const { F } = feedback();
+  const excerpt = (text, names) => F.capabilityExcerpt(text, ['PcaUpdateTracker'], names || []);
+  assert.equal(excerpt('Les outils de Tigo ne permettent pas d\'écrire dans la table Factures de Martine Dupont (projet PcaUpdateTracker).'),
+    'Les outils de Tigo ne permettent pas d’écrire dans la table <name> de <name> <name> (projet <project>).');
+  assert.equal(excerpt('I cannot open https://acme.example.com/forms/42?token=abc as jane.doe@acme.fr with sk-abcdefghijklmnopqrst.'),
+    'I cannot open <url> as <email> with <secret>.');
+  assert.equal(excerpt('je ne peux pas lire la valeur "Montant TTC" ni le champ montant_ttc ni montantTtc, ni ses 1 250,50 lignes'),
+    'je ne peux pas lire la valeur … ni le champ <name> ni <name>, ni ses N N lignes');
+  assert.equal(excerpt('le navigateur Playwright et JxBrowser ne sont pas disponibles dans cette session No Code ni sur C8Oforms'),
+    'le navigateur Playwright et JxBrowser ne sont pas disponibles dans cette session No Code ni sur C8Oforms', 'the product\'s words stay');
+  assert.equal(excerpt('- **Limite** : les outils ne voient pas Gestion des Stocks', ['Gestion des Stocks']), 'Limite : les outils ne voient pas <name>');
+  assert.equal(excerpt('les outils MCP et GLM-5 ne lisent pas les lignes de la table Clients de Gregory Martin'),
+    'les outils MCP et GLM-N ne lisent pas les lignes de la table <name> de <name> <name>', 'acronyms stay, generic capitalized names do not');
+  const long = excerpt('les outils no-code ne permettent pas ' + 'de faire ceci et cela '.repeat(20));
+  assert.equal(long.length, 200);
+  assert.ok(long.endsWith('…'));
+  for (const text of ['Les outils de Tigo ne permettent pas d\'écrire dans la table Factures de Martine Dupont.', 'I cannot open https://acme.example.com/x as jane.doe@acme.fr']) {
+    assert.equal(F.capabilityExcerpt(excerpt(text), ['PcaUpdateTracker'], []), excerpt(text), 'masking an excerpt again changes nothing');
+  }
+  assert.equal(excerpt(null), '');
+});
+
+test('a waiting missing capability is masked again before it is sent, with names learnt since', () => {
+  const { F, store } = feedback({ settings: { mode: 'ask' } });
+  let names = [];
+  store.readNames = () => names;
+  store.writeNames = () => {};
+  F.collectMissingCapabilities({ answer: 'les outils no-code ne permettent pas de supprimer une table planning', events: [] });
+  assert.equal(F.pending()[0].finding.template, 'les outils no-code ne permettent pas de supprimer une table planning');
+  names = ['planning'];
+  assert.equal(F.pending()[0].finding.template, 'les outils no-code ne permettent pas de supprimer une table <name>');
+  // An agent's own friction under such a subject carries no excerpt: only Tigo's detection writes one.
+  const raw = { kind: 'agent_friction', finding: { subject: 'missing-capability:other', summary: 'x', template: 'Martine Dupont needs rows' } };
+  const { F: ingested } = feedback({ settings: { mode: 'ask' }, incoming: [{ ...raw, __file: 'a.json' }] });
+  assert.equal(ingested.pending()[0].finding.template, undefined);
 });
 
 test('a missing capability is not filed without consent, or when the agent filed a friction itself in the turn', () => {

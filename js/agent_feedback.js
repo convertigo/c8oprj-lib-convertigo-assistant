@@ -95,7 +95,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   // A No Code agent that tells the user a capability is missing (no browser to see the form, no read of the rows of a
   // table) and works around it rarely files the friction: GLM took "a friction of a tool you had to work around" for
   // failing tools only (gregoryv, test-nocode, 26/10). Tigo files it from the answer and the comments of the turn, with
-  // these sentences of the product only: never the agent's words. A subject of its own: an agent filing it gets them too.
+  // these sentences of the product and, as template, a short masked excerpt of the agent's clause (F.capabilityExcerpt).
+  // A subject of its own: an agent filing it gets these sentences too.
   var MISSING_CAPABILITY = "missing-capability:";
   var MISSING_CAPABILITIES = {
     "form-preview": {
@@ -150,6 +151,20 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   var VISUAL_CHECK_NOT_DONE = new RegExp("\\b(?:verification|controle|test|check) (?:visuel(?:le)?|visual)|\\bvisual (?:check|verification)\\b");
   var NOT_DONE = new RegExp("\\b(?:non (?:effectuee?|realisee?|faite?)|n'a pas ete (?:effectuee?|realisee?|faite?)|pas (?:ete )?(?:effectuee?|realisee?|faite?)"
     + "|n'ai pas (?:fait|effectue|realise|pu faire)|reste a (?:faire|confirmer)|not (?:done|performed|run))\\b");
+  // The clauses of an agent's text: sentence and clause marks split it, not a dot or a colon inside a word, so that an
+  // email, a URL or a version stays whole in the clause and is masked whole in its excerpt.
+  // No i flag: Rhino refuses a case-insensitive pattern that reaches past U+017F (the ellipsis).
+  var CLAUSE_SPLIT = /[.;:!?]+(?=\s|$)|[()\n\u2026]+|,\s*(?:et|and|mais|but|car|because|Et|And|Mais|But|Car|Because)\s+/;
+  // The excerpt of the clause that told a missing capability (feedback group fee7dbe3, 28/10: missing-capability:other
+  // with no word of what was missing): short, and masked further than an error template, the text being the agent's.
+  var EXCERPT_MAX = 200;
+  // Capitalized words an excerpt keeps: the product and the tools it names. Any other one but the first word of the
+  // clause may be a person, a customer or a form named in prose: it becomes <name>.
+  var PRODUCT_WORDS = {};
+  ("Tigo Convertigo C8Oforms Baserow Studio No Code NoCode Vibe Codex Claude Mistral GLM Playwright Chrome Chromium Safari "
+    + "Firefox JxBrowser Ionic Angular JavaScript TypeScript Excel Word Google Microsoft Windows Linux").split(" ").forEach(function (word) {
+    PRODUCT_WORDS[word] = true;
+  });
 
   function folded(text) {
     return String(text == null ? "" : text).toLowerCase().replace(/[\u2018\u2019\u02bc`]/g, "'").replace(/[\u00a0*]/g, " ")
@@ -447,19 +462,24 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return cut(provider, 60);
   };
 
-  // The capabilities a No Code agent says it lacks in texts of a turn (its answer, its comments): the subjects of the
-  // frictions Tigo files for it, the known capabilities first. Another lack of a tool is filed alone, under the no-code
-  // tool its clause names or "other".
-  F.missingCapabilities = function (texts) {
+  // The capabilities a No Code agent says it lacks in texts of a turn (its answer, its comments), each with the clause
+  // that says it first ({subject, clause}): the subjects of the frictions Tigo files for it, the known capabilities
+  // first. Another lack of a tool is filed alone, under the no-code tool its clause names or "other".
+  F.missingCapabilityClauses = function (texts) {
     var found = [];
-    var other = "";
+    var other = null;
+    var has = function (subject) {
+      return found.some(function (item) {
+        return item.subject === subject;
+      });
+    };
     for (var t = 0; t < (texts || []).length; t++) {
-      var clauses = folded(String(texts[t] == null ? "" : texts[t]).substring(0, 20000)).split(/[.;:!?()\n\u2026]+|,\s*(?:et|and|mais|but|car|because)\s+/);
-      for (var c = 0; c < clauses.length; c++) {
-        var clause = clauses[c];
+      var originals = String(texts[t] == null ? "" : texts[t]).substring(0, 20000).split(CLAUSE_SPLIT);
+      for (var c = 0; c < originals.length; c++) {
+        var clause = folded(originals[c]);
         if (VISUAL_CHECK_NOT_DONE.test(clause) && NOT_DONE.test(clause)) {
-          if (found.indexOf(MISSING_CAPABILITY + "form-preview") === -1) {
-            found.push(MISSING_CAPABILITY + "form-preview");
+          if (!has(MISSING_CAPABILITY + "form-preview")) {
+            found.push({ subject: MISSING_CAPABILITY + "form-preview", clause: trim(originals[c]) });
           }
           continue;
         }
@@ -470,9 +490,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         for (var o = 0; o < CAPABILITY_OBJECTS.length && !known.length; o++) {
           known = CAPABILITY_OBJECTS[o].pattern.test(clause) ? MISSING_CAPABILITY + CAPABILITY_OBJECTS[o].id : "";
         }
-        if (known.length && found.indexOf(known) === -1) {
-          found.push(known);
-        } else if (!known.length && !other.length && CAPABILITY_TOOL.test(clause)) {
+        if (known.length && !has(known)) {
+          found.push({ subject: known, clause: trim(originals[c]) });
+        } else if (!known.length && other === null && CAPABILITY_TOOL.test(clause)) {
           var tools = [];
           (clause.match(/\bnocode[-_][a-z_-]*[a-z]/g) || []).forEach(function (tool) {
             tool = tool.replace(/_/g, "-");
@@ -480,11 +500,38 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
               tools.push(tool);
             }
           });
-          other = MISSING_CAPABILITY + (tools.length === 1 ? tools[0] : "other");
+          other = { subject: MISSING_CAPABILITY + (tools.length === 1 ? tools[0] : "other"), clause: trim(originals[c]) };
         }
       }
     }
-    return found.length ? found : (other.length ? [other] : []);
+    return found.length ? found : (other !== null ? [other] : []);
+  };
+
+  F.missingCapabilities = function (texts) {
+    return F.missingCapabilityClauses(texts).map(function (item) {
+      return item.subject;
+    });
+  };
+
+  // The excerpt a missing capability's report carries: the clause of the agent that told it, at most EXCERPT_MAX
+  // characters, masked as an error template is (emails, URLs, keys, paths, the names of the projects and of the user's
+  // forms, quoted values, identifiers, numbers) and further: every capitalized word but the first of the clause and the
+  // product's own becomes <name>. An apostrophe inside a word is kept (typographic), so that French stays readable where
+  // a template would take it for a quote. Masking an excerpt again changes nothing.
+  F.capabilityExcerpt = function (clause, names, others) {
+    var text = F.redact(trim(String(clause == null ? "" : clause).replace(/\s+/g, " ").replace(/\*\*|__/g, "")).replace(/^[-*\u2022>#\s]+/, ""),
+      names, others, true);
+    text = text.replace(/([A-Za-z\u00c0-\u017f])'(?=[A-Za-z\u00c0-\u017f])/g, "$1\u2019");
+    var words = 0;
+    text = text.replace(/<[a-z]+>|[A-Za-z\u00c0-\u017f][A-Za-z0-9_\u00c0-\u017f-]*/g, function (word) {
+      var first = words++ === 0;
+      if (first || word.charAt(0) === "<" || word.length < 2 || !/^[A-Z\u00c0-\u00d6\u00d8-\u00de]/.test(word) || PRODUCT_WORDS[word]
+        || /^[A-Z0-9][A-Z0-9-]{1,7}$/.test(word)) {
+        return word;
+      }
+      return "<name>";
+    });
+    return cut(F.template(text, names, others), EXCERPT_MAX);
   };
 
   // The finding of a missing capability's subject, always the product's own sentences; null for another subject.
@@ -499,7 +546,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
 
   // The pure helpers every bound feedback object shares.
   var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "runtimeFailure",
-    "failureSummary", "endpoint", "provider", "missingCapabilities", "missingCapabilityFinding"];
+    "failureSummary", "endpoint", "provider", "missingCapabilities", "missingCapabilityClauses", "missingCapabilityFinding", "capabilityExcerpt"];
 
   // The feedback API bound to one store: the Studio's (engine-wide), or one server user's.
   function bind(F, store) {
@@ -653,14 +700,16 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         finding: {},
         stack: {}
       };
-      // A missing capability says only the product's sentences: nothing to mask, and a user's field named like one of
-      // their words never splits its count.
+      // A missing capability says the product's sentences, and as template the short excerpt of the agent's clause that
+      // told it, masked again as an excerpt.
       var fixed = out.kind === "agent_friction" ? missingCapabilityFinding(finding.subject) : null;
       var keys = ["area", "subject", "severity", "summary", "suggestion", "template"];
       for (var i = 0; i < keys.length; i++) {
-        var value = trim(fixed ? fixed[keys[i]] : finding[keys[i]]);
+        var own = !fixed || keys[i] === "template";
+        var value = trim(own ? finding[keys[i]] : fixed[keys[i]]);
         if (value.length) {
-          out.finding[keys[i]] = fixed ? value : cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60);
+          out.finding[keys[i]] = !own ? value : (fixed ? F.capabilityExcerpt(value, names, others)
+            : cut(F.redact(value, names, others, keys[i] === "template"), LIMITS[keys[i]] || 60));
         }
       }
       var stack = report.stack || {};
@@ -735,7 +784,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
 
     function fingerprintOf(kind, finding) {
       var subject = trim(finding.subject);
-      var basis = trim(finding.template) || trim(finding.summary);
+      // A missing capability is counted by its subject and the product's summary, whatever its excerpt says.
+      var fixed = kind === "agent_friction" ? missingCapabilityFinding(subject) : null;
+      var basis = fixed ? fixed.summary : (trim(finding.template) || trim(finding.summary));
       return store().sha256(kind + "|" + subject + "|" + basis);
     }
 
@@ -909,10 +960,12 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
           texts.push(trim(event.text || event.title));
         }
       }
-      var subjects = F.missingCapabilities(texts);
+      var found = F.missingCapabilityClauses(texts);
       var reports = [];
-      for (var s = 0; s < subjects.length && s < 2; s++) {
-        reports.push(F.add("agent_friction", missingCapabilityFinding(subjects[s]), options));
+      for (var s = 0; s < found.length && s < 2; s++) {
+        var finding = missingCapabilityFinding(found[s].subject);
+        finding.template = F.capabilityExcerpt(found[s].clause, store().projectNames(), customerNames());
+        reports.push(F.add("agent_friction", finding, options));
       }
       return reports;
     };
