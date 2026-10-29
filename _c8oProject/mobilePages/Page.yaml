@@ -6276,6 +6276,13 @@ scriptContent:
         	public writeConfirmUserId() {
         		return this.getAgentContextUserId ? this.getAgentContextUserId() : "";
         	}
+        	public writeConfirmResult(response) {
+        		// AgentWriteConfirm answers {result: {...}} (the key of its JsonToXmlStep), not {response: {...}} like AgentFeedback.
+        		if (response && response.result && typeof response.result === "object") {
+        			return response.result;
+        		}
+        		return response && response.response ? response.response : response;
+        	}
         	public writeConfirmOn() {
         		// The user''s choice, read once from AgentWriteConfirm (kept for the user on the server); off until it is known.
         		var self: any = this;
@@ -6286,7 +6293,7 @@ scriptContent:
         			self.writeConfirmLoading = true;
         			try {
         				this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "status", userId: this.writeConfirmUserId() }).async().then((response: any) => {
-        					var result = response && response.response ? response.response : response;
+        					var result = this.writeConfirmResult(response);
         					self.writeConfirmLoading = false;
         					if (this.local.WriteConfirm === undefined) {
         						this.local.WriteConfirm = result && result.status === "ok" ? { on: result.on === true } : null;
@@ -6334,7 +6341,7 @@ scriptContent:
         		this.tick();
         		try {
         			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "set", enabled: on ? "true" : "false", userId: this.writeConfirmUserId() }).async().then((response: any) => {
-        				var result = response && response.response ? response.response : response;
+        				var result = this.writeConfirmResult(response);
         				if (!result || result.status !== "ok") {
         					failed();
         					return;
@@ -6516,7 +6523,7 @@ scriptContent:
         		try {
         			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "answer", threadid: card.confirmThreadId, requestId: card.confirmRequestId,
         				decision: cta.id, userId: this.writeConfirmUserId() }).async().then((response: any) => {
-        				var result = response && response.response ? response.response : response;
+        				var result = this.writeConfirmResult(response);
         				var code = result && result.error ? result.error.code : "";
         				if (result && result.status === "ok") {
         					done(cta.id === "allow" ? "allowed" : (cta.id === "allow_turn" ? "allowedTurn" : "refused"), false);

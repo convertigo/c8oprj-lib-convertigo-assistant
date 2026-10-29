@@ -168,7 +168,7 @@ const METHODS = ['agentConfirmText', 'writeConfirmAvailable', 'writeConfirmUserI
   'setWriteConfirm', 'noteOpenWriteConfirmCards', 'writeConfirmCommand', 'writeConfirmAsked', 'offerWriteConfirmFor', 'offerWriteConfirm',
   'writeConfirmSummary', 'writeConfirmItemText', 'onWriteConfirmCta', 'closeWriteConfirmCards', 'forwardAgentHostRequests', 'onFeedbackCta',
   'feedbackCard', 'agentUiLanguage', 'normalizeAgentHostContextValue', 'runLocalCommand', 'feedbackCommand', 'endAgentHostTurn',
-  'dropOpenFeedbackCards', 'localSlashCommands', 'agentMetricsText', 'agentFeedbackText'];
+  'dropOpenFeedbackCards', 'localSlashCommands', 'agentMetricsText', 'agentFeedbackText', 'writeConfirmResult'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter((m) => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map((m) => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -176,6 +176,8 @@ const sandbox = { setTimeout: fn => fn() };
 vm.runInNewContext(ts.transpileModule('class View { ' + members.map((m) => m.getText(pageAst)).join('\n') + ' }; this.View = View;',
   { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, sandbox);
 
+// AgentWriteConfirm answers {<key>: {...}}, the key being the one of its JsonToXmlStep ("result").
+const SEQUENCE_KEY = /↓result \[steps\.JsonToXmlStep-\d+\]:[\s\S]*?key: \n[\s\S]*?→→: (\w+)\n/.exec(read('_c8oProject/sequences/AgentWriteConfirm.yaml'))[1];
 function panel({ language = 'fr', noCode = true, status = { status: 'ok', on: false }, answer = { status: 'ok' } } = {}) {
   const view = new sandbox.View();
   const calls = [];
@@ -194,7 +196,8 @@ function panel({ language = 'fr', noCode = true, status = { status: 'ok', on: fa
   view.c8o = { callJsonObject: (name, params) => {
     calls.push([name, JSON.parse(JSON.stringify(params))]);
     const result = params.action === 'status' ? status : (params.action === 'set' ? { status: 'ok', on: params.enabled === 'true' } : (typeof answer === 'function' ? answer(params) : answer));
-    return { async: () => { const promise = result instanceof Error ? Promise.reject(result) : Promise.resolve(result); settle.push(promise.catch(() => {})); return promise; } };
+    // The sequence answers under the key of its JsonToXmlStep, as the engine returns it to callJsonObject.
+    return { async: () => { const promise = result instanceof Error ? Promise.reject(result) : Promise.resolve({ [SEQUENCE_KEY]: result }); settle.push(promise.catch(() => {})); return promise; } };
   } };
   const flush = async () => { for (let i = 0; i < 3; i++) { await Promise.all(settle); await new Promise((resolve) => setImmediate(resolve)); } };
   return { view, calls, flush };
@@ -330,6 +333,37 @@ test('the switch: off by default, one click turns it on at once, off keeps an op
   await failing.flush();
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(failing.view.writeConfirmOn(), false);
+});
+
+test('the page reads AgentWriteConfirm as the engine answers it: under the key of the sequence', async () => {
+  assert.equal(SEQUENCE_KEY, 'result');
+  const { view } = panel();
+  assert.deepEqual(plain(view.writeConfirmResult({ result: { status: 'ok', on: true } })), { status: 'ok', on: true });
+  assert.deepEqual(plain(view.writeConfirmResult({ response: { status: 'ok', on: false } })), { status: 'ok', on: false });
+  assert.deepEqual(plain(view.writeConfirmResult({ status: 'ok', on: true })), { status: 'ok', on: true });
+  // test-nocode, 1.5.7-beta.3: the server saved each choice and answer, the page said it had failed
+  const on = panel({ status: { status: 'ok', on: true } });
+  on.view.writeConfirmOn();
+  await on.flush();
+  assert.equal(on.view.writeConfirmOn(), true, 'a user who turned it on sees it on');
+  on.view.toggleWriteConfirm();
+  await on.flush();
+  assert.equal(on.view.writeConfirmOn(), false, 'and can turn it off');
+  const command = panel();
+  command.view.runLocalCommand('/confirmer');
+  await command.flush();
+  assert.equal(command.view.writeConfirmOn(), true);
+  assert.equal(command.view.local.Messages.at(-1).message, 'Confirmer avant de modifier : activé. Chaque modification de Tigo attendra votre accord, dès la prochaine.');
+  const allowed = panel();
+  allowed.view.forwardAgentHostRequests([held()], 'agent-1');
+  const card = cards(allowed.view)[0];
+  allowed.view.onFeedbackCta(card, card.actions[0]);
+  await allowed.flush();
+  assert.equal(card.state, 'ready');
+  assert.deepEqual(plain(card.actions), []);
+  assert.ok(card.message.endsWith('\n\nAutorisé : Tigo fait la modification.'), card.message);
+  allowed.view.endAgentHostTurn('run-1');
+  assert.ok(card.message.endsWith('\n\nAutorisé : Tigo fait la modification.'), 'the end of the turn does not say an allowed change was not made');
 });
 
 test('outside No Code there is no switch, no status call and no command', () => {
