@@ -66,6 +66,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var MANAGED_MCP_TOKEN_SESSION_EXPIRY = "lib_ConvertigoAssistant.managedMcpTokenExpiry";
   var MANAGED_MCP_TOKEN_TTL_SECONDS = 7200;
   var MANAGED_MCP_TOKEN_RENEW_SKEW_MS = 300000;
+  // The managed token is leased (lib_ConvertigoMCP C8O.mcpAuth, MANAGED_LEASES_KEY): valid while a turn uses it, it ends
+  // MANAGED_MCP_TOKEN_IDLE_SECONDS after the last activity. A fixed 2 h expiry cut a turn 2 h in (PCA eval 29/10). An
+  // older lib_ConvertigoMCP ignores idleSeconds and still gives a token of MANAGED_MCP_TOKEN_TTL_SECONDS.
+  var MANAGED_MCP_TOKEN_IDLE_SECONDS = 1800;
+  var MANAGED_MCP_LEASES_KEY = "lib_ConvertigoMCP.managedTokenLeases";
 
   function now() {
     return System.currentTimeMillis();
@@ -939,6 +944,30 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // Still valid at untilMs: a leased token while its lease ends later (the MCP and the Agent Bridge slide it while a turn
+  // uses it, a restart of the engine or a revocation removes it), a token of fixed lifetime while its expiry is later.
+  function managedMcpTokenUsable(token, expiryMs, untilMs) {
+    if (!trim(token).length) {
+      return false;
+    }
+    var payload = null;
+    try {
+      payload = JSON.parse(decodeJwtPart(String(token).split(".")[1]));
+    } catch (_ignoreManagedPayload) {}
+    if (!payload || payload.lease !== "turn") {
+      return expiryMs > untilMs;
+    }
+    try {
+      var header = JSON.parse(decodeJwtPart(String(token).split(".")[0]));
+      var store = sharedStorage();
+      var leases = store !== null ? store.get(MANAGED_MCP_LEASES_KEY) : null;
+      var lease = leases !== null && typeof leases !== "undefined" ? leases.get(String(header.kid)) : null;
+      return lease !== null && typeof lease !== "undefined" && Number(JSON.parse(String(lease)).expiresAt) > untilMs;
+    } catch (_ignoreManagedLease) {
+      return false;
+    }
+  }
+
   function usesProtectedConvertigoMcp(options) {
     options = options || {};
     if (normalizeSkillProfile(options) === "nocode") {
@@ -963,13 +992,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       existingExpiry = Number(context.httpSession.getAttribute(MANAGED_MCP_TOKEN_SESSION_EXPIRY) || 0);
     } catch (_ignoreManagedSessionRead) {}
     if (existingHandle.length
-        && existingExpiry > now() + MANAGED_MCP_TOKEN_RENEW_SKEW_MS
-        && sharedSecretGet(existingHandle).length) {
+        && managedMcpTokenUsable(sharedSecretGet(existingHandle), existingExpiry, now() + MANAGED_MCP_TOKEN_RENEW_SKEW_MS)) {
       return existingHandle;
     }
     var response = unwrapSequenceResult(callLocalSequence("lib_ConvertigoMCP", "McpManagedTokenCreate", {
       label: "Convertigo Assistant - " + (trim(options.userId) || "Studio"),
-      ttlSeconds: String(MANAGED_MCP_TOKEN_TTL_SECONDS)
+      ttlSeconds: String(MANAGED_MCP_TOKEN_TTL_SECONDS),
+      idleSeconds: String(MANAGED_MCP_TOKEN_IDLE_SECONDS)
     })) || {};
     var token = trim(response.token);
     if (trim(response.status).toLowerCase() !== "ok" || !token.length) {

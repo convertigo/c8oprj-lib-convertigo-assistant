@@ -319,13 +319,15 @@ rediscovering the same context.
   handle to the bridge, but must never expose the raw token in URLs, UI state,
   prompts, logs, or conversation records. Token labels must include the readable
   authenticated user, for example `Convertigo Agent Bridge - user@example.com`.
-- In Studio generalist or Flow mode, the Assistant creates one short-lived
-  managed token
-  through `lib_ConvertigoMCP.McpManagedTokenCreate` using the current
-  `WEB_ADMIN` session. Only an opaque server-memory handle crosses into the
-  Bridge; renew the token before expiry and never expose it to browser state,
-  prompts, logs, or conversation files. The same token authenticates both the
-  Legacy and Flow MCP endpoints.
+- In Studio generalist or Flow mode, the Assistant creates one leased managed
+  token through `lib_ConvertigoMCP.McpManagedTokenCreate` (`idleSeconds`) using
+  the current `WEB_ADMIN` session. It stays valid while a turn uses it (the MCP
+  slides its lease on each call, the Bridge on the events of a running turn) and
+  ends `MANAGED_MCP_TOKEN_IDLE_SECONDS` after the last activity, at a restart of
+  the engine or with `McpTokenRevoke`. Only an opaque server-memory handle
+  crosses into the Bridge; renew the token when its lease is about to end and
+  never expose it to browser state, prompts, logs, or conversation files. The
+  same token authenticates both the Legacy and Flow MCP endpoints.
 - Eclipse can renew the local Assistant's admin session without navigating the
   view. `AuthenticateStudioSession` owns a single-flight, timeout-bounded
   `renewStudioSession` exchange via `lib_ConvertigoAssistant.authenticate.request`
