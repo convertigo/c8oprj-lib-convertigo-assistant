@@ -40,7 +40,7 @@ test('default manifest alias and offline fallback pin the reviewed stable bundle
   assert.equal(preview.channel, 'preview');
   assert.deepEqual(JSON.parse(JSON.stringify(fixture().page.getEmbeddedAgentStackRelease())), stable);
   assert.deepEqual(stable.projects.map(p => p.version), ['0.2.28', '0.4.28', '1.5.6']);
-  assert.deepEqual(preview.projects.map(p => p.version), ['0.2.29-beta.18', '0.4.29-beta.10', '1.5.7-beta.7']);
+  assert.deepEqual(preview.projects.map(p => p.version), ['0.2.29-beta.20', '0.4.29-beta.10', '1.5.7-beta.7']);
   for (const manifest of [stable, preview]) {
     assert.equal(new Set(manifest.projects.map(p => p.name)).size, 3);
     for (const project of manifest.projects) {
