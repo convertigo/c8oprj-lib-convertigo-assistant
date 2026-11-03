@@ -13,6 +13,9 @@ rediscovering the same context.
 - Direct edits are acceptable for plain source files such as `js/*.js`,
   `css/*.css`, documentation, and this `AGENTS.md`.
 - After editing JavaScript helpers, run `node --check` on the touched files.
+- Local Bridge `postForm` calls bypass the proxy only for the literal loopback
+  hosts `localhost`, `127.0.0.1` and `::1`. Remote Bridge URLs keep the engine's
+  proxy selection. Cover this with `tests/assistant_proxy_loopback.test.cjs`.
 - Do not patch generated frontend output under `DisplayObjects`, `_private`,
   `dist`, or similar generated directories.
 
