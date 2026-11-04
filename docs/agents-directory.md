@@ -58,3 +58,21 @@ Offline tests cover default behavior, short POSIX/Windows/UNC destinations and
 invalid-path rejection. No Code image ownership checks also cover an external
 storage root. Native Windows/Citrix installation remains an acceptance test on
 the target environment; a successful macOS test does not certify Windows.
+
+## TigoAccess activation and quota
+
+Both local TigoAccess sequences resolve credentials and metadata from the same
+configured agents directory as the runtime Bridge. The Studio PSC remains in
+`<engine workspace>/studio/psc.txt`; changing the agents directory never changes
+the source of Studio identity. A supplied manual key retains its existing
+priority and is not replaced automatically.
+
+## Windows path diagnostic
+
+The configuration panel shows the selected root and the global symbol name,
+the estimated longest managed journal path, its conservative root-length budget
+and a 32-character safety margin. It recommends Windows long-path support first,
+then a short writable root configured in Administration > Symbols. The estimate
+is scoped to the managed Vibe 3.0.4 journal layout; dependencies and future
+provider changes can impose other limits. No files are moved by changing the
+symbol. Restart active agents and test a new conversation after a layout update.

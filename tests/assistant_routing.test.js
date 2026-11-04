@@ -60,7 +60,7 @@ assert.match(footerSource, /@media \(max-width: 640px\)[\s\S]*?\.agent-prompt-mo
 assert.match(pageSource, /type === ''lib_ConvertigoAssistant\.context'' \|\| type === ''ConvertigoAssistant\.context''/);
 assert.match(pageSource, /postAgentHostMessage\(\{ type: ''ConvertigoAssistant\.context\.request'' \}\)/);
 const stackManifest = JSON.parse(fs.readFileSync("stack-release.json", "utf8"));
-assert.deepEqual(stackManifest.projects.map(project => project.version), ["0.2.29", "0.4.30", "1.5.8"]);
+assert.deepEqual(stackManifest.projects.map(project => project.version), ["0.2.29", "0.4.31", "1.5.9"]);
 for (const project of stackManifest.projects) {
   assert.ok(pageSource.includes(`name: "${project.name}", version: "${project.version}", tag: "${project.tag}", importUrl: "${project.importUrl}"`),
     `embedded stack entry must match the release manifest for ${project.name}`);

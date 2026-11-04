@@ -6796,7 +6796,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (normalizeSkillProfile(state) === "nocode") {
           lines.push(state.language === "fr" ? "Demandez à l'administrateur de configurer la clé d'agent Convertigo du serveur, puis réessayez. Une réinstallation du runtime n'est pas nécessaire." : "Ask the administrator to configure the server's Convertigo agent key, then retry. Reinstalling the runtime is not necessary.");
         } else {
-          lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `convertigo/llm-api-key` du répertoire agents configuré (par défaut, `agents` du workspace Studio)." : "The key will be provisioned automatically during activation; meanwhile, drop it in the `agents/convertigo/llm-api-key` file of the Studio workspace.");
+          lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `convertigo/llm-api-key` du répertoire agents configuré (par défaut, `agents` du workspace Studio)." : "The key will be provisioned automatically during activation; meanwhile, drop it in `convertigo/llm-api-key` under the configured agents directory (by default, `agents` in the Studio workspace).");
         }
       } else {
         lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");

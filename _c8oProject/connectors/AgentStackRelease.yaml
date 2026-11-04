@@ -7,10 +7,66 @@ trustAllServerCertificates: false
 ↓GetManifest [transactions.JsonHttpTransaction]: 
   accessibility: Hidden
   comment: Returns only the reviewed stable Tigo stack. Legacy clients keep using stack-release.json, a stable alias.
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/x-www-form-urlencoded
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Cache-Control
+            - java.lang.String: 
+              - ↑value: no-cache
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Pragma
+            - java.lang.String: 
+              - ↑value: no-cache
   responseTimeout: 20
   subDir: /stack-release-stable.json
+  ↓manifestRevision [variables.RequestableHttpVariable-1793809615419]: 
+    comment: Unique revision for an explicit fresh manifest check.
+    httpName: _tigo_check
 ↓GetPreviewManifest [transactions.JsonHttpTransaction]: 
   accessibility: Hidden
   comment: Reviewed preview catalog, read with the stable one by the Pre-releases channel. That is the choice of a Studio, or of a whole server with the symbol assistant.stack.channel set to preview; the stable channel never reads it.
+  httpParameters: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+      - com.twinsoft.convertigo.beans.common.XMLVector: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Content-Type
+            - java.lang.String: 
+              - ↑value: application/x-www-form-urlencoded
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Cache-Control
+            - java.lang.String: 
+              - ↑value: no-cache
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+          - com.twinsoft.convertigo.beans.common.XMLVector: 
+            - java.lang.String: 
+              - ↑value: Pragma
+            - java.lang.String: 
+              - ↑value: no-cache
   responseTimeout: 20
   subDir: /stack-release-preview.json
+  ↓manifestRevision [variables.RequestableHttpVariable-1793809615627]: 
+    comment: Unique revision for an explicit fresh manifest check.
+    httpName: _tigo_check

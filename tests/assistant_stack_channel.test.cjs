@@ -16,7 +16,7 @@ const names = ['t', 'agentUiLanguage', 'agentStackOfferText', 'isAgentStackOffer
   'refreshAgentStackEngineStatus', 'getAgentStackOfferProjects', 'getAgentStackOfferKey', 'getAgentStackOfferRestriction',
   'isAgentStackOfferTurnRunning', 'getAgentStackOfferView', 'compareAgentStackVersions', 'isServerManagedAgentStack',
   'getAgentStackServerStatus', 'refreshAgentStackServerStatus', 'getInstalledAgentStackVersion', 'isAgentStackUpdateAllowed',
-  'getAgentStackRestrictedText', 'installAgentStackOnServer', 'triggerAgentOnboardingAction', 'refreshAgentStackRelease',
+  'getAgentStackRestrictedText', 'installAgentStackOnServer', 'triggerAgentOnboardingAction', 'postVerifiedAgentStackInstallation', 'readFreshAgentStackRelease', 'refreshAgentStackRelease',
   'getEmbeddedAgentStackRelease', 'getAgentActivationProjects', 'isAgentStackUpdateAvailable', 'getAgentStackVersionText',
   'getAgentStackStatusText', 'getAgentStackStatusClass', 'triggerAgentStackUpdate'];
 const methods = ast.statements[0].members.filter(m => m.name && names.includes(m.name.getText(ast)));
@@ -172,7 +172,7 @@ test('a manifest or a status that cannot be read breaks nothing: the stable chan
   await f.settings();
   assert.equal(f.page.getAgentStackVersionText(), 'MCP 0.2.27 · Bridge 0.4.27 · Assistant 1.5.5');
   assert.equal(f.page.local.AgentStackReleaseError, '');
-  assert.equal(f.page.getAgentStackStatusText(), 'La stack locale est à jour.');
+  assert.match(f.page.getAgentStackStatusText(), /pas encore été vérifiée/);
   assert.match(f.page.getAgentStackChannelView().hint, /n’a pas pu être lu : seules les versions stables/);
   // A forged or mislabelled preview manifest is ignored the same way.
   const forged = manifest(betas, 'preview');
@@ -332,7 +332,7 @@ test('Studio settings opened before the card check read the engine default first
   failing = true;
   g.page.setAgentStackChannel('stable');
   await flush();
-  assert.equal(g.page.getAgentStackVersionText(), 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.30 · Assistant 1.5.5 → 1.5.8');
+  assert.equal(g.page.getAgentStackVersionText(), 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.31 · Assistant 1.5.5 → 1.5.9');
   assert.equal(g.page.local.AgentStackRelease.channel, 'stable');
   assert.match(g.page.getAgentStackStatusText(), /Impossible de vérifier la stack publiée/);
 });
@@ -363,4 +363,21 @@ test('the four Assistant languages have every text of the server channel', () =>
       if (language !== 'en') assert.notEqual(text, en.agentStackOfferText(key), language + ' ' + key + ' is translated');
     }
   }
+});
+
+test('a late background manifest cannot replace the fresh catalog used by an installation',async()=>{
+ for(const failOld of [false,true]){
+  let resolveOld,rejectOld,count=0;
+  const old=new Promise((resolve,reject)=>{resolveOld=resolve;rejectOld=reject;});
+  const latest=manifest({mcp:'0.2.29',bridge:'0.4.31',assistant:'1.5.9'});
+  const f=fixture({surface:'eclipse',stable:()=>++count===1?old:Promise.resolve({object:latest})});
+  await f.settings();
+  assert.equal(await f.page.triggerAgentOnboardingAction(true),true);
+  if(failOld)rejectOld(new Error('old request failed'));else resolveOld({object:manifest()});
+  await flush();
+  assert.deepEqual(plain(f.page.local.AgentStackRelease.projects),latest.projects);
+  assert.equal(f.page.local.AgentStackReleaseVerified,true);
+  assert.equal(f.page.local.AgentStackReleaseError,'');
+  assert.deepEqual(f.posted[0].payload.projects,latest.projects);
+ }
 });

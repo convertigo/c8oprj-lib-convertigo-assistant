@@ -130,7 +130,7 @@ scriptContent:
                         Agent_Windows_Paths_Disabled: "Windows long paths are disabled. Enabling them may be required to install Python/npm.",
                         Agent_Windows_Paths_Failed: "Studio cannot create a file on a path longer than 260 characters.",
                         Agent_Windows_Paths_Restart: "After enabling long paths, close and restart Studio. If necessary, restart Windows, then retry the runtime installation.",
-                        Agent_Windows_Paths_Unknown: "The long path test could not run. Check workspace write permissions; the Windows setting alone does not confirm runtime support.",
+                        Agent_Windows_Paths_Unknown: "The long path test could not run. Check configured agents directory write permissions; the Windows setting alone does not confirm runtime support.",
                         Agent_Windows_Path_Ignored: "Unusable paths were skipped while searching for runtimes:",
                         Agent_Windows_Path_Command: "Command",
                         Agent_Windows_Path_Invalid: "invalid path syntax",
@@ -166,6 +166,7 @@ scriptContent:
         				Agent_Stack_Checking: "Checking the published stack...",
         				Agent_Stack_Update_Available: "A stack update is available.",
         				Agent_Stack_Up_To_Date: "The local stack is up to date.",
+                        Agent_Stack_Not_Verified: "The published version has not been checked yet.",
         				Agent_Stack_Missing_Versions: "Installed project versions are not available yet.",
         				Agent_Stack_Source_Managed: "These projects come from local source checkouts and are not overwritten automatically.",
         				Agent_Stack_Update: "Update stack",
@@ -252,6 +253,7 @@ scriptContent:
         				Agent_Stack_Checking: "Vérification de la stack publiée...",
         				Agent_Stack_Update_Available: "Une mise à jour de la stack est disponible.",
         				Agent_Stack_Up_To_Date: "La stack locale est à jour.",
+                        Agent_Stack_Not_Verified: "La version publiée n’a pas encore été vérifiée.",
         				Agent_Stack_Missing_Versions: "Les versions des projets installés ne sont pas encore disponibles.",
         				Agent_Stack_Source_Managed: "Ces projets proviennent de sources locales et ne sont pas remplacés automatiquement.",
         				Agent_Stack_Update: "Mettre à jour la stack",
@@ -347,6 +349,7 @@ scriptContent:
         				Agent_Stack_Checking: "Verifica dello stack pubblicato...",
         				Agent_Stack_Update_Available: "È disponibile un aggiornamento dello stack.",
         				Agent_Stack_Up_To_Date: "Lo stack locale è aggiornato.",
+                        Agent_Stack_Not_Verified: "La versione pubblicata non è stata ancora verificata.",
         				Agent_Stack_Missing_Versions: "Le versioni dei progetti installati non sono ancora disponibili.",
         				Agent_Stack_Source_Managed: "Questi progetti provengono da sorgenti locali e non vengono sostituiti automaticamente.",
         				Agent_Stack_Update: "Aggiorna stack",
@@ -442,6 +445,7 @@ scriptContent:
         				Agent_Stack_Checking: "Comprobando el stack publicado...",
         				Agent_Stack_Update_Available: "Hay una actualización del stack disponible.",
         				Agent_Stack_Up_To_Date: "El stack local está actualizado.",
+                        Agent_Stack_Not_Verified: "La versión publicada todavía no se ha comprobado.",
         				Agent_Stack_Missing_Versions: "Las versiones de los proyectos instalados aún no están disponibles.",
         				Agent_Stack_Source_Managed: "Estos proyectos proceden de fuentes locales y no se reemplazan automáticamente.",
         				Agent_Stack_Update: "Actualizar stack",
@@ -1884,8 +1888,8 @@ scriptContent:
                         channel: "stable",
                         projects: [
                             { name: "lib_ConvertigoMCP", version: "0.2.29", tag: "v0.2.29", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.29/lib_ConvertigoMCP.car" },
-                            { name: "lib_ConvertigoAgentBridge", version: "0.4.30", tag: "v0.4.30", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.30/lib_ConvertigoAgentBridge.car" },
-                            { name: "lib_ConvertigoAssistant", version: "1.5.8", tag: "v1.5.8", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.8/lib_ConvertigoAssistant.car" }
+                            { name: "lib_ConvertigoAgentBridge", version: "0.4.31", tag: "v0.4.31", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.31/lib_ConvertigoAgentBridge.car" },
+                            { name: "lib_ConvertigoAssistant", version: "1.5.9", tag: "v1.5.9", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.9/lib_ConvertigoAssistant.car" }
                         ]
                     };
                 }
@@ -1949,26 +1953,34 @@ scriptContent:
         			this.local.AgentStackRelease = cached && cached.channel === channel ? cached : this.getEmbeddedAgentStackRelease();
         			this.local.AgentStackReleaseChannel = channel;
         			this.local.AgentStackReleaseLoading = true;
+                        this.local.AgentStackReleaseVerified = false;
         			this.local.AgentStackReleaseError = "";
         			this.local.AgentStackReleasePreviewFailed = false;
         			this.tick();
         			// The stable manifest always; on the preview channel the preview one too, per project the higher version.
-        			var stable = this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {}).async();
+        			var generation = ((this as any).agentStackManifestGeneration || 0) + 1;
+                        (this as any).agentStackManifestGeneration = generation;
+                        var stable = this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {manifestRevision: String(Date.now())}).async();
         			var preview: any = channel !== "preview" ? Promise.resolve(null)
-        				: this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetPreviewManifest", {}).async()
+        				: this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetPreviewManifest", {manifestRevision: String(Date.now())}).async()
         					.then((response: any) => this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, "preview"))
         					.catch(() => null);
         			Promise.all([stable, preview]).then((responses: any) => {
+                            if (generation !== (this as any).agentStackManifestGeneration) { return; }
         				var result = responses[0] && responses[0].result ? responses[0].result : responses[0];
         				var release = this.normalizeAgentStackRelease ? this.normalizeAgentStackRelease(result) : null;
         				if (release && release.channel === "stable" && release.projects && release.projects.length) {
         					// A preview manifest that cannot be read leaves the stable versions.
         					this.local.AgentStackRelease = channel === "preview" ? this.mergeAgentStackOfferReleases([release, responses[1]], "preview") : release;
         					this.local.AgentStackReleasePreviewFailed = channel === "preview" && !responses[1];
+                            this.local.AgentStackReleaseVerified = channel !== "preview" || !!responses[1];
+                            this.local.AgentStackReleaseCheckedAt = Date.now();
+                            this.local.AgentStackReleaseSource = "network";
         				} else {
         					this.local.AgentStackReleaseError = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
         				}
         			}).catch((error) => {
+                            if (generation !== (this as any).agentStackManifestGeneration) { return; }
         				this.local.AgentStackReleaseError = "" + error;
         			}).then(() => {
         				this.local.AgentStackReleaseLoading = false;
@@ -2140,7 +2152,8 @@ scriptContent:
         		for (var i = 0; i < projects.length; i++) {
         			if (!this.getInstalledAgentStackVersion(projects[i].name).length) { return this.t("Agent_Stack_Missing_Versions", "Les versions des projets installés ne sont pas encore disponibles."); }
         		}
-        		if (this.isAgentStackUpdateAvailable()) { return this.t("Agent_Stack_Update_Available", "Une mise à jour de la stack est disponible."); }
+        		if (!this.local || this.local.AgentStackReleaseVerified !== true) { return this.t("Agent_Stack_Not_Verified", "La version publiée n’a pas encore été vérifiée."); }
+                if (this.isAgentStackUpdateAvailable()) { return this.t("Agent_Stack_Update_Available", "Une mise à jour de la stack est disponible."); }
         		return this.t("Agent_Stack_Up_To_Date", "La stack locale est à jour.");
         	}
         
@@ -2155,7 +2168,7 @@ scriptContent:
         	}
         
         	public triggerAgentStackUpdate() {
-        		if (this.local && (this.local.AgentStackReleaseLoading === true || this.local.AgentStackReleaseError)) {
+        		if (this.local && (this.local.AgentStackReleaseLoading === true)) {
         			this.local.AgentActivationMessage = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
         			this.tick();
         			return;
@@ -2596,7 +2609,7 @@ scriptContent:
         		this.local.AgentActivationMessage = "";
         		if (this.isServerManagedAgentStack()) {
         			// The server skips what is already up to date, then the panel reloads.
-        			return this.installAgentStackOnServer({ projects: projects }, false);
+        			return this.triggerAgentOnboardingAction(false, projects);
         		}
         		// The Eclipse host imports these CARs, then reloads this view with the new versions.
         		this.triggerAgentOnboardingAction(true, projects);
@@ -2618,6 +2631,22 @@ scriptContent:
             var diagnostics = settings && settings.diagnostics;
             if (!diagnostics || diagnostics.platform !== ''windows'') { return ''''; }
             var lines = [], paths = diagnostics.longPaths || {}, issues = diagnostics.pathIssues || [];
+                    var storage = diagnostics.agentsDirectory;
+                    var fr = this.agentUiLanguage && this.agentUiLanguage() === "fr";
+                    if (storage) {
+                        lines.push("assistant.agents.directory (" + (storage.configured ? (fr ? "défini" : "configured") : (fr ? "défaut du workspace" : "workspace default")) + "): " + storage.directory);
+                        lines.push((fr ? "Longueur de la racine : " : "Root length: ") + storage.rootLength + (fr ? " caractères." : " characters."));
+                        lines.push((fr ? "Chemin de journal estimé : " : "Estimated journal path: ") + storage.estimatedLongestPathLength + " / " + storage.pathLimit + (fr ? " (limite classique Windows)." : " (legacy Windows limit)."));
+                        lines.push((fr ? "Longueur de racine conseillée : au plus " : "Recommended root length: at most ") + storage.recommendedMaxRootLength + (fr ? " caractères (marge de " : " characters (margin ") + storage.safetyMargin + ").");
+                        if (storage.status !== "within_budget" || paths.registryEnabled === false || paths.fileSystemProbe === "failed") {
+                            lines.push(fr ? "Activez de préférence les chemins longs Windows. Sinon, dans Administration > Symbols, définissez assistant.agents.directory vers un dossier court accessible en écriture, par exemple C:\\Tigo, puis revérifiez le diagnostic. Les données existantes ne sont pas déplacées automatiquement." : "Prefer enabling Windows long paths. Otherwise, in Administration > Symbols, set assistant.agents.directory to a short writable directory, for example C:\\Tigo, then check diagnostics again. Existing data is not moved automatically.");
+                        }
+                        if (storage.estimateScope && storage.estimateScope.indexOf("explicit-") === 0) {
+                            lines.push(fr ? "Un chemin de runtime ou de conversation explicite est pris en compte. Vérifiez cette configuration ; les anciennes conversations ne sont pas déplacées automatiquement." : "An explicit runtime or conversation path is included. Check that configuration; existing conversations are not moved automatically.");
+                        }
+                        lines.push(fr ? "Estimation du journal Vibe géré ; les chemins des dépendances peuvent aussi imposer une limite." : "Managed Vibe journal estimate; dependency paths may impose additional limits.");
+                    }
+        
             if (paths.registryEnabled === false) {
                 lines.push(this.t(''Agent_Windows_Paths_Disabled'', ''Les chemins longs Windows sont désactivés. Leur activation peut être nécessaire pour installer Python/npm.''));
             }
@@ -2627,7 +2656,7 @@ scriptContent:
             if (paths.registryEnabled === false || paths.fileSystemProbe === ''failed'') {
                 lines.push(this.t(''Agent_Windows_Paths_Restart'', ''Après activation, fermez et relancez le Studio. Si nécessaire, redémarrez Windows, puis réessayez l’installation du runtime.''));
             } else if (paths.fileSystemProbe === ''unknown'') {
-                lines.push(this.t(''Agent_Windows_Paths_Unknown'', ''Le test des chemins longs n’a pas pu être exécuté. Vérifiez les droits d’écriture du workspace ; le réglage Windows ne suffit pas à confirmer le fonctionnement des runtimes.''));
+                lines.push(this.t(''Agent_Windows_Paths_Unknown'', ''Le test des chemins longs n’a pas pu être exécuté. Vérifiez les droits d’écriture du répertoire agents configuré ; le réglage Windows ne suffit pas à confirmer le fonctionnement des runtimes.''));
             }
             if (issues.length) {
                 lines.push(this.t(''Agent_Windows_Path_Ignored'', ''Des chemins inutilisables ont été ignorés pendant la recherche des runtimes :''));
@@ -2651,7 +2680,82 @@ scriptContent:
         		} catch (e) {}
         	}
         
-        	public triggerAgentOnboardingAction(forceUpdate = false, projects = null) {
+        	public readFreshAgentStackRelease() {
+            if (!this.local) { this.local = {}; }
+            this.local.AgentStackReleaseVerified = false;
+            var ready: any = null;
+            if (this.isServerManagedAgentStack && this.isServerManagedAgentStack()) {
+                ready = this.refreshAgentStackServerStatus();
+            } else if (this.getAgentStackChannelChoice && !this.getAgentStackChannelChoice() && this.refreshAgentStackEngineStatus) {
+                ready = this.refreshAgentStackEngineStatus();
+            }
+            return Promise.resolve(ready).then(() => {
+                if (!this.c8o || !this.c8o.callJsonObject) { throw new Error("Published stack verification unavailable"); }
+                var channel = this.getAgentStackChannel ? this.getAgentStackChannel() : "stable";
+                var generation = ((this as any).agentStackManifestGeneration || 0) + 1;
+                (this as any).agentStackManifestGeneration = generation;
+                var revision = String(Date.now()) + "-" + String(Math.random()).slice(2);
+                var read = (name, expected) => this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease." + name, {manifestRevision: revision}).async()
+                    .then((response: any) => {
+                        var manifest = this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, expected);
+                        if (!manifest) { throw new Error("Invalid published stack manifest"); }
+                        return manifest;
+                    });
+                return Promise.all([read("GetManifest", "stable"), channel === "preview" ? read("GetPreviewManifest", "preview") : Promise.resolve(null)])
+                    .then((values: any) => {
+                        if (generation !== (this as any).agentStackManifestGeneration) { throw new Error("Manifest check superseded; retry the installation"); }
+                        if (channel !== (this.getAgentStackChannel ? this.getAgentStackChannel() : "stable")) { throw new Error("Update channel changed; retry the installation"); }
+                        var release = channel === "preview" ? this.mergeAgentStackOfferReleases(values, channel) : values[0];
+                        this.local.AgentStackRelease = release;
+                        this.local.AgentStackOfferRelease = release;
+                        this.local.AgentStackReleaseChannel = channel;
+                        this.local.AgentStackReleaseError = "";
+                        this.local.AgentStackReleaseVerified = true;
+                        this.local.AgentStackReleaseCheckedAt = Date.now();
+                        this.local.AgentStackReleaseSource = "network";
+                        return release;
+                    });
+            });
+        }
+        
+        public triggerAgentOnboardingAction(forceUpdate = false, projects = null) {
+            if (!this.global || !this.global.isAssistantAgentReleaseEnabled || !this.global.isAssistantAgentReleaseEnabled()) { return Promise.resolve(false); }
+            if (this.getAgentOnboardingState && this.getAgentOnboardingState() === "unsupported") { this.postVerifiedAgentStackInstallation(forceUpdate, projects); return Promise.resolve(false); }
+            if (!this.local) { this.local = {}; }
+            if (this.local.AgentActivationInProgress === true) { return Promise.resolve(false); }
+            this.local.AgentActivationInProgress = true;
+            this.local.AgentStackInstallChecking = true;
+            this.local.AgentActivationStatus = "checking";
+            this.local.AgentActivationMessage = this.t("Agent_Stack_Checking", "Vérification de la stack publiée...");
+            this.tick();
+            return this.readFreshAgentStackRelease().then((release: any) => {
+                var selected = release.projects.filter((item: any) => !this.getInstalledAgentStackVersion(item.name)
+                    || this.compareAgentStackVersions(this.getInstalledAgentStackVersion(item.name), item.version) <= 0);
+                if (projects && projects.length) {
+                    selected = selected.filter((item: any) => !this.getInstalledAgentStackVersion(item.name)
+                        || this.compareAgentStackVersions(this.getInstalledAgentStackVersion(item.name), item.version) < 0);
+                }
+                this.local.AgentStackInstallChecking = false;
+                if (!selected.length) {
+                    this.local.AgentActivationInProgress = false;
+                    this.local.AgentActivationStatus = "success";
+                    this.local.AgentActivationMessage = this.t("Agent_Stack_Up_To_Date", "La stack locale est à jour.");
+                    this.tick(); return false;
+                }
+                this.postVerifiedAgentStackInstallation(forceUpdate, selected);
+                return true;
+            }).catch(() => {
+                this.local.AgentStackInstallChecking = false;
+                this.local.AgentActivationInProgress = false;
+                this.local.AgentActivationStatus = "error";
+                this.local.AgentStackReleaseVerified = false;
+                this.local.AgentStackReleaseError = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
+                this.local.AgentActivationMessage = this.local.AgentStackReleaseError;
+                this.tick(); return false;
+            });
+        }
+        
+        public postVerifiedAgentStackInstallation(forceUpdate = false, projects = null) {
                     if (!this.global || !this.global.isAssistantAgentReleaseEnabled || !this.global.isAssistantAgentReleaseEnabled()) { return; }
         		try {
         			var state = this.getAgentOnboardingState ? this.getAgentOnboardingState() : ''ready'';
@@ -10321,7 +10425,7 @@ title: Tigo
                           beanData: |
                             '{
                              "ionBean": "Button",
-                             "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true || !!this.local.AgentStackReleaseError)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
+                             "Disabled": "script:(this.local && (this.local.AgentActivationInProgress === true || this.local.AgentStackReleaseLoading === true)) || !(this.isAgentStackUpdateAllowed && this.isAgentStackUpdateAllowed())",
                              "IonFill": "plain:clear",
                              "IonSize": "plain:small"
                             }'
