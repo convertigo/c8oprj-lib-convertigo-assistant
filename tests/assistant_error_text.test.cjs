@@ -78,3 +78,12 @@ test('a real 401 remains a credential rejection and unrelated errors keep their 
   assert.match(show(backend), /^reasoning_effort 'medium' is not supported/);
   assert.equal(errors.agentHttpErrorStatus(JSON.stringify({ error: { code: '403' } }), 0), 403);
 });
+
+test('a gateway the agent cannot connect to reads as a connection problem, with what to do', () => {
+  // Vibe ACP after its retries (usage tests 29/10): the turn failed with httpx's bare message.
+  const failed = { message: 'All connection attempts failed' };
+  assert.match(show(failed), /n'a pas pu joindre la passerelle de modèles Convertigo.*accès Internet.*renvoyez votre message/);
+  assert.match(show(failed, 'en'), /could not reach the Convertigo model gateway/);
+  assert.match(show({ error: { message: "ConnectError('All connection attempts failed')" } }), /passerelle de modèles Convertigo/);
+  assert.equal(show(failed, 'fr', 'vibe'), 'All connection attempts failed', 'another provider keeps the cause');
+});

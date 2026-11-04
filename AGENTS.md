@@ -124,6 +124,16 @@ rediscovering the same context.
 - Refresh provider settings after a successful runtime update so model and
   reasoning choices come from the newly installed CLI. Existing agent processes
   may require a restart or a new conversation before using the new runtime.
+- Settings that show are always the settings page (`isAgentSettingsPageShown`), also
+  while the chosen agent is not ready once the page was closed. A note under the agent
+  cards says how to connect that agent (sign-in, install, check running) and offers the
+  way back to a ready agent (`getAgentNotReadyText`, `useReadyAgentProvider`). Closing
+  the settings on an agent that is not ready goes back to the agent in use when they
+  opened, else the saved default, else the first ready one; a runtime install still
+  running keeps its agent (`AgentRuntimeInstallProvider`). The No Code router reads
+  only the agent in use: a card whose agent the panel has not read starts the settings
+  check (`startAgentProviderCheck`), never shows a runtime to install. Cover with
+  `node --test tests/nocode-agent-not-ready.test.cjs`.
 - Settings and runtime discovery may use the visible user-scoped Codex home.
   Studio/generalist conversations that expose the managed JxBrowser viewer use
   a conversation-scoped Codex home so each resident Playwright MCP keeps its own
@@ -159,11 +169,33 @@ rediscovering the same context.
   conversation; an empty panel keeps it. The `Agent` entry page opens the agent at once for
   the No Code and server surfaces, never How-To. Cover with
   `node --test tests/nocode-restore-conversation*.test.cjs`.
+- "Confirmer avant de modifier" (No Code, off by default): while a user has it on,
+  lib_ConvertigoMCP holds each No Code write (create, edit, update, publish with
+  confirm, app-create, schema-apply in apply mode) until the user answers a card of
+  the conversation, whatever the provider. The choice is kept per user
+  (`agents/nocode/users/<userKey>/write-confirm.json`) and published in the server
+  store `lib_ConvertigoAssistant.writeConfirm` (`user:<owner>`, and `grant:<conversation>`
+  for "Tout autoriser pour ce tour") by `js/agent_write_confirm.js`, at each switch and
+  each message; the held change is a `write-confirm` request of
+  `lib_ConvertigoAssistant.hostRequests` that readResponse hands to the page while it
+  waits, and `AgentWriteConfirm` answers it (allow, allow_turn, refuse), or closes it at
+  the end of the turn (the MCP refuses it). A message drops what the last turn left.
+  Switching off answers no open card. The switch sits above the input bar, the setting
+  after the feedback one, `/confirmer` and `/confirm` turn it on or off, and a message
+  such as "ne modifie rien sans mon accord" while it is off offers it once per
+  conversation. The prompt's No Code block says whether it is on. Texts in
+  `agentConfirmText` (fr, en, it, es). Cover with `node --test tests/nocode-write-confirm.test.cjs`.
 - Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.
   No Code settings checks are presence-only by default, bounded to 15 seconds,
-  and settle into an explicit error/configuration state on failure. Never infer
+  and settle into an explicit error/configuration state on failure. The start of a
+  No Code panel (AgentCreateConversationRouter) reads them presence-only too, and in
+  full only when a model catalog is not cached yet; settings reads go to a Bridge
+  context of their own (the shared one orders starts and prompts, and the check
+  waited behind them); a panel that opens again the conversation of a reloaded No
+  Code Studio (`restoreConversation`) prewarms no Vibe. Cover with
+  `node --test tests/nocode-panel-start-cost.test.cjs`. Never infer
   a working project from an unrelated Studio selection for these checks.
   No Code defaults to `lib_ConvertigoAgentBridge`; explicit bridge URLs take
   precedence, and Studio keeps its existing default endpoint. HTTP-200 engine
@@ -290,13 +322,15 @@ rediscovering the same context.
   handle to the bridge, but must never expose the raw token in URLs, UI state,
   prompts, logs, or conversation records. Token labels must include the readable
   authenticated user, for example `Convertigo Agent Bridge - user@example.com`.
-- In Studio generalist or Flow mode, the Assistant creates one short-lived
-  managed token
-  through `lib_ConvertigoMCP.McpManagedTokenCreate` using the current
-  `WEB_ADMIN` session. Only an opaque server-memory handle crosses into the
-  Bridge; renew the token before expiry and never expose it to browser state,
-  prompts, logs, or conversation files. The same token authenticates both the
-  Legacy and Flow MCP endpoints.
+- In Studio generalist or Flow mode, the Assistant creates one leased managed
+  token through `lib_ConvertigoMCP.McpManagedTokenCreate` (`idleSeconds`) using
+  the current `WEB_ADMIN` session. It stays valid while a turn uses it (the MCP
+  slides its lease on each call, the Bridge on the events of a running turn) and
+  ends `MANAGED_MCP_TOKEN_IDLE_SECONDS` after the last activity, at a restart of
+  the engine or with `McpTokenRevoke`. Only an opaque server-memory handle
+  crosses into the Bridge; renew the token when its lease is about to end and
+  never expose it to browser state, prompts, logs, or conversation files. The
+  same token authenticates both the Legacy and Flow MCP endpoints.
 - Eclipse can renew the local Assistant's admin session without navigating the
   view. `AuthenticateStudioSession` owns a single-flight, timeout-bounded
   `renewStudioSession` exchange via `lib_ConvertigoAssistant.authenticate.request`
@@ -519,7 +553,13 @@ rediscovering the same context.
   resources/preferences/selections/secrets live under `agents/tigo/users`.
   Built-ins are read-only, with Studio/NoCode surfaces and EN/FR translations.
 - Page configuration uses native NGX accordions. Footer favorites remain
-  available during a conversation, append to drafts and never auto-send.
+  available during a conversation, append to drafts and never auto-send. Their
+  row folds once the conversation starts (the page's `hasConversationStarted`:
+  the thread shows a message the user sent, from the send on, or a reopened
+  conversation has one) and shows again for a new or empty conversation; the
+  "Prompts" toggle of the composer opens it in between, and it folds again with
+  the next message. The skills and MCP rows stay as the user left them. Cover
+  with `node --test tests/assistant_hide_suggestions.test.cjs`.
 - Skills are injected once per revision/provider session. Track the accepted
   submission only, and bind a newly returned session ID without reinjection.
   Disabling cannot erase model history. Missing selections must remain visible

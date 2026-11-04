@@ -87,6 +87,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var MANAGED_MCP_TOKEN_SESSION_EXPIRY = "lib_ConvertigoAssistant.managedMcpTokenExpiry";
   var MANAGED_MCP_TOKEN_TTL_SECONDS = 7200;
   var MANAGED_MCP_TOKEN_RENEW_SKEW_MS = 300000;
+  // The managed token is leased (lib_ConvertigoMCP C8O.mcpAuth, MANAGED_LEASES_KEY): valid while a turn uses it, it ends
+  // MANAGED_MCP_TOKEN_IDLE_SECONDS after the last activity. A fixed 2 h expiry cut a turn 2 h in (PCA eval 29/10). An
+  // older lib_ConvertigoMCP ignores idleSeconds and still gives a token of MANAGED_MCP_TOKEN_TTL_SECONDS.
+  var MANAGED_MCP_TOKEN_IDLE_SECONDS = 1800;
+  var MANAGED_MCP_LEASES_KEY = "lib_ConvertigoMCP.managedTokenLeases";
 
   function now() {
     return System.currentTimeMillis();
@@ -334,6 +339,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (language.length) {
       lines.push("- Reply to the user and write progress/details in " + language + ".");
     }
+    lines.push(writeConfirmModule().promptLine(typeof options.writeConfirmOn === "boolean" ? options.writeConfirmOn : noCodeWriteConfirmOn(options)));
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
     lines.push("- Read the latest saved form with `nocode-form-get` using its document id before auditing, proposing improvements, or editing. The contract tool describes supported components, not this form's content.");
     lines.push("- If a selected element id is provided, locate it in the form returned by `nocode-form-get`. Apply the smallest `nocode-form-edit` operation only when the user requests a change; suggestions and audits are read-only.");
@@ -959,6 +965,30 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // Still valid at untilMs: a leased token while its lease ends later (the MCP and the Agent Bridge slide it while a turn
+  // uses it, a restart of the engine or a revocation removes it), a token of fixed lifetime while its expiry is later.
+  function managedMcpTokenUsable(token, expiryMs, untilMs) {
+    if (!trim(token).length) {
+      return false;
+    }
+    var payload = null;
+    try {
+      payload = JSON.parse(decodeJwtPart(String(token).split(".")[1]));
+    } catch (_ignoreManagedPayload) {}
+    if (!payload || payload.lease !== "turn") {
+      return expiryMs > untilMs;
+    }
+    try {
+      var header = JSON.parse(decodeJwtPart(String(token).split(".")[0]));
+      var store = sharedStorage();
+      var leases = store !== null ? store.get(MANAGED_MCP_LEASES_KEY) : null;
+      var lease = leases !== null && typeof leases !== "undefined" ? leases.get(String(header.kid)) : null;
+      return lease !== null && typeof lease !== "undefined" && Number(JSON.parse(String(lease)).expiresAt) > untilMs;
+    } catch (_ignoreManagedLease) {
+      return false;
+    }
+  }
+
   function usesProtectedConvertigoMcp(options) {
     options = options || {};
     if (normalizeSkillProfile(options) === "nocode") {
@@ -983,13 +1013,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       existingExpiry = Number(context.httpSession.getAttribute(MANAGED_MCP_TOKEN_SESSION_EXPIRY) || 0);
     } catch (_ignoreManagedSessionRead) {}
     if (existingHandle.length
-        && existingExpiry > now() + MANAGED_MCP_TOKEN_RENEW_SKEW_MS
-        && sharedSecretGet(existingHandle).length) {
+        && managedMcpTokenUsable(sharedSecretGet(existingHandle), existingExpiry, now() + MANAGED_MCP_TOKEN_RENEW_SKEW_MS)) {
       return existingHandle;
     }
     var response = unwrapSequenceResult(callLocalSequence("lib_ConvertigoMCP", "McpManagedTokenCreate", {
       label: "Convertigo Assistant - " + (trim(options.userId) || "Studio"),
-      ttlSeconds: String(MANAGED_MCP_TOKEN_TTL_SECONDS)
+      ttlSeconds: String(MANAGED_MCP_TOKEN_TTL_SECONDS),
+      idleSeconds: String(MANAGED_MCP_TOKEN_IDLE_SECONDS)
     })) || {};
     var token = trim(response.token);
     if (trim(response.status).toLowerCase() !== "ok" || !token.length) {
@@ -1905,6 +1935,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var eventsKey = String(params && (params.handle || params.threadid) || "") + "|" + callerSessionId();
       payload.__context = "studio_assistant_events_" + java.lang.Integer.toHexString(new java.lang.String(eventsKey).hashCode());
     }
+    // The settings are only read: they get a context of their own too. On the shared one, a No Code panel's check of the
+    // agent waited 29 s behind the starts of two panels and a prewarmed Vibe, and its 15-s limit opened the settings
+    // (test-nocode, reloads of No Code Studio).
+    if (sequence === "agent_settings") {
+      payload.__context = "studio_assistant_settings_" + java.lang.Integer.toHexString(new java.lang.String(callerSessionId()).hashCode());
+    }
     var bridgeUrl = trim(options.bridgeBaseUrl) || defaultBridgeUrl(options);
     var headers = {};
     if (isOwnBridgeUrl(bridgeUrl)) {
@@ -2179,7 +2215,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // A No Code conversation's Vibe took 11 s to start, process and session, before its first answer (test-nocode).
-  // Opening the panel starts one in the background for the user's next conversation, whose first message takes it
+  // Opening the panel (not a panel that opens again the conversation of a reloaded No Code Studio, restoreConversation)
+  // starts one in the background for the user's next conversation, whose first message takes it
   // (takePrewarmedConversation) and starts the next one. Nothing of that conversation is saved before its first message; the Bridge stops its
   // process after 3 min idle without one, keeps one prewarm per user, and restarts it on that message if the start
   // asks for another configuration.
@@ -2582,9 +2619,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       options.skillProfile = trim(options.skillProfile) || trim(capabilityProfile.id);
     }
     var resolvedProvider = descriptor && descriptor.id ? normalizeProvider(descriptor.id) : normalizeProvider(provider || (settings.defaults && settings.defaults.provider));
+    // settings.defaults is the user's confirmed choice (else the first ready provider's default): for its provider it
+    // comes before the provider's own default model, the gateway default for Convertigo.
+    var savedDefaults = settings.defaults && normalizeProvider(settings.defaults.provider) === resolvedProvider ? settings.defaults : null;
+    var savedModel = trim(savedDefaults && savedDefaults.model);
+    var offeredSavedModel = savedModel.length ? modelSettings(descriptor, savedModel) : null;
+    if (offeredSavedModel && trim(offeredSavedModel.id) !== savedModel) {
+      savedModel = "";
+    }
     var model = trim(options.model || options.agentModel);
     if (!model.length || model.toLowerCase() === "default" || model.toLowerCase() === "auto") {
-      model = trim((descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
+      model = trim(savedModel || (descriptor && descriptor.defaultModel) || (settings.defaults && settings.defaults.model) || "");
       if (!model.length) {
         var firstModel = modelSettings(descriptor, "");
         model = trim(firstModel && firstModel.id);
@@ -2599,7 +2644,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var selectedModel = modelSettings(descriptor, trim(options.model || options.agentModel || model));
     var reasoning = trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
     if (!reasoning.length || reasoning.toLowerCase() === "default" || reasoning.toLowerCase() === "auto") {
-      reasoning = trim((selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
+      var savedReasoning = savedModel.length && savedModel === trim(selectedModel && selectedModel.id) ? trim(savedDefaults.reasoning) : "";
+      reasoning = trim(savedReasoning || (selectedModel && selectedModel.defaultReasoning) || (settings.defaults && settings.defaults.reasoning) || "");
       if (reasoning.length) {
         options.reasoningEffort = reasoning;
       }
@@ -3742,6 +3788,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       gatewayModelDenied: "Accès au modèle {model} refusé par LiteLLM (HTTP 403). Vérifiez les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
       gatewayKeyRejected: "LiteLLM a refusé la clé d'API (HTTP 401). Vérifiez la clé configurée pour l'agent Convertigo.",
       gatewayAccessRejected: "LiteLLM a refusé l'accès au modèle {model}. Vérifiez la validité de la clé et les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
+      gatewayUnreachable: "Tigo n'a pas pu joindre la passerelle de modèles Convertigo : la connexion a échoué à chaque nouvel essai. Vérifiez l'accès Internet de ce poste (ou son proxy), puis renvoyez votre message. Le travail déjà fait dans le projet est conservé.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -3783,6 +3830,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       gatewayModelDenied: "LiteLLM denied access to model {model} (HTTP 403). Check the models allowed for both the key and its LiteLLM user.",
       gatewayKeyRejected: "LiteLLM rejected the API key (HTTP 401). Check the key configured for the Convertigo agent.",
       gatewayAccessRejected: "LiteLLM refused access to model {model}. Check the key's validity and the models allowed for both the key and its LiteLLM user.",
+      gatewayUnreachable: "Tigo could not reach the Convertigo model gateway: the connection failed on every retry. Check this computer's Internet access (or its proxy), then send your message again. The work already done in the project is kept.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -3896,6 +3944,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       // for a model permission denial. Do not claim a 401 or an invalid credential.
       if (lower.indexOf("invalid api key") !== -1) {
         return lang(state).gatewayAccessRejected.replace("{model}", model);
+      }
+      // Vibe retries a model call that cannot connect for about five minutes, then fails the turn with httpx's bare
+      // "All connection attempts failed" (usage tests 29/10).
+      if (/all connection attempts failed|connecterror|connection refused|nodename nor servname|name or service not known|failed to establish a new connection/.test(lower)) {
+        return lang(state).gatewayUnreachable;
       }
     }
     if (lower.indexOf("refresh token") !== -1 || lower.indexOf("access token could not be refreshed") !== -1 || lower.indexOf("please log out and sign in again") !== -1) {
@@ -6780,6 +6833,31 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // The start of a No Code panel reads the settings as its own check does (presence only: what is installed and the
+  // cached model catalog). The full read probed Codex, Node and Playwright at every opening, 10 s on test-nocode, and
+  // the check waited behind it. It stays for the settings the user opens, and for a catalog not cached yet.
+  function panelStartSettings(options, workspaceRoot, userKey, projectFilter, provider) {
+    if (normalizeSkillProfile(options) !== "nocode" || trim(options.runtimePresenceOnly).length) {
+      return agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+    }
+    var presenceOptions = {};
+    for (var key in options) {
+      if (Object.prototype.hasOwnProperty.call(options, key)) {
+        presenceOptions[key] = options[key];
+      }
+    }
+    presenceOptions.runtimePresenceOnly = true;
+    presenceOptions.checkUpdates = false;
+    var settings = agentSettingsForOptions(presenceOptions, workspaceRoot, userKey, projectFilter, provider);
+    var providers = settings && settings.providers ? settings.providers : [];
+    for (var i = 0; i < providers.length; i++) {
+      if (providers[i] && providers[i].status === "configuration_required") {
+        return agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+      }
+    }
+    return settings;
+  }
+
   function setupRequiredAnswer(state, setup) {
     var t = lang(state);
     var provider = providerLabel(state.provider);
@@ -6975,10 +7053,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!requestedThreadId.length && !hasQuestion) {
       setBuffer("", "");
-      var previewSettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      var previewSettings = includeSettings ? panelStartSettings(options, workspaceRoot, userKey, projectFilter, provider) : null;
       sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
       var previewDefaults = applyAgentSettingsDefaults(options, previewSettings, provider);
-      if (previewSettings !== null) {
+      if (previewSettings !== null && !boolValue(options.restoreConversation, false)) {
         prewarmNoCodeConversation(options, previewDefaults.provider);
       }
       var resolvedProvider = provider === "all" ? "" : (previewDefaults.provider || provider);
@@ -7010,9 +7088,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     if (!requestedThreadId.length && provider === "all") {
       setBuffer("", "");
-      var emptySettings = includeSettings ? agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) : null;
+      var emptySettings = includeSettings ? panelStartSettings(options, workspaceRoot, userKey, projectFilter, provider) : null;
       var emptyDefaults = applyAgentSettingsDefaults(options, emptySettings, provider);
-      if (emptySettings !== null) {
+      if (emptySettings !== null && !boolValue(options.restoreConversation, false)) {
         prewarmNoCodeConversation(options, emptyDefaults.provider);
       }
       return {
@@ -7940,6 +8018,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     enrichViewerDebugOptions(options, state);
     collectFeedbackContextNames(state, options);
+    // A message starts a turn: the user's "Confirmer avant de modifier" is published for the MCP, and what the last turn
+    // left (its cards, its "allow all for this turn") is dropped. Never a reason not to send.
+    if (normalizeSkillProfile(state) === "nocode") {
+      try {
+        options.writeConfirmOn = writeConfirmModule().newTurn(state.threadid, options.userId, writeConfirmHost(options));
+      } catch (_ignoreWriteConfirm) {}
+    }
     // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
     options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
     if (trim(options.rawUserQuestion).length) {
@@ -8365,6 +8450,67 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         return java.util.Base64.getDecoder().decode(String(text));
       }
     };
+  }
+
+  // "Confirmer avant de modifier" of a No Code user (js/agent_write_confirm.js), through AgentWriteConfirm: status, set
+  // (enabled), answer (threadid, requestId, decision: allow, allow_turn or refuse) and turn_end (threadid). Always for the
+  // authenticated user, never the one the page names.
+  C8O.assistantAgentBridge.writeConfirm = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    if (!trim(options.userId).length) {
+      return { status: "error", error: { code: "unavailable", message: "No user to keep the choice for." } };
+    }
+    var module = writeConfirmModule();
+    var host = writeConfirmHost(options);
+    var action = trim(options.action).toLowerCase() || "status";
+    if (action === "set") {
+      return module.choose(options.userId, boolValue(options.enabled, false), host);
+    }
+    if (action === "answer") {
+      return module.answer({ conversationId: normalizeThreadId(options.threadid), userId: options.userId, requestId: options.requestId, decision: options.decision }, host);
+    }
+    if (action === "turn_end") {
+      return module.endTurn(normalizeThreadId(options.threadid), options.userId, host);
+    }
+    var on = module.isOn(host);
+    module.publish(options.userId, on, host);
+    return { status: "ok", on: on };
+  };
+
+  function writeConfirmModule() {
+    if (typeof C8O.assistantWriteConfirm === "undefined" || typeof C8O.assistantWriteConfirm.newTurn !== "function") {
+      include("js/agent_write_confirm.js");
+    }
+    return C8O.assistantWriteConfirm;
+  }
+
+  // The user's choice lives beside their No Code MCP token: agents/nocode/users/<userKey>/write-confirm.json.
+  function writeConfirmHost(options) {
+    var root = new File(resolveWorkspaceRoot(options), "agents");
+    var file = new File(new File(new File(new File(root, "nocode"), "users"), safePathPart(normalizeUserKey(options.userId))), "write-confirm.json");
+    var host = hostRequestsHost();
+    host.newMap = function () {
+      return new java.util.concurrent.ConcurrentHashMap();
+    };
+    host.readChoice = function () {
+      return readJsonFile(file);
+    };
+    host.writeChoice = function (record) {
+      writeJsonFile(file, record);
+    };
+    return host;
+  }
+
+  function noCodeWriteConfirmOn(options) {
+    try {
+      return trim(options && options.userId).length > 0 && writeConfirmModule().isOn(writeConfirmHost(options));
+    } catch (_ignoreChoice) {
+      return false;
+    }
   }
 
   function readResponseOf(options) {

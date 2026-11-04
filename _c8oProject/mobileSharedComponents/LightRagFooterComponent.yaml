@@ -14,6 +14,7 @@ scriptContent:
         	disabled = false;
         	suggestionsCache: any = null;
         	suggestionsSignature = '''';
+        	conversationStartedSeen = false;
         	questionInputEl = null;
         	questionInputKeydownHandler = null;
         	imageInputEl = null;
@@ -36,6 +37,7 @@ scriptContent:
         		this.clearAssetPreviewUrls();
         		/*End_c8o_CompFinalization*/
         /*Begin_c8o_CompChanges*/
+        		this.syncPromptsWithConversation();
         		/*End_c8o_CompChanges*/
         /*Begin_c8o_CompDoCheck*/
         		/*End_c8o_CompDoCheck*/
@@ -1098,6 +1100,10 @@ scriptContent:
         			var attachments = this.getAttachFiles();
         			this.Question = '''';
         			this.setQuestionText('''', false);
+        			// Prompts opened again during a conversation fold with the message they helped write.
+        			if (this.ConversationStarted === true && this.resourceTab === ''prompts'') {
+        				this.resourceTab = '''';
+        			}
         			this.RunQuestion.emit({
         				question: message,
         				images: images,
@@ -1330,6 +1336,15 @@ scriptContent:
                 return (String(language).startsWith(''fr'') ? fr : en)[key] || key;
             }
             public toggleResourceTab(tab: string) { this.resourceTab = this.resourceTab === tab ? '''' : tab; this.tick(); }
+            public syncPromptsWithConversation() {
+                // The suggested prompts fold once the conversation starts (first message sent, or a conversation reopened with its messages)
+                // and come back for a new or empty one. In between, the "Prompts" toggle of the composer opens them again.
+                const started = this.ConversationStarted === true;
+                if (started === this.conversationStartedSeen) { return; }
+                this.conversationStartedSeen = started;
+                if (started && this.resourceTab === ''prompts'') { this.resourceTab = ''''; }
+                else if (!started && !this.resourceTab) { this.resourceTab = ''prompts''; }
+            }
             public quickResources() { return this.resourceTab === ''skills'' ? (this.ResourceSkills || []) : (this.ResourceMcp || []); }
         /*End_c8o_CompFunction*/
         '
@@ -4765,6 +4780,9 @@ scriptContent:
 ↓AgentCommands [ngx.components.UICompVariable-1792250487448]: 
   comment: Slash commands advertised by the agent harness, for the "/" menu.
   value: '[]'
+↓ConversationStarted [ngx.components.UICompVariable-1793300000101]: 
+  comment: True once the thread shows a message the user sent. The suggested prompts fold then and come back for a new or empty conversation.
+  value: false
 ↓TigoCommandMenuStyle [ngx.components.UIStyle-1792250493382]: 
   styleContent: 
     - xmlizable: 
