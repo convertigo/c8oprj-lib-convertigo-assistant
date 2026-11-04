@@ -6,13 +6,15 @@ of each companion project.
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
 | Stable | 1.5.6 | 0.4.28 | 0.2.28 |
-| Preview | 1.5.6 | 0.4.28 | 0.2.28 |
+| Preview | 1.5.7-beta.7 | 0.4.29-beta.10 | 0.2.29-beta.21 |
 
 Tigo 1.5.6 adds the Studio update offer and its channel selector, the No Code
 sandbox, faster No Code starts, preview capture and Baserow row reads (see
 [release 1.5.6](release-1.5.6.md)). It retains personal/team access and the NoCode
-integration from [1.5.5](release-1.5.5.md). The preview manifest points at the
-same bundle until the next pre-release set checked on the No Code test server.
+integration from [1.5.5](release-1.5.5.md). The preview manifest lists the
+pre-releases checked together on the No Code test server; listing them is the
+last step of each such set (see
+[RELEASING.md](../RELEASING.md#preview-manifest-after-a-checked-pre-release-set)).
 Studios still on 1.5.5 have no update card and read only the stable manifest:
 they find 1.5.6 in the stack settings of the panel. Both bundles target
 Convertigo 8.4.6; compatibility alone does not constitute stable acceptance.

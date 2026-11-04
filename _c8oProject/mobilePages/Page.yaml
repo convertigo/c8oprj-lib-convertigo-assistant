@@ -1958,8 +1958,8 @@ scriptContent:
                         channel: "stable",
                         projects: [
                             { name: "lib_ConvertigoMCP", version: "0.2.28", tag: "v0.2.28", importUrl: "lib_ConvertigoMCP=https://github.com/convertigo/c8oprj-lib-c8o-mcp/releases/download/v0.2.28/lib_ConvertigoMCP.car" },
-                            { name: "lib_ConvertigoAgentBridge", version: "0.4.28", tag: "v0.4.28", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.28/lib_ConvertigoAgentBridge.car" },
-                            { name: "lib_ConvertigoAssistant", version: "1.5.6", tag: "v1.5.6", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.6/lib_ConvertigoAssistant.car" }
+                            { name: "lib_ConvertigoAgentBridge", version: "0.4.29", tag: "v0.4.29", importUrl: "lib_ConvertigoAgentBridge=https://github.com/convertigo/c8oprj-lib-convertigo-agent-bridge/releases/download/v0.4.29/lib_ConvertigoAgentBridge.car" },
+                            { name: "lib_ConvertigoAssistant", version: "1.5.7", tag: "v1.5.7", importUrl: "lib_ConvertigoAssistant=https://github.com/convertigo/c8oprj-lib-convertigo-assistant/releases/download/v1.5.7/lib_ConvertigoAssistant.car" }
                         ]
                     };
                 }
@@ -8498,11 +8498,7 @@ title: Tigo
             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
             - MobileSmartSourceType: plain:status
       ↓Icon [ngx.components.UIDynamicElement-1793500000005]: 
-        beanData: |
-          '{
-           "ionBean": "Icon",
-           "IconName": "plain:cloud-download-outline"
-          }'
+        beanData: '{"ionBean":"Icon","IconName":"plain:cloud-download-outline"}'
         tagName: ion-icon
       ↓Body [ngx.components.UIDynamicElement-1793500000006]: 
         beanData: '{"ionBean":"DivTag"}'
@@ -18359,14 +18355,14 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
               - com.twinsoft.convertigo.beans.common.FormatedContent: 
                 →: |
-                          if (!page.local) {
+                  '        if (!page.local) {
                               page.local = {};
                           }
                           page.local.AgentConversationsLoading = false;
                           // the start of the page answered: its conversation is set (a quiet resume after a reload waits for it)
                           page.local.AgentStartupDone = true;
                           page.tick();
-                          resolve();
+                          resolve();'
         ↓SetConversationResumed [ngx.components.UIDynamicAction-1781604851703]: 
           beanData: |
             '{

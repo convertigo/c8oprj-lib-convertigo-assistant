@@ -13,6 +13,9 @@ rediscovering the same context.
 - Direct edits are acceptable for plain source files such as `js/*.js`,
   `css/*.css`, documentation, and this `AGENTS.md`.
 - After editing JavaScript helpers, run `node --check` on the touched files.
+- Local Bridge `postForm` calls bypass the proxy only for the literal loopback
+  hosts `localhost`, `127.0.0.1` and `::1`. Remote Bridge URLs keep the engine's
+  proxy selection. Cover this with `tests/assistant_proxy_loopback.test.cjs`.
 - Do not patch generated frontend output under `DisplayObjects`, `_private`,
   `dist`, or similar generated directories.
 
@@ -536,7 +539,9 @@ rediscovering the same context.
 - See `docs/tigo-library.md` for format, ownership and runtime contracts.
 - Assistant 1.5.6 / Bridge 0.4.28 / MCP 0.2.28 is the stable bundle (the 1.5
   line with the opt-in feedback to Convertigo and the Studio update offer); the
-  preview manifest points at the same bundle until the next checked pre-release set.
+  preview manifest lists the pre-releases checked together on test-nocode, its
+  update being the last step of each such set (RELEASING.md), and points at the
+  stable bundle until the next such set.
   `stack-release.json` must equal `stack-release-stable.json`; the Page default
   fallback pins stable too. Preview uses `stack-release-preview.json` explicitly.
 - `js/tigo_resources.js` owns the portable resource core and its Java host. The

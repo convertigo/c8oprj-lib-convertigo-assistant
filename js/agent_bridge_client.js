@@ -1839,7 +1839,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function postForm(urlText, params, timeoutMs, headers) {
-    var conn = new URL(urlText).openConnection();
+    var url = new URL(urlText);
+    var host = String(url.getHost()).toLowerCase();
+    var loopback = host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+    var conn = loopback ? url.openConnection(Packages.java.net.Proxy.NO_PROXY) : url.openConnection();
     conn.setRequestMethod("POST");
     conn.setConnectTimeout(timeoutMs);
     conn.setReadTimeout(timeoutMs);
