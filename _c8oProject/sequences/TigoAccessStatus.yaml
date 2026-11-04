@@ -9,8 +9,10 @@ responseTimeout: 120
     if(!engine.isStudioMode()||!engine.authenticatedSessionManager.hasRole(context.httpSession,role)){throw new com.twinsoft.convertigo.engine.EngineException("Authenticated local Studio session required");}
     function hashLocal(value){return String(com.twinsoft.convertigo.engine.util.HexUtils.toHexString(java.security.MessageDigest.getInstance("SHA-256").digest(new java.lang.String(String(value)).getBytes("UTF-8"))));}
     var root=java.nio.file.Paths.get(String(engine.USER_WORKSPACE_PATH)).toRealPath();
-    var directory=root.resolve("agents").resolve("convertigo");
-    function safePath(path){var p=path;while(p!=null&&!p.equals(root)){if(java.nio.file.Files.isSymbolicLink(p)){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}p=p.getParent();}if(p==null){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}}
+    include("js/agent_storage.js");
+    var storageRoot=C8O.tigoAgentsDirectory(String(engine.USER_WORKSPACE_PATH),java.io.File).toPath().toAbsolutePath().normalize();
+    var directory=storageRoot.resolve("convertigo");
+    function safePath(path,boundary){var b=boundary||storageRoot;if(!path.normalize().startsWith(b)){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}var p=path;while(p!=null){if(java.nio.file.Files.isSymbolicLink(p)){throw new com.twinsoft.convertigo.engine.EngineException("Unsafe local credential path");}p=p.getParent();}}
     var keyPath=directory.resolve("llm-api-key"),metadataPath=directory.resolve("tigo-access.json");safePath(keyPath);safePath(metadataPath);
     var response={status:"error",code:"authentication_required",error:"Connectez-vous au Studio pour activer Tigo."};
     

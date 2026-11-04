@@ -1,3 +1,23 @@
+// Shared storage contract across Tigo projects. Resolved only on the engine.
+if (typeof C8O === "undefined") { var C8O = {}; }
+if (typeof C8O.tigoAgentsDirectory !== "function") {
+  C8O.tigoAgentsDirectory = function (workspaceRoot, FileClass) {
+    var F = FileClass || Packages.java.io.File;
+    var configured = "";
+    try {
+      var value = Packages.com.twinsoft.convertigo.engine.Engine.theApp.databaseObjectsManager.symbolsGetValue("assistant.agents.directory");
+      configured = value == null ? "" : String(value).replace(/^\s+|\s+$/g, "");
+    } catch (_noAgentsDirectorySymbol) {}
+    if (!configured.length) { return new F(workspaceRoot, "agents"); }
+    if (configured.indexOf("\u0000") !== -1) { throw new Error("Invalid assistant.agents.directory"); }
+    var directory = new F(configured);
+    if (!directory.isAbsolute()) { throw new Error("assistant.agents.directory must be an absolute path"); }
+    if (directory.getParentFile() === null) { throw new Error("assistant.agents.directory must be a dedicated directory, not a filesystem root"); }
+    return directory;
+  };
+}
+// End shared storage contract.
+
 if (typeof C8O === "undefined") {
   var C8O = {};
 }
@@ -5,6 +25,7 @@ if (typeof C8O === "undefined") {
 C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
 (function () {
+  function agentsDirectory(workspaceRoot) { return C8O.tigoAgentsDirectory(workspaceRoot, File); }
   var DEFAULT_BRIDGE_PROJECT = "lib_ConvertigoAgentBridge";
   var FALLBACK_MCP_PATH = "/api/mcp";
   var FALLBACK_FLOW_MCP_PATH = "/api/flow-mcp";
@@ -128,7 +149,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!root.length) {
         return;
       }
-      var dir = new File(new File(root, "agents"), "assistant");
+      var dir = new File(agentsDirectory(root), "assistant");
       ensureDir(dir);
       var file = new File(dir, SEND_TIMINGS_FILE);
       if (file.isFile() && file.length() > SEND_TIMINGS_MAX_BYTES) {
@@ -722,7 +743,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function noCodeMcpTokenFile(options, userKey) {
-    var root = new File(resolveWorkspaceRoot(options), "agents");
+    var root = agentsDirectory(resolveWorkspaceRoot(options));
     var usersDir = new File(new File(new File(root, "nocode"), "users"), safePathPart(userKey));
     return new File(usersDir, "mcp-token.json");
   }
@@ -1620,7 +1641,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (slot === "events") {
         identity += "|" + callerSessionId();
       }
-      var dir = new File(new File(new File(workspaceRoot), "agents"), "assistant-bridge-sessions");
+      var dir = new File(agentsDirectory(workspaceRoot), "assistant-bridge-sessions");
       return new File(dir, hashShort(identity) + "-" + slot + ".cookie");
     } catch (_ignoreBridgeCachePath) {
       return null;
@@ -2605,7 +2626,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function agentsRoot(workspaceRoot, provider) {
-    return new File(workspaceRoot, "agents/" + normalizeProvider(provider));
+    return new File(agentsDirectory(workspaceRoot), normalizeProvider(provider));
   }
 
   function userRoot(workspaceRoot, userKey, provider) {
@@ -2789,7 +2810,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!workspaceRoot.length) {
       return "";
     }
-    return filePath(new File(new File(new File(new File(workspaceRoot, "agents/codex"), "homes/users"), safePathPart(record.userKey || "studio")), "codex-home"));
+    return filePath(new File(new File(new File(new File(agentsDirectory(workspaceRoot), "codex"), "homes/users"), safePathPart(record.userKey || "studio")), "codex-home"));
   }
 
   function codexSessionIdFromFileName(name) {
@@ -6775,7 +6796,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (normalizeSkillProfile(state) === "nocode") {
           lines.push(state.language === "fr" ? "Demandez à l'administrateur de configurer la clé d'agent Convertigo du serveur, puis réessayez. Une réinstallation du runtime n'est pas nécessaire." : "Ask the administrator to configure the server's Convertigo agent key, then retry. Reinstalling the runtime is not necessary.");
         } else {
-          lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `agents/convertigo/llm-api-key` du workspace Studio." : "The key will be provisioned automatically during activation; meanwhile, drop it in the `agents/convertigo/llm-api-key` file of the Studio workspace.");
+          lines.push(state.language === "fr" ? "La clé sera fournie automatiquement lors de l'activation ; en attendant, déposez-la dans le fichier `convertigo/llm-api-key` du répertoire agents configuré (par défaut, `agents` du workspace Studio)." : "The key will be provisioned automatically during activation; meanwhile, drop it in `convertigo/llm-api-key` under the configured agents directory (by default, `agents` in the Studio workspace).");
         }
       } else {
         lines.push(state.language === "fr" ? "Vibe est installé, mais aucune clé Mistral n'a été trouvée." : "Vibe is installed, but no Mistral key was found.");
@@ -7598,7 +7619,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         return new File(conversationDirectory(workspaceRoot, userKey, threadid, provider), "attachments");
       }
     }
-    return new File(new File(new File(new File(workspaceRoot, "agents"), "attachments"), userKey), safePathPart(threadid || "shared"));
+    return new File(new File(new File(agentsDirectory(workspaceRoot), "attachments"), userKey), safePathPart(threadid || "shared"));
   }
 
   // Local agents (Codex, Vibe, Claude) read attachments from disk: the uploaded
@@ -8689,7 +8710,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
-    var root = provider === "all" ? new File(workspaceRoot, "agents") : conversationsRoot(workspaceRoot, userKey, provider);
+    var root = provider === "all" ? agentsDirectory(workspaceRoot) : conversationsRoot(workspaceRoot, userKey, provider);
     var includeDeleted = boolValue(options.includeDeleted, false);
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var conversations = publicConversations(workspaceRoot, userKey, projectFilter, includeDeleted, provider, normalizeSkillProfile(options));

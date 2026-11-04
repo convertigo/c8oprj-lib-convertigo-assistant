@@ -20,6 +20,7 @@ function fixture(extra = {}) {
   }
   const sandbox = Object.assign({
     File: FakeFile,
+    agentsDirectory: root => new FakeFile(root, "agents"),
     ensureDir() {},
     now: () => clock,
     trim: value => String(value ?? '').trim(),

@@ -5,7 +5,7 @@ of each companion project.
 
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
-| Stable | 1.5.7 | 0.4.29 | 0.2.28 |
+| Stable | 1.5.9 | 0.4.31 | 0.2.29 |
 | Preview | 1.5.8-beta.1 | 0.4.30-beta.1 | 0.2.29-beta.21 |
 
 Tigo 1.5.6 adds the Studio update offer and its channel selector, the No Code
@@ -140,3 +140,7 @@ Local verification:
 node --test tests/assistant_stack_ui.test.cjs
 python3 -m unittest discover -s tests -p 'release_deployment_test.py'
 ```
+
+The 1.5.8 stable candidate adds [short agent storage paths](release-1.5.8.md).
+A preview older than stable is not offered as a downgrade; the pending
+preview must be rebased and receive higher versions before a future promotion.

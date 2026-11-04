@@ -1,3 +1,23 @@
+// Shared storage contract across Tigo projects. Resolved only on the engine.
+if (typeof C8O === "undefined") { var C8O = {}; }
+if (typeof C8O.tigoAgentsDirectory !== "function") {
+  C8O.tigoAgentsDirectory = function (workspaceRoot, FileClass) {
+    var F = FileClass || Packages.java.io.File;
+    var configured = "";
+    try {
+      var value = Packages.com.twinsoft.convertigo.engine.Engine.theApp.databaseObjectsManager.symbolsGetValue("assistant.agents.directory");
+      configured = value == null ? "" : String(value).replace(/^\s+|\s+$/g, "");
+    } catch (_noAgentsDirectorySymbol) {}
+    if (!configured.length) { return new F(workspaceRoot, "agents"); }
+    if (configured.indexOf("\u0000") !== -1) { throw new Error("Invalid assistant.agents.directory"); }
+    var directory = new F(configured);
+    if (!directory.isAbsolute()) { throw new Error("assistant.agents.directory must be an absolute path"); }
+    if (directory.getParentFile() === null) { throw new Error("assistant.agents.directory must be a dedicated directory, not a filesystem root"); }
+    return directory;
+  };
+}
+// End shared storage contract.
+
 // Feedback to Convertigo: the frictions and bugs Tigo meets, kept in the Studio or, on a server, for each user, and sent
 // with the user's consent. Contract, modes and masking: docs/tigo-feedback.md. Every input and output goes through a
 // store (F._store, or F._storeFor(userKey) for a server user), so the logic runs in tests without a Convertigo engine.
@@ -1113,8 +1133,8 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     var Engine = Packages.com.twinsoft.convertigo.engine.Engine;
     var Files = java.nio.file.Files;
     var UTF8 = java.nio.charset.StandardCharsets.UTF_8;
-    var workspace = java.nio.file.Paths.get(String(Engine.USER_WORKSPACE_PATH)).toRealPath();
-    var feedbackRoot = workspace.resolve("agents").resolve("feedback");
+    var workspace = C8O.tigoAgentsDirectory(String(Engine.USER_WORKSPACE_PATH), java.io.File).toPath().toAbsolutePath().normalize();
+    var feedbackRoot = workspace.resolve("feedback");
     userKey = trim(userKey);
     if (userKey.length && (!/^[A-Za-z0-9_][A-Za-z0-9_.-]{0,159}$/.test(userKey) || userKey.indexOf("..") !== -1)) {
       throw new Error("Invalid feedback user");
@@ -1389,7 +1409,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         if (Engine.isStudioMode() !== true) {
           return this.serverKey();
         }
-        var directory = workspace.resolve("agents").resolve("convertigo");
+        var directory = workspace.resolve("convertigo");
         var keyPath = safe(directory.resolve("llm-api-key"));
         var metadataPath = safe(directory.resolve("tigo-access.json"));
         if (!Files.isRegularFile(keyPath) || Files.size(keyPath) >= 512) {

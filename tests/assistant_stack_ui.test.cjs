@@ -39,7 +39,7 @@ test('default manifest alias and offline fallback pin the reviewed stable bundle
   assert.equal(stable.channel, 'stable');
   assert.equal(preview.channel, 'preview');
   assert.deepEqual(JSON.parse(JSON.stringify(fixture().page.getEmbeddedAgentStackRelease())), stable);
-  assert.deepEqual(stable.projects.map(p => p.version), ['0.2.28', '0.4.29', '1.5.7']);
+  assert.deepEqual(stable.projects.map(p => p.version), ['0.2.29', '0.4.31', '1.5.9']);
   assert.deepEqual(preview.projects.map(p => p.version), ['0.2.29-beta.21', '0.4.30-beta.1', '1.5.8-beta.1']);
   for (const manifest of [stable, preview]) {
     assert.equal(new Set(manifest.projects.map(p => p.name)).size, 3);
@@ -58,7 +58,7 @@ test('the default installation path rejects a preview response and retains stabl
   }) : undefined });
   f.page.refreshAgentStackRelease(true); await flush();
   assert.equal(f.page.local.AgentStackRelease.channel, 'stable');
-  assert.equal(f.page.local.AgentStackRelease.projects.find(p => p.name === 'lib_ConvertigoAssistant').version, '1.5.7');
+  assert.equal(f.page.local.AgentStackRelease.projects.find(p => p.name === 'lib_ConvertigoAssistant').version, '1.5.9');
   assert.ok(f.page.local.AgentStackReleaseError);
   assert.equal(f.calls.some(c => c.name.endsWith('.GetPreviewManifest')), false);
 });
@@ -199,4 +199,10 @@ test('Studio retains host capabilities and does not query server diagnostics at 
   f.page.triggerAgentOnboardingAction = force => { activation = force; };
   f.page.triggerAgentStackUpdate();
   assert.equal(activation, true, 'Studio activation path remains unchanged');
+});
+
+test('an embedded or unverified catalog never claims that a Studio stack is up to date',()=>{
+ const f=fixture({studio:true});
+ f.page.local.AgentStackRelease=f.page.getEmbeddedAgentStackRelease();
+ assert.match(f.page.getAgentStackStatusText(),/pas encore été vérifiée/);
 });

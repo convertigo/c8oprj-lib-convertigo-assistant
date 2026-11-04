@@ -11,13 +11,13 @@ const { ts, read, pageClass } = require('./helpers/assistant-source.cjs');
 const pageYaml = read('_c8oProject/mobilePages/Page.yaml');
 const ast = ts.createSourceFile('offer.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const names = ['t', 'agentUiLanguage', 'agentStackOfferText', 'isAgentStackOfferSurface', 'isOfficialAgentStackRelease',
-  'getAgentStackChannel', 'setAgentStackChannel', 'getAgentStackChannelView', 'mergeAgentStackOfferReleases',
+  'getEmbeddedAgentStackRelease', 'getAgentActivationProjects', 'getAgentStackChannel', 'setAgentStackChannel', 'getAgentStackChannelView', 'mergeAgentStackOfferReleases',
   'normalizeAgentStackRelease', 'normalizeAgentStackOfferRelease', 'scheduleAgentStackOfferCheck', 'refreshAgentStackOfferRelease',
   'refreshAgentStackOfferPolicy', 'getAgentStackOfferProjects', 'getAgentStackOfferKey', 'getAgentStackOfferRestriction',
   'isAgentStackOfferTurnRunning', 'getAgentStackOfferView', 'installAgentStackOffer', 'postponeAgentStackOffer',
   'compareAgentStackVersions', 'isServerManagedAgentStack', 'getAgentStackServerStatus', 'refreshAgentStackServerStatus',
   'getInstalledAgentStackVersion', 'isAgentStackUpdateAllowed', 'getAgentStackRestrictedText', 'installAgentStackOnServer',
-  'triggerAgentOnboardingAction', 'applyAgentActivationStatus', 'getAgentStackChannelChoice', 'getAgentStackServerChannel',
+  'triggerAgentOnboardingAction', 'postVerifiedAgentStackInstallation', 'readFreshAgentStackRelease', 'applyAgentActivationStatus', 'getAgentStackChannelChoice', 'getAgentStackServerChannel',
   'isAgentStackChannelFixed', 'refreshAgentStackEngineStatus'];
 const methods = ast.statements[0].members.filter(m => m.name && names.includes(m.name.getText(ast)));
 assert.deepEqual(methods.map(m => m.name.getText(ast)).sort(), [...names].sort());
@@ -120,7 +120,7 @@ test('the Eclipse view offers a newer stable stack, with the versions concerned,
   assert.deepEqual([view.canUpdate, view.updateDisabled, view.note, view.updateText, view.laterText], [true, false, '', 'Mettre à jour', 'Plus tard']);
   assert.equal(f.page.getAgentStackOfferView(), view, 'one object per state, for change detection');
 
-  assert.equal(f.page.installAgentStackOffer(), true);
+  assert.equal(f.page.installAgentStackOffer(), true); await flush();
   assert.equal(f.posted.length, 1);
   const message = f.posted[0];
   assert.equal(message.type, 'lib_ConvertigoAssistant.activateLocalAgent');
@@ -140,7 +140,7 @@ test('the Eclipse view offers a newer stable stack, with the versions concerned,
 test('a failed host install says why on the card and lets the user try again', async () => {
   const f = fixture();
   await f.open();
-  f.page.installAgentStackOffer();
+  f.page.installAgentStackOffer(); await flush();
   f.page.applyAgentActivationStatus({ status: 'error', message: 'Activation impossible : 404', done: true });
   const view = f.page.getAgentStackOfferView();
   assert.deepEqual([view.error, view.installing, view.updateDisabled, view.note], [true, false, false, 'Activation impossible : 404']);
@@ -188,7 +188,7 @@ test('the comparison is semver: a pre-release newer than the stable one is kept,
   f = fixture({ stable: manifest({ mcp: '0.2.27', bridge: '0.4.27', assistant: '1.5.5' }), context: { localAssistantVersion: '1.5.6-beta.16', localMcpVersion: '0.2.26' } });
   await f.open();
   assert.equal(f.page.getAgentStackOfferView().versions, 'MCP 0.2.26 → 0.2.27');
-  f.page.installAgentStackOffer();
+  f.page.installAgentStackOffer(); await flush();
   assert.deepEqual(f.posted[0].payload.projects.map(p => p.name + '@' + p.version), ['lib_ConvertigoMCP@0.2.27'], 'the newer Assistant is not reimported');
 
   f = fixture({ context: { localAssistantVersion: '1.5.7-beta.3', localAgentBridgeVersion: '0.4.29', localMcpVersion: '0.2.29' } });
@@ -252,7 +252,7 @@ test('never while a turn runs: the card waits for its end', async () => {
   f.page.local.AgentConversations = [{ conversationId: 'c-2', status: 'in_progress', updatedAt: f.clock.now - 2 * 3600000 }];
   view = f.page.getAgentStackOfferView();
   assert.deepEqual([view.updateDisabled, view.note], [false, ''], 'a record left running by a closed Studio does not block');
-  assert.equal(f.page.installAgentStackOffer(), true);
+  assert.equal(f.page.installAgentStackOffer(), true); await flush();
 });
 
 test('when the update is not allowed, the card says why and offers no update', async () => {
@@ -279,7 +279,7 @@ test('the Web Studio reads the versions on its engine and installs there, skippi
   assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest']);
   const view = f.page.getAgentStackOfferView();
   assert.equal(view.versions, 'MCP 0.2.27 → 0.2.29 · Bridge 0.4.27 → 0.4.29 · Assistant 1.5.5 → 1.5.7');
-  f.page.installAgentStackOffer();
+  f.page.installAgentStackOffer(); await flush();
   await flush();
   const install = f.calls.find(c => c.name.endsWith('.AgentStackInstall'));
   assert.equal(install.payload.forceUpdate, 'false');
@@ -350,7 +350,7 @@ test('stable is the default channel; the pre-release channel offers the reviewed
   const channel = f.page.getAgentStackChannelView();
   assert.deepEqual([channel.channel, channel.label, channel.stableText, channel.previewText], ['preview', 'Canal de mise à jour', 'Stable', 'Pré-releases']);
   assert.match(channel.hint, /ne rétrograde rien/);
-  f.page.installAgentStackOffer();
+  f.page.installAgentStackOffer(); await flush();
   assert.deepEqual(f.posted[0].payload.projects.map(p => p.importUrl),
     [carUrl('lib_ConvertigoMCP', '0.2.30-beta.1'), carUrl('lib_ConvertigoAgentBridge', '0.4.30-beta.2'), carUrl('lib_ConvertigoAssistant', '1.5.8-beta.3')]);
 
@@ -481,4 +481,57 @@ test('the page shows the card under the toolbar, wires its buttons and checks fr
   assert.match(pageYaml, /\.agent-stack-channel-options ion-button\.is-selected \{/);
   // Each bean of the card is new to the project.
   for (const id of pageYaml.match(/-17935000000\d\d\]/g)) assert.equal(pageYaml.split(id).length, 2, id);
+});
+
+test('installation ignores a day-old display cache and waits for a fresh published manifest', async()=>{
+ let complete;
+ const current=manifest({mcp:'0.2.29',bridge:'0.4.31',assistant:'1.5.9'});
+ const f=fixture({stable:()=>new Promise(resolve=>{complete=resolve;})});
+ f.page.local.AgentStackRelease=manifest();
+ f.storage.set('lib_ConvertigoAssistant.AgentStackStableCheck',JSON.stringify({checkedAt:f.clock.now,release:manifest()}));
+ const pending=f.page.triggerAgentOnboardingAction(true);
+ await flush();
+ assert.equal(f.posted.length,0,'no import while the manifest is outstanding');
+ const request=f.calls.find(x=>x.name.endsWith('.GetManifest'));
+ assert.ok(request.payload.manifestRevision,'fresh HTTP query revision');
+ complete({object:current});
+ assert.equal(await pending,true);
+ assert.deepEqual(f.posted[0].payload.projects,current.projects);
+ assert.equal(f.page.local.AgentStackReleaseVerified,true);
+});
+
+test('failed or malformed fresh manifests never install the embedded fallback',async()=>{
+ for(const stable of [()=>Promise.reject(new Error('offline')), {status:'error'},manifest({},'preview')]){
+  const f=fixture({stable});f.page.getEmbeddedAgentStackRelease=()=>manifest();
+  const ok=await f.page.triggerAgentOnboardingAction(true);
+  assert.equal(ok,false);assert.equal(f.posted.length,0);
+  assert.equal(f.calls.some(x=>x.name.endsWith('.AgentStackInstall')),false);
+  assert.equal(f.page.local.AgentStackReleaseVerified,false);
+  assert.ok(f.page.local.AgentStackReleaseError);
+ }
+});
+
+test('initial activation also fetches the manifest; duplicate clicks cannot install twice',async()=>{
+ let complete;
+ const f=fixture({onboarding:'local-install',stable:()=>new Promise(resolve=>{complete=resolve;})});
+ const first=f.page.triggerAgentOnboardingAction();
+ const second=f.page.triggerAgentOnboardingAction();
+ assert.equal(await second,false);await flush();assert.equal(f.posted.length,0);
+ complete({object:manifest()});await first;
+ assert.equal(f.posted.length,1);assert.equal(f.posted[0].payload.forceUpdate,false);
+});
+
+test('a failed fresh check can be retried without reopening or reinstalling the old stack',async()=>{
+ let offline=true;
+ const f=fixture({stable:()=>offline?Promise.reject(new Error('offline')):Promise.resolve({object:manifest()})});
+ assert.equal(await f.page.triggerAgentOnboardingAction(true),false);
+ offline=false;
+ assert.equal(await f.page.triggerAgentOnboardingAction(true),true);
+ assert.equal(f.posted.length,1);
+});
+
+test('reinstall never downgrades a newer installed preview to the stable manifest',async()=>{
+ const f=fixture({context:{localMcpVersion:'9.0.0-beta.1',localAgentBridgeVersion:'9.0.0-beta.1',localAssistantVersion:'9.0.0-beta.1'}});
+ assert.equal(await f.page.triggerAgentOnboardingAction(true),false);
+ assert.equal(f.posted.length,0);
 });
