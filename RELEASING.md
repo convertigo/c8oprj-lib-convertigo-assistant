@@ -40,6 +40,15 @@ A separate server/NoCode installation that executes agents needs its own full
 stack on the execution server. This is distinct from backend-apps serving the
 public frontend. TigoAccess remains a separate hosted backend service.
 
+## Version numbering
+
+Keep the current stable and preview branches. Stable maintenance uses `X.Y.Z`;
+release urgent fixes directly as the next patch version. Preview work uses the
+next minor as `X.(Y+1).0-beta.N`: for example Assistant `1.6.0-beta.1`, Bridge
+`0.5.0-beta.1`, and MCP `0.3.0-beta.1` while stable is 1.5.x / 0.4.x / 0.2.x.
+A preview includes the latest stable fixes and stays opt-in; never promote it or
+change the stable manifests as a side effect of publishing it.
+
 ## Release order
 
 Dependencies first, the Assistant last, because its manifest references the two others.
