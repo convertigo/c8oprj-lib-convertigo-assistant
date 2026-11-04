@@ -19,8 +19,10 @@ class FakePath {
   toString() { return this.p; }
 }
 class FakeFile {
+  toString() { return this.p; }
   constructor(parent, child) { this.p = child === undefined ? String(parent) : path.join(String(parent.p || parent), String(child)); }
   getCanonicalFile() { return new FakeFile(path.resolve(this.p)); }
+  getParentFile() { return this.p === path.parse(this.p).root ? null : new FakeFile(path.dirname(this.p)); }
   isAbsolute() { return path.isAbsolute(this.p); }
   isFile() { return files.has(path.resolve(this.p)); }
   length() { return PNG.length; }
@@ -29,10 +31,10 @@ class FakeFile {
 const digest = { getInstance: () => ({ digest: bytes => Array.from(crypto.createHash('sha256').update(Buffer.from(bytes)).digest(), b => (b > 127 ? b - 256 : b)) }) };
 class JString { constructor(t) { this.t = String(t); } getBytes() { return Array.from(Buffer.from(this.t, 'utf8')); } }
 
-function load({ admin = false, user = '' } = {}) {
+function load({ admin = false, user = '', agentsDirectory = '' } = {}) {
   const sandbox = {
     Packages: { com: { twinsoft: { convertigo: { engine: {
-      Engine: { USER_WORKSPACE_PATH: '/ws', PROJECTS_PATH: '/projects', authenticatedSessionManager: { hasRole: () => admin } },
+      Engine: { theApp: { databaseObjectsManager: { symbolsGetValue: () => agentsDirectory } }, USER_WORKSPACE_PATH: '/ws', PROJECTS_PATH: '/projects', authenticatedSessionManager: { hasRole: () => admin } },
       AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN' } }
     } } } } },
     java: { io: { File: FakeFile }, nio: { file: { Files: { readAllBytes: () => PNG } } }, util: { Base64: { getEncoder: () => ({ encodeToString: b => Buffer.from(b).toString('base64') }) } },
@@ -79,4 +81,18 @@ test('a No Code session reads its own attachments and its agent\'s working files
   }
   assert.deepEqual(JSON.parse(JSON.stringify(load({ user: '' }).get(own[0]))), { ok: false, error: { code: 'authentication_required' } });
   assert.equal(load({ admin: true }).get('/projects/C8Oforms/x.png').ok, true, 'the Studio as before');
+});
+
+
+test('an external agents directory retains No Code image ownership boundaries', () => {
+  const slug = assistantSlug(user);
+  const own = '/short/tigo/attachments/' + slug + '/shared/scan.png';
+  const other = '/short/tigo/attachments/other/shared/scan.png';
+  const old = '/ws/agents/attachments/' + slug + '/shared/scan.png';
+  [own, other, old].forEach(p => files.add(p));
+  const session = load({ user, agentsDirectory: '/short/tigo' });
+  assert.equal(session.get(own).ok, true);
+  assert.equal(session.get(other).ok, false);
+  assert.equal(session.get(old).ok, false, 'no fallback outside the configured storage');
+  assert.equal(load({ admin: true, agentsDirectory: '/short/tigo' }).get(own).ok, true);
 });
