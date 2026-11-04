@@ -6,7 +6,7 @@ of each companion project.
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
 | Stable | 1.5.9 | 0.4.31 | 0.2.29 |
-| Preview | 1.5.8-beta.1 | 0.4.30-beta.1 | 0.2.29-beta.21 |
+| Preview | 1.6.0-beta.1 | 0.5.0-beta.1 | 0.3.0-beta.1 |
 
 Tigo 1.5.6 adds the Studio update offer and its channel selector, the No Code
 sandbox, faster No Code starts, preview capture and Baserow row reads (see
@@ -96,9 +96,10 @@ Assistant release to stable normally deploys it to production (see below). A
 release body containing `[skip deploy]` suppresses this automatic deployment.
 
 The explicitly requested `v1.5.1` publication remains a GitHub pre-release despite
-its unsuffixed tag. Use beta and release-candidate tags for future preview
-iterations, for example `v1.5.7-beta.1` and `v1.5.7-rc.1`. Keep the preview manifest's three versions
-coherent with its published CARs.
+its unsuffixed tag. Use the next minor for new preview iterations: `v1.6.0-beta.N`,
+`v0.5.0-beta.N` and `v0.3.0-beta.N` respectively. Stable fixes remain
+`X.Y.Z` patch releases on the current branches. Keep the preview manifest's
+three versions coherent with its published CARs.
 
 Stable promotion is an explicit maintainer operation after code review and
 agreed functional acceptance: update the stable manifest, compatibility alias

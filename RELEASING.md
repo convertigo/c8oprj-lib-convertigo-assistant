@@ -17,9 +17,10 @@ installed Assistant reads it (through the `AgentStackRelease.GetManifest` transa
 therefore publishes the stack to every user at once.
 
 The same three entries are **embedded** in `_c8oProject/mobilePages/Page.yaml`
-(`getEmbeddedAgentStackRelease`). The embedded copy is the fallback when the public manifest
-cannot be fetched, and the first install of a fresh Studio uses it. Both copies must always
-carry the same versions, tags and `importUrl`.
+(`getEmbeddedAgentStackRelease`). The embedded copy provides stable display defaults when the public manifest
+cannot be fetched. Since 1.5.9, explicit installation and reinstallation require a fresh,
+validated online manifest; they never install these fallback defaults after a failed read.
+The embedded stable defaults must match the stable manifest versions, tags and `importUrl`.
 
 Each `importUrl` points at a release CAR:
 `<project>=https://github.com/convertigo/<repository>/releases/download/v<version>/<project>.car`
@@ -39,6 +40,15 @@ not provide access to the developer's local harness session.
 A separate server/NoCode installation that executes agents needs its own full
 stack on the execution server. This is distinct from backend-apps serving the
 public frontend. TigoAccess remains a separate hosted backend service.
+
+## Version numbering
+
+Keep the current stable and preview branches. Stable maintenance uses `X.Y.Z`;
+release urgent fixes directly as the next patch version. Preview work uses the
+next minor as `X.(Y+1).0-beta.N`: for example Assistant `1.6.0-beta.1`, Bridge
+`0.5.0-beta.1`, and MCP `0.3.0-beta.1` while stable is 1.5.x / 0.4.x / 0.2.x.
+A preview includes the latest stable fixes and stays opt-in; never promote it or
+change the stable manifests as a side effect of publishing it.
 
 ## Release order
 
