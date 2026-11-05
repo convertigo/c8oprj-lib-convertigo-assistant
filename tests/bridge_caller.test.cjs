@@ -150,8 +150,11 @@ test('Every Assistant entry point that reaches the Bridge refuses first, before 
     }
     ts.forEachChild(node, visit);
   })(ast);
+  // the entry points that start, set up or prompt an agent also refuse a No Code user without the Tigo right
+  const AGENT_ENTRY_POINTS = ['createConversation', 'settings', 'setupAgent', 'sendMessage'];
   for (const name of ENTRY_POINTS) {
-    assert.equal(first[name], 'var refused = bridgeCallerRefusal();', name);
+    assert.match(first[name], AGENT_ENTRY_POINTS.includes(name)
+      ? /^var refused = bridgeCallerRefusal\(\) \|\| noCodeAgentRefusal\((true)?\);$/ : /^var refused = bridgeCallerRefusal\(\);$/, name);
     assert.match(second[name], /^options = withCallerUserId\((optionsWithRequestFallbacks\(options( \|\| \{\})?\)|options)\);$/, name);
   }
   assert.match(source, /function bridgeCall\(options, sequence, params, timeoutMs, background\) \{\n    requireBridgeCaller\(\);/);

@@ -85,8 +85,8 @@ test('each call to the Bridge is a step named after its sequence, after the prep
 
 test('sending a message, creating a conversation and reading the settings are timed, after the caller checks', () => {
   assert.match(source, /C8O\.assistantAgentBridge\.sendMessageFromSequenceScope = function \(scope\) \{\n\s+return timedCall\("send", function \(\) \{\n\s+return sendMessageFromScope\(scope\);/);
-  assert.match(source, /options = withCallerUserId\(options\);\n\s+return timedCall\("conversation", function \(\) \{\n\s+return createConversationSteps\(options\);/);
-  assert.match(source, /options = withCallerUserId\(optionsWithRequestFallbacks\(options\)\);\n\s+return timedCall\("settings", function \(\) \{\n\s+return settingsSteps\(options\);/);
+  assert.match(source, /options = withCallerUserId\(options\);\n\s+options = withNoCodeServerSettings\(options\);\n\s+return timedCall\("conversation", function \(\) \{\n\s+return createConversationSteps\(options\);/);
+  assert.match(source, /options = withCallerUserId\(optionsWithRequestFallbacks\(options\)\);\n\s+options = withNoCodeServerSettings\(options, true\);\n\s+return timedCall\("settings", function \(\) \{\n\s+return settingsSteps\(options\);/);
   const send = source.slice(source.indexOf('C8O.assistantAgentBridge.sendMessage = function'), source.indexOf('C8O.assistantAgentBridge.readResponse = function'));
   for (const step of ['nocode-context', 'state/read', 'state/create', 'prompt', 'state/save', 'tigo-access', 'resources', 'setup', 'start-payload']) {
     assert.ok(send.includes('sendMark("' + step + '"'), step);

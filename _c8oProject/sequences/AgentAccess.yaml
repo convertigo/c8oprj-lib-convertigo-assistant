@@ -1,0 +1,20 @@
+accessibility: Hidden
+comment: 'Tigo access of the user of the session (js/agent_bridge_client.js agentAccess): whether the user may use Tigo (the right tigo_rights of a No Code Studio, decided by C8Oforms.APIV2_AgentAccess) and administers the No Code Studio. The Studio and a WEB_ADMIN session have both.'
+responseTimeout: 30
+↓Run [steps.SimpleStep-1793875849341]: 
+  expression: |
+    include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.agentAccess();
+↓result [steps.JsonToXmlStep-1793875849343]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result

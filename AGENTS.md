@@ -670,3 +670,50 @@ rediscovering the same context.
   its paired metadata replacement fails.
 - Run `tests/tigo_access_refresh.test.cjs`, `tests/tigo_access_switch.test.cjs`
   and `tests/tigo_team_quota.test.cjs` with existing quota and setup checks.
+
+## No Code Studio administration of Tigo
+
+- Tigo is a right of each No Code Studio user (C8Oforms `tigo_rights`, granted by
+  its administrators to users or groups, default `C8Oforms.tigo_rights_default_enabled`,
+  granted when unset). `noCodeAgentRefusal` asks `C8Oforms.APIV2_AgentAccess`
+  for the user of the session (once per HTTP request, never a page value) at the
+  start of `createConversation` (prewarm included), `settings`, `setupAgent`,
+  `sendMessage` and the No Code context catalog, right after `bridgeCallerRefusal`.
+  The Studio, a WEB_ADMIN session, a server without C8Oforms or with a C8Oforms
+  older than the right are not concerned; an unanswered check refuses with
+  `agent_access_unavailable`. Close, interrupt and readResponse stay open.
+- The former chat sequences (SendMessage, CreateConversation, ReadResponse,
+  UploadFiles, GetMessages, LRagQuery) start with
+  `C8O.assistantAgentBridge.requireAgentAccess()`: on the server of a No Code
+  Studio that knows the right (APIV2_AgentAccess), the callers and the right of
+  the agent. The Studio and the hosted Assistant (assistant.convertigo.com, whose
+  chat and LightRAG relay are called without a session) keep them as they were.
+- No Code MCP tokens are created with `client: "tigo"`: C8Oforms creates them
+  only with the right and stops accepting them once it is withdrawn (personal
+  tokens too). The Bridge checks the token again at each start and prompt.
+- The No Code agent is set for the whole server in global symbols:
+  `assistant.nocode.provider|model|reasoning|write_confirm`,
+  `assistant.feedback.policy`, `assistant.stack.channel`; `agents.tool_policy`
+  (or the platform property) is the operator's, read only.
+  Only where C8Oforms knows the right (`agentAccessSequenceAvailable`): elsewhere
+  the users keep their own choice.
+  `withNoCodeServerSettings` puts the server's agent, model and effort on every
+  No Code request, clears the service tier and the runtime update flags of a
+  user, and saves no preference (`savePreferences` "false", kept by
+  `keepNoCodeServerValues` after the request fallbacks of `agentSettingsForOptions`).
+  A conversation of another agent than the server's answers `agent_changed`
+  (`noCodeAgentChanged`). `saveNoCodeServerSettings` checks every value before
+  writing any symbol. `applyNoCodeServerDefaults`
+  answers them as `settings.defaults`/`preferences` with `serverSettings`
+  (`administrator` for an administrator of the No Code Studio). The settings
+  screen of an administrator is the server's: Continue saves the symbols, the
+  Preferences tab sets the default of "confirm before changing" and the feedback
+  policy, the Runtime tab the update channel (`AgentServerSettings`). A user
+  keeps Reveal, confirm before changing, feedback when the policy is `user`,
+  prompts and skills; no agent, runtime or MCP tab, no model in the composer.
+  The page keys this on `serverSettings.managed === true` (never on the surface
+  alone); the composer offers no model or effort when the server sets them,
+  administrators included. The C8Oforms GESTION menu entry "Tigo" opens the panel
+  on these settings.
+- Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`
+  and `tests/nocode-server-settings-ui.test.cjs`.

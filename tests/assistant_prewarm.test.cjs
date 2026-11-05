@@ -153,7 +153,7 @@ function sendWith({ taken, prompt }) {
     recoverableBridgeError: () => false, isCodexAuthenticationError: () => false, responseForState: () => ({ AIData: {} }),
     submitTigoPrompt: () => { events.push('prompt'); return prompt(); },
     bridgeCall: (_state, sequence) => { events.push(sequence); return { ok: true, status: 'already_running', state: { sessionId: 's1' } }; },
-    bridgeCallerRefusal: () => null, withCallerUserId: options => options || {}, sendMark() {},
+    bridgeCallerRefusal: () => null, noCodeAgentRefusal: () => null, withNoCodeServerSettings: options => options, noCodeAgentChanged: () => null, withCallerUserId: options => options || {}, sendMark() {},
     takePrewarmedConversation: () => taken,
     prewarmNoCodeConversation: (options, provider) => { events.push('prewarm:' + provider + ':' + (options.threadid || '')); return null; }
   };

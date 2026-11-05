@@ -84,7 +84,14 @@ C8O.assistantWriteConfirm = C8O.assistantWriteConfirm || {};
     try {
       choice = host.readChoice();
     } catch (_unreadableChoice) {}
-    return !!choice && choice.on === true;
+    if (!choice || typeof choice.on !== "boolean") {
+      try {
+        return typeof host.defaultOn === "function" && host.defaultOn() === true;
+      } catch (_noDefault) {
+        return false;
+      }
+    }
+    return choice.on === true;
   };
 
   // The choice in the store, where the MCP reads it.

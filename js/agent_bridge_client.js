@@ -829,12 +829,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
         var label = noCodeMcpTokenLabel(options);
+        // client tigo: C8Oforms creates it only for a user with the Tigo right, and refuses it once the right is withdrawn
         var response = callLocalSequence("C8Oforms", "APIV2_McpTokenCreate", {
-          name: label
+          name: label,
+          client: "tigo"
         });
         var result = unwrapSequenceResult(response) || {};
         var token = trim(result.token);
         if (!token.length) {
+          // C8Oforms creates no Tigo token for a user without the Tigo right: say why the agent has no Convertigo tools
+          if (trim(result.error && result.error.code) === "agent_not_allowed") {
+            try { log.warn("(lib_ConvertigoAssistant) No Code MCP token not created: the Tigo right of this user is withdrawn"); } catch (_ignoreNoLog) {}
+          }
           return "";
         }
         if (!validateNoCodeMcpToken(token)) {
@@ -1342,11 +1348,22 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function noCodeContextCatalogFromScope(scope) {
+    var refused = bridgeCallerRefusal() || noCodeAgentRefusal();
+    if (refused !== null) {
+      refused.forms = [];
+      refused.pages = [];
+      refused.elements = [];
+      refused.baserow = { status: "unavailable", workspaces: [], bases: [], tables: [] };
+      refused.errors = [{ scope: "access", message: refused.error.message }];
+      return refused;
+    }
     var names = ["userId", "workspaceRoot", "agentProfile", "skillProfile", "formId"];
     var options = {};
     for (var i = 0; i < names.length; i++) {
       options[names[i]] = sequenceScopeValue(scope, names[i]);
     }
+    // the forms and the token of the user of the session, never of a user the page names
+    options = withCallerUserId(options);
     if (!trim(options.agentProfile).length) {
       options.agentProfile = "nocode";
     }
@@ -1823,6 +1840,397 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options.userId = callerUserId(options.userId);
     return options;
   }
+
+  // Tigo in the No Code Studio is a right of each user: C8Oforms tigo_rights, granted by its administrators to the user
+  // or to one of the user's groups. C8Oforms decides it for the user of the session (APIV2_AgentAccess), never for a
+  // user the page names. Not concerned: the Studio, a WEB_ADMIN session, a server without C8Oforms, and a C8Oforms
+  // older than the right (no APIV2_AgentAccess). Checked by the entry points that start, set up or prompt an agent,
+  // right after bridgeCallerRefusal; closing, interrupting and reading a running turn stay possible.
+  var AGENT_ACCESS_PROJECT = "C8Oforms";
+  var AGENT_ACCESS_SEQUENCE = "APIV2_AgentAccess";
+  var AGENT_ACCESS_REQUEST_ATTRIBUTE = "lib_ConvertigoAssistant.agentAccess";
+
+  function agentAccessSequenceAvailable() {
+    try {
+      var project = Engine.theApp.databaseObjectsManager.getOriginalProjectByName(AGENT_ACCESS_PROJECT);
+      return project != null && project.getSequenceByName(AGENT_ACCESS_SEQUENCE) != null;
+    } catch (_ignoreNoAccessSequence) {
+      return false;
+    }
+  }
+
+  function truthyAccess(value) {
+    return value === true || trim(value).toLowerCase() === "true";
+  }
+
+  // {managed, tigo, admin, answered}: once per HTTP request (an entry point and the steps it runs ask again).
+  function agentAccessOfSession(withAdmin) {
+    var request = null;
+    try {
+      request = context.httpServletRequest;
+    } catch (_ignoreNoRequest) {}
+    var key = AGENT_ACCESS_REQUEST_ATTRIBUTE + (withAdmin ? ".admin" : "");
+    if (request != null) {
+      try {
+        // the answer with the administration holds the right too
+        var cached = request.getAttribute(key);
+        if (cached == null && !withAdmin) {
+          cached = request.getAttribute(AGENT_ACCESS_REQUEST_ATTRIBUTE + ".admin");
+        }
+        if (cached != null) {
+          return JSON.parse(String(cached));
+        }
+      } catch (_ignoreNoCachedAccess) {}
+    }
+    var access;
+    if (!agentAccessSequenceAvailable()) {
+      access = { managed: false, tigo: true, admin: false, answered: true };
+    } else {
+      try {
+        var result = unwrapSequenceResult(callLocalSequence(AGENT_ACCESS_PROJECT, AGENT_ACCESS_SEQUENCE,
+          withAdmin ? { withAdmin: "true" } : {})) || {};
+        access = { managed: true, tigo: truthyAccess(result.tigo), admin: truthyAccess(result.admin),
+          answered: trim(result.status) === "ok" };
+      } catch (accessError) {
+        access = { managed: true, tigo: false, admin: false, answered: false };
+        try { log.warn("(lib_ConvertigoAssistant) Tigo right not checked: " + accessError); } catch (_ignoreNoLog) {}
+      }
+    }
+    if (request != null) {
+      try {
+        request.setAttribute(key, JSON.stringify(access));
+      } catch (_ignoreNoRequestAttribute) {}
+    }
+    return access;
+  }
+
+  function isWebAdminSession() {
+    try {
+      return Engine.authenticatedSessionManager.hasRole(context.httpSession, Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN) == true;
+    } catch (_ignoreAdminRole) {
+      return false;
+    }
+  }
+
+  // null, or the answer of an entry point the user of the session may not reach without the Tigo right. withAdmin: the
+  // entry point also needs to know whether the user administers the No Code Studio (one C8Oforms call for both).
+  function noCodeAgentRefusal(withAdmin) {
+    if (Engine.isStudioMode() || isWebAdminSession()) {
+      return null;
+    }
+    var user = "";
+    try {
+      user = trim(context.getAuthenticatedUser());
+    } catch (_ignoreAuthenticatedUser) {}
+    if (!user.length) {
+      return null;
+    }
+    var access = agentAccessOfSession(withAdmin === true);
+    if (access.tigo === true) {
+      return null;
+    }
+    // Wording read by the Tigo UI: agent_not_allowed hides the composer, agent_access_unavailable can be retried.
+    if (access.answered === false) {
+      return { ok: false, status: "failed", error: { code: "agent_access_unavailable",
+        message: "agent_access_unavailable: The Tigo right of this account could not be checked. Try again in a moment." } };
+    }
+    return { ok: false, status: "failed", error: { code: "agent_not_allowed",
+      message: "agent_not_allowed: Tigo is not enabled for this account. An administrator of the No Code Studio can grant it." } };
+  }
+
+  // First step of the sequences of the former chat assistant (SendMessage, CreateConversation, ReadResponse,
+  // UploadFiles, GetMessages, LRagQuery): on the server of a No Code Studio that knows the Tigo right, the same callers
+  // as the agent, with the right. Elsewhere they stay as they were: the Studio, and the hosted Assistant
+  // (assistant.convertigo.com), whose chat and LightRAG relay (every Studio's LRagQuery, the MCP rag-query tool) are
+  // called without a session.
+  C8O.assistantAgentBridge.requireAgentAccess = function () {
+    if (Engine.isStudioMode() || !agentAccessSequenceAvailable()) {
+      return;
+    }
+    requireBridgeCaller();
+    var refused = noCodeAgentRefusal();
+    if (refused !== null) {
+      throw new Error(refused.error.message);
+    }
+  };
+
+  // The No Code Studio of a server: its administrators set Tigo for every user, from the Tigo page of the C8Oforms
+  // administration (the settings screen of this panel in server mode). One place for these settings, the global
+  // symbols, read here and by lib_ConvertigoAgentBridge:
+  //   assistant.nocode.provider       convertigo, vibe, codex or claude (convertigo when not set)
+  //   assistant.nocode.model          the model of that agent (the agent's default when not set)
+  //   assistant.nocode.reasoning      its reasoning effort (the model's default when not set)
+  //   assistant.nocode.write_confirm  on or off: "confirm before modifying" for a user who never chose (off)
+  //   assistant.feedback.policy       user, off, ask or auto (js/agent_feedback.js)
+  //   assistant.stack.channel         stable or preview (js/agent_stack_server.js)
+  //   agents.tool_policy              the confinement of the agents: set by the operator, shown read only
+  // A No Code user then keeps only their own preferences (Reveal, confirm before modifying, feedback when the policy
+  // lets each user choose, prompts and skills).
+  var NOCODE_SERVER_SYMBOLS = {
+    provider: "assistant.nocode.provider",
+    model: "assistant.nocode.model",
+    reasoning: "assistant.nocode.reasoning",
+    writeConfirm: "assistant.nocode.write_confirm",
+    feedbackPolicy: "assistant.feedback.policy",
+    stackChannel: "assistant.stack.channel"
+  };
+  var NOCODE_SERVER_PROVIDERS = ["convertigo", "vibe", "codex", "claude"];
+  var NOCODE_SERVER_REASONING = ["", "minimal", "low", "medium", "high", "xhigh", "max"];
+  var NOCODE_SERVER_CHOICES = {
+    writeConfirm: ["off", "on"],
+    feedbackPolicy: ["user", "off", "ask", "auto"],
+    stackChannel: ["stable", "preview"]
+  };
+
+  function serverSymbolValue(name) {
+    try {
+      var value = Engine.theApp.databaseObjectsManager.symbolsGetValue(name);
+      return value === null || typeof value === "undefined" ? "" : trim(String(value));
+    } catch (_ignoreNoSymbol) {
+      return "";
+    }
+  }
+
+  // strict: "" for a value that is no choice (saving), else the default choice (reading a symbol set by hand)
+  function noCodeServerChoice(key, value, strict) {
+    var text = trim(value).toLowerCase();
+    if (key === "provider") {
+      text = text.length ? normalizeProvider(text) : "";
+      return NOCODE_SERVER_PROVIDERS.indexOf(text) >= 0 ? text : (strict ? "" : NOCODE_SERVER_PROVIDERS[0]);
+    }
+    if (key === "model") {
+      var model = trim(value);
+      return /^[A-Za-z0-9._:\/@+-]{1,200}$/.test(model) ? model : "";
+    }
+    if (key === "reasoning") {
+      return NOCODE_SERVER_REASONING.indexOf(text) >= 0 ? text : "";
+    }
+    var choices = NOCODE_SERVER_CHOICES[key] || [];
+    return choices.indexOf(text) >= 0 ? text : (strict ? "" : choices[0]);
+  }
+
+  // The values the server applies (defaults for what is not set), and the symbols they come from.
+  function readNoCodeServerSettings() {
+    var values = {};
+    var symbols = {};
+    for (var key in NOCODE_SERVER_SYMBOLS) {
+      if (Object.prototype.hasOwnProperty.call(NOCODE_SERVER_SYMBOLS, key)) {
+        var raw = serverSymbolValue(NOCODE_SERVER_SYMBOLS[key]);
+        values[key] = noCodeServerChoice(key, raw);
+        symbols[key] = { name: NOCODE_SERVER_SYMBOLS[key], set: raw.length > 0 };
+      }
+    }
+    var toolPolicy = "";
+    var toolPolicySource = "default";
+    try {
+      toolPolicy = trim(java.lang.System.getProperty("convertigo.engine.agents.tool_policy"));
+      if (toolPolicy.length) {
+        toolPolicySource = "platform";
+      }
+    } catch (_ignoreNoProperty) {}
+    if (!toolPolicy.length) {
+      toolPolicy = serverSymbolValue("agents.tool_policy");
+      toolPolicySource = toolPolicy.length ? "symbol" : "default";
+    }
+    values.toolPolicy = toolPolicy.toLowerCase() || "files";
+    symbols.toolPolicy = { name: "agents.tool_policy", set: toolPolicySource !== "default", source: toolPolicySource, readOnly: true };
+    return { values: values, symbols: symbols };
+  }
+
+  // null in the Studio, for the Studio's own profile, and on a server whose C8Oforms does not know the Tigo right yet
+  // (nobody administers Tigo there: the users keep their own choice); otherwise what the No Code agent of this server runs.
+  function noCodeServerSettings(options) {
+    if (Engine.isStudioMode() || assistantProfileDescriptor(options || {}).id !== "nocode" || !agentAccessSequenceAvailable()) {
+      return null;
+    }
+    var read = readNoCodeServerSettings();
+    var settings = read.values;
+    settings.managed = true;
+    settings.symbols = read.symbols;
+    return settings;
+  }
+
+  // An administrator of the No Code Studio, a WEB_ADMIN session or the Studio: may set Tigo for the whole server.
+  function isNoCodeAdministrator() {
+    return Engine.isStudioMode() || isWebAdminSession() || agentAccessOfSession(true).admin === true;
+  }
+
+  // Right after withCallerUserId: a No Code user's agent, model and effort are the server's, whatever the page sends.
+  // The settings screen of an administrator of the No Code Studio is the server's (the Tigo page of the C8Oforms
+  // administration opens it): it lists every agent and model, and the choice it saves is the server's.
+  function withNoCodeServerSettings(options, forSettings) {
+    options = options || {};
+    var server = noCodeServerSettings(options);
+    if (server === null) {
+      return options;
+    }
+    if (forSettings === true && isNoCodeAdministrator()) {
+      options.noCodeServerAdministrator = true;
+      if (truthyAccess(options.savePreferences)) {
+        var saved = saveNoCodeServerSettings({ provider: options.provider || options.agentProvider,
+          model: options.model || options.agentModel, reasoning: options.reasoningEffort || options.reasoningLevel || "" });
+        options.noCodeServerSaved = saved;
+      }
+      // the administrator's own preference is not kept apart from the server's
+      options.savePreferences = "false";
+      return options;
+    }
+    options.provider = server.provider;
+    options.agentProvider = server.provider;
+    options.model = server.model;
+    options.agentModel = server.model;
+    options.reasoningEffort = server.reasoning;
+    delete options.reasoningLevel;
+    delete options.modelReasoningEffort;
+    options.serviceTier = "";
+    delete options.speedTier;
+    // the runtime of the server is its administrators' to update
+    var runtimeFlags = ["updateRuntime", "forceRuntimeUpdate", "forceUpdate", "forceCodexInstall", "forceVibeInstall", "forceClaudeInstall"];
+    for (var i = 0; i < runtimeFlags.length; i++) {
+      options[runtimeFlags[i]] = "false";
+    }
+    // the agent of a No Code user is not theirs to save; not empty, so no request parameter fills it again
+    options.savePreferences = "false";
+    options.noCodeServerValues = { provider: server.provider, model: server.model, reasoning: server.reasoning };
+    return options;
+  }
+
+  // agentSettingsForOptions reads the request parameters again: the server's values stay.
+  function keepNoCodeServerValues(options) {
+    if (options && options.noCodeServerValues) {
+      options.provider = options.noCodeServerValues.provider;
+      options.agentProvider = options.noCodeServerValues.provider;
+      options.model = options.noCodeServerValues.model;
+      options.agentModel = options.noCodeServerValues.model;
+      options.reasoningEffort = options.noCodeServerValues.reasoning;
+      options.reasoningLevel = "";
+      options.serviceTier = "";
+    }
+    if (options && (options.noCodeServerValues || options.noCodeServerAdministrator === true)) {
+      options.savePreferences = "false";
+    }
+    return options;
+  }
+
+  // A conversation of another agent than the server's (its administrators changed it) is not continued.
+  function noCodeAgentChanged(options, state) {
+    if (!options || !options.noCodeServerValues || !state || !trim(state.provider).length
+        || normalizeProvider(state.provider) === normalizeProvider(options.noCodeServerValues.provider)) {
+      return null;
+    }
+    return { ok: false, status: "failed", error: { code: "agent_changed",
+      message: "agent_changed: The administrators of the No Code Studio changed the agent of Tigo. Start a new conversation." },
+      state: publicState(state) };
+  }
+
+  // The settings the Bridge answers for a No Code user: the server's agent, model and effort are the defaults and the
+  // only preference (the user's own saved choice is ignored).
+  function applyNoCodeServerDefaults(options, settings) {
+    var server = noCodeServerSettings(options);
+    if (server === null || !settings || typeof settings !== "object") {
+      return settings;
+    }
+    // the settings screen of an administrator is the server's (every answer says so, a conversation's settings too)
+    server.administrator = (options && options.noCodeServerAdministrator === true) || isNoCodeAdministrator();
+    if (options && options.noCodeServerSaved && options.noCodeServerSaved.ok === false) {
+      server.saveError = options.noCodeServerSaved.error;
+    }
+    var defaults = { provider: server.provider, model: server.model, reasoning: server.reasoning };
+    settings.defaults = defaults;
+    settings.preferences = { provider: server.provider, model: server.model, reasoning: server.reasoning, confirmed: true, source: "server" };
+    settings.serverSettings = server;
+    return settings;
+  }
+
+  // Writes the symbols of the given keys (a value left empty removes its symbol); the caller is an administrator.
+  function saveNoCodeServerSettings(values) {
+    if (!values || typeof values !== "object") {
+      return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: settings is not a JSON object" } };
+    }
+    // every value is checked before any symbol is written
+    var planned = [];
+    for (var key in NOCODE_SERVER_SYMBOLS) {
+      if (!Object.prototype.hasOwnProperty.call(NOCODE_SERVER_SYMBOLS, key) || !Object.prototype.hasOwnProperty.call(values, key)) {
+        continue;
+      }
+      var raw = trim(values[key]);
+      var checked = raw.length ? noCodeServerChoice(key, raw, true) : "";
+      if (raw.length && !checked.length) {
+        return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: " + key } };
+      }
+      planned.push({ name: NOCODE_SERVER_SYMBOLS[key], value: checked });
+    }
+    var written = [];
+    for (var p = 0; p < planned.length; p++) {
+      var name = planned[p].name;
+      var value = planned[p].value;
+      try {
+        if (value.length) {
+          if (serverSymbolValue(name) !== value) {
+            Engine.theApp.databaseObjectsManager.symbolsEdit(name, name, value);
+          }
+        } else if (serverSymbolValue(name).length) {
+          Engine.theApp.databaseObjectsManager.symbolsDelete(name);
+        }
+        written.push(name);
+      } catch (symbolError) {
+        return { ok: false, status: "failed", error: { code: "symbol_not_saved", message: "symbol_not_saved: " + name + ": " + symbolError } };
+      }
+    }
+    try { log.info("(lib_ConvertigoAssistant) No Code agent settings saved: " + written.join(", ")); } catch (_ignoreNoLog) {}
+    return { ok: true, written: written };
+  }
+
+  // AgentServerSettings: read (any caller of the agent) or save (an administrator of the No Code Studio, a WEB_ADMIN
+  // session, or the Studio) the server settings of the No Code agent.
+  C8O.assistantAgentBridge.serverSettings = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = options || {};
+    var administrator = isNoCodeAdministrator();
+    var action = trim(options.action).toLowerCase() || "get";
+    if (action === "save") {
+      if (!administrator) {
+        return { ok: false, status: "failed", error: { code: "not_administrator",
+          message: "not_administrator: only an administrator of the No Code Studio sets Tigo for the server." } };
+      }
+      var values = {};
+      try {
+        // a sequence variable is a Java string: only a plain object is taken as it is
+        values = Object.prototype.toString.call(options.settings) === "[object Object]" ? options.settings
+          : JSON.parse(trim(options.settings) || "{}");
+        if (!values || typeof values !== "object") {
+          throw new Error("not an object");
+        }
+      } catch (_ignoreBadSettings) {
+        return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: settings is not a JSON object" } };
+      }
+      var saved = saveNoCodeServerSettings(values);
+      if (saved.ok === false) {
+        return saved;
+      }
+    }
+    var read = readNoCodeServerSettings();
+    return { ok: true, status: "ok", administrator: administrator, settings: read.values, symbols: read.symbols,
+      choices: { provider: NOCODE_SERVER_PROVIDERS, reasoning: NOCODE_SERVER_REASONING, writeConfirm: NOCODE_SERVER_CHOICES.writeConfirm,
+        feedbackPolicy: NOCODE_SERVER_CHOICES.feedbackPolicy, stackChannel: NOCODE_SERVER_CHOICES.stackChannel } };
+  };
+
+  // For the C8Oforms administration of Tigo: whether the user of the session administers this No Code Studio.
+  C8O.assistantAgentBridge.agentAccess = function () {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    var access = agentAccessOfSession(true);
+    if (Engine.isStudioMode() || isWebAdminSession()) {
+      access.tigo = true;
+      access.admin = true;
+    }
+    return { ok: true, status: "ok", access: access };
+  };
 
   // The key goes only to this engine's Bridge: at the configured engine URL, or on a loopback host at the port that
   // received the request. A bridgeBaseUrl sent by a caller, or a request Host header, never receives it.
@@ -6774,7 +7182,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider) {
-    options = optionsWithRequestFallbacks(options);
+    options = keepNoCodeServerValues(optionsWithRequestFallbacks(options));
     var providerSelector = normalizeProviderSelector(provider || options.provider || options.agentProvider);
     var providerFilter = providerSelector === "all" ? "" : providerSelector;
     var explicitProject = trim(projectFilter || options.targetProject || options.projectName || options.projectId);
@@ -6816,7 +7224,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     try {
       var settings = bridgeCall(options, "agent_settings", payload, 120000);
       settings.ok = settings.ok !== false;
-      return settings;
+      return applyNoCodeServerDefaults(options, settings);
     } catch (e) {
       return {
         ok: false,
@@ -7022,11 +7430,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   C8O.assistantAgentBridge.createConversation = function (options) {
-    var refused = bridgeCallerRefusal();
+    var refused = bridgeCallerRefusal() || noCodeAgentRefusal(true);
     if (refused !== null) {
       return refused;
     }
     options = withCallerUserId(options);
+    options = withNoCodeServerSettings(options);
     return timedCall("conversation", function () {
       return createConversationSteps(options);
     });
@@ -7194,11 +7603,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   };
 
   C8O.assistantAgentBridge.settings = function (options) {
-    var refused = bridgeCallerRefusal();
+    var refused = bridgeCallerRefusal() || noCodeAgentRefusal(true);
     if (refused !== null) {
       return refused;
     }
     options = withCallerUserId(optionsWithRequestFallbacks(options));
+    options = withNoCodeServerSettings(options, true);
     return timedCall("settings", function () {
       return settingsSteps(options);
     });
@@ -7233,13 +7643,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   C8O.assistantAgentBridge.setupAgent = function (options) {
-    var refused = bridgeCallerRefusal();
+    var refused = bridgeCallerRefusal() || noCodeAgentRefusal();
     if (refused !== null) {
       return refused;
     }
     options = withCallerUserId(optionsWithRequestFallbacks(options || {}));
+    options = withNoCodeServerSettings(options);
     var threadid = normalizeThreadId(options.threadid);
     var state = threadid.length ? readState(threadid) : null;
+    var agentChanged = noCodeAgentChanged(options, state);
+    if (agentChanged !== null) {
+      return agentChanged;
+    }
     if (state === null && !threadid.length && !trim(options.provider || options.agentProvider).length) {
       return {
         ok: true,
@@ -7884,11 +8299,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   C8O.assistantAgentBridge.sendMessage = function (options) {
-    var refused = bridgeCallerRefusal();
+    var refused = bridgeCallerRefusal() || noCodeAgentRefusal();
     if (refused !== null) {
       return refused;
     }
     options = withCallerUserId(optionsWithRequestFallbacks(options || {}));
+    options = withNoCodeServerSettings(options);
     var question = enrichNoCodePrompt(String(options.Question || options.question || ""), options);
     var rawUserQuestion = trim(options.rawUserQuestion || options.userQuestion || extractUserMessage(question));
     options.Question = question;
@@ -7938,6 +8354,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return turnRunningResponse(state, running);
     }
     var stateBeforeSend = state !== null ? JSON.stringify(state) : null;
+    var agentChanged = noCodeAgentChanged(options, state);
+    if (agentChanged !== null) {
+      return agentChanged;
+    }
     if (state === null) {
       state = createState(options);
     }
@@ -8498,6 +8918,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
     host.readChoice = function () {
       return readJsonFile(file);
+    };
+    // a user who never chose: the server's default (assistant.nocode.write_confirm)
+    host.defaultOn = function () {
+      var server = noCodeServerSettings(options);
+      return server !== null && server.writeConfirm === "on";
     };
     host.writeChoice = function (record) {
       writeJsonFile(file, record);

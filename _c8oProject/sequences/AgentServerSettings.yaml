@@ -1,0 +1,29 @@
+accessibility: Hidden
+comment: 'Settings of the No Code agent for the whole server (js/agent_bridge_client.js serverSettings): get (default) reads them for any caller of the agent; save (with settings, a JSON object of provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel) writes their global symbols, for an administrator of the No Code Studio, a WEB_ADMIN session or the Studio. An empty value removes its symbol; agents.tool_policy stays the operator''s (read only).'
+responseTimeout: 30
+↓Run [steps.SimpleStep-1793875846341]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.serverSettings({
+      action: typeof action === "undefined" ? "" : action,
+      settings: typeof settings === "undefined" ? "" : settings
+    });'
+↓result [steps.JsonToXmlStep-1793875846343]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓action [variables.RequestableVariable-1793875846345]: 
+  comment: get (default) or save.
+  description: get (default) or save.
+↓settings [variables.RequestableVariable-1793875846347]: 
+  comment: 'For save, a JSON object of the settings to write: provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel. A key left out keeps its symbol, an empty value removes it.'
+  description: 'For save, a JSON object of the settings to write: provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel. A key left out keeps its symbol, an empty value removes it.'
