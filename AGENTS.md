@@ -65,6 +65,10 @@ rediscovering the same context.
   profiles back to the standard Studio profile when that gate is closed.
 - Models and reasoning choices must come from the bridge/CLI capability contract,
   not from UI-only hardcoded lists.
+- The prompt effort selector uses both the selected model's `reasoningLevels`
+  and the provider's `supports.reasoning`. The Bridge must keep those consistent
+  when restoring a gateway offer. Cover returning from settings and restoring
+  the saved effort with `tests/assistant_reasoning_effort.test.cjs`.
 - Tigo 1.5 favorites can insert prompts into the draft of new or existing
   conversations, without auto-send. Keep classic How-To suggestions separate.
 - Preserve accumulated progress steps after completion and collapse them by

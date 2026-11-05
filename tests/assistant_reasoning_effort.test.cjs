@@ -125,3 +125,33 @@ test('the provider global default is the last fallback, and no level without rea
   const local = modelLocal(glm53, 'max'); local.AgentProviderSupportsReasoning = false;
   assert.equal(withResolver(local).resolveAgentReasoning(['max'], true), '');
 });
+
+test('returning from settings restores the gateway effort choices in the prompt footer', () => {
+  const methods = ['useReadyAgentProvider', 'resolveAgentReasoning'].map(name => {
+    const method = pageAst.statements[0].members.find(m => m.name && m.name.getText(pageAst) === name);
+    assert.ok(method, name);
+    return method.getText(pageAst);
+  });
+  const scope = {};
+  vm.runInNewContext(ts.transpileModule('class Page { ' + methods.join('\n') + ' }; this.Page = Page;',
+    { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, scope);
+  const model = { id: 'test-model', defaultReasoning: 'high', reasoningLevels: levels(['low', 'high', 'max']) };
+  const descriptor = { id: 'convertigo', ready: true, supports: { reasoning: true }, models: [model] };
+  const page = new scope.Page();
+  Object.assign(page, {
+    local: { AgentConfigReturnState: { provider: 'convertigo', model: model.id, reasoning: 'max' } },
+    normalizeAgentProviderValue: clean, getAgentProviderDescriptor: () => descriptor,
+    isAgentProviderReady: value => value.ready, getDefaultAgentModel: () => model.id,
+    getAgentSettingsRoot: () => ({}), t: (_key, fallback) => fallback, tick() {}
+  });
+  assert.equal(page.useReadyAgentProvider('convertigo'), true);
+  assert.deepEqual(Array.from(page.local.AgentReasoningLevels, level => level.id), ['low', 'high', 'max']);
+  assert.equal(page.local.AgentReasoningEffort, 'max');
+  assert.equal(page.resolveAgentReasoning(['high'], false), 'high');
+  // The provider flag must agree with its offer; an unsupported model keeps the selector hidden.
+  descriptor.supports.reasoning = false;
+  descriptor.models = [{ id: model.id, reasoningLevels: [] }];
+  page.useReadyAgentProvider('convertigo');
+  assert.equal(page.local.AgentReasoningLevels.length, 0);
+  assert.equal(page.local.AgentReasoningEffort, '');
+});
