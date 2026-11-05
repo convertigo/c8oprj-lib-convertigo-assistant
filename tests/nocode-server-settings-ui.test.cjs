@@ -37,8 +37,11 @@ test('the tabs: no agent, runtime nor MCP tab for a user, a note of who sets the
 test('the categories of the administrators are left out for a user, the footer offers no model', () => {
   for (const name of ['AgentCategory', 'RuntimeCategory', 'McpCategory']) {
     const category = bean(name);
-    assert.ok(category.includes("attrName: '*ngIf'") && category.includes(`!(${MANAGED})`), name);
+    // a structural attribute takes a plain expression: in script mode Mobile Builder writes *ngIf="{{...}}", which
+    // Angular refuses (NG5002, build of 1.6.0-beta.4, 05/11)
+    assert.ok(category.includes("attrName: '*ngIf'") && category.includes(`plain:!(${MANAGED})`), name);
   }
+  assert.doesNotMatch(page, /attrName: '\*ngIf'\n\s+attrValue: \n\s+- xmlizable: \n\s+- ↑classname: [^\n]+\n\s+- MobileSmartSourceType: '?script:/, 'no *ngIf in script mode in the page');
   assert.ok(bean('SettingsCategories').includes(`(${MANAGED} && ['agent', 'runtime', 'mcp'].includes(this.local?.ResourceAccordion || 'agent')) ? 'prefs' : this.local?.ResourceAccordion`));
   for (const name of ['AgentModels', 'AgentReasoningLevels']) {
     const variable = page.slice(page.indexOf('↓' + name + ' [ngx.components.UIUseVariable-'));
