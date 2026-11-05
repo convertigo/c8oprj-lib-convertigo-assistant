@@ -9467,6 +9467,9 @@ title: Tigo
               ↓CreateSettings [ngx.components.UIDynamicElement-1781700500010]: 
                 beanData: '{"ionBean":"DivTag"}'
                 tagName: div
+                ↓SettingsTabs [ngx.components.UICustom-1793872628019]: 
+                  comment: Settings sections as tabs (narrow) or a side list (wide). The active tab is the open accordion (local.ResourceAccordion); its headers are hidden by TigoSettingsTabsStyle.
+                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), section: (local?.ResourceAccordion || ''agent'')} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{feedbackSettingVisible() ? '' · '' + (tab.lang === ''fr'' ? ''Retours'' : (tab.lang === ''it'' ? ''Segnalazioni'' : (tab.lang === ''es'' ? ''Comentarios'' : ''Feedback''))) + '' '' + agentFeedbackText(feedbackSettingMode()) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}} · {{local?.ResourceMcpItems?.length || 0}} MCP</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav></ng-container>'
                 ↓ResourceSearch [ngx.components.UIDynamicElement-1792084623537]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -9978,6 +9981,9 @@ title: Tigo
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                       - MobileSmartSourceType: script:this.t('Agent_Provider_Convertigo_Copy', 'No setup, uses your Convertigo account')
+                            ↓ProviderState [ngx.components.UICustom-1793872653026]: 
+                              comment: Ready or to set up, once the Bridge listed the providers.
+                              htmlTemplate: '<ng-container *ngIf="hasAgentSettingsProvidersLoaded()"><span *ngIf="((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2) as lang" class="agent-provider-state" [class.is-ready]="hasReadyAgentProvider(''convertigo'')">{{hasReadyAgentProvider(''convertigo'') ? (lang === ''fr'' ? ''Prêt'' : (lang === ''it'' ? ''Pronto'' : (lang === ''es'' ? ''Listo'' : ''Ready''))) : (lang === ''fr'' ? ''À configurer'' : (lang === ''it'' ? ''Da configurare'' : (lang === ''es'' ? ''Por configurar'' : ''Needs setup'')))}}</span></ng-container>'
                             ↓SelectedIcon [ngx.components.UIDynamicElement-1789580000034]: 
                               beanData: |
                                 '{
@@ -10163,6 +10169,9 @@ title: Tigo
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                       - MobileSmartSourceType: script:this.t('Agent_Provider_Vibe_Copy', 'Explore and create quickly')
+                            ↓ProviderState [ngx.components.UICustom-1793872658359]: 
+                              comment: Ready or to set up, once the Bridge listed the providers.
+                              htmlTemplate: '<ng-container *ngIf="hasAgentSettingsProvidersLoaded()"><span *ngIf="((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2) as lang" class="agent-provider-state" [class.is-ready]="hasReadyAgentProvider(''vibe'')">{{hasReadyAgentProvider(''vibe'') ? (lang === ''fr'' ? ''Prêt'' : (lang === ''it'' ? ''Pronto'' : (lang === ''es'' ? ''Listo'' : ''Ready''))) : (lang === ''fr'' ? ''À configurer'' : (lang === ''it'' ? ''Da configurare'' : (lang === ''es'' ? ''Por configurar'' : ''Needs setup'')))}}</span></ng-container>'
                             ↓SelectedIcon [ngx.components.UIDynamicElement-1787737642874]: 
                               beanData: |
                                 '{
@@ -10348,6 +10357,9 @@ title: Tigo
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                       - MobileSmartSourceType: script:this.t('Agent_Provider_Codex_Copy', 'Build and modify code')
+                            ↓ProviderState [ngx.components.UICustom-1793872662113]: 
+                              comment: Ready or to set up, once the Bridge listed the providers.
+                              htmlTemplate: '<ng-container *ngIf="hasAgentSettingsProvidersLoaded()"><span *ngIf="((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2) as lang" class="agent-provider-state" [class.is-ready]="hasReadyAgentProvider(''codex'')">{{hasReadyAgentProvider(''codex'') ? (lang === ''fr'' ? ''Prêt'' : (lang === ''it'' ? ''Pronto'' : (lang === ''es'' ? ''Listo'' : ''Ready''))) : (lang === ''fr'' ? ''À configurer'' : (lang === ''it'' ? ''Da configurare'' : (lang === ''es'' ? ''Por configurar'' : ''Needs setup'')))}}</span></ng-container>'
                             ↓SelectedIcon [ngx.components.UIDynamicElement-1787737656266]: 
                               beanData: |
                                 '{
@@ -10533,6 +10545,9 @@ title: Tigo
                                     - xmlizable: 
                                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                       - MobileSmartSourceType: script:this.t('Agent_Provider_Claude_Copy', 'Reason deeply and build carefully')
+                            ↓ProviderState [ngx.components.UICustom-1793872665680]: 
+                              comment: Ready or to set up, once the Bridge listed the providers.
+                              htmlTemplate: '<ng-container *ngIf="hasAgentSettingsProvidersLoaded()"><span *ngIf="((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2) as lang" class="agent-provider-state" [class.is-ready]="hasReadyAgentProvider(''claude'')">{{hasReadyAgentProvider(''claude'') ? (lang === ''fr'' ? ''Prêt'' : (lang === ''it'' ? ''Pronto'' : (lang === ''es'' ? ''Listo'' : ''Ready''))) : (lang === ''fr'' ? ''À configurer'' : (lang === ''it'' ? ''Da configurare'' : (lang === ''es'' ? ''Por configurar'' : ''Needs setup'')))}}</span></ng-container>'
                             ↓SelectedIcon [ngx.components.UIDynamicElement-1789370113997]: 
                               beanData: |
                                 '{
@@ -10562,6 +10577,289 @@ title: Tigo
                         ↓RevealLabel [ngx.components.UIDynamicElement-1789580000044]: 
                           beanData: '{"ionBean":"Paragraph"}'
                           tagName: p
+                      ↓ModelSettings [ngx.components.UIDynamicElement-1787737346772]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1787737346774]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-model-setting
+                        ↓ModelLabel [ngx.components.UIDynamicElement-1785253202087]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1785253229708]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-create-label
+                          ↓Text [ngx.components.UIText-1785253229710]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.t('Agent_Model_Label', 'Modèle')
+                        ↓ModelDescription [ngx.components.UIDynamicElement-1787737406416]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1787737406418]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-setting-description
+                          ↓Text [ngx.components.UIText-1787737406420]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Le modèle détermine les performances et la vitesse.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Il modello determina prestazioni e velocità.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''El modelo determina el rendimiento y la velocidad.'' : ''The model determines performance and speed.''))'
+                        ↓ModelChoices [ngx.components.UIControlDirective-1785253202305]: 
+                          directiveItemName: agentModel
+                          directiveSource: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                          ↓ModelButton [ngx.components.UIDynamicElement-1785253248707]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Button",
+                               "IonFill": "plain:clear",
+                               "IonSize": "plain:small"
+                              }'
+                            tagName: ion-button
+                            ↓Class [ngx.components.UIAttribute-1785253252933]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:agentModel && agentModel.id === this.getAgentModel() ? ''agent-choice-button agent-model-option active'' : ''agent-choice-button agent-model-option'''
+                            ↓Event [ngx.components.UIControlEvent-1785253252935]: 
+                              ↓SetModel [ngx.components.UICustomAction-1785253254441]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        '        var agentModel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.agentModel : null;
+                                                if (!page.local) { page.local = {}; }
+                                                var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
+                                                var modelId = clean(agentModel && agentModel.id);
+                                                page.local.AgentModel = modelId;
+                                                var provider = clean(page.local.AgentProvider).toLowerCase();
+                                                var settings = page.local.AgentSettings || {};
+                                                if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                                                var providers = settings.providers || [];
+                                                var selectedProvider = null;
+                                                for (var i = 0; i < providers.length; i++) {
+                                                    if (clean(providers[i] && providers[i].id).toLowerCase() === provider) { selectedProvider = providers[i]; break; }
+                                                }
+                                                page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
+                                                page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && agentModel && agentModel.reasoningLevels ? agentModel.reasoningLevels : [];
+                                                var reasoning = clean(agentModel && agentModel.defaultReasoning);
+                                                if (page.local.AgentProviderSupportsReasoning !== true) { reasoning = ''''; }
+                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
+                                                var tiers = agentModel && agentModel.serviceTiers ? agentModel.serviceTiers : [];
+                                                var currentTier = clean(page.local.AgentServiceTier);
+                                                var tierOk = !currentTier.length;
+                                                for (var j = 0; j < tiers.length; j++) {
+                                                    if (clean(tiers[j] && tiers[j].id) === currentTier) { tierOk = true; break; }
+                                                }
+                                                page.local.AgentServiceTier = tierOk ? currentTier : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''');
+                                                page.tick();
+                                                resolve();'
+                            ↓ModelCopy [ngx.components.UIDynamicElement-1787737666971]: 
+                              beanData: '{"ionBean":"DivTag"}'
+                              tagName: div
+                              ↓Class [ngx.components.UIAttribute-1787737666973]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:agent-model-copy
+                              ↓ModelTitle [ngx.components.UIDynamicElement-1787737666975]: 
+                                beanData: '{"ionBean":"Paragraph"}'
+                                tagName: p
+                                ↓Class [ngx.components.UIAttribute-1787737666977]: 
+                                  attrName: class
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: plain:agent-model-title
+                                ↓Text [ngx.components.UIText-1787737666979]: 
+                                  textValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: 'script:agentModel ? agentModel.label : '''''
+                              ↓ModelDescription [ngx.components.UIDynamicElement-1787737666981]: 
+                                beanData: '{"ionBean":"Paragraph"}'
+                                tagName: p
+                                ↓Class [ngx.components.UIAttribute-1787737666983]: 
+                                  attrName: class
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: plain:agent-model-description
+                                ↓Text [ngx.components.UIText-1787737666985]: 
+                                  textValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: 'script:agentModel && (agentModel.description || agentModel.summary) ? (agentModel.description || agentModel.summary) : '''''
+                        ↓RefreshModels [ngx.components.UIDynamicElement-1792162722705]: 
+                          beanData: |
+                            '{
+                             "ionBean": "Button",
+                             "Disabled": "script:local.AgentSettingsRefreshRunning || local.IsAgentWorking === true",
+                             "IonFill": "plain:clear"
+                            }'
+                          tagName: ion-button
+                          ↓Label [ngx.components.UIAttribute-1792162722707]: 
+                            attrName: '[attr.aria-label]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('refreshModels')
+                          ↓Title [ngx.components.UIAttribute-1792162722709]: 
+                            attrName: '[attr.title]'
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('refreshModels')
+                          ↓Icon [ngx.components.UIDynamicElement-1792162722711]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Icon",
+                               "IconName": "plain:refresh-outline",
+                               "IconSlot": "plain:icon-only"
+                              }'
+                            tagName: ion-icon
+                          ↓Click [ngx.components.UIControlEvent-1792162722713]: 
+                            ↓Apply [ngx.components.UICustomAction-1792162724307]: 
+                              actionValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                    →: |
+                                      page.refreshAgentModelCatalog();
+                                      resolve();
+                          ↓Attr [ngx.components.UIAttribute-1792162724309]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-model-refresh
+                      ↓ReasoningIf [ngx.components.UIControlDirective-1785253202523]: 
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
+                        ↓ReasoningSettings [ngx.components.UIDynamicElement-1785253270230]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1785253274456]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-reasoning-setting
+                          ↓ReasoningLabel [ngx.components.UIDynamicElement-1785253274458]: 
+                            beanData: '{"ionBean":"Paragraph"}'
+                            tagName: p
+                            ↓Class [ngx.components.UIAttribute-1785253274460]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-create-label
+                            ↓Text [ngx.components.UIText-1785253274462]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.t('Agent_Reasoning_Label', 'Raisonnement')
+                          ↓ReasoningDescription [ngx.components.UIDynamicElement-1787737410878]: 
+                            beanData: '{"ionBean":"Paragraph"}'
+                            tagName: p
+                            ↓Class [ngx.components.UIAttribute-1787737410880]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-setting-description
+                            ↓Text [ngx.components.UIText-1787737410882]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Un niveau élevé est plus précis, mais peut prendre davantage de temps.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Un livello elevato è più preciso, ma può richiedere più tempo.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Un nivel alto es más preciso, pero puede tardar más.'' : ''A higher level is more precise, but may take longer.''))'
+                          ↓ReasoningChoices [ngx.components.UIControlDirective-1785253274464]: 
+                            directiveItemName: reasoningLevel
+                            directiveSource: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
+                            ↓ReasoningButton [ngx.components.UIDynamicElement-1785253288370]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "Button",
+                                 "IonFill": "plain:clear",
+                                 "IonSize": "plain:small"
+                                }'
+                              tagName: ion-button
+                              ↓Class [ngx.components.UIAttribute-1785253292596]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.id === (this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : '''') ? ''agent-choice-button agent-reasoning-option active'' : ''agent-choice-button agent-reasoning-option'''
+                              ↓Event [ngx.components.UIControlEvent-1785253292598]: 
+                                ↓SetReasoning [ngx.components.UICustomAction-1785253294104]: 
+                                  actionValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                        →: |
+                                          '        var reasoningLevel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.reasoningLevel : null;
+                                                  if (!page.local) { page.local = {}; }
+                                                  page.local.AgentReasoningEffort = reasoningLevel && reasoningLevel.id != null ? ('''' + reasoningLevel.id).replace(/^\s+|\s+$/g, '''') : '''';
+                                                  page.tick();
+                                                  resolve();'
+                              ↓Text [ngx.components.UIText-1785253294106]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
+                  ↓PrefsCategory [ngx.components.UIDynamicElement-1793872635471]: 
+                    beanData: '{"ionBean":"Accordion","Value":"plain:prefs"}'
+                    tagName: ion-accordion
+                    ↓Header [ngx.components.UIDynamicElement-1793872635473]: 
+                      beanData: '{"ionBean":"GenericItem"}'
+                      tagName: ion-item
+                      ↓Attr [ngx.components.UIAttribute-1793872635475]: 
+                        attrName: slot
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:header
+                      ↓Text [ngx.components.UIText-1793872635477]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Préférences'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Preferenze'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Preferencias'' : ''Preferences''))'
+                    ↓Body [ngx.components.UIDynamicElement-1793872635479]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Attr [ngx.components.UIAttribute-1793872635481]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:tigo-accordion-body
+                      ↓Attr1 [ngx.components.UIAttribute-1793872635483]: 
+                        attrName: slot
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:content
                       ↓RevealSettings1 [ngx.components.UIDynamicElement-1782955202301]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -10844,257 +11142,6 @@ title: Tigo
                                         →: |
                                           		page.setWriteConfirm(props.stack.root.scope.choice === 'on', null);
                                           		resolve();
-                      ↓ModelSettings [ngx.components.UIDynamicElement-1787737346772]: 
-                        beanData: '{"ionBean":"DivTag"}'
-                        tagName: div
-                        ↓Class [ngx.components.UIAttribute-1787737346774]: 
-                          attrName: class
-                          attrValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-model-setting
-                        ↓ModelLabel [ngx.components.UIDynamicElement-1785253202087]: 
-                          beanData: '{"ionBean":"Paragraph"}'
-                          tagName: p
-                          ↓Class [ngx.components.UIAttribute-1785253229708]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-create-label
-                          ↓Text [ngx.components.UIText-1785253229710]: 
-                            textValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.t('Agent_Model_Label', 'Modèle')
-                        ↓ModelDescription [ngx.components.UIDynamicElement-1787737406416]: 
-                          beanData: '{"ionBean":"Paragraph"}'
-                          tagName: p
-                          ↓Class [ngx.components.UIAttribute-1787737406418]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-setting-description
-                          ↓Text [ngx.components.UIText-1787737406420]: 
-                            textValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Le modèle détermine les performances et la vitesse.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Il modello determina prestazioni e velocità.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''El modelo determina el rendimiento y la velocidad.'' : ''The model determines performance and speed.''))'
-                        ↓ModelChoices [ngx.components.UIControlDirective-1785253202305]: 
-                          directiveItemName: agentModel
-                          directiveSource: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentModels","prefix":"","suffix":"","custom":"","useCustom":false}}
-                          ↓ModelButton [ngx.components.UIDynamicElement-1785253248707]: 
-                            beanData: |
-                              '{
-                               "ionBean": "Button",
-                               "IonFill": "plain:clear",
-                               "IonSize": "plain:small"
-                              }'
-                            tagName: ion-button
-                            ↓Class [ngx.components.UIAttribute-1785253252933]: 
-                              attrName: class
-                              attrValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: 'script:agentModel && agentModel.id === this.getAgentModel() ? ''agent-choice-button agent-model-option active'' : ''agent-choice-button agent-model-option'''
-                            ↓Event [ngx.components.UIControlEvent-1785253252935]: 
-                              ↓SetModel [ngx.components.UICustomAction-1785253254441]: 
-                                actionValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                      →: |
-                                        '        var agentModel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.agentModel : null;
-                                                if (!page.local) { page.local = {}; }
-                                                var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
-                                                var modelId = clean(agentModel && agentModel.id);
-                                                page.local.AgentModel = modelId;
-                                                var provider = clean(page.local.AgentProvider).toLowerCase();
-                                                var settings = page.local.AgentSettings || {};
-                                                if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
-                                                var providers = settings.providers || [];
-                                                var selectedProvider = null;
-                                                for (var i = 0; i < providers.length; i++) {
-                                                    if (clean(providers[i] && providers[i].id).toLowerCase() === provider) { selectedProvider = providers[i]; break; }
-                                                }
-                                                page.local.AgentProviderSupportsReasoning = selectedProvider && selectedProvider.supports && selectedProvider.supports.reasoning === true;
-                                                page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && agentModel && agentModel.reasoningLevels ? agentModel.reasoningLevels : [];
-                                                var reasoning = clean(agentModel && agentModel.defaultReasoning);
-                                                if (page.local.AgentProviderSupportsReasoning !== true) { reasoning = ''''; }
-                                                page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([page.local.AgentReasoningEffort, reasoning], false) : reasoning;
-                                                var tiers = agentModel && agentModel.serviceTiers ? agentModel.serviceTiers : [];
-                                                var currentTier = clean(page.local.AgentServiceTier);
-                                                var tierOk = !currentTier.length;
-                                                for (var j = 0; j < tiers.length; j++) {
-                                                    if (clean(tiers[j] && tiers[j].id) === currentTier) { tierOk = true; break; }
-                                                }
-                                                page.local.AgentServiceTier = tierOk ? currentTier : (tiers.length === 1 ? clean(tiers[0] && tiers[0].id) : '''');
-                                                page.tick();
-                                                resolve();'
-                            ↓ModelCopy [ngx.components.UIDynamicElement-1787737666971]: 
-                              beanData: '{"ionBean":"DivTag"}'
-                              tagName: div
-                              ↓Class [ngx.components.UIAttribute-1787737666973]: 
-                                attrName: class
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: plain:agent-model-copy
-                              ↓ModelTitle [ngx.components.UIDynamicElement-1787737666975]: 
-                                beanData: '{"ionBean":"Paragraph"}'
-                                tagName: p
-                                ↓Class [ngx.components.UIAttribute-1787737666977]: 
-                                  attrName: class
-                                  attrValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: plain:agent-model-title
-                                ↓Text [ngx.components.UIText-1787737666979]: 
-                                  textValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: 'script:agentModel ? agentModel.label : '''''
-                              ↓ModelDescription [ngx.components.UIDynamicElement-1787737666981]: 
-                                beanData: '{"ionBean":"Paragraph"}'
-                                tagName: p
-                                ↓Class [ngx.components.UIAttribute-1787737666983]: 
-                                  attrName: class
-                                  attrValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: plain:agent-model-description
-                                ↓Text [ngx.components.UIText-1787737666985]: 
-                                  textValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                      - MobileSmartSourceType: 'script:agentModel && (agentModel.description || agentModel.summary) ? (agentModel.description || agentModel.summary) : '''''
-                        ↓RefreshModels [ngx.components.UIDynamicElement-1792162722705]: 
-                          beanData: |
-                            '{
-                             "ionBean": "Button",
-                             "Disabled": "script:local.AgentSettingsRefreshRunning || local.IsAgentWorking === true",
-                             "IonFill": "plain:clear"
-                            }'
-                          tagName: ion-button
-                          ↓Label [ngx.components.UIAttribute-1792162722707]: 
-                            attrName: '[attr.aria-label]'
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.tigoText('refreshModels')
-                          ↓Title [ngx.components.UIAttribute-1792162722709]: 
-                            attrName: '[attr.title]'
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.tigoText('refreshModels')
-                          ↓Icon [ngx.components.UIDynamicElement-1792162722711]: 
-                            beanData: |
-                              '{
-                               "ionBean": "Icon",
-                               "IconName": "plain:refresh-outline",
-                               "IconSlot": "plain:icon-only"
-                              }'
-                            tagName: ion-icon
-                          ↓Click [ngx.components.UIControlEvent-1792162722713]: 
-                            ↓Apply [ngx.components.UICustomAction-1792162724307]: 
-                              actionValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                  - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                    →: |
-                                      page.refreshAgentModelCatalog();
-                                      resolve();
-                          ↓Attr [ngx.components.UIAttribute-1792162724309]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-model-refresh
-                      ↓ReasoningIf [ngx.components.UIControlDirective-1785253202523]: 
-                        directiveName: If
-                        directiveSource: 
-                          - xmlizable: 
-                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: script:this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
-                        ↓ReasoningSettings [ngx.components.UIDynamicElement-1785253270230]: 
-                          beanData: '{"ionBean":"DivTag"}'
-                          tagName: div
-                          ↓Class [ngx.components.UIAttribute-1785253274456]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-reasoning-setting
-                          ↓ReasoningLabel [ngx.components.UIDynamicElement-1785253274458]: 
-                            beanData: '{"ionBean":"Paragraph"}'
-                            tagName: p
-                            ↓Class [ngx.components.UIAttribute-1785253274460]: 
-                              attrName: class
-                              attrValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: plain:agent-create-label
-                            ↓Text [ngx.components.UIText-1785253274462]: 
-                              textValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: script:this.t('Agent_Reasoning_Label', 'Raisonnement')
-                          ↓ReasoningDescription [ngx.components.UIDynamicElement-1787737410878]: 
-                            beanData: '{"ionBean":"Paragraph"}'
-                            tagName: p
-                            ↓Class [ngx.components.UIAttribute-1787737410880]: 
-                              attrName: class
-                              attrValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: plain:agent-setting-description
-                            ↓Text [ngx.components.UIText-1787737410882]: 
-                              textValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Un niveau élevé est plus précis, mais peut prendre davantage de temps.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Un livello elevato è più preciso, ma può richiedere più tempo.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Un nivel alto es más preciso, pero puede tardar más.'' : ''A higher level is more precise, but may take longer.''))'
-                          ↓ReasoningChoices [ngx.components.UIControlDirective-1785253274464]: 
-                            directiveItemName: reasoningLevel
-                            directiveSource: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.AgentReasoningLevels","prefix":"","suffix":"","custom":"","useCustom":false}}
-                            ↓ReasoningButton [ngx.components.UIDynamicElement-1785253288370]: 
-                              beanData: |
-                                '{
-                                 "ionBean": "Button",
-                                 "IonFill": "plain:clear",
-                                 "IonSize": "plain:small"
-                                }'
-                              tagName: ion-button
-                              ↓Class [ngx.components.UIAttribute-1785253292596]: 
-                                attrName: class
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:reasoningLevel && reasoningLevel.id === (this.local && this.local.AgentReasoningEffort ? this.local.AgentReasoningEffort : '''') ? ''agent-choice-button agent-reasoning-option active'' : ''agent-choice-button agent-reasoning-option'''
-                              ↓Event [ngx.components.UIControlEvent-1785253292598]: 
-                                ↓SetReasoning [ngx.components.UICustomAction-1785253294104]: 
-                                  actionValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                        →: |
-                                          '        var reasoningLevel = props && props.stack && props.stack.root && props.stack.root.scope ? props.stack.root.scope.reasoningLevel : null;
-                                                  if (!page.local) { page.local = {}; }
-                                                  page.local.AgentReasoningEffort = reasoningLevel && reasoningLevel.id != null ? ('''' + reasoningLevel.id).replace(/^\s+|\s+$/g, '''') : '''';
-                                                  page.tick();
-                                                  resolve();'
-                              ↓Text [ngx.components.UIText-1785253294106]: 
-                                textValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:reasoningLevel ? reasoningLevel.label : '''''
                   ↓RuntimeCategory [ngx.components.UIDynamicElement-1792084635803]: 
                     beanData: '{"ionBean":"Accordion","Value":"plain:runtime"}'
                     tagName: ion-accordion
@@ -25782,4 +25829,333 @@ title: Tigo
           .agent-stack-channel-options ion-button.is-selected { --background: color-mix(in srgb, var(--modern-cyan, #06b6d4) 16%, transparent 84%); --color: var(--modern-text, var(--ion-text-color)); font-weight: 600; }
           .agent-stack-channel-hint { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--modern-muted, #64748b); }
           .agent-stack-channel-value { margin: 0; font-size: 12px; color: var(--modern-text, var(--ion-text-color)); }
+          '
+↓TigoSettingsTabsStyle [ngx.components.UIStyle-1793872832523]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Settings page laid out as tabs (narrow views such as the docked Studio panel) or a side list (wide views, 1100 px and more).
+             The active tab is the open accordion (local.ResourceAccordion); the accordion headers give way to the tabs. */
+          .agent-config-page {
+            --tigo-tab-accent: #0891b2;
+            --tigo-tab-active-bg: rgba(8, 145, 178, 0.1);
+            --tigo-state-ready-bg: rgba(16, 185, 129, 0.12);
+            --tigo-state-ready: #047857;
+            --tigo-state-todo-bg: rgba(245, 158, 11, 0.14);
+            --tigo-state-todo: #b45309;
+          }
+          :host-context(:root.force-dark) .agent-config-page,
+          :host-context(html.force-dark) .agent-config-page,
+          :host-context(body.force-dark) .agent-config-page,
+          :host-context(.force-dark) .agent-config-page {
+            --tigo-tab-accent: #22d3ee;
+            --tigo-tab-active-bg: rgba(8, 145, 178, 0.16);
+            --tigo-state-ready-bg: rgba(52, 211, 153, 0.14);
+            --tigo-state-ready: #6ee7b7;
+            --tigo-state-todo-bg: rgba(251, 191, 36, 0.14);
+            --tigo-state-todo: #fcd34d;
+          }
+          @media (prefers-color-scheme: dark) {
+            :host-context(:root:not(.force-light)) .agent-config-page,
+            :host-context(html:not(.force-light)) .agent-config-page,
+            :host-context(body:not(.force-light)) .agent-config-page {
+              --tigo-tab-accent: #22d3ee;
+              --tigo-tab-active-bg: rgba(8, 145, 178, 0.16);
+              --tigo-state-ready-bg: rgba(52, 211, 153, 0.14);
+              --tigo-state-ready: #6ee7b7;
+              --tigo-state-todo-bg: rgba(251, 191, 36, 0.14);
+              --tigo-state-todo: #fcd34d;
+            }
+          }
+          
+          /* The column grows with the panel instead of staying at 720 px, and the heading stays short. */
+          .modern-main:has(.agent-config-page) {
+            padding-top: 12px !important;
+          }
+          .modern-center:has(.agent-config-page) {
+            gap: 10px !important;
+            max-width: min(100%, 980px) !important;
+            padding-top: 0 !important;
+          }
+          .modern-center:has(.agent-config-page) .agent-desktop-hero {
+            margin-bottom: 0 !important;
+          }
+          .modern-center:has(.agent-config-page) .modern-intro-title {
+            font-size: 19px;
+            line-height: 1.3;
+            margin-bottom: 0;
+          }
+          .agent-config-intro-copy {
+            display: none !important;
+          }
+          
+          /* Tabs */
+          .agent-config-page .tigo-settings-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 4px;
+            padding: 6px;
+            border-bottom: 1px solid color-mix(in srgb, var(--modern-muted, #64748b) 20%, transparent);
+          }
+          .agent-config-page .tigo-settings-tab {
+            align-items: center;
+            appearance: none;
+            background: transparent;
+            border: 0;
+            border-radius: 8px;
+            color: var(--modern-text, #0f172a);
+            cursor: pointer;
+            display: flex;
+            font: inherit;
+            gap: 8px;
+            min-width: 0;
+            padding: 8px 10px;
+            text-align: left;
+          }
+          .agent-config-page .tigo-settings-tab:hover {
+            background: color-mix(in srgb, var(--modern-muted, #64748b) 10%, transparent);
+          }
+          .agent-config-page .tigo-settings-tab:focus-visible {
+            outline: 2px solid var(--tigo-tab-accent);
+            outline-offset: 1px;
+          }
+          .agent-config-page .tigo-settings-tab ion-icon {
+            color: var(--modern-muted, #64748b);
+            flex: none;
+            font-size: 17px;
+          }
+          .agent-config-page .tigo-settings-tab.active {
+            background: var(--tigo-tab-active-bg);
+            box-shadow: inset 0 -2px 0 var(--tigo-tab-accent);
+          }
+          .agent-config-page .tigo-settings-tab.active ion-icon {
+            color: var(--tigo-tab-accent);
+          }
+          .agent-config-page .tigo-settings-tab-copy {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+          }
+          .agent-config-page .tigo-settings-tab-label {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .agent-config-page .tigo-settings-tab-status {
+            align-items: center;
+            color: var(--modern-muted, #64748b);
+            display: block;
+            font-size: 11.5px;
+            line-height: 1.35;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .agent-config-page .tigo-settings-dot {
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            height: 7px;
+            margin-right: 5px;
+            vertical-align: 1px;
+            width: 7px;
+          }
+          .agent-config-page .tigo-settings-dot.is-update {
+            background: #f59e0b;
+          }
+          /* Prompts, Skills and MCP connections: a second row under the Library tab. */
+          .agent-config-page .tigo-library-tabs {
+            display: none;
+            gap: 4px;
+            grid-column: 1 / -1;
+          }
+          .agent-config-page .tigo-settings-tabs.library-open .tigo-library-tabs {
+            display: flex;
+          }
+          .agent-config-page .tigo-settings-subtab {
+            padding: 5px 10px;
+          }
+          .agent-config-page .tigo-settings-subtab .tigo-settings-tab-copy {
+            align-items: baseline;
+            flex-direction: row;
+            gap: 6px;
+          }
+          
+          /* One section at a time: the tabs replace the accordion headers. */
+          .agent-config-page .tigo-settings-categories > ion-accordion > ion-item[slot="header"],
+          .agent-config-page .tigo-settings-categories > ion-accordion.accordion-collapsed {
+            display: none;
+          }
+          .agent-config-page .tigo-settings-categories .tigo-accordion-body {
+            padding: 2px 0;
+          }
+          .agent-config-page .tigo-settings-categories .agent-setting-section {
+            padding: 14px 18px !important;
+          }
+          .agent-config-page .tigo-settings-categories .agent-setting-description {
+            margin: 2px 0 10px;
+          }
+          
+          /* Agent cards: one compact row each, with the agent''s state. */
+          .agent-config-page .tigo-settings-categories .agent-provider-options {
+            gap: 6px !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          .agent-config-page .tigo-settings-categories ion-button.agent-provider-option {
+            height: auto !important;
+            min-height: 0;
+          }
+          .agent-config-page .tigo-settings-categories ion-button.agent-provider-option::part(native) {
+            min-height: 0;
+            padding: 8px 12px !important;
+          }
+          .agent-config-page .tigo-settings-categories .agent-provider-icon {
+            font-size: 18px !important;
+            margin-right: 10px !important;
+            padding: 7px !important;
+          }
+          .agent-config-page .tigo-settings-categories .agent-provider-title {
+            font-size: 14px;
+          }
+          .agent-config-page .tigo-settings-categories .agent-provider-copy {
+            flex: 1;
+            min-width: 0;
+          }
+          .agent-config-page .tigo-settings-categories .agent-provider-description {
+            margin-top: 1px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .agent-config-page .agent-provider-state {
+            background: var(--tigo-state-todo-bg);
+            border-radius: 9px;
+            color: var(--tigo-state-todo);
+            flex: none;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 18px;
+            margin-left: 8px;
+            padding: 0 8px;
+            white-space: nowrap;
+          }
+          .agent-config-page .agent-provider-state.is-ready {
+            background: var(--tigo-state-ready-bg);
+            color: var(--tigo-state-ready);
+          }
+          
+          /* Narrow views: the section names say enough; the helper sentences under Agent and Model come back when wide. */
+          @media (max-width: 1099px) {
+            .agent-config-page .agent-provider-setting > .agent-setting-description,
+            .agent-config-page .agent-model-setting > .agent-setting-description,
+            .agent-config-page .agent-reasoning-setting > .agent-setting-description {
+              display: none;
+            }
+            .agent-config-page .tigo-settings-categories .agent-create-label {
+              margin-bottom: 8px;
+            }
+          }
+          
+          /* Agent tab: agents on the left, model and reasoning on the right. */
+          @media (min-width: 760px) {
+            .agent-config-page ion-accordion[value="agent"] > .tigo-accordion-body {
+              align-items: start;
+              display: grid;
+              grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+            }
+            .agent-config-page ion-accordion[value="agent"] > .tigo-accordion-body > * {
+              grid-column: 2;
+            }
+            .agent-config-page ion-accordion[value="agent"] > .tigo-accordion-body > .agent-provider-setting {
+              border-bottom: 0;
+              border-right: 1px solid color-mix(in srgb, var(--modern-muted, #64748b) 20%, transparent);
+              grid-column: 1;
+              grid-row: 1 / span 4;
+            }
+          }
+          
+          /* Wide views: the tabs become a side list and the content takes the width. */
+          @media (min-width: 1100px) {
+            .modern-center:has(.agent-config-page) {
+              max-width: min(100%, 1320px) !important;
+            }
+            .modern-center:has(.agent-config-page) .modern-intro-title {
+              font-size: 23px;
+              margin-bottom: 4px;
+            }
+            .modern-center:has(.agent-config-page) {
+              gap: 4px !important;
+            }
+            .modern-main:has(.agent-config-page) {
+              padding-top: 24px !important;
+            }
+            .agent-config-intro-copy {
+              display: block !important;
+              margin: 0 0 16px !important;
+            }
+            .agent-config-page .agent-config-settings.agent-create-settings {
+              align-items: start;
+              display: grid !important;
+              grid-template-columns: 270px minmax(0, 1fr);
+            }
+            .agent-config-page .agent-config-settings.agent-create-settings > * {
+              grid-column: 2;
+              min-width: 0;
+            }
+            .agent-config-page .agent-config-settings.agent-create-settings > .tigo-settings-tabs {
+              align-self: stretch;
+              border-bottom: 0;
+              border-right: 1px solid color-mix(in srgb, var(--modern-muted, #64748b) 20%, transparent);
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+              grid-column: 1;
+              grid-row: 1 / span 40;
+              padding: 12px 10px;
+            }
+            .agent-config-page .tigo-settings-tab {
+              padding: 9px 12px;
+            }
+            .agent-config-page .tigo-settings-tab.active {
+              box-shadow: inset 3px 0 0 var(--tigo-tab-accent);
+            }
+            .agent-config-page .tigo-settings-tab-label {
+              font-size: 14px;
+            }
+            .agent-config-page .tigo-settings-tab.tigo-settings-tab-library {
+              background: transparent;
+              box-shadow: none;
+              cursor: default;
+              margin-top: 10px;
+              padding: 6px 12px 2px;
+            }
+            .agent-config-page .tigo-settings-tab-library ion-icon,
+            .agent-config-page .tigo-settings-tab-library .tigo-settings-tab-status {
+              display: none;
+            }
+            .agent-config-page .tigo-settings-tab-library .tigo-settings-tab-label {
+              color: var(--modern-muted, #64748b);
+              font-size: 11.5px;
+              letter-spacing: 0.06em;
+              text-transform: uppercase;
+            }
+            .agent-config-page .tigo-library-tabs,
+            .agent-config-page .tigo-settings-tabs.library-open .tigo-library-tabs {
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+            }
+            .agent-config-page .tigo-settings-subtab {
+              padding: 8px 12px;
+            }
+            .agent-config-page .tigo-settings-subtab .tigo-settings-tab-copy {
+              flex: 1;
+              justify-content: space-between;
+            }
+          }
           '

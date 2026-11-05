@@ -458,7 +458,8 @@ test('the template: the switch above the input bar and the setting, No Code only
   assert.match(footer, /attrName: role[\s\S]*plain:switch/);
   assert.match(footer, /attrName: '\[attr\.aria-checked\]'/);
   assert.match(footer, /page\.toggleWriteConfirm\(\);/);
-  const setting = page.slice(page.indexOf('↓ConfirmSettings ['), page.indexOf('↓ModelSettings [ngx.components.UIDynamicElement-1787737346772]'));
+  // The setting is the last block of the Preferences category, before the runtime category.
+  const setting = page.slice(page.indexOf('↓ConfirmSettings ['), page.indexOf('↓RuntimeCategory [ngx.components.UIDynamicElement-1792084635803]'));
   assert.match(setting, /script:!this\.writeConfirmAvailable\(\)/);
   assert.match(setting, /script:this\.writeConfirmChoices\(\)/);
   assert.match(setting, /page\.setWriteConfirm\(props\.stack\.root\.scope\.choice === 'on', null\);/);

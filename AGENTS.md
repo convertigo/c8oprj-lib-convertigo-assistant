@@ -138,6 +138,16 @@ rediscovering the same context.
   only the agent in use: a card whose agent the panel has not read starts the settings
   check (`startAgentProviderCheck`), never shows a runtime to install. Cover with
   `node --test tests/nocode-agent-not-ready.test.cjs`.
+- The settings page shows one section at a time. `SettingsTabs` (a UICustom at the
+  top of `CreateSettings`) lists Agent and model, Preferences, Runtime and stack and
+  the Library (Prompts, Skills, MCP connections), each with its state; a tab only
+  calls `onTigoResourcesAccordionChange`, so the active tab is the open accordion
+  (`local.ResourceAccordion`) and code that opens a section keeps working.
+  Preferences (`PrefsCategory`) holds Reveal, the feedback mode and confirm-before-
+  modifying. `TigoSettingsTabsStyle` hides the accordion headers, shows the tabs as a
+  row in narrow views (the docked Studio panel) and as a side list from 1100 px, puts
+  agents and model side by side from 760 px, and keeps each agent card to one compact
+  row with its ready state. Cover with `node --test tests/assistant_settings_tabs.test.cjs`.
 - Settings and runtime discovery may use the visible user-scoped Codex home.
   Studio/generalist conversations that expose the managed JxBrowser viewer use
   a conversation-scoped Codex home so each resident Playwright MCP keeps its own
