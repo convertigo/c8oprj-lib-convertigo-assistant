@@ -8,6 +8,7 @@ scriptContent:
         /*End_c8o_CompImport*/
         /*Begin_c8o_CompDeclaration*/
         	disabled = false;
+        	busy = false;
         	isDragging = false;
         	attachInputEl = null;
         	attachInputChangeHandler = null;
@@ -48,8 +49,15 @@ scriptContent:
         		this.refresh(0);
         	}
         	
+        	// The page calls it around the generation: a spinner in the drop zone, no loading overlay.
+        	setBusy(busy) {
+        		this.busy = busy === true;
+        		this.isDragging = false;
+        		this.refresh(0);
+        	}
+        	
         	isComponentEnabled() {
-        		return this.disabled !== true && this.EnableChat !== false && this.IsProcessing !== true;
+        		return this.disabled !== true && this.busy !== true && this.EnableChat !== false && this.IsProcessing !== true;
         	}
         	
         	getAttachInputElement() {
@@ -294,13 +302,25 @@ scriptContent:
       attrValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: script:this.disabled || this.EnableChat === false || this.IsProcessing === true
+          - MobileSmartSourceType: script:this.disabled || this.busy === true || this.EnableChat === false || this.IsProcessing === true
     ↓Dragging [ngx.components.UIAttribute-1781100000206]: 
       attrName: '[class.figma-drop-button-dragging]'
       attrValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
           - MobileSmartSourceType: script:this.isDragging
+    ↓Busy [ngx.components.UIAttribute-1794310000008]: 
+      attrName: '[class.figma-drop-button-busy]'
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.busy === true
+    ↓AriaBusy [ngx.components.UIAttribute-1794310000009]: 
+      attrName: '[attr.aria-busy]'
+      attrValue: 
+        - xmlizable: 
+          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+          - MobileSmartSourceType: script:this.busy === true || null
     ↓Event [ngx.components.UIControlEvent-1781100000207]: 
       ↓OpenAttachPicker [ngx.components.UICustomAction-1781100000208]: 
         actionValue: 
@@ -490,6 +510,34 @@ scriptContent:
           .figma-drop-button.figma-drop-button-dragging::part(native) {
             border-color: var(--modern-cyan, #06b6d4);
             background: var(--figma-drop-bg-dragging);
+          }
+          
+          .figma-drop-button.figma-drop-button-busy {
+            opacity: 1;
+            cursor: progress;
+          }
+          
+          .figma-drop-button-busy .figma-drop-icon-wrap {
+            position: relative;
+          }
+          
+          .figma-drop-button-busy .figma-drop-icon {
+            visibility: hidden;
+          }
+          
+          .figma-drop-button-busy .figma-drop-icon-wrap::after {
+            content: "";
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 3px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 25%, transparent);
+            border-top-color: var(--modern-cyan, #06b6d4);
+            animation: figma-drop-spin 0.9s linear infinite;
+          }
+          
+          @keyframes figma-drop-spin {
+            to { transform: rotate(360deg); }
           }
           
           .figma-drop-content {

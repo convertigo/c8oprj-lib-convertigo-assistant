@@ -21395,8 +21395,49 @@ title: Tigo
     ↓Event [ngx.components.UIControlEvent-1751354586665]: 
       attrName: (RunQuestion)
       eventName: RunQuestion
+      ↓ShowSendPending [ngx.components.UICustomAction-1794310000001]: 
+        comment: No loading overlay while the files of the prompt upload; the chat spinner shows it and the composer waits for it.
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		if (!page.local) {
+                			page.local = {};
+                		}
+                		page.local.SendPending = true;
+                		page.local.spinner = true;
+                		page.tick();
+                		resolve();
       ↓CallSequence [ngx.components.UIDynamicAction-1751354620842]: 
-        beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:lib_ConvertigoAssistant.UploadFilesRouter"}'
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:lib_ConvertigoAssistant.UploadFilesRouter",
+           "noLoading": "plain:true"
+          }'
+        ↓Failure [ngx.components.UIActionFailureEvent-1794310000002]: 
+          ↓HideSendPending [ngx.components.UICustomAction-1794310000003]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		if (!page.local) {
+                    			page.local = {};
+                    		}
+                    		page.local.SendPending = false;
+                    		page.local.spinner = false;
+                    		var sent = props.stack.root.out;
+                    		var draft = sent && sent.question != null ? ("" + sent.question) : "";
+                    		if (draft.length && page.chatfooter && page.chatfooter.setQuestionText) {
+                    			var current = page.chatfooter.getQuestionText ? ("" + page.chatfooter.getQuestionText()) : "";
+                    			if (!current.trim().length) {
+                    				page.chatfooter.setQuestionText(draft, false);
+                    			}
+                    		}
+                    		page.tick();
+                    		resolve();
         ↓files [ngx.components.UIControlVariable-1751354620845]: 
           varValue: 
             - xmlizable: 
@@ -21411,6 +21452,8 @@ title: Tigo
                   '		page.c8o.log.debug(''[MB] '' + props.actionFunction + '': '' + props.actionName);
                   		page.local.AIFiles = [];
                   		page.local.UploadImageCursor = 0;
+                  		page.local.SendPending = false;
+                  		page.local.spinner = false;
                   		console.log("page.local.AIFiles", page.local.AIFiles);
                   		resolve();
                   '
@@ -25641,7 +25684,12 @@ title: Tigo
 ↓AgentQuotaRefresh [ngx.components.UIEventSubscriber-1791878665075]: 
   topic: AgentQuotaRefresh
   ↓ReadQuota [ngx.components.UIDynamicAction-1791878665577]: 
-    beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:lib_ConvertigoAssistant.AgentQuota"}'
+    beanData: |
+      '{
+       "ionBean": "CallSequenceAction",
+       "requestable": "plain:lib_ConvertigoAssistant.AgentQuota",
+       "noLoading": "plain:true"
+      }'
     ↓Failure [ngx.components.UIActionFailureEvent-1791879156127]: 
       ↓QuotaUnavailable [ngx.components.UICustomAction-1791879156605]: 
         actionValue: 

@@ -266,7 +266,7 @@ console.log("Assistant Claude routing OK");
 const routerSequenceSource = fs.readFileSync("_c8oProject/sequences/UploadFilesRouter.yaml", "utf8");
 assert.match(routerSequenceSource, /storeAttachments\(/, "the upload router must store attachments locally in agent mode");
 assert.match(routerSequenceSource, /"UploadFiles"/, "the upload router must keep the legacy OpenAI upload for the hosted assistant");
-assert.match(pageSource, /requestable":"plain:lib_ConvertigoAssistant\.UploadFilesRouter"/, "the prompt footer must call the upload router");
+assert.match(pageSource, /"requestable": ?"plain:lib_ConvertigoAssistant\.UploadFilesRouter"/, "the prompt footer must call the upload router");
 assert.match(pageSource, /"path\\":\\"\?\.result\.file\\"/, "the upload loop must iterate the router result");
 assert.equal(typeof C8O.assistantAgentBridge.storeAttachments, "function");
 const emptyStore = C8O.assistantAgentBridge.storeAttachments({ threadid: "", userId: "studio", files: [], attachments: [] });

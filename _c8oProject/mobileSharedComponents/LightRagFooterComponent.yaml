@@ -1091,6 +1091,10 @@ scriptContent:
         			if (this.IsProcessing === true) {
         				return;
         			}
+        			// The previous send still uploads its files (no loading overlay any more): wait for it.
+        			if (owner && owner.local && owner.local.SendPending === true) {
+        				return;
+        			}
         			var message = ('''' + this.getQuestionText()).trim();
         			if (!message.length) {
         				return;

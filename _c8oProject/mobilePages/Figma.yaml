@@ -1511,8 +1511,45 @@ title: Title for Figma
                 		page.enableAutoScroll();
                 		resolve();
                 
+      ↓ShowBusy [ngx.components.UICustomAction-1794310000004]: 
+        comment: No loading overlay while the component is generated; the drop zone shows a spinner and waits.
+        actionValue: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+            - com.twinsoft.convertigo.beans.common.FormatedContent: 
+              →: |
+                		if (page.chatinput && page.chatinput.setBusy) {
+                			page.chatinput.setBusy(true);
+                		}
+                		resolve();
       ↓CallSequence [ngx.components.UIDynamicAction-1752575630370]: 
-        beanData: '{"ionBean":"CallSequenceAction","requestable":"plain:lib_ConvertigoAssistant.CreateFigmaComp"}'
+        beanData: |
+          '{
+           "ionBean": "CallSequenceAction",
+           "requestable": "plain:lib_ConvertigoAssistant.CreateFigmaComp",
+           "noLoading": "plain:true"
+          }'
+        ↓Failure [ngx.components.UIActionFailureEvent-1794310000005]: 
+          ↓EndBusyOnFailure [ngx.components.UICustomAction-1794310000006]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                    		if (page.chatinput && page.chatinput.setBusy) {
+                    			page.chatinput.setBusy(false);
+                    		}
+                    		resolve();
+        ↓EndBusy [ngx.components.UICustomAction-1794310000007]: 
+          actionValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+              - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                →: |
+                  		if (page.chatinput && page.chatinput.setBusy) {
+                  			page.chatinput.setBusy(false);
+                  		}
+                  		resolve();
         ↓zipfiles [ngx.components.UIControlVariable-1752575720168]: 
           varValue: 
             - xmlizable: 
