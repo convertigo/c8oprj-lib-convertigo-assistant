@@ -1980,6 +1980,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var GATEWAY_KEY_TURN_MARGIN_MS = 5 * 60 * 1000;
   var GATEWAY_KEY_PURGE_MS = 2 * 60 * 60 * 1000;
   var GATEWAY_KEY_INDEX = "lib_ConvertigoAssistant.gatewayKey.index";
+  // TigoAccess makes a server key expire in LiteLLM (expiresAt, 120 min after its last get by default, each get pushing it
+  // back): a key in memory never outlives its expiry minus this margin, and a running turn asks again for it every
+  // GATEWAY_KEY_TTL_MS so that the same key stays alive however long the turn.
+  var GATEWAY_KEY_EXPIRY_MARGIN_MS = 15 * 60 * 1000;
   var GATEWAY_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,256}$/;
   var TIGO_BUDGET_SCOPES = ["member", "team", "key", "user", "unknown"];
 
@@ -2123,12 +2127,30 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return { ok: false, code: /^[a-z_]{1,64}$/.test(code) ? code : "service_unavailable" };
     }
     var expiresAt = Number(now()) + GATEWAY_KEY_TTL_MS;
+    var keyExpiresAt = Date.parse(trim(answer.expiresAt));
+    if (isFinite(keyExpiresAt) && keyExpiresAt > 0) {
+      expiresAt = Math.min(expiresAt, keyExpiresAt - GATEWAY_KEY_EXPIRY_MARGIN_MS);
+    }
     var fresh = newGatewayKeyHandle();
-    sharedSecretSet(fresh, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0, expiresAt: expiresAt }));
+    sharedSecretSet(fresh, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0, expiresAt: expiresAt,
+      keyExpiresAt: isFinite(keyExpiresAt) && keyExpiresAt > 0 ? keyExpiresAt : null }));
     sessionGatewayKeyHandle(fresh);
     // the previous key of this session stays for the process that holds it, then goes with the purge
     purgeUserGatewayKeys(fresh, expiresAt);
     return { ok: true, handle: fresh };
+  }
+
+  // While a turn of this session's user runs on the gateway, its key is asked again once its time in memory is over:
+  // TigoAccess then pushes the key's expiry back (same key), so a long turn never meets it. Never for a viewer of
+  // someone else's conversation, never for a session without a key, never a reason for the read to fail.
+  function keepUserGatewayKeyAlive(state, options) {
+    try {
+      if (isTerminalStatus(state.status) || !userGatewayKeysOn(state) || !usesConvertigoGateway(state)
+          || !trim(state.userId).length || trim(state.userId) !== trim((options || {}).userId) || !sessionGatewayKeyHandle().length) {
+        return;
+      }
+      userGatewayKeyHandle({ userId: state.userId }, true);
+    } catch (_ignoreKeepAlive) {}
   }
 
   // A key C8Oforms or the gateway refused (right removed, key revoked, rejected): this session asks again next time.
@@ -2371,6 +2393,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.budgetAnswerRunid = trim(state.runid);
     state.errorCode = "budget_exceeded";
     return answer;
+  }
+
+  // The gateway refused the user's own key: HTTP 401, LiteLLM's "Expired Key", or Vibe's "Invalid API key" (it may drop
+  // the status). Never a budget: that one is a 429 with its own code.
+  function userGatewayKeyRejected(state, data) {
+    if (!userGatewayKeysOn(state) || !usesConvertigoGateway(state) || isBudgetError(data)) {
+      return false;
+    }
+    if (agentHttpErrorStatus(data, 0) === 401) {
+      return true;
+    }
+    return /expired key|key expired|invalid api key|authentication error|\bhttp(?:\/[0-9.]+)?\s*[:=]?\s*401\b|\b401 unauthorized\b/i.test(trim(extractAgentErrorText(data, 0)));
   }
 
   // A rate limit on the gateway without the budget code (a runtime older than the Bridge's hook): the quota says
@@ -4723,6 +4757,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userKeyTeamFull: "L'\u00e9quipe Tigo de ce serveur est compl\u00e8te. Un administrateur du No Code Studio peut l'agrandir.",
       agentIsolationUnavailable: "Cet agent ne peut pas fonctionner sur ce serveur avec des cl\u00e9s Tigo par utilisateur : il n'y serait pas isol\u00e9 des agents des autres utilisateurs. Un administrateur peut choisir l'agent Convertigo.",
       conversationNotOwned: "Cette conversation appartient \u00e0 un autre compte. Commencez une nouvelle conversation.",
+      userKeyExpired: "La cl\u00e9 Tigo de votre compte avait expir\u00e9. Renvoyez votre message : une cl\u00e9 renouvel\u00e9e sera utilis\u00e9e.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -4776,6 +4811,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userKeyTeamFull: "The Tigo team of this server is full. An administrator of the No Code Studio can extend it.",
       agentIsolationUnavailable: "This agent cannot run on this server with per-user Tigo keys: it would not be isolated from the other users' agents. An administrator can choose the Convertigo agent.",
       conversationNotOwned: "This conversation belongs to another account. Start a new conversation.",
+      userKeyExpired: "The Tigo key of your account had expired. Send your message again: a renewed key will be used.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -9518,6 +9554,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!isTerminalStatus(state.status) && isResidentProvider(state.provider) && trim(state.answer).length && state.answerIsFinal !== true) {
       state.answer = "";
     }
+    keepUserGatewayKeyAlive(state, options);
     if (state.status === "completed" || state.status === "failed" || state.status === "cancelled" || state.status === "closed" || state.status === "deleted") {
       if (state.status === "completed") {
         if (!trim(state.answer).length) {
@@ -9700,11 +9737,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           // a used-up budget ends the turn with its level and reset date, read again (contract section 6)
           if (isBudgetError(data) || gatewayRateLimitIsBudget(state, data)) {
             state.error = budgetErrorAnswer(state, data);
+          } else if (userGatewayKeyRejected(state, data)) {
+            // an expired key (TigoAccess makes them expire) or a revoked one: the next message asks C8Oforms again
+            forgetUserGatewayKey(state);
+            state.error = lang(state).userKeyExpired;
           } else {
             state.error = userFacingAgentError(state, data);
-            if (userGatewayKeysOn(state) && agentHttpErrorStatus(data, 0) === 401) {
-              forgetUserGatewayKey(state);
-            }
           }
           if (isResidentProvider(state.provider) && isCodexAuthenticationError(data)) {
             state.setupRequired = true;
