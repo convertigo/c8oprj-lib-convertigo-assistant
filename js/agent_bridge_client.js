@@ -1090,9 +1090,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // Per-user gateway keys: the handle of the user's key goes with every call that starts, sets up, prompts or reads an
   // agent; a start or setup asks C8Oforms for the key when memory has none (a prewarm), the others use memory only.
   function attachGatewayKeyHandle(payload, options, sequence) {
-    if (trim(payload.gatewayKeyHandle).length) {
-      return;
-    }
+    // only the handle of this session's own key, never one that came with the request
+    delete payload.gatewayKeyHandle;
     // a prewarm (the panel opening) never waits for C8Oforms and TigoAccess (up to ~45 s): memory only
     var start = /^agent_[a-z]+_(setup|start)$/.test(sequence) && trim(payload.prewarm) !== "true";
     if (!start && !/^agent_[a-z]+_prompt$/.test(sequence) && sequence !== "agent_settings") {
@@ -1102,8 +1101,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     // asking C8Oforms enrols the user in the server's team: only for an agent on the gateway
-    var key = trim(options.gatewayKeyHandle).length ? { ok: true, handle: trim(options.gatewayKeyHandle) }
-      : userGatewayKeyHandle(options, start && usesConvertigoGateway(options));
+    var key = userGatewayKeyHandle(options, start && usesConvertigoGateway(options));
     if (key.ok) {
       payload.gatewayKeyHandle = key.handle;
     }
@@ -2039,8 +2037,34 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return false;
   }
 
-  function gatewayKeyHandleOf(userId) {
-    return GATEWAY_KEY_HANDLE_PREFIX + hashShort("tigo-user-key:" + trim(userId));
+  // A random handle per key: it cannot be computed from a user id. The HTTP session of the authenticated user keeps it,
+  // so a key in memory is only served to the session that obtained it, and only while its owner is that session's user.
+  var GATEWAY_KEY_SESSION_ATTRIBUTE = "lib_ConvertigoAssistant.gatewayKeyHandle";
+
+  function newGatewayKeyHandle() {
+    return GATEWAY_KEY_HANDLE_PREFIX + String(UUID.randomUUID()).replace(/-/g, "");
+  }
+
+  // the handle of this session ("" without one); with a value, stores it ("" removes it)
+  function sessionGatewayKeyHandle(value) {
+    try {
+      var session = context.httpSession;
+      if (session == null) {
+        return "";
+      }
+      if (typeof value === "string") {
+        if (value.length) {
+          session.setAttribute(GATEWAY_KEY_SESSION_ATTRIBUTE, value);
+        } else {
+          session.removeAttribute(GATEWAY_KEY_SESSION_ATTRIBUTE);
+        }
+        return value;
+      }
+      var stored = session.getAttribute(GATEWAY_KEY_SESSION_ATTRIBUTE);
+      return stored == null ? "" : trim(String(stored));
+    } catch (_ignoreNoSession) {
+      return "";
+    }
   }
 
   // An internal call whose answer holds a secret: the engine writes no log of its input, answer or HTTP traces in this
@@ -2091,9 +2115,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!userId.length) {
       return { ok: false, code: "authentication_required" };
     }
-    var handle = gatewayKeyHandleOf(userId);
+    var handle = sessionGatewayKeyHandle();
     try {
-      var cached = JSON.parse(sharedSecretGet(handle) || "null");
+      var cached = handle.length ? JSON.parse(sharedSecretGet(handle) || "null") : null;
       if (cached && cached.owner === userId && Number(cached.expiresAt) > Number(now()) + (Number(minRemainingMs) || 0)
           && GATEWAY_KEY_PATTERN.test(trim(cached.key))) {
         return { ok: true, handle: handle };
@@ -2111,21 +2135,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var key = trim(answer.key);
     if (trim(answer.status) !== "ok" || !GATEWAY_KEY_PATTERN.test(key)) {
-      sharedSecretRemove(handle);
+      forgetUserGatewayKey();
       var code = trim(answer.error && answer.error.code) || trim(answer.code) || "service_unavailable";
       return { ok: false, code: /^[a-z_]{1,64}$/.test(code) ? code : "service_unavailable" };
     }
     var expiresAt = Number(now()) + GATEWAY_KEY_TTL_MS;
-    sharedSecretSet(handle, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0, expiresAt: expiresAt }));
-    purgeUserGatewayKeys(handle, expiresAt);
-    return { ok: true, handle: handle };
+    var fresh = newGatewayKeyHandle();
+    sharedSecretSet(fresh, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0, expiresAt: expiresAt }));
+    sessionGatewayKeyHandle(fresh);
+    // the previous key of this session stays for the process that holds it, then goes with the purge
+    purgeUserGatewayKeys(fresh, expiresAt);
+    return { ok: true, handle: fresh };
   }
 
-  // A key C8Oforms or the gateway refused (right removed, key revoked, rejected): the next turn asks again.
-  function forgetUserGatewayKey(options) {
-    var userId = trim((options || {}).userId);
-    if (userId.length) {
-      sharedSecretRemove(gatewayKeyHandleOf(userId));
+  // A key C8Oforms or the gateway refused (right removed, key revoked, rejected): this session asks again next time.
+  function forgetUserGatewayKey() {
+    var handle = sessionGatewayKeyHandle();
+    if (handle.length) {
+      sharedSecretRemove(handle);
+      sessionGatewayKeyHandle("");
     }
   }
 

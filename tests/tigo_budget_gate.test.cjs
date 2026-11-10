@@ -22,13 +22,13 @@ function assignment(name) {
   }
 }
 
-const NAMES = ['c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigoGateway', 'gatewayKeyHandleOf', 'callLocalSequenceQuietly',
+const NAMES = ['c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigoGateway', 'newGatewayKeyHandle', 'sessionGatewayKeyHandle', 'callLocalSequenceQuietly',
   'userGatewayKeyHandle', 'forgetUserGatewayKey', 'userTigoQuota', 'usdValue', 'tigoBudgetScope', 'effectiveTigoBalance', 'twoDigits',
   'formatResetDate', 'budgetExhaustedMessage', 'userKeyRefusalMessage', 'convertigoTurnRefusalResponse', 'convertigoTurnRefusal',
   'readConvertigoBalance', 'isBudgetError', 'budgetErrorAnswer', 'gatewayRateLimitIsBudget', 'bridgeRefusalAnswer', 'attachGatewayKeyHandle',
   'lang', 'extractAgentErrorText', 'purgeUserGatewayKeys'];
 const CONSTANTS = ['USER_KEY_SEQUENCE', 'USER_QUOTA_SEQUENCE', 'USER_KEY_SERVER_SYMBOL', 'GATEWAY_KEY_HANDLE_PREFIX', 'GATEWAY_KEY_TTL_MS', 'GATEWAY_KEY_PATTERN',
-  'GATEWAY_KEY_TURN_MARGIN_MS', 'GATEWAY_KEY_PURGE_MS', 'GATEWAY_KEY_INDEX',
+  'GATEWAY_KEY_TURN_MARGIN_MS', 'GATEWAY_KEY_PURGE_MS', 'GATEWAY_KEY_INDEX', 'GATEWAY_KEY_SESSION_ATTRIBUTE',
   'TIGO_BUDGET_SCOPES', 'AGENT_ACCESS_PROJECT', 'TRANSLATIONS'];
 const USER_KEY = 'sk-user-' + 'a'.repeat(32);
 
@@ -38,10 +38,23 @@ function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUse
   const mdc = [];
   let mdcValue = nolog;
   const store = new Map();
+  const logs = [];
   let clock = 1_000_000;
+  // an HTTP session of the user; sessionFor(other) switches to another one (another tab, another user)
+  const sessions = new Map();
+  const sessionFor = name => {
+    if (!sessions.has(name)) {
+      const attributes = new Map();
+      sessions.set(name, { getAttribute: k => (attributes.has(k) ? attributes.get(k) : null), setAttribute: (k, v) => attributes.set(k, v),
+        removeAttribute: k => attributes.delete(k), attributes });
+    }
+    return sessions.get(name);
+  };
   const sandbox = {
     trim: value => String(value ?? '').trim(),
-    log: { warn() {} },
+    log: { warn: m => logs.push(String(m)), info: m => logs.push(String(m)) },
+    context: { httpSession: sessionFor('ann') },
+    UUID: { randomUUID: () => require('node:crypto').randomUUID() },
     now: () => clock,
     hashShort: value => require('node:crypto').createHash('sha256').update(String(value)).digest('hex').slice(0, 16),
     normalizeProvider: value => String(value || 'vibe').trim().toLowerCase(),
@@ -78,7 +91,7 @@ function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUse
     C8O: { assistantAgentBridge: { refreshTigoAccess: () => { calls.push({ sequence: 'TigoAccessBootstrap' }); if (tigoAccess instanceof Error) throw tigoAccess; return tigoAccess; } } }
   };
   vm.runInNewContext(backendParts(NAMES, CONSTANTS) + '\n' + assignment('noCodeTigoQuota'), sandbox);
-  return { sandbox, calls, mdc, store, tick: ms => { clock += ms; } };
+  return { sandbox, calls, mdc, store, logs, sessionFor, use: name => { sandbox.context.httpSession = sessionFor(name); }, tick: ms => { clock += ms; } };
 }
 
 const NOCODE = { skillProfile: 'nocode', userId: 'ann@example.com', provider: 'convertigo', model: 'glm-5-3', language: 'en', threadid: 't1' };
@@ -142,7 +155,7 @@ test('No Code: the user key is asked to C8Oforms without a log, kept behind a ha
   const { sandbox, calls, mdc, store } = load({ quota: contractQuota(2) });
   const options = { userId: NOCODE.userId };
   assert.equal(sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), options), null);
-  assert.match(options.gatewayKeyHandle, /^lib_ConvertigoAssistant\.gatewayKey\.[0-9a-f]{16}$/);
+  assert.match(options.gatewayKeyHandle, /^lib_ConvertigoAssistant\.gatewayKey\.[0-9a-f]{32}$/, "random");
   const keyCall = calls.find(call => call.sequence === 'APIV2_TigoUserKey');
   assert.equal(keyCall.project, 'C8Oforms');
   assert.equal(JSON.stringify(keyCall.variables), '{}', 'the user of the session, never a page value');
@@ -194,28 +207,74 @@ test('No Code: a refused key ends the turn with its reason, never another key', 
   assert.deepEqual(thrown.mdc.slice(-1), [['remove', 'nolog']], 'the guard is removed after a failure');
 });
 
-test('the key handle: memory for a few minutes, one per user, forgotten on refusal', () => {
-  const { sandbox, calls, store, tick } = load();
+test('the key handle: random, held by the session of its owner, kept a few minutes, purged, forgotten on refusal', () => {
+  const { sandbox, calls, store, tick, use } = load();
   assert.equal(sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, false).ok, false, 'no fetch: memory only');
   const first = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  assert.match(first.handle, /^lib_ConvertigoAssistant\.gatewayKey\.[0-9a-f]{32}$/, 'random, not derived from the user');
   assert.equal(sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true).handle, first.handle);
   assert.equal(calls.length, 1, 'kept in memory');
-  assert.notEqual(sandbox.userGatewayKeyHandle({ userId: 'bob@example.com' }, true).handle, first.handle);
+  use('bob');
+  const bob = sandbox.userGatewayKeyHandle({ userId: 'bob@example.com' }, true);
+  assert.notEqual(bob.handle, first.handle);
+  use('ann');
   tick(6 * 60 * 1000);
   sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
   assert.equal(calls.length, 2, 'still in its lifetime for a start');
-  sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true, 5 * 60 * 1000);
+  const renewed = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true, 5 * 60 * 1000);
   assert.equal(calls.filter(call => call.sequence === 'APIV2_TigoUserKey').length, 3, 'a turn needs 5 minutes of it left: asked again');
-  // a user gone: forgotten two hours after the end of its lifetime, at the next key asked
+  assert.notEqual(renewed.handle, first.handle, 'a new key, a new handle');
+  // keys of the past: forgotten two hours after the end of their lifetime, at the next key asked
   tick(2 * 60 * 60 * 1000 + 11 * 60 * 1000);
-  const bob = sandbox.gatewayKeyHandleOf('bob@example.com');
-  assert.equal(store.has(bob), true);
+  assert.equal(store.has(bob.handle), true);
+  use('carl');
   sandbox.userGatewayKeyHandle({ userId: 'carl@example.com' }, true);
-  assert.equal(store.has(bob), false, 'purged');
+  assert.equal(store.has(bob.handle), false, 'purged');
+  assert.equal(store.has(first.handle), false, 'purged');
   assert.deepEqual(Object.keys(JSON.parse(store.get('lib_ConvertigoAssistant.gatewayKey.index'))).length, 1);
-  sandbox.forgetUserGatewayKey({ userId: 'ann@example.com' });
-  assert.equal(store.has(first.handle), false);
+  use('ann');
+  sandbox.forgetUserGatewayKey();
+  assert.equal(store.has(renewed.handle), false);
+  assert.equal(sandbox.sessionGatewayKeyHandle(), '');
   assert.equal(sandbox.userGatewayKeyHandle({}, true).code, 'authentication_required');
+});
+
+test('T6: a cached key is served to its owner\'s session only; a handle from the request is never used', () => {
+  const { sandbox, calls, use, sessionFor } = load();
+  const ann = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  use('mallory');
+  assert.equal(sandbox.userGatewayKeyHandle({ userId: 'mallory@example.com' }, false).ok, false, 'another session has nothing');
+  sessionFor('mallory').setAttribute('lib_ConvertigoAssistant.gatewayKeyHandle', ann.handle);
+  assert.equal(sandbox.userGatewayKeyHandle({ userId: 'mallory@example.com' }, false).ok, false, 'even holding the handle, not its owner');
+  const payload = { gatewayKeyHandle: ann.handle };
+  sandbox.attachGatewayKeyHandle(payload, Object.assign({}, NOCODE, { userId: 'mallory@example.com' }), 'agent_vibe_prompt');
+  assert.equal(payload.gatewayKeyHandle, undefined, 'a handle that came with the call is dropped');
+  assert.equal(calls.length, 1);
+});
+
+test('T8: a key past its lifetime, then purged, is never served', () => {
+  const { sandbox, store, tick } = load();
+  const first = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  tick(10 * 60 * 1000 + 1);
+  const payload = {};
+  sandbox.attachGatewayKeyHandle(payload, Object.assign({}, NOCODE), 'agent_vibe_prompt');
+  assert.equal(payload.gatewayKeyHandle, undefined, 'past its lifetime: no handle without asking again');
+  store.delete(first.handle);
+  assert.equal(sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, false).ok, false, 'purged');
+});
+
+test('T5: the key never reaches a log, a refusal, an answer, the options or the conversation', () => {
+  const thrown = load({ key: new Error('TigoAccess failed for ' + USER_KEY) });
+  thrown.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId });
+  const ok = load({ quota: contractQuota(0) });
+  const options = { userId: NOCODE.userId };
+  const state = Object.assign({ runid: 'r1' }, NOCODE);
+  const refused = ok.sandbox.convertigoTurnRefusal(state, options);
+  const answer = ok.sandbox.budgetErrorAnswer(state, { code: 'budget_exceeded', scope: 'member' });
+  const quota = ok.sandbox.C8O.assistantAgentBridge.noCodeTigoQuota({});
+  const visible = JSON.stringify({ logs: thrown.logs.concat(ok.logs), refused, answer, quota, options, state });
+  assert.ok(!visible.includes(USER_KEY), visible);
+  assert.match(thrown.logs.join('\n'), /sk-\*\*\*/, 'the log line says a key was there, not which');
 });
 
 test('no key is asked for an agent off the gateway (it would enrol the user), nor by a prewarm', () => {
@@ -313,7 +372,8 @@ test('a turn the gateway stopped on a used-up budget ends with its level and res
 test('a start or prompt the Bridge refused reads as a sentence', () => {
   const { sandbox, store } = load({ quota: new Error('down') });
   const state = Object.assign({ runid: 'r1' }, NOCODE);
-  store.set(sandbox.gatewayKeyHandleOf('ann@example.com'), '{}');
+  sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  store.delete('lib_ConvertigoAssistant.gatewayKey.index');
   assert.equal(sandbox.bridgeRefusalAnswer(state, 'Error: gateway_credential_missing: The Tigo key of this account is not available.'),
     'The Tigo key of your account could not be obtained. Try again in a moment.');
   assert.equal(store.size, 0, 'the next turn asks C8Oforms again');

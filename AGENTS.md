@@ -727,10 +727,13 @@ rediscovering the same context.
   `options.tigoAccessResult`), C8Oforms `APIV2_TigoUserQuota` on a No Code server. An unknown balance lets the turn go.
 - On a No Code server registered with TigoAccess (`C8Oforms.tigo.server.id`) whose C8Oforms has `APIV2_TigoUserKey`,
   the user's key is asked under the log4j MDC
-  `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind
-  `lib_ConvertigoAssistant.gatewayKey.<hash>`: 10 min for new starts, at least 5 left when a turn starts, purged 2 h
-  after that. Only that handle goes to the Bridge (`attachGatewayKeyHandle`), and it is fetched for a gateway agent
-  only. The handle is the session user's; a conversation of another account is refused (`conversation_not_owned`).
+  `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind a
+  random handle, `lib_ConvertigoAssistant.gatewayKey.<random>`: 10 min for new starts, at least 5 left when a turn
+  starts, purged 2 h after that. The HTTP session that obtained it holds the handle, and a cached key is served only to
+  that session while its user owns it. Only that handle goes to the Bridge (`attachGatewayKeyHandle`, which drops any
+  handle that came with the request), and it is fetched for a gateway agent only. A conversation of another account is
+  refused (`conversation_not_owned`). `context.server` can be read by any Rhino code of the engine: see the Bridge's
+  `docs/nocode-user-keys.md` about co-hosted low-code projects.
   A refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right
   or a 401 forgets it.
 - A turn the gateway stopped (`budget_exceeded`, or a gateway rate limit while the quota reads zero) ends with
