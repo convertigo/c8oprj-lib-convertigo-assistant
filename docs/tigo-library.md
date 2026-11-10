@@ -187,9 +187,43 @@ credential-bearing URLs, and recognized credential command arguments are rejecte
 ## Editing through Convertigo MCP
 
 The `tigo-resources` tool requires a full authenticated Convertigo MCP token.
-It operates only on a named project's resources; the NoCode catalog does not
-expose it. It cannot change personal favorites, activation or credentials, edit
-built-in resources, or commit/push Git changes.
+In Studio it operates on a named project's resources, or on the Studio owner's
+personal library with `input.scope: "workspace"`. This personal scope is never
+accepted on a server. The No Code catalog does not expose the tool, and No Code
+credentials are rejected even if the sequence is called directly. The tool cannot
+change favorites, conversation activation or secrets, edit built-ins, or commit Git changes.
+
+Studio includes two additional English/French prompts for every harness:
+**Fast POC** demonstrates the nominal end-to-end path with one functional check,
+keeps secrets and destructive actions out, and lists production work left aside.
+**Security check** combines the read-only `project-security-audit` tool with
+agent analysis and a severity-ranked report; fixes require a separate agreement.
+These prompts are not included in the No Code catalog.
+
+### Ask Tigo to extend the library
+
+Ask for a prompt, a skill or an MCP declaration, and specify **Shared project**
+or **Personal workspace**. Tigo can read documentation to prepare it; documentation
+is data, not authorization to execute commands or expand access. Prompts and skills
+use the existing editor, format and revision checks. Remove them from the library
+when no longer needed.
+
+An MCP save by the agent creates a **pending proposal**, not a connection.
+Open **Settings > Library > MCP connections**, reload the library if needed,
+and review its scope, command or URL, arguments and secret references. Choose
+**Add this MCP** or **Reject**. Only the authenticated Studio UI can confirm a
+proposal through the protected resource facade; the agent tool has no confirmation
+action. Proposals expire after 15 minutes, are bounded to ten per user, and reject
+changed declarations or destination revisions. Adding does not enable the MCP:
+activation still requires the existing separate conversation control.
+
+Never send secret values to Tigo or put them in a command, URL, resource file or
+prompt. Use named references and enter values through the existing personal-secret
+UI; the tool neither reads nor writes those values. Review covers network access
+and code execution: it does not establish that an external server is trustworthy.
+Full Studio-author privileges are not a sandbox against the machine owner.
+No Code self-configuration remains disabled, and these additions do not change
+Landlock, MCP-only restrictions or server tool policies.
 
 Supported actions: `list`, `get`, `save`, `duplicate`, `delete`, `readFile`, and
 `writeFile`. Read before updating: the returned `revision` is required for edits,

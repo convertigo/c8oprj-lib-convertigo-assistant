@@ -392,6 +392,48 @@ C8O.tigoResources = (function () {
         mcpRevisions: v.mcpRevisions || {}
       };
     }
+    function proposals() {
+      var rows = object(host.read(personal, "mcp-proposals.json")).items || [];
+      return rows.filter(function (p) { return p && p.expiresAt > host.now(); });
+    }
+    function propose(args) {
+      if (!who.studio || !who.admin) { fail("studio_configuration_required"); }
+      var destination = source(args.scope, args.project);
+      if (destination.readOnly) { fail("builtin_read_only"); }
+      var data = normalize("mcp", args.input);
+      var previous = load(destination, "mcp", data.id);
+      if (previous ? previous.revision !== args.revision : !!args.revision) { fail("revision_conflict"); }
+      var payload = {scope: destination.scope, project: destination.project, data: data, expectedRevision: args.revision || ""};
+      var canonical = JSON.stringify(payload);
+      if (canonical.length > 65536) { fail("proposal_too_large"); }
+      var digest = host.hash(canonical), rows = proposals();
+      var existing = rows.filter(function (p) { return p.digest === digest; })[0];
+      if (!existing) {
+        if (rows.length >= 10) { fail("too_many_proposals"); }
+        existing = payload;
+        existing.id = host.hash(digest + ":" + host.now());
+        existing.digest = digest;
+        existing.expiresAt = host.now() + 15 * 60 * 1000;
+        rows.push(existing);
+        host.write(personal, "mcp-proposals.json", JSON.stringify({items:rows}));
+      }
+      return {ok:true, approvalRequired:true, proposalId:existing.id,
+        message:"Review this proposal in Settings > Library > MCP connections. Only the authenticated user can add it. It is not active."};
+    }
+    function answerProposal(args) {
+      // Host capability, never an argument or a confirmation claimed by the agent.
+      if (host.agentInitiated === true || !who.studio || !who.admin) { fail("human_review_required"); }
+      var rows = proposals(), input = object(args.input);
+      var proposal = rows.filter(function (p) { return p.id === input.id; })[0];
+      if (!proposal || proposal.digest !== input.digest || host.hash(JSON.stringify({scope:proposal.scope,project:proposal.project,data:proposal.data,expectedRevision:proposal.expectedRevision})) !== proposal.digest) { fail("proposal_expired_or_changed"); }
+      var result = {ok:true};
+      if (args.action === "confirmProposal") {
+        var destination = source(proposal.scope, proposal.project);
+        result.item = write(destination, "mcp", proposal.data, proposal.expectedRevision);
+      }
+      host.write(personal, "mcp-proposals.json", JSON.stringify({items:rows.filter(function (p) {return p.id !== proposal.id;})}));
+      return result;
+    }
     function list(language, thread) {
       var sources = [source("builtin"), source("workspace")],
         items = [],
@@ -491,6 +533,7 @@ C8O.tigoResources = (function () {
         favorites: favorites,
         selection: s,
         missingSelections: missing,
+        proposals: who.studio && who.admin ? proposals() : [],
         canManageMcp: who.admin,
         projects: who.admin
           ? Object.keys(host.projects())
@@ -504,6 +547,8 @@ C8O.tigoResources = (function () {
       };
     }
     function write(s, kind, value, revision) {
+      // Every agent write path, including duplication, must go through a proposal.
+      if (kind === "mcp" && host.agentInitiated === true) { fail("human_review_required"); }
       if (s.readOnly) {
         fail("builtin_read_only");
       }
@@ -556,6 +601,9 @@ C8O.tigoResources = (function () {
       args = object(args);
       var action = text(args.action || "list"),
         input = object(args.input);
+      if (action === "propose") { return propose(args); }
+      if (action === "confirmProposal" || action === "rejectProposal") { return answerProposal(args); }
+      if (host.agentInitiated === true && args.kind === "mcp" && action === "save") { return propose(args); }
       if (action === "list") {
         return list(args.language, args.threadid);
       }
@@ -945,6 +993,7 @@ C8O.tigoResources = (function () {
     }
     var identity = {
       admin: !!admin,
+      studio: studio,
       surface: projectOnly ? "all" : studio || !user ? "studio" : "nocode",
       user: studio && !projectOnly ? "studio" : user,
       owner: studio && !projectOnly ? "studio" : conversationOwner(user),

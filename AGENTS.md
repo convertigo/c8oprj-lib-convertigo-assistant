@@ -581,9 +581,12 @@ rediscovering the same context.
 - MCP activation uses an opaque private-memory handle and conversation homes;
   raw secrets never enter browser state, prompts, records or generated configs.
   Keep the managed Convertigo skill/MCP intact.
-- `tigo-resources` in lib_ConvertigoMCP delegates project-only operations to this
-  core and must independently require a full MCP bearer token. It cannot alter
-  favorites, activation, personal resources or secrets.
+- `tigo-resources` in lib_ConvertigoMCP independently requires a full MCP bearer.
+  Local Studio owners can author project or personal prompts/skills. MCP saves
+  produce pending proposals, never declarations or activation. The authenticated
+  UI alone confirms a displayed proposal (digest/revision checked, 15-minute TTL).
+  Agent calls cannot confirm, alter favorites/activation or read/write secrets.
+  No Code self-configuration stays disabled; keep server confinement unchanged.
 - Run `node --test tests/tigo_resources*.test.cjs` plus the existing Assistant
   and NoCode checks. Quota tests require a current canonical Page snapshot
   with the current LightRagFooterComponent tree in `snapshot.footer`.

@@ -7545,6 +7545,7 @@ scriptContent:
         
             public tigoText(key: string) {
                 const fr = {
+                    proposalTitle:''MCP proposé par Tigo — à vérifier'', proposalHint:''Vérifiez la commande ou l’adresse, les arguments et les références aux secrets avant d’ajouter ce MCP. Il peut lancer du code ou accéder au réseau. L’ajout ne l’active pas pour la conversation.'', proposalAdd:''Ajouter ce MCP'', proposalReject:''Refuser'', proposalAdded:''Connexion ajoutée. Activez-la séparément pour la conversation.'', proposalRejected:''Proposition refusée.'', proposal_expired_or_changed:''La proposition a expiré ou changé. Demandez à Tigo de la préparer à nouveau.'', human_review_required:''Cette proposition doit être validée depuis la bibliothèque par l’utilisateur.'',
                     prompts:''Prompts'', skills:''Skills'', mcp:''Connexions MCP'', agent:''Agent et modèle'', runtime:''Runtime et stack'',
                     search:''Rechercher dans la bibliothèque'', allSources:''Toutes les provenances'', builtin:''Livré par Convertigo'', workspace:''Workspace personnel'', project:''Projet partagé'',
                     refresh:''Recharger la bibliothèque'', create:''Nouveau'', edit:''Éditer'', view:''Consulter'', duplicate:''Dupliquer'', use:''Insérer dans le brouillon'', favorite:''Ajouter aux favoris'', unfavorite:''Retirer des favoris'', up:''Monter le favori'', down:''Descendre le favori'', refreshModels:''Actualiser les modèles'',
@@ -7564,6 +7565,7 @@ scriptContent:
                     csrf_invalid:''La session a été renouvelée. Actualisez la bibliothèque puis recommencez.'', origin_forbidden:''Origine de la requête non autorisée.'', review:''Réactiver la connexion modifiée'', mcp_changed_requires_review:''Une connexion MCP a changé. Vérifiez sa déclaration puis réactivez-la avant de continuer.'', secret_admin_required:''La gestion des secrets MCP requiert un administrateur.'', mcp_https_or_loopback_required:''Utilisez une URL HTTPS ou une adresse HTTP locale.'', mcp_url_credentials_forbidden:''Placez les identifiants dans les secrets personnels, jamais dans l’URL.'', invalid_header_prefix:''Le préfixe d’en-tête doit être vide, Bearer ou Basic.'', mcp_arguments_credentials_forbidden:''Passez les identifiants par une variable d’environnement, jamais comme argument de commande.''
                 };
                 const en = {
+                    proposalTitle:''MCP proposed by Tigo — review required'', proposalHint:''Review the command or URL, arguments and secret references before adding this MCP. It may run code or access the network. Adding it does not enable it for the conversation.'', proposalAdd:''Add this MCP'', proposalReject:''Reject'', proposalAdded:''Connection added. Enable it separately for the conversation.'', proposalRejected:''Proposal rejected.'', proposal_expired_or_changed:''The proposal expired or changed. Ask Tigo to prepare it again.'', human_review_required:''The user must review this proposal from the library.'',
                     prompts:''Prompts'', skills:''Skills'', mcp:''MCP connections'', agent:''Agent and model'', runtime:''Runtime and stack'', search:''Search the library'', allSources:''All sources'', builtin:''Built into Tigo'', workspace:''Personal workspace'', project:''Shared project'', refresh:''Reload library'', create:''New'', edit:''Edit'', view:''View'', duplicate:''Duplicate'', use:''Insert into draft'', favorite:''Add to favorites'', unfavorite:''Remove from favorites'', up:''Move favorite up'', down:''Move favorite down'', refreshModels:''Refresh models'', enable:''Enable for this conversation'', disable:''Disable for this conversation'', enabled:''Enabled'', empty:''No resources in this category.'', loading:''Loading the library…'',
                     skillHint:''Enabled skills are supplied on the next message. Disabling them does not erase instructions already present in the conversation history.'', mcpHint:''Explicitly enable a connection for this conversation. Changes apply on the next message and may restart the harness. Secrets remain personal.'', promptHint:''Insert a favorite into your draft without sending it.'',
                     title:''Title'', description:''Description'', body:''Prompt / Markdown content'', language:''Language of this translation'', location:''Save in'', target:''Target project'', save:''Save'', cancel:''Cancel'', remove:''Remove'', removeConfirm:''Confirm removal'', readonly:''This resource ships with Tigo. Duplicate it to customize.'', draft:''The prompt was added to your draft.'', connection:''MCP connection (JSON, secret references only)'', dependencies:''Required MCP connections (optional)'', dependenciesHint:''Select the external tools this skill needs. Leave everything unchecked if none are required.'', editorHint:''Save this resource here before leaving the editor.'', skillBody:''Skill instructions (Markdown)'', promptBody:''Prompt text'', skillTemplate:''Describe this skill'', skillMetadataHint:''The SKILL.md technical name and description are generated automatically. Enter only the instructions below.'', saving:''Saving…'', secretName:''Secret name (e.g. COMPANY_API_KEY)'', secretValue:''Private value'', secretSave:''Save personal secret'', secrets:''Available secrets: '', none:''none'', allPrompts:''All prompts…'',
@@ -7597,6 +7599,8 @@ scriptContent:
                 this.filterTigoResources();
                 if (request.request.action === ''save'' || request.request.action === ''duplicate'' || request.request.action === ''delete'') { this.local.ResourceEditorOpen = false; this.local.ResourceEditorPending = false; this.local.ResourceNotice = this.tigoText(''saved''); }
                 if (request.request.action === ''select'') { this.local.ResourceNotice = this.tigoText(''selected''); }
+                if (request.request.action === ''confirmProposal'') { this.local.ResourceNotice = this.tigoText(''proposalAdded''); }
+                if (request.request.action === ''rejectProposal'') { this.local.ResourceNotice = this.tigoText(''proposalRejected''); }
                 this.local.ResourceSecretValue = '''';
                 this.tick();
             }
@@ -7784,6 +7788,18 @@ scriptContent:
                 }).join(''\n'').trim();
                 const header = ''name: '' + JSON.stringify(id) + ''\ndescription: '' + JSON.stringify(String(translation.description || translation.title || '''').trim());
                 return ''---\n'' + header + (extra ? ''\n'' + extra : '''') + ''\n---\n\n'' + document.body;
+            }
+        
+        
+            public tigoMcpProposalPreview(proposal: any) {
+                // Plain text only: declarations are untrusted and are never rendered as HTML or links.
+                return JSON.stringify({scope:proposal.scope, project:proposal.project || undefined, declaration:proposal.data}, null, 2);
+            }
+            public answerTigoMcpProposal(proposalId: string, digest: string, accept: boolean) {
+                if (this.local.ResourceLoading) { return; }
+                const proposal = (this.local.ResourceCatalog?.proposals || []).find(p => p.id === proposalId && p.digest === digest);
+                if (!proposal || proposal.expiresAt <= Date.now()) { this.requestTigoResources(true); this.local.ResourceNotice = this.tigoText(''proposal_expired_or_changed''); this.tick(); return; }
+                this.requestTigoResources(true, {action:accept ? ''confirmProposal'' : ''rejectProposal'', input:{id:proposal.id,digest:proposal.digest}});
             }
         
         /*End_c8o_PageFunction*/
@@ -13225,6 +13241,100 @@ title: Tigo
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                               - MobileSmartSourceType: script:this.tigoText('mcpHint')
+                      ↓PendingProposals [ngx.components.UIControlDirective-1794320384460]: 
+                        directiveIndexName: mcpProposalIndex
+                        directiveItemName: mcpProposal
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.ResourceCatalog?.proposals","prefix":"","suffix":"","custom":"","useCustom":false}}
+                        ↓Review [ngx.components.UIElement-1794320385030]: 
+                          tagName: section
+                          ↓Class [ngx.components.UIAttribute-1794320385600]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:tigo-resource-editor tigo-mcp-proposal
+                          ↓Aria_label [ngx.components.UIAttribute-1794320385602]: 
+                            attrName: aria-label
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.tigoText('proposalTitle')
+                          ↓Title [ngx.components.UIElement-1794320385604]: 
+                            tagName: h3
+                            ↓Text [ngx.components.UIText-1794320385606]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.tigoText('proposalTitle')
+                          ↓Warning [ngx.components.UIElement-1794320385608]: 
+                            tagName: p
+                            ↓Text [ngx.components.UIText-1794320385610]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.tigoText('proposalHint')
+                          ↓Declaration [ngx.components.UIElement-1794320385612]: 
+                            tagName: pre
+                            ↓Style [ngx.components.UIAttribute-1794320385614]: 
+                              attrName: style
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:white-space:pre-wrap;overflow-wrap:anywhere;max-height:22rem;overflow:auto;text-align:left;font-size:0.82rem
+                            ↓Text [ngx.components.UIText-1794320385616]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.tigoMcpProposalPreview(mcpProposal)
+                          ↓Confirm [ngx.components.UIDynamicElement-1794320385618]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Button",
+                               "Disabled": "script:local.ResourceLoading",
+                               "IonFill": "plain:outline",
+                               "IonSize": "plain:small"
+                              }'
+                            tagName: ion-button
+                            ↓Text [ngx.components.UIText-1794320385620]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.tigoText('proposalAdd')
+                            ↓Click [ngx.components.UIControlEvent-1794320385622]: 
+                              ↓Answer [ngx.components.UICustomAction-1794320385844]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        page.answerTigoMcpProposal(props.stack.root.scope.mcpProposal.id, props.stack.root.scope.mcpProposal.digest, true);
+                                        resolve();
+                          ↓Reject [ngx.components.UIDynamicElement-1794320385846]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Button",
+                               "Disabled": "script:local.ResourceLoading",
+                               "IonFill": "plain:outline",
+                               "IonSize": "plain:small"
+                              }'
+                            tagName: ion-button
+                            ↓Text [ngx.components.UIText-1794320385848]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.tigoText('proposalReject')
+                            ↓Click [ngx.components.UIControlEvent-1794320385850]: 
+                              ↓Answer [ngx.components.UICustomAction-1794320385852]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        page.answerTigoMcpProposal(props.stack.root.scope.mcpProposal.id, props.stack.root.scope.mcpProposal.digest, false);
+                                        resolve();
                       ↓Create [ngx.components.UIDynamicElement-1792084640509]: 
                         beanData: |
                           '{
