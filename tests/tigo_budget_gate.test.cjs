@@ -159,7 +159,7 @@ test('No Code: the user key is asked to C8Oforms without a log, kept behind a ha
   assert.match(options.gatewayKeyHandle, /^lib_ConvertigoAssistant\.gatewayKey\.[0-9a-f]{32}$/, "random");
   const keyCall = calls.find(call => call.sequence === 'APIV2_TigoUserKey');
   assert.equal(keyCall.project, 'C8Oforms');
-  assert.equal(JSON.stringify(keyCall.variables), '{}', 'the user of the session, never a page value');
+  assert.equal(JSON.stringify(keyCall.variables), '{"__nolog":"true"}', 'the user of the session, never a page value; no log of its answer');
   assert.equal(keyCall.nolog, true, 'under the MDC nolog');
   assert.deepEqual(mdc, [['put', 'nolog', true], ['remove', 'nolog']]);
   const silent = load({ nolog: true });
