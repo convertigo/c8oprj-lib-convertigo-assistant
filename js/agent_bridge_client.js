@@ -2132,7 +2132,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var answer;
     try {
-      answer = unwrapSequenceResult(callLocalSequenceQuietly(AGENT_ACCESS_PROJECT, USER_KEY_SEQUENCE, {})) || {};
+      // __nolog as well: the engine follows it for the answer it generates, whatever the thread
+      answer = unwrapSequenceResult(callLocalSequenceQuietly(AGENT_ACCESS_PROJECT, USER_KEY_SEQUENCE, { __nolog: "true" })) || {};
     } catch (keyError) {
       try { log.warn("(lib_ConvertigoAssistant) Tigo user key not obtained: " + String(keyError).replace(/sk-[A-Za-z0-9_-]+/g, "sk-***")); } catch (_ignoreNoLog) {}
       return { ok: false, code: "service_unavailable" };
