@@ -27,13 +27,13 @@ const NAMES = ['c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigo
   'formatResetDate', 'budgetExhaustedMessage', 'userKeyRefusalMessage', 'convertigoTurnRefusalResponse', 'convertigoTurnRefusal',
   'readConvertigoBalance', 'isBudgetError', 'budgetErrorAnswer', 'gatewayRateLimitIsBudget', 'bridgeRefusalAnswer', 'attachGatewayKeyHandle',
   'lang', 'extractAgentErrorText', 'purgeUserGatewayKeys'];
-const CONSTANTS = ['USER_KEY_SEQUENCE', 'USER_QUOTA_SEQUENCE', 'GATEWAY_KEY_HANDLE_PREFIX', 'GATEWAY_KEY_TTL_MS', 'GATEWAY_KEY_PATTERN',
+const CONSTANTS = ['USER_KEY_SEQUENCE', 'USER_QUOTA_SEQUENCE', 'USER_KEY_SERVER_SYMBOL', 'GATEWAY_KEY_HANDLE_PREFIX', 'GATEWAY_KEY_TTL_MS', 'GATEWAY_KEY_PATTERN',
   'GATEWAY_KEY_TURN_MARGIN_MS', 'GATEWAY_KEY_PURGE_MS', 'GATEWAY_KEY_INDEX',
   'TIGO_BUDGET_SCOPES', 'AGENT_ACCESS_PROJECT', 'TRANSLATIONS'];
 const USER_KEY = 'sk-user-' + 'a'.repeat(32);
 
 function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUserQuota'], key = { status: 'ok', key: USER_KEY, generation: 2 },
-  quota = null, tigoAccess = { status: 'ok', state: 'ready', quota: null }, tigoStatus = null, nolog = null } = {}) {
+  quota = null, tigoAccess = { status: 'ok', state: 'ready', quota: null }, tigoStatus = null, nolog = null, registered = true } = {}) {
   const calls = [];
   const mdc = [];
   let mdcValue = nolog;
@@ -54,8 +54,10 @@ function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUse
       remove: k => { mdcValue = null; mdc.push(['remove', k]); } } } } } },
     Engine: {
       isStudioMode: () => studio,
-      theApp: { databaseObjectsManager: { getOriginalProjectByName: name => (name === 'C8Oforms'
-        ? { getSequenceByName: sequence => (sequences.includes(sequence) ? {} : null) } : null) } }
+      theApp: { databaseObjectsManager: {
+        getOriginalProjectByName: name => (name === 'C8Oforms' ? { getSequenceByName: sequence => (sequences.includes(sequence) ? {} : null) } : null),
+        symbolsGetValue: name => (name === 'C8Oforms.tigo.server.id' && registered ? 'server-test' : null)
+      } }
     },
     callLocalSequence(project, sequence, variables) {
       calls.push({ project, sequence, variables, nolog: mdc.length > 0 && mdc[mdc.length - 1][0] === 'put' });
@@ -161,8 +163,8 @@ test('No Code: the user key is asked to C8Oforms without a log, kept behind a ha
   // an unknown balance or an unread quota lets the turn go: the gateway enforces
   assert.equal(load({ quota: contractQuota(null) }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }), null);
   assert.equal(load({ quota: new Error('down') }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }), null);
-  // the Studio, a C8Oforms without user keys: no key asked
-  for (const fixture of [load({ studio: true }), load({ sequences: [] })]) {
+  // the Studio, a C8Oforms without user keys, a server not registered with TigoAccess yet: no key asked
+  for (const fixture of [load({ studio: true }), load({ sequences: [] }), load({ registered: false })]) {
     fixture.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId });
     assert.equal(fixture.calls.filter(call => call.sequence === 'APIV2_TigoUserKey').length, 0);
   }
@@ -170,7 +172,7 @@ test('No Code: the user key is asked to C8Oforms without a log, kept behind a ha
 
 test('No Code: a refused key ends the turn with its reason, never another key', () => {
   const messages = {};
-  for (const code of ['agent_not_allowed', 'email_missing', 'not_configured', 'key_revoked', 'member_blocked', 'member_limit_reached', 'service_unavailable', 'stale_request']) {
+  for (const code of ['agent_not_allowed', 'email_missing', 'not_configured', 'key_revoked', 'member_blocked', 'member_limit_reached', 'service_unavailable', 'stale_request', 'revocation_pending']) {
     const { sandbox, store } = load({ key: { status: 'error', error: { code, message: 'TigoAccess said ' + code } } });
     const refused = sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId });
     assert.equal(refused.error.code, code);
@@ -184,6 +186,7 @@ test('No Code: a refused key ends the turn with its reason, never another key', 
   assert.equal(messages.key_revoked, messages.member_blocked);
   assert.match(messages.member_limit_reached, /full/);
   assert.equal(messages.service_unavailable, messages.stale_request);
+  assert.equal(messages.revocation_pending, messages.service_unavailable, 'retry later, like a rate limit');
   // an answer without a usable key, or an exception: no key
   assert.equal(load({ key: { status: 'ok', key: 'not-a-key' } }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }).error.code, 'service_unavailable');
   const thrown = load({ key: new Error('boom ' + USER_KEY) });
@@ -215,12 +218,28 @@ test('the key handle: memory for a few minutes, one per user, forgotten on refus
   assert.equal(sandbox.userGatewayKeyHandle({}, true).code, 'authentication_required');
 });
 
-test('no key is asked for an agent off the gateway (it would enrol the user)', () => {
+test('no key is asked for an agent off the gateway (it would enrol the user), nor by a prewarm', () => {
   const { sandbox, calls } = load();
   const payload = {};
   sandbox.attachGatewayKeyHandle(payload, Object.assign({}, NOCODE, { provider: 'codex' }), 'agent_codex_start');
   assert.equal(payload.gatewayKeyHandle, undefined);
+  const prewarm = { prewarm: 'true' };
+  sandbox.attachGatewayKeyHandle(prewarm, Object.assign({}, NOCODE), 'agent_vibe_start');
+  assert.equal(prewarm.gatewayKeyHandle, undefined, 'the panel opening never waits for TigoAccess');
   assert.equal(calls.length, 0);
+});
+
+test("TigoAccess's getQuota of a managed team's key: its contract shape decides, a revoked key is not a budget", () => {
+  const { sandbox } = load();
+  const of = q => JSON.parse(JSON.stringify(sandbox.effectiveTigoBalance(q)));
+  const legacy = { activeScope: 'team', balanceUsd: 3, keyState: 'active', team: { balanceUsd: 40, member: { balanceUsd: 3 } } };
+  const contract = { member: { budgetUsd: 5, spentUsd: 5, balanceUsd: 0, resetAt: '2026-12-01T00:00:00Z' },
+    team: { envelopeUsd: 100, spentUsd: 60, balanceUsd: 40, resetAt: null }, effective: { balanceUsd: 0, resetAt: '2026-12-01T00:00:00Z', scope: 'member' },
+    key: { state: 'active', generation: 1 } };
+  assert.deepEqual(of(Object.assign({}, legacy, { surface: 'server', contract })), { balanceUsd: 0, resetAt: '2026-12-01T00:00:00Z', scope: 'member', exhausted: true });
+  const revoked = Object.assign({}, contract, { key: { state: 'revoked', generation: 1 } });
+  assert.equal(of(Object.assign({}, legacy, { contract: revoked })).exhausted, false);
+  assert.equal(of(revoked).exhausted, false, 'the No Code quota too');
 });
 
 test('a conversation of another account, a revoked key, a failed refresh: never a budget refusal by mistake', () => {

@@ -725,7 +725,8 @@ rediscovering the same context.
 - `convertigoTurnRefusal` runs before a Convertigo turn writes anything (`sendMessage`, before `starting`). It
   refuses the turn when the effective balance is zero or below: TigoAccess in the Studio (the refresh is kept in
   `options.tigoAccessResult`), C8Oforms `APIV2_TigoUserQuota` on a No Code server. An unknown balance lets the turn go.
-- On a No Code server whose C8Oforms has `APIV2_TigoUserKey`, the user's key is asked under the log4j MDC
+- On a No Code server registered with TigoAccess (`C8Oforms.tigo.server.id`) whose C8Oforms has `APIV2_TigoUserKey`,
+  the user's key is asked under the log4j MDC
   `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind
   `lib_ConvertigoAssistant.gatewayKey.<hash>`: 10 min for new starts, at least 5 left when a turn starts, purged 2 h
   after that. Only that handle goes to the Bridge (`attachGatewayKeyHandle`), and it is fetched for a gateway agent
