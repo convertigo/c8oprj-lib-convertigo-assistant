@@ -732,7 +732,10 @@ rediscovering the same context.
   starts, purged 2 h after that. The HTTP session that obtained it holds the handle, and a cached key is served only to
   that session while its user owns it. Only that handle goes to the Bridge (`attachGatewayKeyHandle`, which drops any
   handle that came with the request), and it is fetched for a gateway agent only. A conversation of another account is
-  refused (`conversation_not_owned`). `context.server` can be read by any Rhino code of the engine: see the Bridge's
+  refused (`conversation_not_owned`). A key never stays past its `expiresAt` minus 15 min (TigoAccess expires
+  server keys in LiteLLM). A running turn asks for it again every 10 min (`keepUserGatewayKeyAlive`), which keeps the
+  same key alive. An expired or rejected key (`userGatewayKeyRejected`) ends the turn with `userKeyExpired` and is
+  asked for again, never read as a budget. `context.server` can be read by any Rhino code of the engine: see the Bridge's
   `docs/nocode-user-keys.md` about co-hosted low-code projects.
   A refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right
   or a 401 forgets it.

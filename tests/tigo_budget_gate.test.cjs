@@ -26,9 +26,10 @@ const NAMES = ['c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigo
   'userGatewayKeyHandle', 'forgetUserGatewayKey', 'userTigoQuota', 'usdValue', 'tigoBudgetScope', 'effectiveTigoBalance', 'twoDigits',
   'formatResetDate', 'budgetExhaustedMessage', 'userKeyRefusalMessage', 'convertigoTurnRefusalResponse', 'convertigoTurnRefusal',
   'readConvertigoBalance', 'isBudgetError', 'budgetErrorAnswer', 'gatewayRateLimitIsBudget', 'bridgeRefusalAnswer', 'attachGatewayKeyHandle',
-  'lang', 'extractAgentErrorText', 'purgeUserGatewayKeys'];
+  'lang', 'extractAgentErrorText', 'purgeUserGatewayKeys', 'keepUserGatewayKeyAlive', 'userGatewayKeyRejected', 'isTerminalStatus',
+  'agentHttpErrorStatus'];
 const CONSTANTS = ['USER_KEY_SEQUENCE', 'USER_QUOTA_SEQUENCE', 'USER_KEY_SERVER_SYMBOL', 'GATEWAY_KEY_HANDLE_PREFIX', 'GATEWAY_KEY_TTL_MS', 'GATEWAY_KEY_PATTERN',
-  'GATEWAY_KEY_TURN_MARGIN_MS', 'GATEWAY_KEY_PURGE_MS', 'GATEWAY_KEY_INDEX', 'GATEWAY_KEY_SESSION_ATTRIBUTE',
+  'GATEWAY_KEY_TURN_MARGIN_MS', 'GATEWAY_KEY_PURGE_MS', 'GATEWAY_KEY_INDEX', 'GATEWAY_KEY_SESSION_ATTRIBUTE', 'GATEWAY_KEY_EXPIRY_MARGIN_MS',
   'TIGO_BUDGET_SCOPES', 'AGENT_ACCESS_PROJECT', 'TRANSLATIONS'];
 const USER_KEY = 'sk-user-' + 'a'.repeat(32);
 
@@ -419,7 +420,8 @@ test('every place keeps its guard: before the turn is written, on the error even
   assert.match(src, /var convertigoRefusal = convertigoTurnRefusal\(state, options\);\n    if \(convertigoRefusal !== null\) \{\n      return convertigoRefusal;\n    \}\n    state\.status = "starting";/);
   assert.match(src, /var tigoAccess = options\.tigoAccessResult \|\| C8O\.assistantAgentBridge\.refreshTigoAccess\(\);/);
   assert.match(src, /if \(isBudgetError\(data\) \|\| gatewayRateLimitIsBudget\(state, data\)\) \{\n\s+state\.error = budgetErrorAnswer\(state, data\);/);
-  assert.match(src, /if \(userGatewayKeysOn\(state\) && agentHttpErrorStatus\(data, 0\) === 401\) \{\n\s+forgetUserGatewayKey\(state\);/);
+  assert.match(src, /\} else if \(userGatewayKeyRejected\(state, data\)\) \{[\s\S]{0,200}forgetUserGatewayKey\(state\);\n\s+state\.error = lang\(state\)\.userKeyExpired;/);
+  assert.match(src, /state = ensureState\(state\);\n[\s\S]{0,260}keepUserGatewayKeyAlive\(state, options\);/, 'each read of a running turn');
   assert.match(src, /state\.error = bridgeRefusalAnswer\(state, String\(e\)\) \|\| String\(e\);/);
   assert.match(src, /attachMcpTokenHandle\(payload, options\);\n    \}\n    attachGatewayKeyHandle\(payload, options, sequence\);/);
   const quota = fs.readFileSync(path.resolve(__dirname, '../_c8oProject/sequences/AgentQuota.yaml'), 'utf8');
@@ -429,8 +431,56 @@ test('every place keeps its guard: before the turn is written, on the error even
   for (const language of ['fr', 'en']) {
     const block = src.slice(src.indexOf('    ' + language + ': {', src.indexOf('var TRANSLATIONS')));
     for (const name of ['budgetExhausted', 'budgetTeamExhausted', 'budgetKeyExhausted', 'budgetRenews', 'userKeyUnavailable', 'userKeyEmailMissing',
-      'userKeyNotConfigured', 'userKeyRevoked', 'userKeyTeamFull', 'agentIsolationUnavailable']) {
+      'userKeyNotConfigured', 'userKeyRevoked', 'userKeyTeamFull', 'agentIsolationUnavailable', 'conversationNotOwned', 'userKeyExpired']) {
       assert.match(block.slice(0, block.indexOf('\n    }')), new RegExp('\\n      ' + name + ': "'), language + ' ' + name);
     }
   }
+});
+
+test('a key never stays in memory past its own expiry (TigoAccess makes server keys expire in LiteLLM)', () => {
+  const soon = new Date(1_000_000 + 20 * 60 * 1000).toISOString();
+  const { sandbox, store, calls, tick } = load({ key: { status: 'ok', key: USER_KEY, generation: 3, expiresAt: soon } });
+  const first = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  const bundle = JSON.parse(store.get(first.handle));
+  assert.equal(bundle.expiresAt, 1_000_000 + 5 * 60 * 1000, 'its expiry minus 15 minutes, before the 10 minutes in memory');
+  assert.equal(bundle.keyExpiresAt, Date.parse(soon));
+  tick(5 * 60 * 1000 + 1);
+  sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  assert.equal(calls.length, 2, 'asked again before it expires');
+  const later = load({ key: { status: 'ok', key: USER_KEY, generation: 3, expiresAt: null } });
+  const handle = later.sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true).handle;
+  assert.equal(JSON.parse(later.store.get(handle)).expiresAt, 1_000_000 + 10 * 60 * 1000, 'no expiry given: the 10 minutes');
+});
+
+test('a running turn keeps its key alive: asked again once its time in memory is over, for its own user and session only', () => {
+  const { sandbox, calls, tick, use } = load();
+  const state = Object.assign({ status: 'in_progress' }, NOCODE);
+  sandbox.keepUserGatewayKeyAlive(state, { userId: NOCODE.userId });
+  assert.equal(calls.length, 0, 'a session without a key asks nothing (a viewer, a reload)');
+  sandbox.userGatewayKeyHandle({ userId: NOCODE.userId }, true);
+  sandbox.keepUserGatewayKeyAlive(state, { userId: NOCODE.userId });
+  assert.equal(calls.length, 1, 'still in memory');
+  tick(10 * 60 * 1000 + 1);
+  sandbox.keepUserGatewayKeyAlive(state, { userId: NOCODE.userId });
+  assert.equal(calls.length, 2, 'asked again: TigoAccess pushes the same key\'s expiry back');
+  tick(10 * 60 * 1000 + 1);
+  sandbox.keepUserGatewayKeyAlive(Object.assign({}, state, { status: 'completed' }), { userId: NOCODE.userId });
+  sandbox.keepUserGatewayKeyAlive(state, { userId: 'bob@example.com' });
+  sandbox.keepUserGatewayKeyAlive(Object.assign({}, state, { provider: 'codex' }), { userId: NOCODE.userId });
+  assert.equal(calls.length, 2, 'not for an ended turn, another user or an agent off the gateway');
+  use('other');
+  sandbox.keepUserGatewayKeyAlive(state, { userId: NOCODE.userId });
+  assert.equal(calls.length, 2, 'not from another session');
+});
+
+test('an expired or rejected user key reads as such, never as a budget, and is asked again', () => {
+  const { sandbox } = load();
+  const state = Object.assign({}, NOCODE);
+  assert.equal(sandbox.userGatewayKeyRejected(state, { error: { message: 'Authentication Error - Expired Key. Key Expiry time 2026-11-10 18:00:00' } }), true);
+  assert.equal(sandbox.userGatewayKeyRejected(state, { error: { message: 'HTTP 401 Unauthorized' } }), true);
+  assert.equal(sandbox.userGatewayKeyRejected(state, { error: { message: 'Invalid API key' } }), true, 'Vibe may drop the status');
+  assert.equal(sandbox.userGatewayKeyRejected(state, { code: 'budget_exceeded', scope: 'member', message: 'budget_exceeded: The Tigo budget is used up.' }), false);
+  assert.equal(sandbox.userGatewayKeyRejected(state, { error: { message: 'Rate limit exceeded for convertigo' } }), false);
+  assert.equal(load({ studio: true }).sandbox.userGatewayKeyRejected(state, { error: { message: 'HTTP 401' } }), false, 'the Studio keeps its own message');
+  assert.equal(sandbox.lang({ language: 'en' }).userKeyExpired, 'The Tigo key of your account had expired. Send your message again: a renewed key will be used.');
 });
