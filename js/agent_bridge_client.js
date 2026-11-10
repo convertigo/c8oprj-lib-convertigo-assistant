@@ -2480,6 +2480,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var keyState = trim(q.key && q.key.state).toLowerCase();
     var state = keyState === "revoked" || keyState === "blocked" ? keyState : (balance.exhausted ? "exhausted" : "active");
     var memberReported = member.unlimited === true || usdValue(member.budgetUsd) !== null;
+    // Never the envelope: TigoAccess counts the team balance against the envelope minus its safety margin (the
+    // gateway's team budget), so the figure that adds up with spent and balance is allocatableUsd, else spent + balance.
+    var teamSpent = usdValue(team.spentUsd), teamBalance = team.unlimited === true ? null : usdValue(team.balanceUsd);
+    var teamAllocatable = usdValue(team.allocatableUsd);
+    var teamBudget = team.unlimited === true ? null : teamAllocatable !== null ? teamAllocatable
+      : teamSpent !== null && teamBalance !== null ? Math.round((teamSpent + teamBalance) * 1e6) / 1e6 : null;
     return {
       status: "ok",
       quota: {
@@ -2487,8 +2493,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         personal: null,
         team: {
           id: "", name: "",
-          budgetUsd: team.unlimited === true ? null : usdValue(team.envelopeUsd),
-          spentUsd: usdValue(team.spentUsd), balanceUsd: team.unlimited === true ? null : usdValue(team.balanceUsd), keyState: state,
+          budgetUsd: teamBudget, spentUsd: teamSpent, balanceUsd: teamBalance, keyState: state,
           member: {
             spentUsd: usdValue(member.spentUsd), budgetUsd: member.unlimited === true ? null : usdValue(member.budgetUsd),
             balanceUsd: member.unlimited === true ? null : usdValue(member.balanceUsd),
@@ -2496,9 +2501,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         },
         offerAmountUsd: null,
-        budgetUsd: team.unlimited === true ? null : usdValue(team.envelopeUsd),
-        spentUsd: usdValue(team.spentUsd),
-        balanceUsd: team.unlimited === true ? null : usdValue(team.balanceUsd),
+        budgetUsd: teamBudget,
+        spentUsd: teamSpent,
+        balanceUsd: teamBalance,
         keyState: state, expiresAt: null, extensionMode: "manual", updatedAt: Number(now()), windows: []
       }
     };

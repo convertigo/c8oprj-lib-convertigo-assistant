@@ -99,7 +99,7 @@ const NOCODE = { skillProfile: 'nocode', userId: 'ann@example.com', provider: 'c
 const STUDIO = { skillProfile: 'generalist', userId: 'studio', provider: 'convertigo', model: 'glm-5-3', language: 'fr', threadid: 't2' };
 const contractQuota = (balanceUsd, extra = {}) => ({ status: 'ok', quota: {
   member: { budgetUsd: 5, spentUsd: 5 - (balanceUsd ?? 0), balanceUsd, resetAt: '2026-12-01T00:00:00Z' },
-  team: { envelopeUsd: 100, spentUsd: 40, balanceUsd: 60, resetAt: '2026-12-01T00:00:00Z' },
+  team: { envelopeUsd: 100, spentUsd: 40, balanceUsd: 50, resetAt: '2026-12-01T00:00:00Z' },
   effective: Object.assign({ balanceUsd, resetAt: '2026-12-01T00:00:00Z', scope: 'member' }, extra),
   key: { state: 'active', generation: 2 } } });
 
@@ -395,7 +395,16 @@ test('the No Code quota arc reads the user\'s C8Oforms quota as the Studio arc r
   assert.equal(q.keyState, 'exhausted');
   assert.equal(q.team.member.balanceUsd, 0);
   assert.equal(q.team.member.budgetResetAt, '2026-12-01T00:00:00Z');
-  assert.equal(q.team.budgetUsd, 100);
+  // envelope 100 with a 10 margin: the team figure adds up with spent 40 + balance 50, never the envelope
+  assert.equal(q.team.budgetUsd, 90);
+  assert.equal(q.budgetUsd, 90);
+  assert.equal(q.team.balanceUsd, 50);
+  const withAllocatable = contractQuota(0);
+  withAllocatable.quota.team = { envelopeUsd: 100, allocatableUsd: 90, spentUsd: 95, balanceUsd: 0 };
+  assert.equal(load({ quota: withAllocatable }).sandbox.C8O.assistantAgentBridge.noCodeTigoQuota({}).quota.team.budgetUsd, 90, 'allocatableUsd first, when TigoAccess sends it');
+  const unknownSpend = contractQuota(0);
+  unknownSpend.quota.team = { envelopeUsd: 100, spentUsd: null, balanceUsd: null };
+  assert.equal(load({ quota: unknownSpend }).sandbox.C8O.assistantAgentBridge.noCodeTigoQuota({}).quota.team.budgetUsd, null, 'unknown spend: no figure rather than the envelope');
   assert.doesNotMatch(JSON.stringify(answer), /sk-|ann@example|generation/, 'no key, email or key generation');
   assert.equal(load({ studio: true }).sandbox.C8O.assistantAgentBridge.noCodeTigoQuota({}), null, 'the Studio keeps TigoAccessStatus');
   assert.equal(load({ sequences: ['APIV2_TigoUserKey'] }).sandbox.C8O.assistantAgentBridge.noCodeTigoQuota({}), null, 'a C8Oforms without the quota');

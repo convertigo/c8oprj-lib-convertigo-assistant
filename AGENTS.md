@@ -741,5 +741,7 @@ rediscovering the same context.
   or a 401 forgets it.
 - A turn the gateway stopped (`budget_exceeded`, or a gateway rate limit while the quota reads zero) ends with
   `budgetErrorAnswer`: the quota is read again for the level and the reset date, or the generic sentence if that read
-  fails. `AgentQuota` serves No Code through `noCodeTigoQuota`, in the shape of the Studio's TigoAccess quota.
+  fails. `AgentQuota` serves No Code through `noCodeTigoQuota`, in the shape of the Studio's TigoAccess quota. The
+  team figure is `team.allocatableUsd`, else spent + balance, never `team.envelopeUsd`: TigoAccess counts the team
+  balance against the envelope minus its safety margin. The gate reads `effective.balanceUsd` only.
 - Run `node --test tests/tigo_budget_gate.test.cjs`.
