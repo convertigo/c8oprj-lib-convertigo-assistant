@@ -723,8 +723,11 @@ rediscovering the same context.
 ## Server settings request contract
 
 - Every global No Code settings save, including the implicit admin preference path,
-  requires POST and the engine session token or an explicit same-server Origin.
-  The shared save helper owns this check; reads do not require it.
-- A token-fetch header is not an existing session token. With no established token,
-  the Origin must match the request endpoint or the configured public server endpoint.
-- Run `node --test tests/nocode-server-settings.test.cjs` for the request contract.
+  requires POST. A supplied Origin must match the server before any session token
+  is considered; a missing Origin requires an existing engine session token.
+  Empty and opaque origins are refused. Reads do not require these write checks.
+- Compare session tokens with MessageDigest.isEqual. A token-fetch header is not
+  an existing token. The shared save helper owns the request checks.
+- Behind TLS termination, configure the server's public HTTPS URL as described
+  in docs/nocode-server-settings.md.
+- Run `node --test tests/nocode-server-settings.test.cjs` for T9, T9b and T9c.

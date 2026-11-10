@@ -2744,7 +2744,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
-  // Server settings writes always use POST plus the existing session token, or an explicit server Origin.
+  // Server settings writes use POST and check every supplied Origin before considering a session token.
   // Checking the engine token ourselves is intentional: its generic checker can issue a token on first use.
   function noCodeServerSettingsWriteRefusal() {
     var denied = function (code) {
@@ -2756,17 +2756,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (req === null || String(req.getMethod()) !== "POST") {
         return denied("post_required");
       }
+      var originHeader = req.getHeader("Origin");
+      var hasOrigin = originHeader !== null && typeof originHeader !== "undefined";
+      if (hasOrigin) {
+        var origin = noCodeSettingsOrigin(originHeader, false);
+        if (!origin.length) { return denied("request_origin_required"); }
+        var direct = noCodeSettingsOrigin(String(req.getRequestURL()), true);
+        var configured = noCodeSettingsOrigin(configuredConvertigoBaseUrl(), true);
+        if (origin !== direct && (!configured.length || origin !== configured)) {
+          return denied("request_origin_required");
+        }
+      }
       var supplied = trim(req.getHeader("X-Xsrf-Token"));
       if (!supplied.length) { supplied = trim(req.getParameter("__xsrfToken")); }
       if (supplied.length && supplied !== "Fetch") {
         var expected = trim(Packages.com.twinsoft.convertigo.engine.enums.SessionAttribute.xsrfToken.get(context.httpSession));
-        return expected.length && supplied === expected ? null : denied("request_token_required");
+        return expected.length && MessageDigest.isEqual(new java.lang.String(supplied).getBytes("UTF-8"),
+          new java.lang.String(expected).getBytes("UTF-8")) ? null : denied("request_token_required");
       }
-      var origin = noCodeSettingsOrigin(req.getHeader("Origin"), false);
-      if (!origin.length) { return denied("request_origin_required"); }
-      var direct = noCodeSettingsOrigin(String(req.getRequestURL()), true);
-      var configured = noCodeSettingsOrigin(configuredConvertigoBaseUrl(), true);
-      return origin === direct || (configured.length && origin === configured) ? null : denied("request_origin_required");
+      return hasOrigin ? null : denied("request_token_required");
     } catch (_ignoreSettingsRequest) {
       return denied("request_origin_required");
     }

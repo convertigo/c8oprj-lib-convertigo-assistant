@@ -23,9 +23,10 @@ function fixture({ studio = false, webAdmin = false, admin = false, user = 'alic
     } },
     configuredConvertigoBaseUrl: () => configuredUrl,
     Packages: { com: { twinsoft: { convertigo: { engine: { enums: { SessionAttribute: { xsrfToken: { get: () => sessionToken } } } } } } } },
+    MessageDigest: { isEqual: (a, b) => a.length === b.length && require('node:crypto').timingSafeEqual(a, b) },
     trim: value => String(value ?? '').trim(),
     log: { info() {}, warn() {} },
-    java: { net: { URI: function (value) { return uri(value); } }, lang: { System: { getProperty: name => (name === 'convertigo.engine.agents.tool_policy' ? platformPolicy : null) } } },
+    java: { net: { URI: function (value) { return uri(value); } }, lang: { String: function (value) { return { getBytes: () => Buffer.from(String(value), 'utf8') }; }, System: { getProperty: name => (name === 'convertigo.engine.agents.tool_policy' ? platformPolicy : null) } } },
     Engine: {
       isStudioMode: () => studio,
       theApp: { databaseObjectsManager: {
@@ -240,4 +241,32 @@ test('T9: the settings-read route stays readable and implicit admin saves use th
   const options = f.sandbox.withNoCodeServerSettings({ userId: 'test-user', provider: 'vibe', savePreferences: 'true' }, true);
   assert.equal(options.noCodeServerSaved.ok, false);
   assert.equal(f.edits.length, 0);
+});
+
+
+test('T9b: an existing session token never substitutes for the server origin', () => {
+  const save = options => {
+    const f = fixture({ admin: true, token: 'expected', sessionToken: 'expected', ...options });
+    const result = f.sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'save', settings: { model: 'test-model' } });
+    return { result, f };
+  };
+  for (const origin of ['https://other.example.test', 'null', '']) {
+    const { result, f } = save({ origin });
+    assert.equal(result.ok, false);
+    assert.equal(f.edits.length, 0);
+  }
+  assert.equal(save({ origin: null }).result.ok, true);
+  assert.equal(save({ origin: null, token: 'wrong' }).result.ok, false);
+  assert.equal(save({ origin: null, token: '' }).result.ok, false);
+  assert.equal(save({ origin: null, token: 'Fetch' }).result.ok, false);
+});
+
+test('T9c: TLS termination uses the configured public HTTPS origin', () => {
+  const save = configuredUrl => fixture({ admin: true, origin: 'https://public.example.test',
+    requestUrl: 'http://engine:28080/convertigo/', configuredUrl }).sandbox.C8O.assistantAgentBridge
+    .serverSettings({ action: 'save', settings: { model: 'test-model' } });
+  assert.equal(save('https://public.example.test/convertigo').ok, true);
+  assert.equal(save('http://engine:28080/convertigo').ok, false);
+  assert.equal(save('http://public.example.test/convertigo').ok, false);
+  assert.equal(save('').ok, false);
 });
