@@ -726,10 +726,12 @@ rediscovering the same context.
   refuses the turn when the effective balance is zero or below: TigoAccess in the Studio (the refresh is kept in
   `options.tigoAccessResult`), C8Oforms `APIV2_TigoUserQuota` on a No Code server. An unknown balance lets the turn go.
 - On a No Code server whose C8Oforms has `APIV2_TigoUserKey`, the user's key is asked under the log4j MDC
-  `nolog` (`callLocalSequenceQuietly`). It is kept 5 min in `context.server` behind
-  `lib_ConvertigoAssistant.gatewayKey.<hash>`, and only that handle goes to the Bridge (`attachGatewayKeyHandle`). A
-  refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right or a
-  401 forgets it.
+  `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind
+  `lib_ConvertigoAssistant.gatewayKey.<hash>`: 10 min for new starts, at least 5 left when a turn starts, purged 2 h
+  after that. Only that handle goes to the Bridge (`attachGatewayKeyHandle`), and it is fetched for a gateway agent
+  only. The handle is the session user's; a conversation of another account is refused (`conversation_not_owned`).
+  A refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right
+  or a 401 forgets it.
 - A turn the gateway stopped (`budget_exceeded`, or a gateway rate limit while the quota reads zero) ends with
   `budgetErrorAnswer`: the quota is read again for the level and the reset date, or the generic sentence if that read
   fails. `AgentQuota` serves No Code through `noCodeTigoQuota`, in the shape of the Studio's TigoAccess quota.

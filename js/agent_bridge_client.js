@@ -1100,8 +1100,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!userGatewayKeysOn(options)) {
       return;
     }
+    // asking C8Oforms enrols the user in the server's team: only for an agent on the gateway
     var key = trim(options.gatewayKeyHandle).length ? { ok: true, handle: trim(options.gatewayKeyHandle) }
-      : userGatewayKeyHandle(options, start);
+      : userGatewayKeyHandle(options, start && usesConvertigoGateway(options));
     if (key.ok) {
       payload.gatewayKeyHandle = key.handle;
     }
@@ -1988,7 +1989,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   var USER_KEY_SEQUENCE = "APIV2_TigoUserKey";
   var USER_QUOTA_SEQUENCE = "APIV2_TigoUserQuota";
   var GATEWAY_KEY_HANDLE_PREFIX = "lib_ConvertigoAssistant.gatewayKey.";
-  var GATEWAY_KEY_TTL_MS = 5 * 60 * 1000;
+  // A key serves new starts for GATEWAY_KEY_TTL_MS; a turn starts with at least GATEWAY_KEY_TURN_MARGIN_MS of it left (its
+  // setup, start and prompt follow). A running process may go on with the key it holds (the Bridge accepts it by its
+  // fingerprint) until GATEWAY_KEY_PURGE_MS after the end of its lifetime, when every key of a user gone is forgotten.
+  var GATEWAY_KEY_TTL_MS = 10 * 60 * 1000;
+  var GATEWAY_KEY_TURN_MARGIN_MS = 5 * 60 * 1000;
+  var GATEWAY_KEY_PURGE_MS = 2 * 60 * 60 * 1000;
+  var GATEWAY_KEY_INDEX = "lib_ConvertigoAssistant.gatewayKey.index";
   var GATEWAY_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,256}$/;
   var TIGO_BUDGET_SCOPES = ["member", "team", "key", "user", "unknown"];
 
@@ -2031,17 +2038,46 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // thread. Never made without that guard.
   function callLocalSequenceQuietly(project, sequence, variables) {
     var mdc = Packages.org.apache.log4j.MDC;
+    var previous = mdc.get("nolog");
     mdc.put("nolog", true);
     try {
       return callLocalSequence(project, sequence, variables);
     } finally {
-      try { mdc.remove("nolog"); } catch (_ignoreMdcRemove) {}
+      // a request already silent (X-Convertigo-NoLog, __nolog) stays so
+      try {
+        if (previous === null || typeof previous === "undefined") {
+          mdc.remove("nolog");
+        } else {
+          mdc.put("nolog", previous);
+        }
+      } catch (_ignoreMdcRestore) {}
     }
   }
 
+  // The handles of the keys in memory and the end of their lifetime: a key is forgotten GATEWAY_KEY_PURGE_MS after it.
+  function purgeUserGatewayKeys(keep, keepExpiresAt) {
+    var index = {};
+    try { index = JSON.parse(sharedSecretGet(GATEWAY_KEY_INDEX) || "{}") || {}; } catch (_ignoreBadIndex) { index = {}; }
+    var limit = Number(now()) - GATEWAY_KEY_PURGE_MS;
+    var kept = {};
+    for (var handle in index) {
+      if (Object.prototype.hasOwnProperty.call(index, handle) && handle !== keep) {
+        if (Number(index[handle]) < limit) {
+          sharedSecretRemove(handle);
+        } else {
+          kept[handle] = Number(index[handle]);
+        }
+      }
+    }
+    if (keep) {
+      kept[keep] = keepExpiresAt;
+    }
+    sharedSecretSet(GATEWAY_KEY_INDEX, JSON.stringify(kept));
+  }
+
   // {ok: true, handle} or {ok: false, code}: the user's key behind its handle, asked to C8Oforms when fetch is true and
-  // the one in memory is missing or older than GATEWAY_KEY_TTL_MS.
-  function userGatewayKeyHandle(options, fetch) {
+  // the one in memory is missing or has less than minRemainingMs of its lifetime left.
+  function userGatewayKeyHandle(options, fetch, minRemainingMs) {
     var userId = trim((options || {}).userId);
     if (!userId.length) {
       return { ok: false, code: "authentication_required" };
@@ -2049,7 +2085,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var handle = gatewayKeyHandleOf(userId);
     try {
       var cached = JSON.parse(sharedSecretGet(handle) || "null");
-      if (cached && cached.owner === userId && Number(cached.expiresAt) > Number(now()) && GATEWAY_KEY_PATTERN.test(trim(cached.key))) {
+      if (cached && cached.owner === userId && Number(cached.expiresAt) > Number(now()) + (Number(minRemainingMs) || 0)
+          && GATEWAY_KEY_PATTERN.test(trim(cached.key))) {
         return { ok: true, handle: handle };
       }
     } catch (_ignoreCachedKey) {}
@@ -2069,8 +2106,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var code = trim(answer.error && answer.error.code) || trim(answer.code) || "service_unavailable";
       return { ok: false, code: /^[a-z_]{1,64}$/.test(code) ? code : "service_unavailable" };
     }
-    sharedSecretSet(handle, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0,
-      expiresAt: Number(now()) + GATEWAY_KEY_TTL_MS }));
+    var expiresAt = Number(now()) + GATEWAY_KEY_TTL_MS;
+    sharedSecretSet(handle, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0, expiresAt: expiresAt }));
+    purgeUserGatewayKeys(handle, expiresAt);
     return { ok: true, handle: handle };
   }
 
@@ -2146,7 +2184,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     var resetAt = trim(member && member.budgetResetAt);
-    if (trim(quota.keyState).toLowerCase() === "exhausted") {
+    var keyState = trim(quota.keyState).toLowerCase();
+    // a revoked, blocked or expired key is not a used-up budget: the turn goes, the gateway's refusal says what it is
+    if (keyState === "revoked" || keyState === "blocked" || keyState === "expired") {
+      return { balanceUsd: null, resetAt: resetAt, scope: "unknown", exhausted: false };
+    }
+    if (keyState === "exhausted") {
       return { balanceUsd: 0, resetAt: resetAt, scope: tightest && tightest.balance <= 0 ? tightest.scope : (activeTeam ? "team" : "key"), exhausted: true };
     }
     return { balanceUsd: tightest ? tightest.balance : null, resetAt: resetAt, scope: tightest ? tightest.scope : "unknown",
@@ -2202,6 +2245,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         return t.userKeyTeamFull;
       case "agent_isolation_unavailable":
         return t.agentIsolationUnavailable;
+      case "conversation_not_owned":
+        return t.conversationNotOwned;
       default:
         return t.userKeyUnavailable;
     }
@@ -2226,7 +2271,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var balance = null;
     if (userGatewayKeysOn(state)) {
-      var key = userGatewayKeyHandle({ userId: state.userId || options.userId }, true);
+      // the key of the user of the session, in a conversation of that user only
+      var caller = trim(options.userId);
+      if (!caller.length || (trim(state.userId).length && trim(state.userId) !== caller)) {
+        return convertigoTurnRefusalResponse(state, "conversation_not_owned", userKeyRefusalMessage(state, "conversation_not_owned"));
+      }
+      var key = userGatewayKeyHandle({ userId: caller }, true, GATEWAY_KEY_TURN_MARGIN_MS);
       if (!key.ok) {
         return convertigoTurnRefusalResponse(state, key.code, userKeyRefusalMessage(state, key.code));
       }
@@ -2234,7 +2284,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var read = userTigoQuota(state);
       balance = read && read.ok ? effectiveTigoBalance(read.quota) : null;
     } else if (normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode() && normalizeProvider(state.provider) === "convertigo") {
-      var access = C8O.assistantAgentBridge.refreshTigoAccess();
+      var access;
+      try {
+        access = C8O.assistantAgentBridge.refreshTigoAccess();
+      } catch (refreshError) {
+        // the turn stops on it as before (sendMessage), recorded as a failed turn
+        access = { status: "error", code: "service_unavailable", error: String(refreshError) };
+      }
       options.tigoAccessResult = access;
       balance = access && access.status === "ok" && access.quota ? effectiveTigoBalance(access.quota) : null;
     }
@@ -4637,6 +4693,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userKeyRevoked: "Tigo n'est plus disponible pour votre compte. Un administrateur du No Code Studio peut le r\u00e9tablir.",
       userKeyTeamFull: "L'\u00e9quipe Tigo de ce serveur est compl\u00e8te. Un administrateur du No Code Studio peut l'agrandir.",
       agentIsolationUnavailable: "Cet agent ne peut pas fonctionner sur ce serveur avec des cl\u00e9s Tigo par utilisateur : il n'y serait pas isol\u00e9 des agents des autres utilisateurs. Un administrateur peut choisir l'agent Convertigo.",
+      conversationNotOwned: "Cette conversation appartient \u00e0 un autre compte. Commencez une nouvelle conversation.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -4689,6 +4746,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userKeyRevoked: "Tigo is no longer available for your account. An administrator of the No Code Studio can restore it.",
       userKeyTeamFull: "The Tigo team of this server is full. An administrator of the No Code Studio can extend it.",
       agentIsolationUnavailable: "This agent cannot run on this server with per-user Tigo keys: it would not be isolated from the other users' agents. An administrator can choose the Convertigo agent.",
+      conversationNotOwned: "This conversation belongs to another account. Start a new conversation.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
