@@ -26,15 +26,17 @@ const NAMES = ['c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigo
   'userGatewayKeyHandle', 'forgetUserGatewayKey', 'userTigoQuota', 'usdValue', 'tigoBudgetScope', 'effectiveTigoBalance', 'twoDigits',
   'formatResetDate', 'budgetExhaustedMessage', 'userKeyRefusalMessage', 'convertigoTurnRefusalResponse', 'convertigoTurnRefusal',
   'readConvertigoBalance', 'isBudgetError', 'budgetErrorAnswer', 'gatewayRateLimitIsBudget', 'bridgeRefusalAnswer', 'attachGatewayKeyHandle',
-  'lang', 'extractAgentErrorText'];
+  'lang', 'extractAgentErrorText', 'purgeUserGatewayKeys'];
 const CONSTANTS = ['USER_KEY_SEQUENCE', 'USER_QUOTA_SEQUENCE', 'GATEWAY_KEY_HANDLE_PREFIX', 'GATEWAY_KEY_TTL_MS', 'GATEWAY_KEY_PATTERN',
+  'GATEWAY_KEY_TURN_MARGIN_MS', 'GATEWAY_KEY_PURGE_MS', 'GATEWAY_KEY_INDEX',
   'TIGO_BUDGET_SCOPES', 'AGENT_ACCESS_PROJECT', 'TRANSLATIONS'];
 const USER_KEY = 'sk-user-' + 'a'.repeat(32);
 
 function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUserQuota'], key = { status: 'ok', key: USER_KEY, generation: 2 },
-  quota = null, tigoAccess = { status: 'ok', state: 'ready', quota: null }, tigoStatus = null } = {}) {
+  quota = null, tigoAccess = { status: 'ok', state: 'ready', quota: null }, tigoStatus = null, nolog = null } = {}) {
   const calls = [];
   const mdc = [];
+  let mdcValue = nolog;
   const store = new Map();
   let clock = 1_000_000;
   const sandbox = {
@@ -48,7 +50,8 @@ function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUse
     sharedSecretSet: (handle, value) => store.set(handle, String(value)),
     sharedSecretRemove: handle => store.delete(handle),
     unwrapSequenceResult: response => response && response.document && response.document.result,
-    Packages: { org: { apache: { log4j: { MDC: { put: (k, v) => mdc.push(['put', k, v]), remove: k => mdc.push(['remove', k]) } } } } },
+    Packages: { org: { apache: { log4j: { MDC: { get: () => mdcValue, put: (k, v) => { mdcValue = v; mdc.push(['put', k, v]); },
+      remove: k => { mdcValue = null; mdc.push(['remove', k]); } } } } } },
     Engine: {
       isStudioMode: () => studio,
       theApp: { databaseObjectsManager: { getOriginalProjectByName: name => (name === 'C8Oforms'
@@ -70,7 +73,7 @@ function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUse
       }
       throw new Error('unexpected ' + sequence);
     },
-    C8O: { assistantAgentBridge: { refreshTigoAccess: () => { calls.push({ sequence: 'TigoAccessBootstrap' }); return tigoAccess; } } }
+    C8O: { assistantAgentBridge: { refreshTigoAccess: () => { calls.push({ sequence: 'TigoAccessBootstrap' }); if (tigoAccess instanceof Error) throw tigoAccess; return tigoAccess; } } }
   };
   vm.runInNewContext(backendParts(NAMES, CONSTANTS) + '\n' + assignment('noCodeTigoQuota'), sandbox);
   return { sandbox, calls, mdc, store, tick: ms => { clock += ms; } };
@@ -135,7 +138,7 @@ test('Studio: a Convertigo turn on an exhausted TigoAccess quota is refused befo
 
 test('No Code: the user key is asked to C8Oforms without a log, kept behind a handle, and the turn refused at zero', () => {
   const { sandbox, calls, mdc, store } = load({ quota: contractQuota(2) });
-  const options = {};
+  const options = { userId: NOCODE.userId };
   assert.equal(sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), options), null);
   assert.match(options.gatewayKeyHandle, /^lib_ConvertigoAssistant\.gatewayKey\.[0-9a-f]{16}$/);
   const keyCall = calls.find(call => call.sequence === 'APIV2_TigoUserKey');
@@ -143,21 +146,24 @@ test('No Code: the user key is asked to C8Oforms without a log, kept behind a ha
   assert.equal(JSON.stringify(keyCall.variables), '{}', 'the user of the session, never a page value');
   assert.equal(keyCall.nolog, true, 'under the MDC nolog');
   assert.deepEqual(mdc, [['put', 'nolog', true], ['remove', 'nolog']]);
+  const silent = load({ nolog: true });
+  silent.sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  assert.deepEqual(silent.mdc.slice(-1), [['put', 'nolog', true]], 'a request already silent stays so');
   const stored = JSON.parse(store.get(options.gatewayKeyHandle));
   assert.equal(stored.key, USER_KEY);
   assert.equal(stored.owner, 'ann@example.com', 'the Bridge checks the owner');
   assert.doesNotMatch(JSON.stringify(options), /sk-/, 'only the handle leaves server memory');
   // zero: refused with the level and the reset date
   const zero = load({ quota: contractQuota(0) });
-  const refused = zero.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {});
+  const refused = zero.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId });
   assert.equal(refused.error.code, 'budget_exceeded');
   assert.equal(refused.error.message, 'Your Tigo budget is used up. It renews on 2026-12-01.');
   // an unknown balance or an unread quota lets the turn go: the gateway enforces
-  assert.equal(load({ quota: contractQuota(null) }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {}), null);
-  assert.equal(load({ quota: new Error('down') }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {}), null);
+  assert.equal(load({ quota: contractQuota(null) }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }), null);
+  assert.equal(load({ quota: new Error('down') }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }), null);
   // the Studio, a C8Oforms without user keys: no key asked
   for (const fixture of [load({ studio: true }), load({ sequences: [] })]) {
-    fixture.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {});
+    fixture.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId });
     assert.equal(fixture.calls.filter(call => call.sequence === 'APIV2_TigoUserKey').length, 0);
   }
 });
@@ -166,7 +172,7 @@ test('No Code: a refused key ends the turn with its reason, never another key', 
   const messages = {};
   for (const code of ['agent_not_allowed', 'email_missing', 'not_configured', 'key_revoked', 'member_blocked', 'member_limit_reached', 'service_unavailable', 'stale_request']) {
     const { sandbox, store } = load({ key: { status: 'error', error: { code, message: 'TigoAccess said ' + code } } });
-    const refused = sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {});
+    const refused = sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId });
     assert.equal(refused.error.code, code);
     assert.doesNotMatch(refused.error.message, /TigoAccess said/, 'the raw answer is not shown');
     assert.equal(store.size, 0);
@@ -179,9 +185,9 @@ test('No Code: a refused key ends the turn with its reason, never another key', 
   assert.match(messages.member_limit_reached, /full/);
   assert.equal(messages.service_unavailable, messages.stale_request);
   // an answer without a usable key, or an exception: no key
-  assert.equal(load({ key: { status: 'ok', key: 'not-a-key' } }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {}).error.code, 'service_unavailable');
+  assert.equal(load({ key: { status: 'ok', key: 'not-a-key' } }).sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }).error.code, 'service_unavailable');
   const thrown = load({ key: new Error('boom ' + USER_KEY) });
-  assert.equal(thrown.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {}).error.code, 'service_unavailable');
+  assert.equal(thrown.sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), { userId: NOCODE.userId }).error.code, 'service_unavailable');
   assert.deepEqual(thrown.mdc.slice(-1), [['remove', 'nolog']], 'the guard is removed after a failure');
 });
 
@@ -192,12 +198,45 @@ test('the key handle: memory for a few minutes, one per user, forgotten on refus
   assert.equal(sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true).handle, first.handle);
   assert.equal(calls.length, 1, 'kept in memory');
   assert.notEqual(sandbox.userGatewayKeyHandle({ userId: 'bob@example.com' }, true).handle, first.handle);
-  tick(5 * 60 * 1000 + 1);
+  tick(6 * 60 * 1000);
   sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
-  assert.equal(calls.filter(call => call.sequence === 'APIV2_TigoUserKey').length, 3, 'asked again after its lifetime');
+  assert.equal(calls.length, 2, 'still in its lifetime for a start');
+  sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true, 5 * 60 * 1000);
+  assert.equal(calls.filter(call => call.sequence === 'APIV2_TigoUserKey').length, 3, 'a turn needs 5 minutes of it left: asked again');
+  // a user gone: forgotten two hours after the end of its lifetime, at the next key asked
+  tick(2 * 60 * 60 * 1000 + 11 * 60 * 1000);
+  const bob = sandbox.gatewayKeyHandleOf('bob@example.com');
+  assert.equal(store.has(bob), true);
+  sandbox.userGatewayKeyHandle({ userId: 'carl@example.com' }, true);
+  assert.equal(store.has(bob), false, 'purged');
+  assert.deepEqual(Object.keys(JSON.parse(store.get('lib_ConvertigoAssistant.gatewayKey.index'))).length, 1);
   sandbox.forgetUserGatewayKey({ userId: 'ann@example.com' });
   assert.equal(store.has(first.handle), false);
   assert.equal(sandbox.userGatewayKeyHandle({}, true).code, 'authentication_required');
+});
+
+test('no key is asked for an agent off the gateway (it would enrol the user)', () => {
+  const { sandbox, calls } = load();
+  const payload = {};
+  sandbox.attachGatewayKeyHandle(payload, Object.assign({}, NOCODE, { provider: 'codex' }), 'agent_codex_start');
+  assert.equal(payload.gatewayKeyHandle, undefined);
+  assert.equal(calls.length, 0);
+});
+
+test('a conversation of another account, a revoked key, a failed refresh: never a budget refusal by mistake', () => {
+  const { sandbox, calls } = load({ quota: contractQuota(2) });
+  const foreign = sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE, { userId: 'bob@example.com' }), { userId: 'ann@example.com' });
+  assert.equal(foreign.error.code, 'conversation_not_owned');
+  assert.equal(calls.length, 0, 'no key asked for it');
+  assert.equal(sandbox.convertigoTurnRefusal(Object.assign({}, NOCODE), {}).error.code, 'conversation_not_owned', 'no caller');
+  const { sandbox: studio } = load();
+  for (const keyState of ['revoked', 'blocked', 'expired']) {
+    assert.equal(studio.effectiveTigoBalance({ activeScope: 'team', balanceUsd: 0, keyState, team: { balanceUsd: 0 } }).exhausted, false, keyState);
+  }
+  const thrown = load({ studio: true, tigoAccess: new Error('TigoAccess down') });
+  const options = {};
+  assert.equal(thrown.sandbox.convertigoTurnRefusal(Object.assign({}, STUDIO), options), null);
+  assert.equal(options.tigoAccessResult.status, 'error', 'the turn stops on it as before');
 });
 
 test('the Bridge calls carry the handle: a start or setup asks for the key, a prompt or a settings read uses memory', () => {
