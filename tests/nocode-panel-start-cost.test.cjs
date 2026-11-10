@@ -16,7 +16,7 @@ function bridgeCallSandbox(sessionId) {
   const posts = [];
   const sandbox = {
     trim: value => String(value ?? '').trim(),
-    requireBridgeCaller() {}, shouldAttachMcpTokenHandle: () => false, isOwnBridgeUrl: () => false, sendMark() {},
+    requireBridgeCaller() {}, shouldAttachMcpTokenHandle: () => false, attachGatewayKeyHandle() {}, isOwnBridgeUrl: () => false, sendMark() {},
     normalizeSkillProfile: () => 'nocode',
     callerSessionId: () => sessionId,
     defaultBridgeUrl: () => 'http://localhost/convertigo/projects/lib_ConvertigoAgentBridge/.json',

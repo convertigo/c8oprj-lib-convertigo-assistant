@@ -44,6 +44,7 @@ function fixture({ studio = true, desktop, admin = false, user = '', localPort =
     normalizeSkillProfile: () => 'generalist',
     normalizeUserKey: value => 'key:' + value,
     shouldAttachMcpTokenHandle: () => false,
+    attachGatewayKeyHandle() {},
     response: { result: { ok: true } },
     postForm(...args) { calls.push(args); return sandbox.response; },
     sendMark() {}

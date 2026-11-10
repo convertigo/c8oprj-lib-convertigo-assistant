@@ -72,7 +72,7 @@ test('a failed call is written too; a step outside a timed call writes nothing',
 test('each call to the Bridge is a step named after its sequence, after the preparation of its payload', () => {
   const { sandbox, lines } = fixture({
     parts: ['bridgeCall'],
-    requireBridgeCaller() {}, shouldAttachMcpTokenHandle: () => false, isOwnBridgeUrl: () => false, normalizeSkillProfile: () => 'nocode',
+    requireBridgeCaller() {}, shouldAttachMcpTokenHandle: () => false, attachGatewayKeyHandle() {}, isOwnBridgeUrl: () => false, normalizeSkillProfile: () => 'nocode',
     defaultBridgeUrl: () => 'http://localhost/convertigo/projects/lib_ConvertigoAgentBridge/.json',
     postForm() { sandbox.advance(11500); return { ok: true }; }
   });

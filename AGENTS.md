@@ -717,3 +717,20 @@ rediscovering the same context.
   on these settings.
 - Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`
   and `tests/nocode-server-settings-ui.test.cjs`.
+
+## Tigo budget gate and No Code per-user keys
+
+- Contract `tigo-nocode-contract.md` sections 5, 6 and 8 (convertigo/c8oprj-tigoaccess#5). Design and the
+  isolation analysis: lib_ConvertigoAgentBridge `docs/nocode-user-keys.md`.
+- `convertigoTurnRefusal` runs before a Convertigo turn writes anything (`sendMessage`, before `starting`). It
+  refuses the turn when the effective balance is zero or below: TigoAccess in the Studio (the refresh is kept in
+  `options.tigoAccessResult`), C8Oforms `APIV2_TigoUserQuota` on a No Code server. An unknown balance lets the turn go.
+- On a No Code server whose C8Oforms has `APIV2_TigoUserKey`, the user's key is asked under the log4j MDC
+  `nolog` (`callLocalSequenceQuietly`). It is kept 5 min in `context.server` behind
+  `lib_ConvertigoAssistant.gatewayKey.<hash>`, and only that handle goes to the Bridge (`attachGatewayKeyHandle`). A
+  refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right or a
+  401 forgets it.
+- A turn the gateway stopped (`budget_exceeded`, or a gateway rate limit while the quota reads zero) ends with
+  `budgetErrorAnswer`: the quota is read again for the level and the reset date, or the generic sentence if that read
+  fails. `AgentQuota` serves No Code through `noCodeTigoQuota`, in the shape of the Studio's TigoAccess quota.
+- Run `node --test tests/tigo_budget_gate.test.cjs`.
