@@ -1093,7 +1093,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (trim(payload.gatewayKeyHandle).length) {
       return;
     }
-    var start = /^agent_[a-z]+_(setup|start)$/.test(sequence);
+    // a prewarm (the panel opening) never waits for C8Oforms and TigoAccess (up to ~45 s): memory only
+    var start = /^agent_[a-z]+_(setup|start)$/.test(sequence) && trim(payload.prewarm) !== "true";
     if (!start && !/^agent_[a-z]+_prompt$/.test(sequence) && sequence !== "agent_settings") {
       return;
     }
@@ -1988,6 +1989,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   //   APIV2_TigoUserQuota  {status: "ok", quota: {member, team, effective, key}} | the same error
   var USER_KEY_SEQUENCE = "APIV2_TigoUserKey";
   var USER_QUOTA_SEQUENCE = "APIV2_TigoUserQuota";
+  // the server's registration with TigoAccess (piece A3): an unregistered server keeps its shared key (not_configured)
+  var USER_KEY_SERVER_SYMBOL = "C8Oforms.tigo.server.id";
   var GATEWAY_KEY_HANDLE_PREFIX = "lib_ConvertigoAssistant.gatewayKey.";
   // A key serves new starts for GATEWAY_KEY_TTL_MS; a turn starts with at least GATEWAY_KEY_TURN_MARGIN_MS of it left (its
   // setup, start and prompt follow). A running process may go on with the key it holds (the Bridge accepts it by its
@@ -2008,12 +2011,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
-  // true where the per-user path is the only one: a No Code session, on a server, whose C8Oforms issues user keys
+  // true where the per-user path is the only one: a No Code session, on a server registered with TigoAccess whose
+  // C8Oforms issues user keys (the Bridge keeps it on once seen)
   function userGatewayKeysOn(options) {
-    if (Engine.isStudioMode() || normalizeSkillProfile(options || {}) !== "nocode") {
+    if (Engine.isStudioMode() || normalizeSkillProfile(options || {}) !== "nocode" || !c8oformsSequenceAvailable(USER_KEY_SEQUENCE)) {
       return false;
     }
-    return c8oformsSequenceAvailable(USER_KEY_SEQUENCE);
+    try {
+      var server = Engine.theApp.databaseObjectsManager.symbolsGetValue(USER_KEY_SERVER_SYMBOL);
+      return server !== null && typeof server !== "undefined" && trim(String(server)).length > 0;
+    } catch (_ignoreNoServerSymbol) {
+      return false;
+    }
   }
 
   // The agents on the Convertigo gateway: the convertigo agent (Vibe), Claude Code on a gateway model (provider/model).
@@ -2158,8 +2167,17 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // (Studio: the active scope, the team and the member, the tightest decides). balanceUsd null: unknown or unlimited.
   function effectiveTigoBalance(quota) {
     quota = quota || {};
+    // TigoAccess's getQuota of a managed team's key carries the contract shape too: it decides
+    if (quota.contract && typeof quota.contract === "object" && quota.contract.effective && typeof quota.contract.effective === "object") {
+      return effectiveTigoBalance(quota.contract);
+    }
     if (quota.effective && typeof quota.effective === "object") {
       var effective = quota.effective;
+      var contractKeyState = trim(quota.key && quota.key.state).toLowerCase();
+      // a revoked or blocked key is not a used-up budget: the key's refusal says what it is
+      if (contractKeyState === "revoked" || contractKeyState === "blocked") {
+        return { balanceUsd: null, resetAt: trim(effective.resetAt), scope: "unknown", exhausted: false };
+      }
       if (effective.unlimited === true || trim(effective.unlimited) === "true") {
         return { balanceUsd: null, resetAt: trim(effective.resetAt), scope: tigoBudgetScope(effective.scope), exhausted: false };
       }
