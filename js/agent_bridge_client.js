@@ -1070,6 +1070,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  // Per-user gateway keys: the handle of the user's key goes with every call that starts, sets up, prompts or reads an
+  // agent; a start or setup asks C8Oforms for the key when memory has none (a prewarm), the others use memory only.
+  function attachGatewayKeyHandle(payload, options, sequence) {
+    if (trim(payload.gatewayKeyHandle).length) {
+      return;
+    }
+    var start = /^agent_[a-z]+_(setup|start)$/.test(sequence);
+    if (!start && !/^agent_[a-z]+_prompt$/.test(sequence) && sequence !== "agent_settings") {
+      return;
+    }
+    if (!userGatewayKeysOn(options)) {
+      return;
+    }
+    var key = trim(options.gatewayKeyHandle).length ? { ok: true, handle: trim(options.gatewayKeyHandle) }
+      : userGatewayKeyHandle(options, start);
+    if (key.ok) {
+      payload.gatewayKeyHandle = key.handle;
+    }
+  }
+
   function sequencePayload(response) {
     var value = unwrapSequenceResult(response);
     if (value === null || typeof value === "undefined") {
@@ -1934,9 +1954,401 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return { ok: false, status: "failed", error: { code: "agent_access_unavailable",
         message: "agent_access_unavailable: The Tigo right of this account could not be checked. Try again in a moment." } };
     }
+    forgetUserGatewayKey({ userId: callerUserId("") });
     return { ok: false, status: "failed", error: { code: "agent_not_allowed",
       message: "agent_not_allowed: Tigo is not enabled for this account. An administrator of the No Code Studio can grant it." } };
   }
+
+  // ---- No Code per-user gateway keys and the Tigo budget (tigo-nocode-contract.md sections 5, 6 and 8) ----
+  // On a server whose C8Oforms issues one gateway key per user (piece A3), a No Code turn on the Convertigo gateway runs
+  // on its user's key. The Assistant asks C8Oforms for it within the user's own request (never for a user the page
+  // names), keeps it a few minutes in server memory behind an opaque handle and passes the handle to the Bridge, which
+  // puts the key in the agent's environment. The key never reaches the page, a file or a log: the call runs under the
+  // log4j MDC nolog, since the engine logs a requestable's answer. Any refusal ends the turn there: no server key, no
+  // other model. The Studio keeps its TigoAccess key file.
+  //   APIV2_TigoUserKey    {status: "ok", key, generation} | {status: "error", error: {code, message}, retryAfter?}
+  //   APIV2_TigoUserQuota  {status: "ok", quota: {member, team, effective, key}} | the same error
+  var USER_KEY_SEQUENCE = "APIV2_TigoUserKey";
+  var USER_QUOTA_SEQUENCE = "APIV2_TigoUserQuota";
+  var GATEWAY_KEY_HANDLE_PREFIX = "lib_ConvertigoAssistant.gatewayKey.";
+  var GATEWAY_KEY_TTL_MS = 5 * 60 * 1000;
+  var GATEWAY_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,256}$/;
+  var TIGO_BUDGET_SCOPES = ["member", "team", "key", "user", "unknown"];
+
+  function c8oformsSequenceAvailable(name) {
+    try {
+      var project = Engine.theApp.databaseObjectsManager.getOriginalProjectByName(AGENT_ACCESS_PROJECT);
+      return project != null && project.getSequenceByName(name) != null;
+    } catch (_ignoreNoSequence) {
+      return false;
+    }
+  }
+
+  // true where the per-user path is the only one: a No Code session, on a server, whose C8Oforms issues user keys
+  function userGatewayKeysOn(options) {
+    if (Engine.isStudioMode() || normalizeSkillProfile(options || {}) !== "nocode") {
+      return false;
+    }
+    return c8oformsSequenceAvailable(USER_KEY_SEQUENCE);
+  }
+
+  // The agents on the Convertigo gateway: the convertigo agent (Vibe), Claude Code on a gateway model (provider/model).
+  function usesConvertigoGateway(options) {
+    options = options || {};
+    var provider = normalizeProvider(options.provider || options.agentProvider);
+    if (provider === "convertigo") {
+      return true;
+    }
+    if (provider === "claude") {
+      var model = trim(options.model || options.agentModel);
+      return model.indexOf("/") > 0 && !/^claude-/.test(model);
+    }
+    return false;
+  }
+
+  function gatewayKeyHandleOf(userId) {
+    return GATEWAY_KEY_HANDLE_PREFIX + hashShort("tigo-user-key:" + trim(userId));
+  }
+
+  // An internal call whose answer holds a secret: the engine writes no log of its input, answer or HTTP traces in this
+  // thread. Never made without that guard.
+  function callLocalSequenceQuietly(project, sequence, variables) {
+    var mdc = Packages.org.apache.log4j.MDC;
+    mdc.put("nolog", true);
+    try {
+      return callLocalSequence(project, sequence, variables);
+    } finally {
+      try { mdc.remove("nolog"); } catch (_ignoreMdcRemove) {}
+    }
+  }
+
+  // {ok: true, handle} or {ok: false, code}: the user's key behind its handle, asked to C8Oforms when fetch is true and
+  // the one in memory is missing or older than GATEWAY_KEY_TTL_MS.
+  function userGatewayKeyHandle(options, fetch) {
+    var userId = trim((options || {}).userId);
+    if (!userId.length) {
+      return { ok: false, code: "authentication_required" };
+    }
+    var handle = gatewayKeyHandleOf(userId);
+    try {
+      var cached = JSON.parse(sharedSecretGet(handle) || "null");
+      if (cached && cached.owner === userId && Number(cached.expiresAt) > Number(now()) && GATEWAY_KEY_PATTERN.test(trim(cached.key))) {
+        return { ok: true, handle: handle };
+      }
+    } catch (_ignoreCachedKey) {}
+    if (fetch !== true) {
+      return { ok: false, code: "gateway_credential_missing" };
+    }
+    var answer;
+    try {
+      answer = unwrapSequenceResult(callLocalSequenceQuietly(AGENT_ACCESS_PROJECT, USER_KEY_SEQUENCE, {})) || {};
+    } catch (keyError) {
+      try { log.warn("(lib_ConvertigoAssistant) Tigo user key not obtained: " + String(keyError).replace(/sk-[A-Za-z0-9_-]+/g, "sk-***")); } catch (_ignoreNoLog) {}
+      return { ok: false, code: "service_unavailable" };
+    }
+    var key = trim(answer.key);
+    if (trim(answer.status) !== "ok" || !GATEWAY_KEY_PATTERN.test(key)) {
+      sharedSecretRemove(handle);
+      var code = trim(answer.error && answer.error.code) || trim(answer.code) || "service_unavailable";
+      return { ok: false, code: /^[a-z_]{1,64}$/.test(code) ? code : "service_unavailable" };
+    }
+    sharedSecretSet(handle, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0,
+      expiresAt: Number(now()) + GATEWAY_KEY_TTL_MS }));
+    return { ok: true, handle: handle };
+  }
+
+  // A key C8Oforms or the gateway refused (right removed, key revoked, rejected): the next turn asks again.
+  function forgetUserGatewayKey(options) {
+    var userId = trim((options || {}).userId);
+    if (userId.length) {
+      sharedSecretRemove(gatewayKeyHandleOf(userId));
+    }
+  }
+
+  // {ok: true, quota} (the contract's shape), {ok: false, code}, or null where C8Oforms has no quota for its users.
+  function userTigoQuota(options) {
+    if (!c8oformsSequenceAvailable(USER_QUOTA_SEQUENCE)) {
+      return null;
+    }
+    try {
+      var answer = unwrapSequenceResult(callLocalSequence(AGENT_ACCESS_PROJECT, USER_QUOTA_SEQUENCE, {})) || {};
+      if (trim(answer.status) !== "ok" || !answer.quota || typeof answer.quota !== "object") {
+        return { ok: false, code: trim(answer.error && answer.error.code) || "service_unavailable" };
+      }
+      return { ok: true, quota: answer.quota };
+    } catch (_ignoreQuotaRead) {
+      return { ok: false, code: "service_unavailable" };
+    }
+  }
+
+  // An amount in USD, or null when unknown (null, empty, not a number): unknown is never zero.
+  function usdValue(value) {
+    if (value === null || typeof value === "undefined") {
+      return null;
+    }
+    var text = trim(value);
+    if (!text.length || text === "null") {
+      return null;
+    }
+    var number = Number(text);
+    return isFinite(number) ? number : null;
+  }
+
+  function tigoBudgetScope(value) {
+    var scope = trim(value).toLowerCase();
+    return TIGO_BUDGET_SCOPES.indexOf(scope) >= 0 ? scope : "unknown";
+  }
+
+  // {balanceUsd, resetAt, scope, exhausted} of a quota: the contract's (No Code, effective) or TigoAccess's getQuota
+  // (Studio: the active scope, the team and the member, the tightest decides). balanceUsd null: unknown or unlimited.
+  function effectiveTigoBalance(quota) {
+    quota = quota || {};
+    if (quota.effective && typeof quota.effective === "object") {
+      var effective = quota.effective;
+      if (effective.unlimited === true || trim(effective.unlimited) === "true") {
+        return { balanceUsd: null, resetAt: trim(effective.resetAt), scope: tigoBudgetScope(effective.scope), exhausted: false };
+      }
+      var balance = usdValue(effective.balanceUsd);
+      return { balanceUsd: balance, resetAt: trim(effective.resetAt), scope: tigoBudgetScope(effective.scope), exhausted: balance !== null && balance <= 0 };
+    }
+    var activeTeam = trim(quota.activeScope) === "team";
+    var team = activeTeam && quota.team && typeof quota.team === "object" ? quota.team : null;
+    var member = team && team.member && typeof team.member === "object" ? team.member : null;
+    var candidates = [];
+    if (member && member.budgetReported !== false && trim(member.budgetReported) !== "false") {
+      candidates.push({ balance: usdValue(member.balanceUsd), scope: "member" });
+    }
+    if (team) {
+      candidates.push({ balance: usdValue(team.balanceUsd), scope: "team" });
+    }
+    candidates.push({ balance: usdValue(quota.balanceUsd), scope: activeTeam ? "team" : "key" });
+    var tightest = null;
+    for (var i = 0; i < candidates.length; i++) {
+      if (candidates[i].balance !== null && (tightest === null || candidates[i].balance < tightest.balance)) {
+        tightest = candidates[i];
+      }
+    }
+    var resetAt = trim(member && member.budgetResetAt);
+    if (trim(quota.keyState).toLowerCase() === "exhausted") {
+      return { balanceUsd: 0, resetAt: resetAt, scope: tightest && tightest.balance <= 0 ? tightest.scope : (activeTeam ? "team" : "key"), exhausted: true };
+    }
+    return { balanceUsd: tightest ? tightest.balance : null, resetAt: resetAt, scope: tightest ? tightest.scope : "unknown",
+      exhausted: tightest !== null && tightest.balance <= 0 };
+  }
+
+  function twoDigits(value) {
+    return value < 10 ? "0" + value : String(value);
+  }
+
+  // A reset date (ISO, or epoch seconds or milliseconds) as the user reads it, "" when unknown.
+  function formatResetDate(state, value) {
+    var text = trim(value);
+    if (!text.length) {
+      return "";
+    }
+    var ms = /^\d+$/.test(text) ? Number(text) * (text.length <= 10 ? 1000 : 1) : Date.parse(text);
+    if (!isFinite(ms) || ms <= 0) {
+      return "";
+    }
+    var date = new Date(ms);
+    var day = twoDigits(date.getUTCDate()), month = twoDigits(date.getUTCMonth() + 1), year = date.getUTCFullYear();
+    return state && state.language === "fr" ? day + "/" + month + "/" + year : year + "-" + month + "-" + day;
+  }
+
+  // The answer of a turn the budget refused or stopped: its level and reset date when the quota said them. Never the
+  // gateway's message, an amount of someone else or an id.
+  function budgetExhaustedMessage(state, scope, resetAt) {
+    var t = lang(state);
+    var text = scope === "team" ? t.budgetTeamExhausted : (scope === "key" ? t.budgetKeyExhausted : t.budgetExhausted);
+    var date = formatResetDate(state, resetAt);
+    return text + (date.length ? " " + t.budgetRenews.replace("{date}", date) : "");
+  }
+
+  // The sentence for a code that refused the user's key (C8Oforms, TigoAccess) or the agent (Bridge).
+  function userKeyRefusalMessage(state, code) {
+    var t = lang(state);
+    switch (code) {
+      case "agent_not_allowed":
+        return "agent_not_allowed: Tigo is not enabled for this account. An administrator of the No Code Studio can grant it.";
+      case "email_missing":
+      case "email_invalid":
+        return t.userKeyEmailMissing;
+      case "not_configured":
+      case "unknown_server":
+      case "bad_secret":
+        return t.userKeyNotConfigured;
+      case "key_revoked":
+      case "member_blocked":
+      case "server_removed":
+        return t.userKeyRevoked;
+      case "member_limit_reached":
+        return t.userKeyTeamFull;
+      case "agent_isolation_unavailable":
+        return t.agentIsolationUnavailable;
+      default:
+        return t.userKeyUnavailable;
+    }
+  }
+
+  function convertigoTurnRefusalResponse(state, code, message, details) {
+    var error = { code: code, message: message };
+    for (var name in (details || {})) {
+      if (Object.prototype.hasOwnProperty.call(details, name)) {
+        error[name] = details[name];
+      }
+    }
+    return { ok: false, status: "failed", threadid: trim(state && state.threadid), error: error };
+  }
+
+  // Before a Convertigo turn writes anything (Studio and No Code): the user's key where the server issues one, and an
+  // effective balance above zero (contract section 6). An unknown balance lets the turn go: the gateway still enforces.
+  // The Studio's TigoAccess refresh is kept in options.tigoAccessResult for the rest of the turn.
+  function convertigoTurnRefusal(state, options) {
+    if (!usesConvertigoGateway(state)) {
+      return null;
+    }
+    var balance = null;
+    if (userGatewayKeysOn(state)) {
+      var key = userGatewayKeyHandle({ userId: state.userId || options.userId }, true);
+      if (!key.ok) {
+        return convertigoTurnRefusalResponse(state, key.code, userKeyRefusalMessage(state, key.code));
+      }
+      options.gatewayKeyHandle = key.handle;
+      var read = userTigoQuota(state);
+      balance = read && read.ok ? effectiveTigoBalance(read.quota) : null;
+    } else if (normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode() && normalizeProvider(state.provider) === "convertigo") {
+      var access = C8O.assistantAgentBridge.refreshTigoAccess();
+      options.tigoAccessResult = access;
+      balance = access && access.status === "ok" && access.quota ? effectiveTigoBalance(access.quota) : null;
+    }
+    if (balance !== null && balance.exhausted) {
+      return convertigoTurnRefusalResponse(state, "budget_exceeded", budgetExhaustedMessage(state, balance.scope, balance.resetAt),
+        { scope: balance.scope, resetAt: balance.resetAt || null, retryable: false });
+    }
+    return null;
+  }
+
+  // {ok, balance}: the user's quota read again after the gateway stopped a turn (No Code: C8Oforms; Studio: TigoAccess).
+  function readConvertigoBalance(state) {
+    try {
+      if (userGatewayKeysOn(state)) {
+        var read = userTigoQuota(state);
+        return read && read.ok ? { ok: true, balance: effectiveTigoBalance(read.quota) } : { ok: false };
+      }
+      if (Engine.isStudioMode() && normalizeSkillProfile(state) !== "nocode") {
+        var result = callLocalSequence("lib_ConvertigoAssistant", "TigoAccessStatus", {});
+        result = result && (result.document || result.doc || result);
+        result = result && (result.document || result);
+        var access = result && result.response;
+        return access && trim(access.status) === "ok" && access.quota ? { ok: true, balance: effectiveTigoBalance(access.quota) } : { ok: false };
+      }
+    } catch (_ignoreBalanceRead) {}
+    return { ok: false };
+  }
+
+  function isBudgetError(data) {
+    if (!data) {
+      return false;
+    }
+    if (typeof data === "string") {
+      return /(^|[^A-Za-z0-9_])budget_exceeded([^A-Za-z0-9_]|$)/.test(data);
+    }
+    return trim(data.code) === "budget_exceeded" || !!(data.budget && trim(data.budget.code) === "budget_exceeded");
+  }
+
+  // The answer of a turn the gateway stopped on a used-up budget, once per run: the quota is read again for the level
+  // and the reset date; if that read fails, the generic sentence.
+  function budgetErrorAnswer(state, data) {
+    if (trim(state.budgetAnswer).length && trim(state.budgetAnswerRunid) === trim(state.runid)) {
+      return state.budgetAnswer;
+    }
+    var read = readConvertigoBalance(state);
+    var scope = read.ok && read.balance.exhausted ? read.balance.scope : tigoBudgetScope(data && (data.scope || (data.budget && data.budget.scope)));
+    var answer = read.ok ? budgetExhaustedMessage(state, scope, read.balance.resetAt) : lang(state).budgetExhausted;
+    state.budgetAnswer = answer;
+    state.budgetAnswerRunid = trim(state.runid);
+    state.errorCode = "budget_exceeded";
+    return answer;
+  }
+
+  // A rate limit on the gateway without the budget code (a runtime older than the Bridge's hook): the quota says
+  // whether the budget is used up.
+  function gatewayRateLimitIsBudget(state, data) {
+    if (!usesConvertigoGateway(state)) {
+      return false;
+    }
+    var text = trim(extractAgentErrorText(data, 0)).toLowerCase();
+    if (!/rate limit|\b429\b|too many requests/.test(text)) {
+      return false;
+    }
+    // one read per run: a failed turn reports its error in more than one event
+    if (trim(state.rateLimitBudgetRunid).length && state.rateLimitBudgetRunid === trim(state.runid)) {
+      return state.rateLimitBudget === true;
+    }
+    var read = readConvertigoBalance(state);
+    state.rateLimitBudgetRunid = trim(state.runid);
+    state.rateLimitBudget = read.ok && read.balance.exhausted === true;
+    return state.rateLimitBudget;
+  }
+
+  // The answer of a start or prompt the Bridge refused for the user's key, the isolation of agents or the budget, "" for
+  // anything else.
+  function bridgeRefusalAnswer(state, text) {
+    text = String(text || "");
+    if (isBudgetError(text)) {
+      return budgetErrorAnswer(state, { scope: (/"scope"\s*:\s*"([a-z]+)"/.exec(text) || [])[1] || "unknown" });
+    }
+    if (/(^|[^a-z_])gateway_credential_missing([^a-z_]|$)/.test(text)) {
+      forgetUserGatewayKey(state);
+      return userKeyRefusalMessage(state, "gateway_credential_missing");
+    }
+    if (/(^|[^a-z_])agent_isolation_unavailable([^a-z_]|$)/.test(text)) {
+      return userKeyRefusalMessage(state, "agent_isolation_unavailable");
+    }
+    return "";
+  }
+
+  // The user's quota of a No Code server as the panel's quota arc reads the Studio's TigoAccess quota, or null where
+  // C8Oforms has none (the arc stays neutral). No key, email or id of TigoAccess or LiteLLM in it.
+  C8O.assistantAgentBridge.noCodeTigoQuota = function (options) {
+    if (Engine.isStudioMode() || !c8oformsSequenceAvailable(USER_QUOTA_SEQUENCE)) {
+      return null;
+    }
+    var unavailable = { provider: "convertigo", source: "tigoaccess", kind: "credit", available: false, windows: [], updatedAt: null };
+    var read = userTigoQuota(options || {});
+    if (read === null || !read.ok) {
+      return { status: "error", code: read ? trim(read.code) || "service_unavailable" : "service_unavailable", quota: unavailable };
+    }
+    var q = read.quota;
+    var member = q.member && typeof q.member === "object" ? q.member : {};
+    var team = q.team && typeof q.team === "object" ? q.team : {};
+    var balance = effectiveTigoBalance(q);
+    var keyState = trim(q.key && q.key.state).toLowerCase();
+    var state = keyState === "revoked" || keyState === "blocked" ? keyState : (balance.exhausted ? "exhausted" : "active");
+    var memberReported = member.unlimited === true || usdValue(member.budgetUsd) !== null;
+    return {
+      status: "ok",
+      quota: {
+        provider: "convertigo", source: "tigoaccess", kind: "credit", available: true, activeScope: "team",
+        personal: null,
+        team: {
+          id: "", name: "",
+          budgetUsd: team.unlimited === true ? null : usdValue(team.envelopeUsd),
+          spentUsd: usdValue(team.spentUsd), balanceUsd: team.unlimited === true ? null : usdValue(team.balanceUsd), keyState: state,
+          member: {
+            spentUsd: usdValue(member.spentUsd), budgetUsd: member.unlimited === true ? null : usdValue(member.budgetUsd),
+            balanceUsd: member.unlimited === true ? null : usdValue(member.balanceUsd),
+            budgetResetAt: trim(member.resetAt || balance.resetAt) || null, budgetReported: memberReported
+          }
+        },
+        offerAmountUsd: null,
+        budgetUsd: team.unlimited === true ? null : usdValue(team.envelopeUsd),
+        spentUsd: usdValue(team.spentUsd),
+        balanceUsd: team.unlimited === true ? null : usdValue(team.balanceUsd),
+        keyState: state, expiresAt: null, extensionMode: "manual", updatedAt: Number(now()), windows: []
+      }
+    };
+  };
 
   // First step of the sequences of the former chat assistant (SendMessage, CreateConversation, ReadResponse,
   // UploadFiles, GetMessages, LRagQuery): on the server of a No Code Studio that knows the Tigo right, the same callers
@@ -2334,6 +2746,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (shouldAttachMcpTokenHandle(sequence)) {
       attachMcpTokenHandle(payload, options);
     }
+    attachGatewayKeyHandle(payload, options, sequence);
     // In the Studio, the engine gives every caller of a sequence one shared context unless its name starts with
     // "studio_", and serializes the requests on it: each read of a viewer waited behind the long-poll of the run pilot,
     // whatever its session. Each viewer gets a context of its own, stable for its HTTP session and the conversation:
@@ -4197,6 +4610,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       gatewayKeyRejected: "LiteLLM a refusé la clé d'API (HTTP 401). Vérifiez la clé configurée pour l'agent Convertigo.",
       gatewayAccessRejected: "LiteLLM a refusé l'accès au modèle {model}. Vérifiez la validité de la clé et les modèles autorisés sur la clé et sur son utilisateur LiteLLM.",
       gatewayUnreachable: "Tigo n'a pas pu joindre la passerelle de modèles Convertigo : la connexion a échoué à chaque nouvel essai. Vérifiez l'accès Internet de ce poste (ou son proxy), puis renvoyez votre message. Le travail déjà fait dans le projet est conservé.",
+      budgetExhausted: "Votre budget Tigo est \u00e9puis\u00e9.",
+      budgetTeamExhausted: "Le budget Tigo de votre \u00e9quipe est \u00e9puis\u00e9.",
+      budgetKeyExhausted: "Le cr\u00e9dit Tigo de cette cl\u00e9 est \u00e9puis\u00e9.",
+      budgetRenews: "Il sera renouvel\u00e9 le {date}.",
+      userKeyUnavailable: "La cl\u00e9 Tigo de votre compte n'a pas pu \u00eatre obtenue. R\u00e9essayez dans un instant.",
+      userKeyEmailMissing: "Tigo a besoin d'une adresse e-mail valide sur votre compte. Demandez-la \u00e0 un administrateur du No Code Studio.",
+      userKeyNotConfigured: "Tigo n'est pas encore configur\u00e9 sur ce serveur. Un administrateur du No Code Studio doit le d\u00e9clarer aupr\u00e8s de Convertigo.",
+      userKeyRevoked: "Tigo n'est plus disponible pour votre compte. Un administrateur du No Code Studio peut le r\u00e9tablir.",
+      userKeyTeamFull: "L'\u00e9quipe Tigo de ce serveur est compl\u00e8te. Un administrateur du No Code Studio peut l'agrandir.",
+      agentIsolationUnavailable: "Cet agent ne peut pas fonctionner sur ce serveur avec des cl\u00e9s Tigo par utilisateur : il n'y serait pas isol\u00e9 des agents des autres utilisateurs. Un administrateur peut choisir l'agent Convertigo.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -4239,6 +4662,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       gatewayKeyRejected: "LiteLLM rejected the API key (HTTP 401). Check the key configured for the Convertigo agent.",
       gatewayAccessRejected: "LiteLLM refused access to model {model}. Check the key's validity and the models allowed for both the key and its LiteLLM user.",
       gatewayUnreachable: "Tigo could not reach the Convertigo model gateway: the connection failed on every retry. Check this computer's Internet access (or its proxy), then send your message again. The work already done in the project is kept.",
+      budgetExhausted: "Your Tigo budget is used up.",
+      budgetTeamExhausted: "Your team's Tigo budget is used up.",
+      budgetKeyExhausted: "The Tigo credit of this key is used up.",
+      budgetRenews: "It renews on {date}.",
+      userKeyUnavailable: "The Tigo key of your account could not be obtained. Try again in a moment.",
+      userKeyEmailMissing: "Tigo needs a valid email address on your account. Ask an administrator of the No Code Studio.",
+      userKeyNotConfigured: "Tigo is not set up on this server yet. An administrator of the No Code Studio has to register it with Convertigo.",
+      userKeyRevoked: "Tigo is no longer available for your account. An administrator of the No Code Studio can restore it.",
+      userKeyTeamFull: "The Tigo team of this server is full. An administrator of the No Code Studio can extend it.",
+      agentIsolationUnavailable: "This agent cannot run on this server with per-user Tigo keys: it would not be isolated from the other users' agents. An administrator can choose the Convertigo agent.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -8384,6 +8817,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (trim(options.serviceTier || options.speedTier).length) {
       state.serviceTier = trim(options.serviceTier || options.speedTier);
     }
+    // Before anything of the turn is written: on the Convertigo gateway, the user's key where the server issues one and
+    // a balance above zero (tigo-nocode-contract.md section 6); the gateway still enforces on its own.
+    var convertigoRefusal = convertigoTurnRefusal(state, options);
+    if (convertigoRefusal !== null) {
+      return convertigoRefusal;
+    }
     state.status = "starting";
     state.answer = "";
     state.answerIsFinal = false;
@@ -8473,7 +8912,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     try {
       var provider = runProvider;
       if (provider === "convertigo" && normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode()) {
-        var tigoAccess = C8O.assistantAgentBridge.refreshTigoAccess();
+        var tigoAccess = options.tigoAccessResult || C8O.assistantAgentBridge.refreshTigoAccess();
         if (tigoAccess.status !== "ok") { throw new Error("TigoAccess (" + tigoAccess.code + "): " + tigoAccess.error); }
         sendMark("tigo-access");
       }
@@ -8742,7 +9181,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           }
         };
       } else {
-        state.error = String(e);
+        state.error = bridgeRefusalAnswer(state, String(e)) || String(e);
       }
       state.answer = state.error;
       state.answerIsFinal = true;
@@ -9154,7 +9593,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           finishTurnReasoning(state);
           collectFeedbackRuntimeError(state, extractAgentErrorText(data, 0) || type);
           state.status = "failed";
-          state.error = userFacingAgentError(state, data);
+          // a used-up budget ends the turn with its level and reset date, read again (contract section 6)
+          if (isBudgetError(data) || gatewayRateLimitIsBudget(state, data)) {
+            state.error = budgetErrorAnswer(state, data);
+          } else {
+            state.error = userFacingAgentError(state, data);
+            if (userGatewayKeysOn(state) && agentHttpErrorStatus(data, 0) === 401) {
+              forgetUserGatewayKey(state);
+            }
+          }
           if (isResidentProvider(state.provider) && isCodexAuthenticationError(data)) {
             state.setupRequired = true;
             state.setupReport = {

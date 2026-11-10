@@ -21798,6 +21798,10 @@ title: Tigo
                               		this.local.Buffer = {};
                               		page.tick();
                               		page.scrollChatBottom(0);
+                              		// a turn refused for a used-up Tigo budget: the quota arc shows it at once
+                              		if (vars.error && vars.error.code === "budget_exceeded" && typeof page.requestAgentQuota === "function") {
+                              			page.requestAgentQuota(true);
+                              		}
                               		resolve();
                               '
                       ↓error [ngx.components.UIControlVariable-1751354620917]: 

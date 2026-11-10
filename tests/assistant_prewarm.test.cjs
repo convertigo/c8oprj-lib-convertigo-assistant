@@ -93,7 +93,7 @@ test('a background Bridge call returns at once and posts from its own daemon thr
   const threads = [];
   const sandbox = {
     trim: value => String(value ?? '').trim(),
-    requireBridgeCaller() {}, shouldAttachMcpTokenHandle: () => false, isOwnBridgeUrl: () => false, sendMark() {},
+    requireBridgeCaller() {}, shouldAttachMcpTokenHandle: () => false, attachGatewayKeyHandle() {}, isOwnBridgeUrl: () => false, sendMark() {},
     defaultBridgeUrl: () => 'http://localhost/convertigo/projects/lib_ConvertigoAgentBridge/.json',
     postForm: (...args) => { posts.push(args); return { ok: true }; },
     java: { lang: {
@@ -153,7 +153,7 @@ function sendWith({ taken, prompt }) {
     recoverableBridgeError: () => false, isCodexAuthenticationError: () => false, responseForState: () => ({ AIData: {} }),
     submitTigoPrompt: () => { events.push('prompt'); return prompt(); },
     bridgeCall: (_state, sequence) => { events.push(sequence); return { ok: true, status: 'already_running', state: { sessionId: 's1' } }; },
-    bridgeCallerRefusal: () => null, noCodeAgentRefusal: () => null, withNoCodeServerSettings: options => options, noCodeAgentChanged: () => null, withCallerUserId: options => options || {}, sendMark() {},
+    bridgeCallerRefusal: () => null, noCodeAgentRefusal: () => null, withNoCodeServerSettings: options => options, noCodeAgentChanged: () => null, convertigoTurnRefusal: () => null, bridgeRefusalAnswer: () => '', withCallerUserId: options => options || {}, sendMark() {},
     takePrewarmedConversation: () => taken,
     prewarmNoCodeConversation: (options, provider) => { events.push('prewarm:' + provider + ':' + (options.threadid || '')); return null; }
   };

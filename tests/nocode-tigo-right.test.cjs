@@ -7,6 +7,7 @@ const { read, backendParts } = require('./helpers/assistant-source.cjs');
 
 function fixture({ studio = false, admin = false, user = 'alice@example.com', c8oforms = true, sequence = true, answer = { status: 'ok', tigo: true } } = {}) {
   const calls = [];
+  const forgotten = [];
   const attributes = new Map();
   const project = c8oforms ? {
     getSequenceByName: (name) => {
@@ -35,17 +36,21 @@ function fixture({ studio = false, admin = false, user = 'alice@example.com', c8
     },
     unwrapSequenceResult: response => response.document.result,
     C8O: { assistantAgentBridge: {} },
-    bridgeCallerRefusal: () => null
+    bridgeCallerRefusal: () => null,
+    callerUserId: () => user || '',
+    forgetUserGatewayKey(options) { forgotten.push(options.userId); }
   };
   vm.runInNewContext(backendParts(['agentAccessSequenceAvailable', 'truthyAccess', 'agentAccessOfSession', 'isWebAdminSession', 'noCodeAgentRefusal'],
     ['AGENT_ACCESS_PROJECT', 'AGENT_ACCESS_SEQUENCE', 'AGENT_ACCESS_REQUEST_ATTRIBUTE']), sandbox);
-  return { sandbox, calls };
+  return { sandbox, calls, forgotten };
 }
 
 test('a No Code user with the right reaches the agent, a user without it is refused with agent_not_allowed', () => {
   assert.equal(fixture().sandbox.noCodeAgentRefusal(), null);
   assert.equal(fixture({ answer: { status: 'ok', tigo: 'true' } }).sandbox.noCodeAgentRefusal(), null, 'a text value from the XML answer');
-  const refused = fixture({ answer: { status: 'ok', tigo: false } }).sandbox.noCodeAgentRefusal();
+  const withoutRight = fixture({ answer: { status: 'ok', tigo: false } });
+  const refused = withoutRight.sandbox.noCodeAgentRefusal();
+  assert.deepEqual(withoutRight.forgotten.length, 1, 'a right withdrawn takes the per-user Tigo key away from memory');
   assert.equal(refused.ok, false);
   assert.equal(refused.status, 'failed');
   assert.equal(refused.error.code, 'agent_not_allowed');

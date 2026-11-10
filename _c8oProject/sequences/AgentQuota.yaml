@@ -1,5 +1,5 @@
 accessibility: Hidden
-comment: Read-only public quota facade. Studio WEB_ADMIN or authenticated server user; conversation ownership and provider match enforced. Convertigo uses TigoAccessStatus; wrappers use the existing bridge status channel without starting any CLI. No credential returned.
+comment: Read-only public quota facade. Studio WEB_ADMIN or authenticated server user; conversation ownership and provider match enforced. Convertigo uses TigoAccessStatus in the Studio and the user's C8Oforms quota (APIV2_TigoUserQuota, noCodeTigoQuota) on a No Code server; wrappers use the existing bridge status channel without starting any CLI. No credential returned.
 includeResponseElement: false
 responseTimeout: 120
 ↓AuthorizeQuota [steps.SimpleStep-1791878663470]: 
@@ -17,6 +17,7 @@ responseTimeout: 120
      var url=com.twinsoft.convertigo.engine.Engine.theApp.databaseObjectsManager.symbolsGetValue("assistant.tigo.portal_url");url=url==null?"https://backend-apps.convertigo.net/convertigo/projects/TigoAccess/DisplayObjects/mobile/home":String(url);
      try{var uri=new java.net.URI(url);if(String(uri.getScheme())==="https"&&uri.getHost()!=null&&uri.getUserInfo()==null&&uri.getQuery()==null&&uri.getFragment()==null){response.portalUrl=url;}}catch(ignored){}
     }
+    if(provider==="convertigo"&&!studio){include("js/agent_bridge_client.js");var noCodeQuota=C8O.assistantAgentBridge.noCodeTigoQuota({userId:trustedUserId});if(noCodeQuota!==null){response.status=noCodeQuota.status;response.quota=noCodeQuota.quota;response.portalUrl="";if(noCodeQuota.code){response.code=noCodeQuota.code;}}noCodeQuota=null;}
     '
 ↓ConvertigoQuota [steps.IfStep-1791878663476]: 
   condition: isConvertigo
