@@ -6,13 +6,26 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { read, backendParts } = require('./helpers/assistant-source.cjs');
 
-function fixture({ studio = false, webAdmin = false, admin = false, user = 'alice@example.com', symbols = {}, platformPolicy = '', c8oformsRight = true } = {}) {
+function fixture({ studio = false, webAdmin = false, admin = false, user = 'alice@example.com', symbols = {}, platformPolicy = '', c8oformsRight = true, method = 'POST', origin = 'https://settings.example.test', token = '', sessionToken = '', configuredUrl = '', requestUrl = 'https://settings.example.test/convertigo/projects/lib_ConvertigoAssistant/.json' } = {}) {
   const store = new Map(Object.entries(symbols));
   const edits = [];
+  const uri = value => {
+    const u = new URL(value);
+    return { getScheme: () => u.protocol.slice(0, -1), getHost: () => u.hostname,
+      getPort: () => u.port ? Number(u.port) : -1, getUserInfo: () => u.username || u.password || null,
+      getRawPath: () => u.pathname, getRawQuery: () => u.search || null, getRawFragment: () => u.hash || null };
+  };
   const sandbox = {
+    context: { httpSession: {}, httpServletRequest: {
+      getMethod: () => method,
+      getHeader: name => name.toLowerCase() === 'origin' ? origin : (name.toLowerCase() === 'x-xsrf-token' ? token : null),
+      getParameter: () => null, getRequestURL: () => requestUrl
+    } },
+    configuredConvertigoBaseUrl: () => configuredUrl,
+    Packages: { com: { twinsoft: { convertigo: { engine: { enums: { SessionAttribute: { xsrfToken: { get: () => sessionToken } } } } } } } },
     trim: value => String(value ?? '').trim(),
     log: { info() {}, warn() {} },
-    java: { lang: { System: { getProperty: name => (name === 'convertigo.engine.agents.tool_policy' ? platformPolicy : null) } } },
+    java: { net: { URI: function (value) { return uri(value); } }, lang: { System: { getProperty: name => (name === 'convertigo.engine.agents.tool_policy' ? platformPolicy : null) } } },
     Engine: {
       isStudioMode: () => studio,
       theApp: { databaseObjectsManager: {
@@ -34,7 +47,9 @@ function fixture({ studio = false, webAdmin = false, admin = false, user = 'alic
     bridgeCallerRefusal: () => null,
     C8O: { assistantAgentBridge: {} }
   };
-  vm.runInNewContext(backendParts(['serverSymbolValue', 'noCodeServerChoice', 'readNoCodeServerSettings', 'noCodeServerSettings',
+  const requestHelpers = read('js/agent_bridge_client.js').includes('function noCodeServerSettingsWriteRefusal(')
+    ? ['noCodeServerSettingsWriteRefusal', 'noCodeSettingsOrigin'] : [];
+  vm.runInNewContext(backendParts([...requestHelpers,'serverSymbolValue', 'noCodeServerChoice', 'readNoCodeServerSettings', 'noCodeServerSettings',
     'isNoCodeAdministrator', 'withNoCodeServerSettings', 'applyNoCodeServerDefaults', 'saveNoCodeServerSettings',
     'keepNoCodeServerValues', 'noCodeAgentChanged'],
   ['NOCODE_SERVER_SYMBOLS', 'NOCODE_SERVER_PROVIDERS', 'NOCODE_SERVER_REASONING', 'NOCODE_SERVER_CHOICES']), sandbox);
@@ -186,4 +201,43 @@ test('the entry points apply the server settings right after the caller, the con
   assert.equal(isOn(null, false), false);
   assert.equal(isOn({ on: false }, true), false, 'the user\'s own choice wins');
   assert.equal(isOn({ on: true }, false), true);
+});
+
+
+test('T9: settings save requires POST and a session token or the server origin', () => {
+  const save = f => f.sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'save', settings: { model: 'test-model' } });
+  for (const options of [
+    { method: 'GET' },
+    { origin: 'https://other.example.test' },
+    { origin: null },
+    { origin: 'null' },
+    { origin: 'https://settings.example.test.other.test' },
+    { origin: 'https://settings.example.test:444' },
+    { origin: 'https://settings.example.test/path' },
+    { token: 'wrong', sessionToken: 'expected' },
+    { origin: 'https://other.example.test', token: 'Fetch' }
+  ]) {
+    const f = fixture({ admin: true, ...options });
+    assert.equal(save(f).ok, false, JSON.stringify(options));
+    assert.equal(f.edits.length, 0);
+  }
+  for (const options of [
+    {},
+    { origin: 'https://SETTINGS.example.test:443' },
+    { origin: null, token: 'expected', sessionToken: 'expected' },
+    { token: 'Fetch' },
+    { origin: 'https://public.example.test', requestUrl: 'http://engine:28080/convertigo/', configuredUrl: 'https://public.example.test/convertigo' }
+  ]) {
+    const f = fixture({ admin: true, ...options });
+    assert.equal(save(f).ok, true, JSON.stringify(options));
+    assert.equal(f.edits.length, 1);
+  }
+});
+
+test('T9: the settings-read route stays readable and implicit admin saves use the same guard', () => {
+  const f = fixture({ admin: true, method: 'GET', origin: null });
+  assert.equal(f.sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'get' }).ok, true);
+  const options = f.sandbox.withNoCodeServerSettings({ userId: 'test-user', provider: 'vibe', savePreferences: 'true' }, true);
+  assert.equal(options.noCodeServerSaved.ok, false);
+  assert.equal(f.edits.length, 0);
 });

@@ -718,31 +718,13 @@ rediscovering the same context.
 - Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`
   and `tests/nocode-server-settings-ui.test.cjs`.
 
-## Tigo budget gate and No Code per-user keys
 
-- Contract `tigo-nocode-contract.md` sections 5, 6 and 8 (convertigo/c8oprj-tigoaccess#5). Design and the
-  isolation analysis: lib_ConvertigoAgentBridge `docs/nocode-user-keys.md`.
-- `convertigoTurnRefusal` runs before a Convertigo turn writes anything (`sendMessage`, before `starting`). It
-  refuses the turn when the effective balance is zero or below: TigoAccess in the Studio (the refresh is kept in
-  `options.tigoAccessResult`), C8Oforms `APIV2_TigoUserQuota` on a No Code server. An unknown balance lets the turn go.
-- On a No Code server registered with TigoAccess (`C8Oforms.tigo.server.id`) whose C8Oforms has `APIV2_TigoUserKey`,
-  the user's key is asked under the log4j MDC
-  `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind a
-  random handle, `lib_ConvertigoAssistant.gatewayKey.<random>`: 10 min for new starts, at least 5 left when a turn
-  starts, purged 2 h after that. A renewal that returns the same key keeps its handle (one copy in server memory); a
-  new key gets a new handle. The HTTP session that obtained it holds the handle, and a cached key is served only to
-  that session while its user owns it. Only that handle goes to the Bridge (`attachGatewayKeyHandle`, which drops any
-  handle that came with the request), and it is fetched for a gateway agent only. A conversation of another account is
-  refused (`conversation_not_owned`). A key never stays past its `expiresAt` minus 15 min (TigoAccess expires
-  server keys in LiteLLM). A running turn asks for it again every 10 min (`keepUserGatewayKeyAlive`), which keeps the
-  same key alive. An expired or rejected key (`userGatewayKeyRejected`) ends the turn with `userKeyExpired` and is
-  asked for again, never read as a budget. `context.server` can be read by any Rhino code of the engine: see the Bridge's
-  `docs/nocode-user-keys.md` about co-hosted low-code projects.
-  A refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right
-  or a 401 forgets it.
-- A turn the gateway stopped (`budget_exceeded`, or a gateway rate limit while the quota reads zero) ends with
-  `budgetErrorAnswer`: the quota is read again for the level and the reset date, or the generic sentence if that read
-  fails. `AgentQuota` serves No Code through `noCodeTigoQuota`, in the shape of the Studio's TigoAccess quota. The
-  team figure is `team.allocatableUsd`, else spent + balance, never `team.envelopeUsd`: TigoAccess counts the team
-  balance against the envelope minus its safety margin. The gate reads `effective.balanceUsd` only.
-- Run `node --test tests/tigo_budget_gate.test.cjs`.
+
+## Server settings request contract
+
+- Every global No Code settings save, including the implicit admin preference path,
+  requires POST and the engine session token or an explicit same-server Origin.
+  The shared save helper owns this check; reads do not require it.
+- A token-fetch header is not an existing session token. With no established token,
+  the Origin must match the request endpoint or the configured public server endpoint.
+- Run `node --test tests/nocode-server-settings.test.cjs` for the request contract.

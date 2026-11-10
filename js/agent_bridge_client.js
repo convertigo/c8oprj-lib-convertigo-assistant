@@ -2724,8 +2724,58 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return settings;
   }
 
+  // Canonical HTTP origin; only the configured endpoint may carry a path.
+  function noCodeSettingsOrigin(value, endpoint) {
+    try {
+      var uri = new java.net.URI(trim(value));
+      var scheme = trim(uri.getScheme()).toLowerCase(), host = trim(uri.getHost()).toLowerCase();
+      if ((scheme !== "http" && scheme !== "https") || !host.length || uri.getUserInfo() !== null
+          || uri.getRawQuery() !== null || uri.getRawFragment() !== null) {
+        return "";
+      }
+      var path = trim(uri.getRawPath());
+      if (endpoint !== true && path.length && path !== "/") {
+        return "";
+      }
+      var port = Number(uri.getPort());
+      return scheme + "://" + host + ":" + (port < 0 ? (scheme === "https" ? 443 : 80) : port);
+    } catch (_ignoreSettingsOrigin) {
+      return "";
+    }
+  }
+
+  // Server settings writes always use POST plus the existing session token, or an explicit server Origin.
+  // Checking the engine token ourselves is intentional: its generic checker can issue a token on first use.
+  function noCodeServerSettingsWriteRefusal() {
+    var denied = function (code) {
+      return { ok: false, status: "failed", error: { code: code,
+        message: "The server settings must be saved from this server's settings page using POST." } };
+    };
+    try {
+      var req = context.httpServletRequest;
+      if (req === null || String(req.getMethod()) !== "POST") {
+        return denied("post_required");
+      }
+      var supplied = trim(req.getHeader("X-Xsrf-Token"));
+      if (!supplied.length) { supplied = trim(req.getParameter("__xsrfToken")); }
+      if (supplied.length && supplied !== "Fetch") {
+        var expected = trim(Packages.com.twinsoft.convertigo.engine.enums.SessionAttribute.xsrfToken.get(context.httpSession));
+        return expected.length && supplied === expected ? null : denied("request_token_required");
+      }
+      var origin = noCodeSettingsOrigin(req.getHeader("Origin"), false);
+      if (!origin.length) { return denied("request_origin_required"); }
+      var direct = noCodeSettingsOrigin(String(req.getRequestURL()), true);
+      var configured = noCodeSettingsOrigin(configuredConvertigoBaseUrl(), true);
+      return origin === direct || (configured.length && origin === configured) ? null : denied("request_origin_required");
+    } catch (_ignoreSettingsRequest) {
+      return denied("request_origin_required");
+    }
+  }
+
   // Writes the symbols of the given keys (a value left empty removes its symbol); the caller is an administrator.
   function saveNoCodeServerSettings(values) {
+    var refused = noCodeServerSettingsWriteRefusal();
+    if (refused !== null) { return refused; }
     if (!values || typeof values !== "object") {
       return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: settings is not a JSON object" } };
     }
