@@ -2149,7 +2149,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (isFinite(keyExpiresAt) && keyExpiresAt > 0) {
       expiresAt = Math.min(expiresAt, keyExpiresAt - GATEWAY_KEY_EXPIRY_MARGIN_MS);
     }
-    var fresh = newGatewayKeyHandle();
+    // The same key keeps its handle: one copy of it in server memory however long the turn, and the handle the running
+    // process got stays valid (condition 8 of the A4 security review). A new key gets a new handle.
+    var fresh = "";
+    try {
+      var previous = handle.length ? JSON.parse(sharedSecretGet(handle) || "null") : null;
+      if (previous && previous.owner === userId && trim(previous.key) === key) {
+        fresh = handle;
+      }
+    } catch (_ignorePreviousKey) {}
+    if (!fresh.length) {
+      fresh = newGatewayKeyHandle();
+    }
     sharedSecretSet(fresh, JSON.stringify({ key: key, owner: userId, generation: Number(answer.generation) || 0, expiresAt: expiresAt,
       keyExpiresAt: isFinite(keyExpiresAt) && keyExpiresAt > 0 ? keyExpiresAt : null }));
     sessionGatewayKeyHandle(fresh);

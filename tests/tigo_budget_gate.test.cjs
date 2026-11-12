@@ -209,7 +209,8 @@ test('No Code: a refused key ends the turn with its reason, never another key', 
 });
 
 test('the key handle: random, held by the session of its owner, kept a few minutes, purged, forgotten on refusal', () => {
-  const { sandbox, calls, store, tick, use } = load();
+  const key = { status: 'ok', key: USER_KEY, generation: 2 };
+  const { sandbox, calls, store, tick, use } = load({ key });
   assert.equal(sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, false).ok, false, 'no fetch: memory only');
   const first = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
   assert.match(first.handle, /^lib_ConvertigoAssistant\.gatewayKey\.[0-9a-f]{32}$/, 'random, not derived from the user');
@@ -224,7 +225,17 @@ test('the key handle: random, held by the session of its owner, kept a few minut
   assert.equal(calls.length, 2, 'still in its lifetime for a start');
   const renewed = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true, 5 * 60 * 1000);
   assert.equal(calls.filter(call => call.sequence === 'APIV2_TigoUserKey').length, 3, 'a turn needs 5 minutes of it left: asked again');
-  assert.notEqual(renewed.handle, first.handle, 'a new key, a new handle');
+  assert.equal(renewed.handle, first.handle, 'the same key keeps its handle: one copy in server memory');
+  assert.equal(JSON.parse(store.get(first.handle)).expiresAt, 1_000_000 + 6 * 60 * 1000 + 10 * 60 * 1000, 'with a new lifetime');
+  const handles = () => [...store.keys()].filter(k => /\.gatewayKey\.[0-9a-f]{32}$/.test(k));
+  assert.equal(handles().filter(h => JSON.parse(store.get(h)).owner === 'ann@example.com').length, 1);
+  // generation 2: a new handle; the old one stays for the process that holds it, until the purge
+  key.key = 'sk-user-' + 'b'.repeat(32);
+  key.generation = 3;
+  tick(10 * 60 * 1000);
+  const generation2 = sandbox.userGatewayKeyHandle({ userId: 'ann@example.com' }, true);
+  assert.notEqual(generation2.handle, first.handle, 'a new key, a new handle');
+  assert.equal(store.has(first.handle), true, 'kept for the running process');
   // keys of the past: forgotten two hours after the end of their lifetime, at the next key asked
   tick(2 * 60 * 60 * 1000 + 11 * 60 * 1000);
   assert.equal(store.has(bob.handle), true);
@@ -235,7 +246,7 @@ test('the key handle: random, held by the session of its owner, kept a few minut
   assert.deepEqual(Object.keys(JSON.parse(store.get('lib_ConvertigoAssistant.gatewayKey.index'))).length, 1);
   use('ann');
   sandbox.forgetUserGatewayKey();
-  assert.equal(store.has(renewed.handle), false);
+  assert.equal(store.has(generation2.handle), false);
   assert.equal(sandbox.sessionGatewayKeyHandle(), '');
   assert.equal(sandbox.userGatewayKeyHandle({}, true).code, 'authentication_required');
 });
