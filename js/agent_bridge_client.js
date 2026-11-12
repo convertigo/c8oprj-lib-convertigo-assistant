@@ -97,6 +97,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return System.currentTimeMillis();
   }
 
+  // A Studio on the desktop, with one local user: the Eclipse Studio (Studio mode), or the Electron Studio, whose engine
+  // is a desktop Studio without Studio mode (Engine.isDesktopStudio, Convertigo 8.5; an older engine has no such
+  // method). Its owner, its Tigo key, its callers and its feedback follow this test; what needs Eclipse itself still
+  // tests isStudioMode().
+  function isLocalStudio() {
+    try {
+      if (Engine.isStudioMode()) {
+        return true;
+      }
+    } catch (_ignoreStudioMode) {}
+    try {
+      return Engine.isDesktopStudio() === true;
+    } catch (_ignoreEngineWithoutDesktopStudio) {
+      return false;
+    }
+  }
+
   // Send timings, a diagnostic: what each step of sending a message, creating a conversation and reading the settings
   // takes, one JSON line per call in agents/assistant/send-timings.ndjson (over 512 KB the file becomes
   // send-timings.ndjson.1); each call to the Bridge is a step named after its sequence. A new No Code conversation waited
@@ -1782,11 +1799,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return String(new Packages.org.mozilla.javascript.Synchronizer(readOrCreate, store)());
   }
 
-  // The Assistant reaches the agents only for its own users: the Studio WEB_ADMIN, or on a server WEB_ADMIN or an
-  // authenticated user (same rule as tigo_resources.js and AgentQuota). Without it, the caller key would turn every
+  // The Assistant reaches the agents only for its own users: the WEB_ADMIN of a desktop Studio (Eclipse or Electron), or
+  // on a server WEB_ADMIN or an authenticated user (same rule as tigo_resources.js and AgentQuota). Without it, the caller key would turn every
   // Public Assistant sequence into an anonymous relay to the Bridge.
   function requireBridgeCaller() {
-    var studio = Engine.isStudioMode();
+    var studio = isLocalStudio();
     try {
       if (Engine.authenticatedSessionManager.hasRole(context.httpSession, Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN)) {
         return;
@@ -1819,7 +1836,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // account or "c8o:admin" keeps its whole name. Same rule as tigo_resources.js (conversationOwner). The Studio has
   // one user and keeps the page value; a WEB_ADMIN session without a user name may act for the user it names.
   function callerUserId(requested) {
-    if (Engine.isStudioMode()) {
+    if (isLocalStudio()) {
       return trim(requested);
     }
     var user = "";
@@ -1915,7 +1932,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // null, or the answer of an entry point the user of the session may not reach without the Tigo right. withAdmin: the
   // entry point also needs to know whether the user administers the No Code Studio (one C8Oforms call for both).
   function noCodeAgentRefusal(withAdmin) {
-    if (Engine.isStudioMode() || isWebAdminSession()) {
+    if (isLocalStudio() || isWebAdminSession()) {
       return null;
     }
     var user = "";
@@ -1944,7 +1961,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // (assistant.convertigo.com), whose chat and LightRAG relay (every Studio's LRagQuery, the MCP rag-query tool) are
   // called without a session.
   C8O.assistantAgentBridge.requireAgentAccess = function () {
-    if (Engine.isStudioMode() || !agentAccessSequenceAvailable()) {
+    if (isLocalStudio() || !agentAccessSequenceAvailable()) {
       return;
     }
     requireBridgeCaller();
@@ -2040,7 +2057,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // null in the Studio, for the Studio's own profile, and on a server whose C8Oforms does not know the Tigo right yet
   // (nobody administers Tigo there: the users keep their own choice); otherwise what the No Code agent of this server runs.
   function noCodeServerSettings(options) {
-    if (Engine.isStudioMode() || assistantProfileDescriptor(options || {}).id !== "nocode" || !agentAccessSequenceAvailable()) {
+    if (isLocalStudio() || assistantProfileDescriptor(options || {}).id !== "nocode" || !agentAccessSequenceAvailable()) {
       return null;
     }
     var read = readNoCodeServerSettings();
@@ -2052,7 +2069,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   // An administrator of the No Code Studio, a WEB_ADMIN session or the Studio: may set Tigo for the whole server.
   function isNoCodeAdministrator() {
-    return Engine.isStudioMode() || isWebAdminSession() || agentAccessOfSession(true).admin === true;
+    return isLocalStudio() || isWebAdminSession() || agentAccessOfSession(true).admin === true;
   }
 
   // Right after withCallerUserId: a No Code user's agent, model and effort are the server's, whatever the page sends.
@@ -2225,7 +2242,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return refused;
     }
     var access = agentAccessOfSession(true);
-    if (Engine.isStudioMode() || isWebAdminSession()) {
+    if (isLocalStudio() || isWebAdminSession()) {
       access.tigo = true;
       access.admin = true;
     }
@@ -5351,7 +5368,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       include("js/agent_feedback.js");
     }
-    if (Engine.isStudioMode()) {
+    if (isLocalStudio()) {
       return C8O.assistantFeedback;
     }
     var userKey = trim(state && state.userKey);
@@ -5390,7 +5407,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // The feedback user of the request on a server: the authenticated user only, never a name the page sends. "" in the
   // Studio, for an anonymous caller, or for a session without a user name.
   function feedbackUserKey() {
-    if (Engine.isStudioMode() || bridgeCallerRefusal() !== null) {
+    if (isLocalStudio() || bridgeCallerRefusal() !== null) {
       return "";
     }
     var user = "";
@@ -8472,7 +8489,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     try {
       var provider = runProvider;
-      if (provider === "convertigo" && normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode()) {
+      if (provider === "convertigo" && normalizeSkillProfile(state) !== "nocode" && isLocalStudio()) {
         var tigoAccess = C8O.assistantAgentBridge.refreshTigoAccess();
         if (tigoAccess.status !== "ok") { throw new Error("TigoAccess (" + tigoAccess.code + "): " + tigoAccess.error); }
         sendMark("tigo-access");

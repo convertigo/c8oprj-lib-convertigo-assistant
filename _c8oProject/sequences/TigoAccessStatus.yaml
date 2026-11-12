@@ -1,12 +1,13 @@
 accessibility: Hidden
-comment: Local Studio WEB_ADMIN only. Public account status; no key or PSC credentials returned.
+comment: Local Studio WEB_ADMIN only (Eclipse, or a desktop Studio engine). Public account status; no key or PSC credentials returned.
 includeResponseElement: false
 responseTimeout: 120
 ↓ReadLocalAccess [steps.SimpleStep-1791831268174]: 
   expression: |
     'var engine=com.twinsoft.convertigo.engine.Engine;
     var role=com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN;
-    if(!engine.isStudioMode()||!engine.authenticatedSessionManager.hasRole(context.httpSession,role)){throw new com.twinsoft.convertigo.engine.EngineException("Authenticated local Studio session required");}
+    var desktop=engine.isStudioMode();if(!desktop){try{desktop=engine.isDesktopStudio()===true;}catch(noDesktopStudio){desktop=false;}}
+    if(!desktop||!engine.authenticatedSessionManager.hasRole(context.httpSession,role)){throw new com.twinsoft.convertigo.engine.EngineException("Authenticated local Studio session required");}
     function hashLocal(value){return String(com.twinsoft.convertigo.engine.util.HexUtils.toHexString(java.security.MessageDigest.getInstance("SHA-256").digest(new java.lang.String(String(value)).getBytes("UTF-8"))));}
     var root=java.nio.file.Paths.get(String(engine.USER_WORKSPACE_PATH)).toRealPath();
     include("js/agent_storage.js");

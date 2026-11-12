@@ -222,9 +222,11 @@ C8O.assistantAgentStack = C8O.assistantAgentStack || {};
     return ordered;
   }
 
-  // Convertigo Studio runs its engine in Studio mode (its Eclipse view and the Web Studio it serves); anything else is a server.
+  // A desktop Studio: the Eclipse Studio runs its engine in Studio mode (its Eclipse view and the Web Studio it serves), the
+  // Electron Studio runs a desktop Studio engine (Engine.isDesktopStudio, Convertigo 8.5); anything else is a server.
   function surface() {
-    try { return engine().isStudioMode() === true ? "studio" : "server"; } catch (_ignoreMode) {}
+    try { if (engine().isStudioMode() === true) { return "studio"; } } catch (_ignoreMode) {}
+    try { if (engine().isDesktopStudio() === true) { return "studio"; } } catch (_ignoreEngineWithoutDesktopStudio) {}
     return "server";
   }
 

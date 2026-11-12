@@ -10,7 +10,9 @@ responseTimeout: 30
         response = C8O.assistantAgentBridge.resources(JSON.parse(String(request || "{}")));
     } catch (e) {
         var code = String(e.code || e.message || "resource_error");
-        if (code === "authentication_required" && Packages.com.twinsoft.convertigo.engine.Engine.isStudioMode()) {
+        var desktop = Packages.com.twinsoft.convertigo.engine.Engine.isStudioMode();
+        if (!desktop) { try { desktop = Packages.com.twinsoft.convertigo.engine.Engine.isDesktopStudio() === true; } catch (noDesktopStudio) { desktop = false; } }
+        if (code === "authentication_required" && desktop) {
             throw new Packages.com.twinsoft.convertigo.engine.EngineException("WEB_ADMIN authentication is required");
         }
         response = {ok:false,error:{code:code}};

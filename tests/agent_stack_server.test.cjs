@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 
-function load({ symbol = '', channel = null, admin = false, user = '', projects = {}, gitCheckouts = [], studio } = {}) {
+function load({ symbol = '', channel = null, admin = false, user = '', projects = {}, gitCheckouts = [], studio, desktop } = {}) {
   const imported = [];
   const symbols = { 'assistant.stack.selfupdate': symbol, 'assistant.stack.channel': channel };
   const manager = {
@@ -37,7 +37,8 @@ function load({ symbol = '', channel = null, admin = false, user = '', projects 
               }
             },
             authenticatedSessionManager: { hasRole: () => admin },
-            ...(studio === undefined ? {} : { isStudioMode: () => studio })
+            ...(studio === undefined ? {} : { isStudioMode: () => studio }),
+            ...(desktop === undefined ? {} : { isDesktopStudio: () => desktop })
           },
           AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN', PROJECTS_CONFIG: 'PROJECTS_CONFIG' } },
           util: {
@@ -82,6 +83,8 @@ test('the status names its surface: the engine of a Studio, else a server', () =
   assert.equal(load({ studio: true }).stack.status().surface, 'studio');
   assert.equal(load({ studio: false }).stack.status().surface, 'server');
   assert.equal(load().stack.status().surface, 'server', 'an engine that cannot tell');
+  assert.equal(load({ studio: false, desktop: true }).stack.status().surface, 'studio', 'the Electron Studio');
+  assert.equal(load({ studio: false, desktop: false }).stack.status().surface, 'server');
 });
 
 test('the update channel is the global symbol assistant.stack.channel, stable when empty or unknown', () => {

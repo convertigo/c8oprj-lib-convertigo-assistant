@@ -34,6 +34,8 @@ function pageClass() {
   return 'class Page {\n' + content.slice(content.indexOf('/*Begin_c8o_PageFunction*/')) + '\n}';
 }
 function backendParts(names, constants = []) {
+  // The desktop Studio test of the caller checks, extracted with every part (it reads Engine only when called).
+  if (!names.includes('isLocalStudio')) names = [...names, 'isLocalStudio'];
   const ast = ts.createSourceFile('bridge.js', read('js/agent_bridge_client.js'), ts.ScriptTarget.Latest, true);
   const parts = [], found = [];
   function visit(node) {

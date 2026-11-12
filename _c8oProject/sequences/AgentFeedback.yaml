@@ -5,7 +5,7 @@ responseTimeout: 120
 ↓RunFeedback [steps.SimpleStep-1792540000001]: 
   expression: |
     var engine=com.twinsoft.convertigo.engine.Engine;
-    var studio=engine.isStudioMode();
+    var studio=engine.isStudioMode();if(!studio){try{studio=engine.isDesktopStudio()===true;}catch(noDesktopStudio){studio=false;}}
     var admin=engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN);
     var response={status:"error",code:"unavailable",available:false,mode:"off",pending:[]};
     var feedback=null;

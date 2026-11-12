@@ -874,6 +874,20 @@ C8O.tigoResources = (function () {
       prepare: prepare
     };
   }
+  // A Studio on the desktop, with one local user: the Eclipse Studio (Studio mode) or the Electron Studio
+  // (Engine.isDesktopStudio, Convertigo 8.5; an older engine has no such method).
+  function localStudio(E) {
+    try {
+      if (E.isStudioMode()) {
+        return true;
+      }
+    } catch (_ignoreStudioMode) {}
+    try {
+      return E.isDesktopStudio() === true;
+    } catch (_ignoreEngineWithoutDesktopStudio) {
+      return false;
+    }
+  }
   function javaHost(ctx, projectOnly) {
     var E = Packages.com.twinsoft.convertigo.engine.Engine,
       F = Packages.java.io.File,
@@ -884,7 +898,7 @@ C8O.tigoResources = (function () {
         Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role
           .WEB_ADMIN
       ),
-      studio = E.isStudioMode(),
+      studio = localStudio(E),
       user = text(ctx.getAuthenticatedUser());
     if (!projectOnly && ctx.httpServletRequest) {
       var origin = text(ctx.httpServletRequest.getHeader("Origin"));

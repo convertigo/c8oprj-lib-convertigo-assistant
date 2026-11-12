@@ -1208,6 +1208,20 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       throw new Error("Invalid feedback user");
     }
     var root = userKey.length ? feedbackRoot.resolve("users").resolve(userKey) : feedbackRoot;
+    // A Studio on the desktop, with one local user: the Eclipse Studio (Studio mode) or the Electron Studio
+    // (Engine.isDesktopStudio, Convertigo 8.5; an older engine has no such method).
+    function localStudio() {
+      try {
+        if (Engine.isStudioMode() === true) {
+          return true;
+        }
+      } catch (_ignoreStudioMode) {}
+      try {
+        return Engine.isDesktopStudio() === true;
+      } catch (_ignoreEngineWithoutDesktopStudio) {
+        return false;
+      }
+    }
     var outbox = root.resolve("outbox");
 
     function safe(path) {
@@ -1302,7 +1316,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     return {
       userKey: userKey,
       studio: function () {
-        return Engine.isStudioMode() === true;
+        return localStudio();
       },
       symbol: function (name) {
         try {
@@ -1435,7 +1449,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       // The server's feedback key (TigoAccess AdminFeedbackClient), installed by Convertigo ops: the TIGO_FEEDBACK_KEY
       // environment variable (a Kubernetes Secret), else <workspace>/agents/feedback/server-key. Never in the Studio.
       serverKey: function () {
-        if (Engine.isStudioMode() === true) {
+        if (localStudio()) {
           return "";
         }
         var key = "";
@@ -1453,7 +1467,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       // The user's pseudonym for Convertigo: an HMAC of their key with a secret that never leaves the server, so that
       // Convertigo counts the users behind a report without knowing who they are.
       reporter: function () {
-        if (!userKey.length || Engine.isStudioMode() === true) {
+        if (!userKey.length || localStudio()) {
           return "";
         }
         var saltPath = feedbackRoot.resolve("reporter-salt");
@@ -1474,7 +1488,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       // The local Tigo key, only when its metadata proves it came from TigoAccess (as TigoAccessStatus checks); on a
       // server, its feedback key.
       readKey: function () {
-        if (Engine.isStudioMode() !== true) {
+        if (!localStudio()) {
           return this.serverKey();
         }
         var directory = workspace.resolve("convertigo");

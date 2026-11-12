@@ -18,7 +18,8 @@ class FakeUri {
   toString() { return this.url.href; }
 }
 
-function fixture({ studio = true, admin = false, user = '', localPort = 18086, configured = 'http://localhost:18086/convertigo' } = {}) {
+// studio: Eclipse (Studio mode); desktop: the answer of Engine.isDesktopStudio (Electron Studio), absent on an 8.4 engine.
+function fixture({ studio = true, desktop, admin = false, user = '', localPort = 18086, configured = 'http://localhost:18086/convertigo' } = {}) {
   const calls = [];
   const sandbox = {
     DEFAULT_BRIDGE_PROJECT: 'lib_ConvertigoAgentBridge',
@@ -29,6 +30,7 @@ function fixture({ studio = true, admin = false, user = '', localPort = 18086, c
     Packages: { com: { twinsoft: { convertigo: { engine: { AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN' } } } } } } },
     Engine: {
       isStudioMode: () => studio,
+      ...(desktop === undefined ? {} : { isDesktopStudio: () => desktop }),
       authenticatedSessionManager: { hasRole: (session, role) => role === 'WEB_ADMIN' && session.admin === true }
     },
     context: {
@@ -63,6 +65,21 @@ test('Server: WEB_ADMIN or an authenticated user, never an anonymous caller', ()
   assert.doesNotThrow(() => fixture({ studio: false, user: 'forms-user' }).sandbox.requireBridgeCaller());
   assert.doesNotThrow(() => fixture({ studio: false, admin: true }).sandbox.requireBridgeCaller());
   assert.throws(() => fixture({ studio: false }).sandbox.requireBridgeCaller(), /authentication_required: Authenticated Assistant session required/);
+});
+
+test('Desktop Studio without Studio mode (Electron): the rules of the Studio, WEB_ADMIN only', () => {
+  const electron = caller => fixture({ studio: false, desktop: true, ...caller }).sandbox;
+  assert.doesNotThrow(() => electron({ admin: true }).requireBridgeCaller());
+  for (const caller of [{}, { user: 'forms-user' }, { user: 'c8o:admin' }]) {
+    assert.throws(() => electron(caller).requireBridgeCaller(), /^Error: authentication_required: A WEB_ADMIN session is required$/, JSON.stringify(caller));
+  }
+  assert.equal(electron({ admin: true, user: 'c8o:admin' }).withCallerUserId({ userId: 'studio' }).userId, 'studio', 'the conversations of the Studio, as in Eclipse');
+  assert.equal(electron({ admin: true, user: 'c8o:admin' }).feedbackUserKey(), '', 'the feedback store of the Studio');
+  // a server engine answers false, an 8.4 engine has no isDesktopStudio: both keep the rules of a server
+  for (const desktop of [false, undefined]) {
+    assert.doesNotThrow(() => fixture({ studio: false, desktop, user: 'forms-user' }).sandbox.requireBridgeCaller());
+    assert.equal(fixture({ studio: false, desktop, user: 'c8o:admin' }).sandbox.withCallerUserId({ userId: 'studio' }).userId, 'c8o:admin');
+  }
 });
 
 test('Server: the conversations belong to the authenticated user, whatever userId the page sends', () => {

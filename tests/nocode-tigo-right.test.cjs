@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { read, backendParts } = require('./helpers/assistant-source.cjs');
 
-function fixture({ studio = false, admin = false, user = 'alice@example.com', c8oforms = true, sequence = true, answer = { status: 'ok', tigo: true } } = {}) {
+function fixture({ studio = false, desktop, admin = false, user = 'alice@example.com', c8oforms = true, sequence = true, answer = { status: 'ok', tigo: true } } = {}) {
   const calls = [];
   const attributes = new Map();
   const project = c8oforms ? {
@@ -20,6 +20,7 @@ function fixture({ studio = false, admin = false, user = 'alice@example.com', c8
     Packages: { com: { twinsoft: { convertigo: { engine: { AuthenticatedSessionManager: { Role: { WEB_ADMIN: 'WEB_ADMIN' } } } } } } },
     Engine: {
       isStudioMode: () => studio,
+      ...(desktop === undefined ? {} : { isDesktopStudio: () => desktop }),
       authenticatedSessionManager: { hasRole: (session, role) => role === 'WEB_ADMIN' && session.admin === true },
       theApp: { databaseObjectsManager: { getOriginalProjectByName: (name) => (name === 'C8Oforms' ? project : null) } }
     },
@@ -63,10 +64,14 @@ test('C8Oforms decides for the user of the session, once per request, without an
 
 test('not concerned: the Studio, a WEB_ADMIN session, a server without C8Oforms or with a C8Oforms older than the right', () => {
   for (const caller of [{ studio: true, answer: { status: 'ok', tigo: false } }, { admin: true, answer: { status: 'ok', tigo: false } },
-    { c8oforms: false }, { sequence: false }, { user: '' }]) {
+    { desktop: true, answer: { status: 'ok', tigo: false } }, { c8oforms: false }, { sequence: false }, { user: '' }]) {
     const { sandbox, calls } = fixture(caller);
     assert.equal(sandbox.noCodeAgentRefusal(), null, JSON.stringify(caller));
-    if (caller.studio || caller.admin || caller.user === '') assert.equal(calls.length, 0, 'C8Oforms is not asked');
+    if (caller.studio || caller.desktop || caller.admin || caller.user === '') assert.equal(calls.length, 0, 'C8Oforms is not asked');
+  }
+  // a server engine (isDesktopStudio false) or an 8.4 engine (no isDesktopStudio) keeps asking C8Oforms
+  for (const desktop of [false, undefined]) {
+    assert.equal(fixture({ desktop, answer: { status: 'ok', tigo: false } }).sandbox.noCodeAgentRefusal().error.code, 'agent_not_allowed');
   }
 });
 
@@ -95,7 +100,7 @@ test('the entry points that start, set up or prompt an agent, and the No Code co
 
 test('the former chat sequences stay open where no C8Oforms knows the right: the Studio and the hosted Assistant', () => {
   const source = read('js/agent_bridge_client.js');
-  assert.match(source, /C8O\.assistantAgentBridge\.requireAgentAccess = function \(\) \{\n    if \(Engine\.isStudioMode\(\) \|\| !agentAccessSequenceAvailable\(\)\) \{\n      return;\n    \}\n    requireBridgeCaller\(\);/);
+  assert.match(source, /C8O\.assistantAgentBridge\.requireAgentAccess = function \(\) \{\n    if \(isLocalStudio\(\) \|\| !agentAccessSequenceAvailable\(\)\) \{\n      return;\n    \}\n    requireBridgeCaller\(\);/);
   for (const sequence of ['SendMessage', 'CreateConversation', 'ReadResponse', 'UploadFiles', 'GetMessages', 'LRagQuery']) {
     assert.match(read(`_c8oProject/sequences/${sequence}.yaml`), /C8O\.assistantAgentBridge\.requireAgentAccess\(\);/, sequence);
   }

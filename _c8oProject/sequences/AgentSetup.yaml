@@ -1,7 +1,7 @@
 comment: Diagnose, install, or reinstall the selected local agent runtime.
 responseTimeout: 900
 ↓PrepareTigoAccess [steps.IfStep-1791831269935]: 
-  condition: com.twinsoft.convertigo.engine.Engine.isStudioMode() && com.twinsoft.convertigo.engine.Engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN) && typeof provider !== "undefined" && String(provider).toLowerCase() === "convertigo"
+  condition: (function(){var E=com.twinsoft.convertigo.engine.Engine;if(E.isStudioMode()){return true;}try{return E.isDesktopStudio()===true;}catch(noDesktopStudio){return false;}})() && com.twinsoft.convertigo.engine.Engine.authenticatedSessionManager.hasRole(context.httpSession,com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN) && typeof provider !== "undefined" && String(provider).toLowerCase() === "convertigo"
   ↓BindActivate [steps.SimpleStep-1791831804814]: 
     expression: var refresh="false";
   ↓Activate [steps.SequenceStep-1791831269937]: 
