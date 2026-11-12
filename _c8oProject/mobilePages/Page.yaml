@@ -2288,6 +2288,9 @@ scriptContent:
         	}
         
         	public getAgentStackStatusText() {
+        		if (this.local && this.local.AgentStackReinstallRefused === true && this.isAgentSetupRunning && this.isAgentSetupRunning()) {
+        			return this.t("Agent_Stack_Wait_Agent_Setup", "L’agent est en cours d’installation : réinstallez la stack une fois qu’il est prêt.");
+        		}
         		if (this.local && this.local.AgentActivationInProgress === true) { return this.local.AgentActivationMessage || this.t("Agent_Stack_Updating", "Mise à jour de la stack..."); }
         		if (this.local && this.local.AgentStackReleaseLoading === true) { return this.t("Agent_Stack_Checking", "Vérification de la stack publiée..."); }
         		if (this.local && this.local.AgentStackReleaseError) { return this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée."); }
@@ -2328,6 +2331,8 @@ scriptContent:
         
         	public triggerAgentStackUpdate() {
         		if (this.isAgentSetupRunning && this.isAgentSetupRunning()) {
+        			// said in the stack status for as long as that install runs (getAgentStackStatusText)
+        			this.local.AgentStackReinstallRefused = true;
         			this.local.AgentActivationMessage = this.t("Agent_Stack_Wait_Agent_Setup", "L’agent est en cours d’installation : réinstallez la stack une fois qu’il est prêt.");
         			this.tick();
         			return;
@@ -2767,14 +2772,16 @@ scriptContent:
         		var restriction = this.getAgentStackOfferRestriction();
         		var installing = mine && local.AgentActivationInProgress === true;
         		var running = this.isAgentStackOfferTurnRunning();
+        		var setupRunning = !!(this.isAgentSetupRunning && this.isAgentSetupRunning());
         		var note = installing ? (local.AgentActivationMessage || this.agentStackOfferText("installing"))
         			: restriction.length ? restriction
+        			: setupRunning ? this.t("Agent_Stack_Wait_Agent_Setup", "L’agent est en cours d’installation : réinstallez la stack une fois qu’il est prêt.")
         			: mine && local.AgentActivationMessage ? "" + local.AgentActivationMessage
         			: running ? this.agentStackOfferText("turnRunning") : "";
         		var view: any = {
         			key: key, title: this.agentStackOfferText(projects.some((project: any) => project.version.indexOf("-") !== -1) ? "titlePreview" : "title"), versions: versions, note: note,
         			error: mine && !installing && ["error", "no_host", "no_response"].indexOf("" + local.AgentActivationStatus) !== -1,
-        			canUpdate: !restriction.length, updateDisabled: installing || running || local.AgentActivationInProgress === true, installing: installing,
+        			canUpdate: !restriction.length, updateDisabled: installing || running || setupRunning || local.AgentActivationInProgress === true, installing: installing,
         			updateText: this.agentStackOfferText("update"), laterText: this.agentStackOfferText("later")
         		};
         		// One object per state, for change detection.
