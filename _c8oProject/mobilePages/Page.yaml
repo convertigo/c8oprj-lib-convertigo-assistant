@@ -188,6 +188,8 @@ scriptContent:
         				Agent_Stack_Updating: "Stack update in progress...",
         				Agent_Stack_Update_Disabled: "Automatic updates are disabled for local source checkouts.",
         				Agent_Stack_Wait_Agent_Setup: "The agent is being installed: reinstall the stack once it is done (reinstalling now reloads this panel and interrupts it).",
+        				Agent_Start_Choice_Project: "Your first message will start a conversation on {project}.",
+        				Agent_Start_Choice_None: "Your first message will start a conversation without a project.",
         				Agent_Stack_Server_Restricted: "Updating the stack on this server requires an administrator session (symbol assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "Stack updates are disabled on this server (symbol assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Updating the stack on the server...",
@@ -297,6 +299,8 @@ scriptContent:
         				Agent_Stack_Updating: "Mise à jour de la stack...",
         				Agent_Stack_Update_Disabled: "La mise à jour automatique est désactivée pour les sources locales.",
         				Agent_Stack_Wait_Agent_Setup: "L’agent est en cours d’installation : réinstallez la stack une fois qu’il est prêt (la réinstaller maintenant recharge ce panneau et l’interrompt).",
+        				Agent_Start_Choice_Project: "Votre premier message démarrera une conversation sur {project}.",
+        				Agent_Start_Choice_None: "Votre premier message démarrera une conversation sans projet.",
         				Agent_Stack_Server_Restricted: "La mise à jour de la stack sur ce serveur nécessite une session administrateur (symbole assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "La mise à jour de la stack est désactivée sur ce serveur (symbole assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Mise à jour de la stack sur le serveur...",
@@ -415,6 +419,8 @@ scriptContent:
         				Agent_Stack_Updating: "Aggiornamento dello stack...",
         				Agent_Stack_Update_Disabled: "Gli aggiornamenti automatici sono disabilitati per i sorgenti locali.",
         				Agent_Stack_Wait_Agent_Setup: "L’agente è in fase di installazione: reinstalla lo stack quando è pronto (reinstallarlo ora ricarica questo pannello e la interrompe).",
+        				Agent_Start_Choice_Project: "Il tuo primo messaggio avvierà una conversazione su {project}.",
+        				Agent_Start_Choice_None: "Il tuo primo messaggio avvierà una conversazione senza progetto.",
         				Agent_Stack_Server_Restricted: "L''aggiornamento dello stack su questo server richiede una sessione amministratore (simbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "Gli aggiornamenti dello stack sono disabilitati su questo server (simbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Aggiornamento dello stack sul server...",
@@ -533,6 +539,8 @@ scriptContent:
         				Agent_Stack_Updating: "Actualizando el stack...",
         				Agent_Stack_Update_Disabled: "Las actualizaciones automáticas están deshabilitadas para fuentes locales.",
         				Agent_Stack_Wait_Agent_Setup: "El agente se está instalando: reinstale la pila cuando esté listo (reinstalarla ahora recarga este panel y la interrumpe).",
+        				Agent_Start_Choice_Project: "Tu primer mensaje iniciará una conversación sobre {project}.",
+        				Agent_Start_Choice_None: "Tu primer mensaje iniciará una conversación sin proyecto.",
         				Agent_Stack_Server_Restricted: "Actualizar la stack en este servidor requiere una sesión de administrador (símbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "Las actualizaciones de la stack están deshabilitadas en este servidor (símbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Actualizando la stack en el servidor...",
@@ -3234,6 +3242,14 @@ scriptContent:
         		return (this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? this.t("Previous_Conversations", "Conversations précédentes") : ((this.local && this.local.Conversation && this.local.NewConversationMode !== true) ? this.t("Current_Conversation", "Conversation en cours") : ((this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) ? (this.isEmbeddedNoCodeAgent() ? this.getC8OformsText("agentCheckTitle") : this.t("Agent_Environment_Check_Title", "Vérification de l’environnement Agent")) : this.t("New_Conversation", "Nouvelle conversation")));
         	}
         	public getStartCardCopy() {
+        		// Once "Start now" (with or without the project) is clicked: what the first message will do, as feedback.
+        		if (this.local && this.local.StartChoiceConfirmed === true && !this.local.Conversation && this.local.ShowAgentConfigPanel !== true
+        			&& this.isAgentBridgeMode && this.isAgentBridgeMode() && !(this.isEmbeddedNoCodeAgent && this.isEmbeddedNoCodeAgent())
+        			&& !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel())) {
+        			var chosen = this.local.ConversationProjectMode === "none" ? "" : this.cleanProjectName(this.local.ConversationProject || this.local.CurrentStudioProject);
+        			return chosen.length ? ("" + this.t("Agent_Start_Choice_Project", "Votre premier message démarrera une conversation sur {project}.")).split("{project}").join(chosen)
+        				: this.t("Agent_Start_Choice_None", "Votre premier message démarrera une conversation sans projet.");
+        		}
                 if (this.isEmbeddedNoCodeAgent() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && !this.isAgentEnvironmentCheckPending()) { return this.getFormsUxText("copy"); }
         		if (this.local && this.local.ShowAgentConfigPanel === true) {
         			return "";
@@ -7899,6 +7915,7 @@ title: Tigo
                             } else if (!project.length) {
                                 page.local.ConversationProjectMode = "";
                             }
+                            page.local.StartChoiceConfirmed = false;
                             page.local.NewConversationMode = true;
                             page.local.ShowConversationPanel = false;
                             page.local.ShowAgentConfigPanel = false;
@@ -9335,6 +9352,7 @@ title: Tigo
                                 }
                                 page.local.CurrentStudioProject = project;
                                 page.local.ConversationProjectMode = "project";
+                                page.local.StartChoiceConfirmed = true;
                                 page.local.NewConversationMode = true;
                                 page.local.ShowConversationPanel = false;
                                 page.local.ShowAgentConfigPanel = false;
@@ -9364,7 +9382,7 @@ title: Tigo
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && (!(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()))) ? (''agent-session-strip agent-start-choice agent-free-choice'' + ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? '' agent-choice-selected'' : ((this.local.ConversationProjectMode === ''none'' || (!(this.getEffectiveProjectName && this.getEffectiveProjectName()) && !this.local.ConversationProject)) ? '' agent-choice-selected'' : ''''))) : ''agent-session-strip agent-start-choice agent-free-choice agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && (!(this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()))) ? (''agent-session-strip agent-start-choice agent-free-choice'' + ((this.shouldShowAgentActivationChoice && this.shouldShowAgentActivationChoice()) ? '' agent-choice-selected'' : ((this.local.ConversationProjectMode === ''none'' || !((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || '''')) ? '' agent-choice-selected'' : ''''))) : ''agent-session-strip agent-start-choice agent-free-choice agent-hidden'''
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746911794]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:cloud-download-outline"}'
               tagName: ion-icon
@@ -9446,6 +9464,7 @@ title: Tigo
                         			page.local.ConversationProject = '';
                         		}
                         		page.local.ConversationProjectMode = 'none';
+                        		page.local.StartChoiceConfirmed = true;
                         		page.local.NewConversationMode = true;
                         		page.local.ShowConversationPanel = false;
                         		page.local.ShowAgentConfigPanel = false;
