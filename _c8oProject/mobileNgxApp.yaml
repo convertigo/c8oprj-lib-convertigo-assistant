@@ -709,6 +709,26 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
                     };
                     // A host message can arrive before GetTheme has initialized its callback.
                     page.global.applyAssistantHostTheme(page.global.AgentHostContext);
+                    // The web Studio (the Electron Studio, a desktop Studio engine without Studio mode) gives its colors
+                    // to the Assistant it hosts. GetVersion names the host from the engine, the test the agent stack uses
+                    // for the desktop Studio. Only on the studio surface, never in the No Code Studio: the Eclipse view and
+                    // C8Oforms keep their theme.
+                    try {
+                        var surfaceQuery = String(window.location.search || "") + "&" + String(window.location.hash || "");
+                        var studioSurface = /(?:assistantSurface|assistantContext)=studio(?:&|$)/i.test(surfaceQuery);
+                        if (studioSurface && noCodeSurface !== true && page.c8o && page.c8o.callJsonObject) {
+                            page.c8o.callJsonObject("lib_ConvertigoAssistant.GetVersion", {}).async().then(function(response) {
+                                var host = String((response && (response.host || (response.document && response.document.host))) || "");
+                                var studioWeb = host === "web";
+                                page.global.studioWebTheme = studioWeb;
+                                try {
+                                    document.documentElement.classList.toggle("tigo-studio-web", studioWeb);
+                                    if (document.body) { document.body.classList.toggle("tigo-studio-web", studioWeb); }
+                                } catch (eStudioWebClass) {}
+                                try { page.tick(); } catch (eStudioWebTick) {}
+                            }).catch(function() {});
+                        }
+                    } catch (eStudioWebTheme) {}
                     resolve();
             '
     comment: Restores and applies the persisted theme preference
@@ -3943,6 +3963,218 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
           }
           ion-menu ion-item.selected .agent-menu-tigo-icon {
             filter: drop-shadow(0 0 4px rgba(var(--ion-color-primary-rgb, 8, 145, 178), 0.34));
+          }
+          
+          /* -------------------------------------------------------
+             Studio web theme: the colors of the web Studio (Electron Studio), its neutral grays and its
+             accent, from its theme variables (StudioShell.svelte, studioTheme.css, convertigo.theme.css).
+             The application sets tigo-studio-web on html when GetVersion names a web Studio host; dark by
+             default, light with force-light (the dark-theme the panel gives). Nowhere else.
+          -------------------------------------------------------- */
+          
+          html.tigo-studio-web {
+            --tsw-bg: #1f1f1f;
+            --tsw-chrome: #181818;
+            --tsw-card: #181818;
+            --tsw-line: #2b2b2b;
+            --tsw-control: #2a2a2b;
+            --tsw-control-line: #3a3a3c;
+            --tsw-hover: #2a2d2e;
+            --tsw-selection: #37373d;
+            --tsw-code: #1f1f1f;
+            --tsw-text: #cccccc;
+            --tsw-strong: #ffffff;
+            --tsw-muted: #858585;
+            --tsw-accent: #18cfff;
+            --tsw-accent-bg: #18cfff;
+            --tsw-accent-hover: #4fdafd;
+            --tsw-on-accent: #002f53;
+            --ion-background-color: var(--tsw-bg);
+            --ion-text-color: var(--tsw-text);
+            --ion-border-color: var(--tsw-line);
+            --ion-card-background: var(--tsw-card);
+            --ion-item-background: var(--tsw-card);
+            --ion-color-primary: var(--tsw-accent);
+            --ion-color-primary-contrast: var(--tsw-on-accent);
+          }
+          
+          html.tigo-studio-web.force-light {
+            --tsw-bg: #ffffff;
+            --tsw-chrome: #f8f8f8;
+            --tsw-card: #f8f8f8;
+            --tsw-line: #e5e5e5;
+            --tsw-control: #ffffff;
+            --tsw-control-line: #d4d4d8;
+            --tsw-hover: #f0f0f0;
+            --tsw-selection: #e4e6f1;
+            --tsw-code: #f0f0f0;
+            --tsw-text: #3b3b3b;
+            --tsw-strong: #1f1f1f;
+            --tsw-muted: #616161;
+            --tsw-accent: #079ecc;
+          }
+          
+          html.tigo-studio-web app-root {
+            --modern-bg: var(--tsw-bg) !important;
+            --modern-surface: var(--tsw-card) !important;
+            --modern-surface-soft: var(--tsw-card) !important;
+            --modern-border: var(--tsw-line) !important;
+            --modern-text: var(--tsw-text) !important;
+            --modern-muted: var(--tsw-muted) !important;
+            --modern-muted-soft: color-mix(in srgb, var(--tsw-muted) 60%, transparent) !important;
+            --modern-input-bg: var(--tsw-control) !important;
+            --modern-kbd-bg: var(--tsw-control) !important;
+            --modern-cyan: var(--tsw-accent) !important;
+            --modern-teal: var(--tsw-accent) !important;
+            --tigo-tab-accent: var(--tsw-accent) !important;
+            --tigo-tab-active-bg: var(--tsw-hover) !important;
+          }
+          
+          html.tigo-studio-web ion-app,
+          html.tigo-studio-web ion-router-outlet,
+          html.tigo-studio-web ion-content {
+            --background: var(--tsw-bg) !important;
+            background: var(--tsw-bg) !important;
+          }
+          
+          html.tigo-studio-web ion-header.modern-header,
+          html.tigo-studio-web ion-header.modern-header ion-toolbar {
+            --background: var(--tsw-chrome) !important;
+            --color: var(--tsw-strong) !important;
+            background: var(--tsw-chrome) !important;
+          }
+          
+          html.tigo-studio-web ion-header.modern-header {
+            box-shadow: inset 0 -1px 0 var(--tsw-line) !important;
+          }
+          
+          html.tigo-studio-web ion-header .modern-header-btn,
+          html.tigo-studio-web ion-header .agent-settings-button {
+            --background: transparent !important;
+            --background-hover: var(--tsw-hover) !important;
+            --color: var(--tsw-text) !important;
+            color: var(--tsw-text) !important;
+          }
+          
+          html.tigo-studio-web ion-header ion-button.toolbar-reveal-button,
+          html.tigo-studio-web ion-header ion-select.toolbar-lang-select {
+            --background: var(--tsw-control) !important;
+            --border-color: var(--tsw-control-line) !important;
+            --color: var(--tsw-text) !important;
+            background: var(--tsw-control) !important;
+            border-color: var(--tsw-control-line) !important;
+            color: var(--tsw-text) !important;
+          }
+          
+          html.tigo-studio-web ion-card.modern-card,
+          html.tigo-studio-web ion-card.chat-assistant-bubble {
+            --background: var(--tsw-card) !important;
+            background: var(--tsw-card) !important;
+            background-image: none !important;
+            border-color: var(--tsw-line) !important;
+            box-shadow: none !important;
+          }
+          
+          html.tigo-studio-web ion-card.modern-card ion-card-content,
+          html.tigo-studio-web ion-card.chat-assistant-bubble ion-card-content {
+            --background: transparent !important;
+          }
+          
+          html.tigo-studio-web .agent-config-page .agent-config-surface {
+            --modern-surface-soft: var(--tsw-card) !important;
+            background: var(--tsw-card) !important;
+            border-color: var(--tsw-line) !important;
+            box-shadow: none !important;
+          }
+          
+          html.tigo-studio-web .agent-config-page .agent-config-settings {
+            background: var(--tsw-card) !important;
+          }
+          
+          html.tigo-studio-web .agent-config-page .agent-settings-footer {
+            background: var(--tsw-card) !important;
+            border-top: 1px solid var(--tsw-line);
+          }
+          
+          html.tigo-studio-web .agent-config-page .tigo-settings-tab:hover {
+            background: var(--tsw-hover) !important;
+          }
+          
+          html.tigo-studio-web .agent-config-page .tigo-settings-tab.active {
+            background: var(--tsw-hover) !important;
+            box-shadow: inset 0 -2px 0 var(--tsw-accent) !important;
+          }
+          
+          html.tigo-studio-web ion-button.agent-choice-button {
+            --background: var(--tsw-control) !important;
+            --background-hover: var(--tsw-hover) !important;
+            --border-color: var(--tsw-control-line) !important;
+            --color: var(--tsw-text) !important;
+          }
+          
+          html.tigo-studio-web ion-button.agent-choice-button.active {
+            --background: var(--tsw-selection) !important;
+            --border-color: var(--tsw-accent) !important;
+            box-shadow: none !important;
+          }
+          
+          html.tigo-studio-web ion-button.agent-settings-continue {
+            --background: var(--tsw-accent-bg) !important;
+            --background-hover: var(--tsw-accent-hover) !important;
+            --color: var(--tsw-on-accent) !important;
+          }
+          
+          html.tigo-studio-web .agent-provider-icon {
+            background: var(--tsw-control) !important;
+            color: var(--tsw-text) !important;
+          }
+          
+          html.tigo-studio-web ion-button.active .agent-provider-icon {
+            background: var(--tsw-accent-bg) !important;
+            color: var(--tsw-on-accent) !important;
+          }
+          
+          html.tigo-studio-web .agent-provider-check,
+          html.tigo-studio-web .agent-session-strip ion-icon {
+            color: var(--tsw-accent) !important;
+          }
+          
+          html.tigo-studio-web .agent-session-strip {
+            background: var(--tsw-control) !important;
+            border-color: var(--tsw-control-line) !important;
+          }
+          
+          html.tigo-studio-web .agent-session-strip:hover {
+            background: var(--tsw-hover) !important;
+          }
+          
+          html.tigo-studio-web .agent-project-choice.agent-session-strip {
+            background: var(--tsw-selection) !important;
+            border-color: var(--tsw-accent) !important;
+          }
+          
+          html.tigo-studio-web markdown pre,
+          html.tigo-studio-web markdown pre[class*="language-"] {
+            background: var(--tsw-code) !important;
+            border-color: var(--tsw-line) !important;
+          }
+          
+          html.tigo-studio-web markdown :not(pre) > code,
+          html.tigo-studio-web markdown :not(pre) > code[class*="language-"] {
+            background: var(--tsw-control) !important;
+            border-color: var(--tsw-control-line) !important;
+          }
+          
+          /* the send button: above the forced-dark rule of the composer */
+          
+          html.tigo-studio-web:root ion-footer.agent-footer-codex .codex-prompt-send-btn.button-has-icon-only.ion-activatable:not(.codex-prompt-stop-btn) {
+            --color: var(--tsw-on-accent) !important;
+            background: var(--tsw-accent-bg) !important;
+            color: var(--tsw-on-accent) !important;
+          }
+          
+          html.tigo-studio-web .tigo-quick-toggle {
+            background: var(--tsw-control) !important;
           }
           '
 ↓Font [ngx.components.UIFont-1771929741657]: 

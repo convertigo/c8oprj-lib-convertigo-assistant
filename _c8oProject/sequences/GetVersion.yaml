@@ -1,3 +1,7 @@
 ↓element [steps.ElementStep-1750662032230]: 
   expression: context.project.getVersion()
   nodeName: version
+↓host [steps.ElementStep-1794493000001]: 
+  comment: The host of this Assistant, for its theme - eclipse (the Eclipse Studio, Studio mode), web (a desktop Studio engine without Studio mode, the Electron Studio, Engine.isDesktopStudio), else server.
+  expression: (function(){var E=com.twinsoft.convertigo.engine.Engine;try{if(E.isStudioMode()){return "eclipse";}}catch(noStudioMode){}try{if(E.isDesktopStudio()===true){return "web";}}catch(noDesktopStudio){}return "server";})()
+  nodeName: host
