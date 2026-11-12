@@ -6,6 +6,8 @@ const { backendParts } = require('./helpers/assistant-source.cjs');
 function settings(options) {
   let payload;
   const sandbox = {
+    now: () => 123456789,
+    attachTigoAccessRefusal: () => {},
     optionsWithRequestFallbacks: value => value,
     keepNoCodeServerValues: value => value,
     trim: value => String(value ?? '').trim(),
