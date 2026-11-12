@@ -47,6 +47,12 @@ test('settings in server mode: the notice of the server settings keeps the paddi
   assert.doesNotMatch(page, /class="tigo-server-scope" role="note" style="margin: 6px 2px 12px;/);
 });
 
+test('header: compact Reveal and language from 640 px, no logo under 460 px, so the title stays readable in the dock', () => {
+  assert.match(page, /@media \(max-width: 640px\) \{\n\s+ion-header\.modern-header ion-buttons \{\n\s+gap: 6px;\n\s+\}\n\s+ion-header\.modern-header ion-button\.toolbar-reveal-button \{\n\s+font-size: 0;/);
+  assert.match(page, /@media \(max-width: 460px\) \{\n\s+ion-header\.modern-header \.modern-logo-btn \{\n\s+display: none;/);
+  assert.match(app, /html\.tigo-studio-web,\n\s+html\.tigo-studio-web body,\n\s+html\.tigo-studio-web ion-app,/);
+});
+
 test('the project subtitle is translated', () => {
   assert.match(page, /return heading\.length \? this\.t\("Agent_Project_Prefix", "Project: "\) \+ heading : "";/);
   assert.doesNotMatch(page, /"Projet : " \+ heading/);
