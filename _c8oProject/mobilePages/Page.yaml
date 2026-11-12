@@ -155,6 +155,7 @@ scriptContent:
         				Agent_Settings_Title: "AI Agent settings",
         				Agent_Settings_Copy: "Choose the agent, model, reasoning level, and manage the local CLI runtime.",
         				Agent_Settings_Continue: "Use these settings and continue",
+        				Agent_Project_Prefix: "Project: ",
         				Agent_Runtime_Local: "Local runtime",
         				Agent_Stack_Local: "Local Agent stack",
         				Agent_Stack_Not_Installed: "not installed",
@@ -249,6 +250,7 @@ scriptContent:
         				Agent_Settings_Title: "Configuration Agent IA",
         				Agent_Settings_Copy: "Choisissez l’agent, le modèle, le niveau de raisonnement et gérez le runtime CLI local.",
         				Agent_Settings_Continue: "Utiliser ces réglages et continuer",
+        				Agent_Project_Prefix: "Projet : ",
         				Agent_Runtime_Local: "Runtime local",
         				Agent_Stack_Local: "Stack Agent locale",
         				Agent_Stack_Not_Installed: "non installé",
@@ -352,6 +354,7 @@ scriptContent:
         				Agent_Settings_Title: "Configurazione Agente IA",
         				Agent_Settings_Copy: "Scegli l’agente, il modello, il livello di ragionamento e gestisci il runtime CLI locale.",
         				Agent_Settings_Continue: "Usa queste impostazioni e continua",
+        				Agent_Project_Prefix: "Progetto: ",
         				Agent_Runtime_Local: "Runtime locale",
         				Agent_Stack_Local: "Stack Agent locale",
         				Agent_Stack_Not_Installed: "non installato",
@@ -455,6 +458,7 @@ scriptContent:
         				Agent_Settings_Title: "Configuración del Agente IA",
         				Agent_Settings_Copy: "Elija el agente, el modelo, el nivel de razonamiento y gestione el runtime CLI local.",
         				Agent_Settings_Continue: "Usar esta configuración y continuar",
+        				Agent_Project_Prefix: "Proyecto: ",
         				Agent_Runtime_Local: "Runtime local",
         				Agent_Stack_Local: "Stack local del Agente",
         				Agent_Stack_Not_Installed: "no instalado",
@@ -4515,7 +4519,7 @@ scriptContent:
         			}
         			break;
         		}
-                return heading.length ? "Projet : " + heading : "";
+                return heading.length ? this.t("Agent_Project_Prefix", "Project: ") + heading : "";
         	}
         	public GetProjectSubtitle() {
         		return this.getProjectSubtitle();
@@ -12043,7 +12047,11 @@ title: Tigo
                                               page.tick();
                                               page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(response) {
                                                   var result = response && response.result ? response.result : {};
-                                                  if (result.ok !== true) { throw new Error(result.message || result.error || tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible'')); }
+                                                  if (result.ok !== true) {
+                                                      // The reason of the failure, else the code or the status it answered: never the generic text twice.
+                                                      var setupError = result.error && typeof result.error === ''object'' ? (result.error.message || result.error.code || '''') : (result.error || '''');
+                                                      throw new Error(String(result.message || setupError || result.code || result.status || ''no reason given''));
+                                                  }
                                                   var settings = result.settings || {};
                                                   if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
                                                   if (settings.providers) { page.local.AgentSettings = settings; }
@@ -12153,8 +12161,9 @@ title: Tigo
                                               }).catch(function(error) {
                                                   page.local.AgentRuntimeLoading = false;
                                                   page.local.AgentRuntimeInstallProvider = '''';
-                                                  page.local.AgentRuntimeError = '''' + error;
-                                                  page.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible : '') + error;
+                                                  var setupFailure = ('''' + (error && error.message ? error.message : error)).replace(/^Error:\s*/, '''');
+                                                  page.local.AgentRuntimeError = setupFailure;
+                                                  page.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible : '') + setupFailure;
                                                   page.tick();
                                                   resolve();
                                               });'
@@ -25996,7 +26005,7 @@ title: Tigo
           .agent-group-ok { color: #10b981; }
           .agent-group-failed { color: #dc2626; }
           .agent-group-running { color: var(--modern-cyan, #06b6d4); }
-          .agent-worklog-tool > .agent-worklog-tool-body { border-top: 1px solid var(--modern-border, #cbd5e1); margin: 0; padding: 6px 12px 8px 46px; }
+          .agent-worklog-tool > .agent-worklog-tool-body { border-left: 0; border-top: 1px solid var(--modern-border, #cbd5e1); margin: 0; padding: 6px 12px 8px 46px; }
           /* Live activity at the end of the turn */
           .agent-live { align-items: center; background: linear-gradient(90deg, color-mix(in srgb, var(--modern-cyan, #06b6d4) 12%, transparent 88%), color-mix(in srgb, var(--modern-cyan, #06b6d4) 3%, transparent 97%)); border: 1px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 45%, transparent 55%); border-radius: 12px; display: grid; gap: 12px; grid-template-columns: 24px minmax(0, 1fr) auto; margin: 14px 0 6px; padding: 10px 14px; }
           .agent-live-spin, .agent-now-spin, .agent-dock-spin { animation: tigo-spin 0.9s linear infinite; border: 3px solid color-mix(in srgb, var(--modern-cyan, #06b6d4) 25%, transparent 75%); border-radius: 50%; border-top-color: var(--modern-cyan, #06b6d4); height: 22px; width: 22px; }
@@ -26318,20 +26327,27 @@ title: Tigo
             display: none !important;
           }
           
+          /* The previous conversations of the home card: the card is their frame, the list draws no second one. */
+          .agent-start-card .agent-conversations-panel:not(.agent-config-surface) {
+            background: transparent;
+            border-radius: 0;
+          }
+          
           /* Tabs */
           .agent-config-page .tigo-settings-tabs {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 4px;
-            padding: 6px;
+            grid-template-columns: repeat(4, minmax(0, auto));
+            gap: 0 4px;
+            padding: 6px 8px 0;
             border-bottom: 1px solid color-mix(in srgb, var(--modern-muted, #64748b) 20%, transparent);
           }
           .agent-config-page .tigo-settings-tab {
-            align-items: center;
+            align-items: flex-start;
             appearance: none;
             background: transparent;
             border: 0;
-            border-radius: 8px;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: -1px;
             color: var(--modern-text, #0f172a);
             cursor: pointer;
             display: flex;
@@ -26352,6 +26368,7 @@ title: Tigo
             color: var(--modern-muted, #64748b);
             flex: none;
             font-size: 17px;
+            margin-top: 1px;
           }
           .agent-config-page .tigo-settings-tab.active {
             background: var(--tigo-tab-active-bg);
@@ -26369,19 +26386,28 @@ title: Tigo
             font-size: 13px;
             font-weight: 600;
             line-height: 1.3;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
           }
+          /* The status of a tab takes two lines when its tab is narrow, instead of a cut. */
           .agent-config-page .tigo-settings-tab-status {
-            align-items: center;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
             color: var(--modern-muted, #64748b);
-            display: block;
+            display: -webkit-box;
             font-size: 11.5px;
             line-height: 1.35;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+          }
+          /* Narrow panels: the tabs on two rows, each with its whole label. */
+          @media (max-width: 639px) {
+            .agent-config-page .tigo-settings-tabs {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 4px;
+              padding: 8px;
+            }
+            .agent-config-page .tigo-settings-tab {
+              border-radius: 8px;
+              margin-bottom: 0;
+            }
           }
           .agent-config-page .tigo-settings-dot {
             background: #10b981;
@@ -26421,8 +26447,59 @@ title: Tigo
           .agent-config-page .tigo-settings-categories .tigo-accordion-body {
             padding: 2px 0;
           }
+          /* One frame: the settings surface. The accordion of a tab draws none of its own (the global accordion style
+             gives every accordion a border, a radius and a shadow), and its group adds no padding. */
+          .agent-config-page .tigo-settings-categories {
+            border-radius: 0;
+            gap: 0;
+            padding: 0;
+          }
+          .agent-config-page .tigo-settings-categories > ion-accordion {
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+          }
+          /* The library lists keep the padding of the sections. */
+          .agent-config-page .tigo-settings-categories > ion-accordion:is([value="prompts"], [value="skills"], [value="mcp"]) > .tigo-accordion-body {
+            padding: 4px 18px 16px;
+          }
+          .agent-config-page .tigo-resource-toolbar {
+            padding: 8px 18px 0;
+          }
+          .agent-config-page .tigo-resource-toolbar:not(:has(> :not([hidden]))) {
+            display: none;
+          }
+          /* Separators between the sections of a tab, inside its padding rather than from one border to the other; a
+             hidden section draws none. */
           .agent-config-page .tigo-settings-categories .agent-setting-section {
+            --tigo-section-line: color-mix(in srgb, var(--modern-muted, #64748b) 22%, transparent);
+            background-repeat: no-repeat !important;
+            border: 0 !important;
             padding: 14px 18px !important;
+          }
+          .agent-config-page .tigo-settings-categories .agent-setting-section + .agent-setting-section {
+            background-image: linear-gradient(var(--tigo-section-line), var(--tigo-section-line)) !important;
+            background-position: center top !important;
+            background-size: calc(100% - 36px) 1px !important;
+          }
+          /* Model: its refresh button on the line of its title. */
+          .agent-config-page .agent-model-setting > ion-button.agent-model-refresh {
+            height: 32px !important;
+            margin: 0 !important;
+            min-height: 0 !important;
+            right: 10px !important;
+            top: 8px !important;
+            width: 32px !important;
+          }
+          /* Runtime: the title on the left of its action, as in the stack section. */
+          .agent-config-page .agent-runtime-settings > .agent-create-label {
+            grid-column: 1;
+          }
+          @media (max-width: 430px) {
+            .agent-config-page .agent-reasoning-setting {
+              grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)) !important;
+            }
           }
           .agent-config-page .tigo-settings-categories .agent-setting-description {
             margin: 2px 0 10px;
@@ -26499,10 +26576,14 @@ title: Tigo
               grid-column: 2;
             }
             .agent-config-page ion-accordion[value="agent"] > .tigo-accordion-body > .agent-provider-setting {
-              border-bottom: 0;
-              border-right: 1px solid color-mix(in srgb, var(--modern-muted, #64748b) 20%, transparent);
+              background-image: linear-gradient(var(--tigo-section-line), var(--tigo-section-line)) !important;
+              background-position: right center !important;
+              background-size: 1px calc(100% - 28px) !important;
               grid-column: 1;
               grid-row: 1 / span 4;
+            }
+            .agent-config-page ion-accordion[value="agent"] > .tigo-accordion-body > .agent-provider-setting + .agent-setting-section {
+              background-image: none !important;
             }
           }
           
@@ -26546,6 +26627,8 @@ title: Tigo
               padding: 12px 10px;
             }
             .agent-config-page .tigo-settings-tab {
+              border-radius: 8px;
+              margin-bottom: 0;
               padding: 9px 12px;
             }
             .agent-config-page .tigo-settings-tab.active {

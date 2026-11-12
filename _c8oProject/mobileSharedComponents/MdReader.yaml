@@ -236,8 +236,40 @@
             display: none;
           }
           
+          /* One frame per code block, the pre: the code of a language draws no box of its own (background, radius, the
+             blue edge and the outline of the Prism coy theme, the padding of the hidden line numbers). */
+          :host ::ng-deep markdown pre[class*="language-"] > code[class*="language-"],
+          :host ::ng-deep markdown pre > code {
+            background: transparent !important;
+            background-image: none !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+          }
+          
+          /* The copy button of a code block (ngx-markdown clipboard) stays inside the block, beside its text. */
+          :host ::ng-deep markdown div:has(> .markdown-clipboard-toolbar) > pre {
+            padding-right: 58px;
+          }
+          :host ::ng-deep markdown .markdown-clipboard-toolbar {
+            right: 7px !important;
+            top: 7px !important;
+          }
+          :host ::ng-deep markdown .markdown-clipboard-button {
+            appearance: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            position: static !important;
+          }
+          :host ::ng-deep markdown .markdown-clipboard-button:hover {
+            color: var(--modern-text, #f1f5f9);
+          }
+          
           :host ::ng-deep markdown button.clipboard,
           :host ::ng-deep markdown .clipboard,
+          :host ::ng-deep markdown .markdown-clipboard-button,
           :host ::ng-deep markdown .copy-to-clipboard-button {
             background: color-mix(in srgb, var(--modern-surface, #111827) 82%, transparent 18%);
             border: 1px solid color-mix(in srgb, var(--modern-border, #334155) 84%, transparent 16%);
@@ -278,15 +310,19 @@
           
           :host-context(:root.force-light) ::ng-deep markdown button.clipboard,
           :host-context(:root.force-light) ::ng-deep markdown .clipboard,
+          :host-context(:root.force-light) ::ng-deep markdown .markdown-clipboard-button,
           :host-context(:root.force-light) ::ng-deep markdown .copy-to-clipboard-button,
           :host-context(html.force-light) ::ng-deep markdown button.clipboard,
           :host-context(html.force-light) ::ng-deep markdown .clipboard,
+          :host-context(html.force-light) ::ng-deep markdown .markdown-clipboard-button,
           :host-context(html.force-light) ::ng-deep markdown .copy-to-clipboard-button,
           :host-context(body.force-light) ::ng-deep markdown button.clipboard,
           :host-context(body.force-light) ::ng-deep markdown .clipboard,
+          :host-context(body.force-light) ::ng-deep markdown .markdown-clipboard-button,
           :host-context(body.force-light) ::ng-deep markdown .copy-to-clipboard-button,
           :host-context(.force-light) ::ng-deep markdown button.clipboard,
           :host-context(.force-light) ::ng-deep markdown .clipboard,
+          :host-context(.force-light) ::ng-deep markdown .markdown-clipboard-button,
           :host-context(.force-light) ::ng-deep markdown .copy-to-clipboard-button {
             background: rgba(248, 250, 252, 0.92);
             border-color: rgba(148, 163, 184, 0.45);
@@ -311,6 +347,7 @@
           }
           :host-context(html:not(.force-dark)) ::ng-deep markdown button.clipboard,
           :host-context(html:not(.force-dark)) ::ng-deep markdown .clipboard,
+          :host-context(html:not(.force-dark)) ::ng-deep markdown .markdown-clipboard-button,
           :host-context(html:not(.force-dark)) ::ng-deep markdown .copy-to-clipboard-button {
           background: rgba(248, 250, 252, 0.92);
           border-color: rgba(148, 163, 184, 0.45);
