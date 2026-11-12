@@ -1197,10 +1197,26 @@ scriptContent:
         			this.applyC8OformsHostTheme(next);
         			// Only the embedded C8Oforms surface uses the No Code resource catalog.
         			try { if (this.events && this.events.publish && this.isEmbeddedInC8Oforms()) { this.events.publish("AgentNoCodeContextChanged", next); } } catch (eCatalogEvent) {}
+        			this.applyHostSelectedProject(next);
         			this.scheduleAgentSettingsRefreshAfterHostContext();
         			if (this.scheduleAgentStackOfferCheck) { this.scheduleAgentStackOfferCheck(); }
         			this.syncFooterPlaceholder();
         			if (this.tick) { this.tick(); }
+        		} catch (e) {}
+        	}
+        
+        	// The web Studio sends the project selected in its tree with its context too (projectScope "selected"): a page the
+        	// app opened after a stack install, which the selection message did not reach, takes it from there, as from a
+        	// selection (JavaMessage). The Eclipse Studio sends no projectScope: unchanged; C8Oforms has its own targets.
+        	public applyHostSelectedProject(context) {
+        		try {
+        			if (!context || context.assistantSurface !== "studio" || context.projectScope !== "selected") { return; }
+        			if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) { return; }
+        			var project = this.cleanProjectName(context.defaultProject || context.projectContext);
+        			if (!project.length || !this.global) { return; }
+        			if (this.cleanProjectName(this.global.projectName) === project && this.cleanProjectName(this.local && this.local.CurrentStudioProject) === project) { return; }
+        			this.global.projectName = project;
+        			if (this.events && this.events.publish) { this.events.publish("JavaMessage", {}); }
         		} catch (e) {}
         	}
         

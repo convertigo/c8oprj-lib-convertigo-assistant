@@ -62,3 +62,28 @@ test('the Studio web theme highlights the chosen start choice, never the project
   assert.match(app, /html\.tigo-studio-web \.agent-start-choice\.agent-choice-selected\.agent-session-strip,\n\s+html\.tigo-studio-web \.agent-start-choice\.agent-choice-selected\.agent-session-strip:hover \{\n\s+background: var\(--tsw-selection\) !important;/);
   assert.doesNotMatch(app, /html\.tigo-studio-web \.agent-project-choice\.agent-session-strip \{/);
 });
+
+test('the project the web Studio selects reaches the page through its context too (a page opened after a stack install)', () => {
+  const start = page.indexOf('        \t// The web Studio sends the project selected in its tree with its context too');
+  const end = page.indexOf('        \tpublic hasAgentSettingsProvidersLoaded() {');
+  assert.ok(start > 0 && end > start);
+  const js = ts.transpileModule('class P {\n' + page.slice(start, end) + '\n cleanProjectName(v) { return ("" + (v == null ? "" : v)).trim(); }\n}', { compilerOptions: { target: ts.ScriptTarget.ES2017 } }).outputText;
+  const P = vm.runInNewContext(js + '\nP;', {});
+  const make = (global = {}, local = {}) => { const p = new P(); p.global = global; p.local = local; p.published = []; p.events = { publish: (t) => p.published.push(t) }; p.isEmbeddedInC8Oforms = () => false; return p; };
+  const web = { assistantSurface: 'studio', projectScope: 'selected', defaultProject: 'lib_ConvertigoAgentBridge' };
+  const p = make();
+  p.applyHostSelectedProject(web);
+  assert.equal(p.global.projectName, 'lib_ConvertigoAgentBridge');
+  assert.deepEqual(p.published, ['JavaMessage'], 'as a selection');
+  const same = make({ projectName: 'lib_ConvertigoAgentBridge' }, { CurrentStudioProject: 'lib_ConvertigoAgentBridge' });
+  same.applyHostSelectedProject(web);
+  assert.deepEqual(same.published, [], 'already applied');
+  const eclipse = make();
+  eclipse.applyHostSelectedProject({ assistantSurface: 'studio', defaultProject: 'X' });
+  assert.equal(eclipse.global.projectName, undefined, 'the Eclipse Studio sends no projectScope: unchanged');
+  const forms = make();
+  forms.isEmbeddedInC8Oforms = () => true;
+  forms.applyHostSelectedProject(web);
+  assert.equal(forms.global.projectName, undefined, 'C8Oforms: unchanged');
+  assert.match(page, /this\.applyHostSelectedProject\(next\);\n\s+this\.scheduleAgentSettingsRefreshAfterHostContext\(\);/);
+});
