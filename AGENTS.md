@@ -729,7 +729,8 @@ rediscovering the same context.
   the user's key is asked under the log4j MDC
   `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind a
   random handle, `lib_ConvertigoAssistant.gatewayKey.<random>`: 10 min for new starts, at least 5 left when a turn
-  starts, purged 2 h after that. The HTTP session that obtained it holds the handle, and a cached key is served only to
+  starts, purged 2 h after that. A renewal that returns the same key keeps its handle (one copy in server memory); a
+  new key gets a new handle. The HTTP session that obtained it holds the handle, and a cached key is served only to
   that session while its user owns it. Only that handle goes to the Bridge (`attachGatewayKeyHandle`, which drops any
   handle that came with the request), and it is fetched for a gateway agent only. A conversation of another account is
   refused (`conversation_not_owned`). A key never stays past its `expiresAt` minus 15 min (TigoAccess expires
