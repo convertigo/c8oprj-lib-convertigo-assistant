@@ -107,6 +107,18 @@ responseTimeout: 120
       }else if(remote&&remote.status==="error"){response={status:"error",code:String(remote.code||"service_unavailable"),error:remote.code==="user_budget_migration_required"?"Votre accès personnel doit être migré par Convertigo avant d’utiliser le budget de l’équipe.":"L’accès Tigo n’a pas pu être activé. Vérifiez votre compte ou réessayez."};}
       secret=null;remoteResult=null;localAccess=null;c=null;
       '
+↓RememberAccessRefusal [steps.SimpleStep-1794500000001]: 
+  comment: Keeps the code of the last refusal (no credential, its code and date) in tigo-access-refusal.json beside the key, for the settings of the Assistant; a key in place removes it.
+  expression: |
+    'try{
+     var refusalPath=directory.resolve("tigo-access-refusal.json");safePath(refusalPath);
+     var refusedCode=response&&response.status==="error"?String(response.code||"").replace(/[^A-Za-z0-9_]/g,"").substring(0,64):"";
+     if(refusedCode.length&&refusedCode!=="authentication_required"){
+      safePath(directory);java.nio.file.Files.createDirectories(directory);
+      java.nio.file.Files.write(refusalPath,new java.lang.String(JSON.stringify({version:1,code:refusedCode,at:new Date().toISOString()})).getBytes("UTF-8"));
+     }else if(response&&response.status==="ok"){java.nio.file.Files.deleteIfExists(refusalPath);}
+    }catch(rememberRefusalIgnored){}
+    '
 ↓Response [steps.JsonToXmlStep-1791831268158]: 
   jsonObject: 
     - xmlizable: 

@@ -7631,12 +7631,42 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     });
   };
 
+  // The last refusal of TigoAccess for the Convertigo agent of a desktop Studio: TigoAccessBootstrap keeps its code in
+  // <agents>/convertigo/tigo-access-refusal.json (no credential) and removes it once a key is in place. The settings
+  // show its reason and what to do instead of a bare "Needs setup".
+  function attachTigoAccessRefusal(settings) {
+    if (!settings || !settings.providers || !settings.providers.length || !isLocalStudio()) {
+      return;
+    }
+    var refusal = null;
+    try {
+      var file = new File(new File(agentsDirectory(String(Engine.USER_WORKSPACE_PATH)), "convertigo"), "tigo-access-refusal.json");
+      if (file.isFile() && file.length() < 4096) {
+        var data = JSON.parse(String(new java.lang.String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)));
+        var code = trim(data && data.code).replace(/[^A-Za-z0-9_]/g, "").substring(0, 64);
+        if (code.length) {
+          refusal = { code: code, at: trim(data.at) };
+        }
+      }
+    } catch (_ignoreNoRefusal) {}
+    if (refusal === null) {
+      return;
+    }
+    for (var i = 0; i < settings.providers.length; i++) {
+      var entry = settings.providers[i];
+      if (entry && trim(entry.id) === "convertigo") {
+        entry.accessRefusal = refusal;
+      }
+    }
+  }
+
   function settingsSteps(options) {
     var workspaceRoot = resolveWorkspaceRoot(options);
     var userKey = normalizeUserKey(options.userId);
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var settings = agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
+    attachTigoAccessRefusal(settings);
     sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
     var conversations = publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options));
     sendMark("conversations");
