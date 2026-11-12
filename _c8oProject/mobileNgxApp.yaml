@@ -4058,7 +4058,16 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
             color: var(--tsw-text) !important;
           }
           
-          html.tigo-studio-web ion-header ion-button.toolbar-reveal-button,
+          /* the round Reveal button: its colors go to its inner button only (a background on the element itself
+             drew a square behind it) */
+          html.tigo-studio-web ion-header ion-button.toolbar-reveal-button {
+            --background: var(--tsw-control) !important;
+            --background-hover: var(--tsw-hover) !important;
+            --border-color: var(--tsw-control-line) !important;
+            --color: var(--tsw-text) !important;
+            background: transparent !important;
+            color: var(--tsw-text) !important;
+          }
           html.tigo-studio-web ion-header ion-select.toolbar-lang-select {
             --background: var(--tsw-control) !important;
             --border-color: var(--tsw-control-line) !important;

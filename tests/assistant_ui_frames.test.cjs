@@ -99,3 +99,50 @@ test('the Studio web theme: only for a web host on the studio surface, the color
     assert.match(selector.trim(), /^html\.tigo-studio-web/, selector);
   }
 });
+
+test('the web Studio: the panel shows, read-only, the channel the Studio follows (its preferences), elsewhere unchanged', () => {
+  const { ts } = require('./helpers/assistant-source.cjs');
+  const start = page.indexOf('        \t// The web Studio installs the agent stack from its own preference');
+  const end = page.indexOf('        \tpublic getAgentStackChannelChoice() {');
+  assert.ok(start > 0 && end > start);
+  const js = ts.transpileModule('class P {\n' + page.slice(start, end) + '\n}', { compilerOptions: { target: ts.ScriptTarget.ES2017 } }).outputText;
+  const run = (classes, stored) => {
+    const box = {
+      document: { documentElement: { classList: { contains: c => classes.includes(c) } } },
+      window: { localStorage: { getItem: k => (k === 'convertigo.studio.preferences.v1' ? stored : null) } }
+    };
+    return new (vm.runInNewContext(js + '\nP;', box))().getWebStudioChannel();
+  };
+  assert.equal(run(['tigo-studio-web'], JSON.stringify({ assistantChannel: 'preview' })), 'preview');
+  assert.equal(run(['tigo-studio-web'], JSON.stringify({ readmeOnSave: true })), 'stable', 'the default of the web Studio');
+  assert.equal(run(['tigo-studio-web'], null), 'stable');
+  assert.equal(run(['tigo-studio-web'], '{broken'), '', 'unreadable: the panel keeps its own rules');
+  assert.equal(run([], JSON.stringify({ assistantChannel: 'preview' })), '', 'the Eclipse Studio, a server: unchanged');
+  // it wins, read-only, and the tab status follows it (getAgentStackChannel)
+  assert.match(page, /var web = this\.getWebStudioChannel \? this\.getWebStudioChannel\(\) : "";\n\s+if \(web\) \{ return web; \}\n\s+var choice = this\.isAgentStackChannelFixed\(\)/);
+  assert.match(page, /if \(this\.isAgentStackChannelFixed\(\) \|\| \(this\.getWebStudioChannel && this\.getWebStudioChannel\(\)\)\) \{ return; \}/);
+  assert.match(page, /if \(web\) \{\n[^\n]*\n\s+view = \{\n\s+readOnly: true, channel: web,[^\n]*\n[^\n]*\n\s+hint: this\.agentStackOfferText\("webStudioChannel"\)/);
+  assert.equal((page.match(/webStudioChannel: "[^"]+Releases of the local Assistant[^"]+"/g) || []).length, 4, 'en, fr, it, es');
+  assert.match(page, /\{\{agentStackOfferText\(getAgentStackChannel\(\) === ''preview'' \? ''channelPreview'' : ''channelStable''\)\}\}/);
+});
+
+test('Runtime and stack: an error or a refusal keeps its alert color in the dark theme', () => {
+  assert.match(page, /\(this\.local\.AgentRuntimeError \|\| \(this\.local\.AgentRuntimeProvider === ''convertigo'' && this\.getConvertigoAccessRefusalText && this\.getConvertigoAccessRefusalText\(\)\)\)\) \? ''agent-runtime-status error''/);
+  assert.match(page, /:host-context\(\.force-dark\) \.agent-runtime-status\.error \{\n\s+color: #f87171;/);
+  assert.match(page, /:host-context\(body:not\(\.force-light\)\) \.agent-runtime-status\.error \{\n\s+color: #f87171;/);
+  assert.match(page, /\.agent-runtime-status\.error \{\n\s+color: #b42318;/);
+});
+
+test('header: the project subtitle stays readable in the dock (whole title width, two lines)', () => {
+  assert.match(page, /ion-header\.modern-header \.modern-title-sub\.modern-title-sub-project \{\n\s+-webkit-box-orient: vertical;\n\s+-webkit-line-clamp: 2;\n\s+display: -webkit-box !important;[\s\S]{0,240}overflow-wrap: anywhere;\n\s+white-space: normal;/);
+  assert.doesNotMatch(page, /modern-title-sub-project \{\n\s+display: block !important;[\s\S]{0,140}white-space: nowrap;/);
+  assert.match(page, /ion-header\.modern-header ion-title \{\n\s+padding-left: 6px;\n\s+padding-right: 6px;\n\s+\}\n\s+ion-header\.modern-header \.modern-title-wrap \{\n\s+height: auto;\n\s+min-height: 34px;\n\s+width: 100%;/);
+});
+
+test('the Studio web theme paints the round Reveal button, never a square behind it', () => {
+  const rule = app.match(/html\.tigo-studio-web ion-header ion-button\.toolbar-reveal-button \{[^}]*\}/)[0];
+  assert.match(rule, /--background: var\(--tsw-control\) !important;/);
+  assert.match(rule, /background: transparent !important;/);
+  assert.doesNotMatch(rule, /\n\s+(background|border-color): var\(--tsw-control/);
+  assert.match(app, /html\.tigo-studio-web ion-header ion-select\.toolbar-lang-select \{\n\s+--background: var\(--tsw-control\) !important;/);
+});

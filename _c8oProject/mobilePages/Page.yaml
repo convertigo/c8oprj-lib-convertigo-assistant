@@ -187,6 +187,7 @@ scriptContent:
         				Agent_Stack_Reinstall: "Reinstall stack",
         				Agent_Stack_Updating: "Stack update in progress...",
         				Agent_Stack_Update_Disabled: "Automatic updates are disabled for local source checkouts.",
+        				Agent_Stack_Wait_Agent_Setup: "The agent is being installed: reinstall the stack once it is done (reinstalling now reloads this panel and interrupts it).",
         				Agent_Stack_Server_Restricted: "Updating the stack on this server requires an administrator session (symbol assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "Stack updates are disabled on this server (symbol assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Updating the stack on the server...",
@@ -295,6 +296,7 @@ scriptContent:
         				Agent_Stack_Reinstall: "Réinstaller la stack",
         				Agent_Stack_Updating: "Mise à jour de la stack...",
         				Agent_Stack_Update_Disabled: "La mise à jour automatique est désactivée pour les sources locales.",
+        				Agent_Stack_Wait_Agent_Setup: "L’agent est en cours d’installation : réinstallez la stack une fois qu’il est prêt (la réinstaller maintenant recharge ce panneau et l’interrompt).",
         				Agent_Stack_Server_Restricted: "La mise à jour de la stack sur ce serveur nécessite une session administrateur (symbole assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "La mise à jour de la stack est désactivée sur ce serveur (symbole assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Mise à jour de la stack sur le serveur...",
@@ -412,6 +414,7 @@ scriptContent:
         				Agent_Stack_Reinstall: "Reinstalla stack",
         				Agent_Stack_Updating: "Aggiornamento dello stack...",
         				Agent_Stack_Update_Disabled: "Gli aggiornamenti automatici sono disabilitati per i sorgenti locali.",
+        				Agent_Stack_Wait_Agent_Setup: "L’agente è in fase di installazione: reinstalla lo stack quando è pronto (reinstallarlo ora ricarica questo pannello e la interrompe).",
         				Agent_Stack_Server_Restricted: "L''aggiornamento dello stack su questo server richiede una sessione amministratore (simbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "Gli aggiornamenti dello stack sono disabilitati su questo server (simbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Aggiornamento dello stack sul server...",
@@ -529,6 +532,7 @@ scriptContent:
         				Agent_Stack_Reinstall: "Reinstalar stack",
         				Agent_Stack_Updating: "Actualizando el stack...",
         				Agent_Stack_Update_Disabled: "Las actualizaciones automáticas están deshabilitadas para fuentes locales.",
+        				Agent_Stack_Wait_Agent_Setup: "El agente se está instalando: reinstale la pila cuando esté listo (reinstalarla ahora recarga este panel y la interrumpe).",
         				Agent_Stack_Server_Restricted: "Actualizar la stack en este servidor requiere una sesión de administrador (símbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Disabled: "Las actualizaciones de la stack están deshabilitadas en este servidor (símbolo assistant.stack.selfupdate).",
         				Agent_Stack_Server_Updating: "Actualizando la stack en el servidor...",
@@ -2309,7 +2313,17 @@ scriptContent:
         		return this.isAgentStackUpdateAvailable && this.isAgentStackUpdateAvailable() ? this.t("Agent_Stack_Update", "Mettre à jour la stack") : this.t("Agent_Stack_Reinstall", "Réinstaller la stack");
         	}
         
+        	// An agent being installed by this panel: replacing the stack now reloads the panel and loses that install.
+        	public isAgentSetupRunning() {
+        		return !!(this.local && this.local.AgentRuntimeInstallProvider);
+        	}
+        
         	public triggerAgentStackUpdate() {
+        		if (this.isAgentSetupRunning && this.isAgentSetupRunning()) {
+        			this.local.AgentActivationMessage = this.t("Agent_Stack_Wait_Agent_Setup", "L’agent est en cours d’installation : réinstallez la stack une fois qu’il est prêt.");
+        			this.tick();
+        			return;
+        		}
         		if (this.local && (this.local.AgentStackReleaseLoading === true)) {
         			this.local.AgentActivationMessage = this.t("Agent_Stack_Check_Failed", "Impossible de vérifier la stack publiée.");
         			this.tick();
@@ -2383,19 +2397,19 @@ scriptContent:
         			fr: { title: "Une mise à jour de Tigo est disponible", titlePreview: "Une pré-release de Tigo est disponible", update: "Mettre à jour", later: "Plus tard", installing: "Mise à jour de Tigo...", turnRunning: "La mise à jour sera possible à la fin du tour en cours.", disabled: "La mise à jour automatique est désactivée (symbole assistant.stack.selfupdate).",
         				channel: "Canal de mise à jour", channelStable: "Stable", channelPreview: "Pré-releases", stableHint: "Seules les versions stables sont proposées.", previewHint: "Les pré-releases revues sont proposées avant leur version stable. Revenir au canal stable ne rétrograde rien : la stable suivante sera proposée.",
         				serverChannel: "Réglé pour tout le serveur par son administrateur (symbole {symbol}).", serverDefault: "Canal par défaut du serveur. Son administrateur peut le changer avec le symbole {symbol}.",
-        				studioDefault: "Canal par défaut de ce Studio, réglé par le symbole {symbol}. Un choix fait ici l’emporte.", previewFailed: "Le manifeste des pré-releases n’a pas pu être lu : seules les versions stables sont proposées." },
+        				studioDefault: "Canal par défaut de ce Studio, réglé par le symbole {symbol}. Un choix fait ici l’emporte.", webStudioChannel: "Canal suivi par ce Studio : il se change dans ses préférences (« Releases of the local Assistant ») ou dans la barre de l’Assistant.", previewFailed: "Le manifeste des pré-releases n’a pas pu être lu : seules les versions stables sont proposées." },
         			en: { title: "A Tigo update is available", titlePreview: "A Tigo pre-release is available", update: "Update", later: "Later", installing: "Updating Tigo...", turnRunning: "You can update once the current turn ends.", disabled: "Automatic updates are disabled (symbol assistant.stack.selfupdate).",
         				channel: "Update channel", channelStable: "Stable", channelPreview: "Pre-releases", stableHint: "Only stable versions are offered.", previewHint: "Reviewed pre-releases are offered before their stable version. Going back to the stable channel downgrades nothing: the next stable version will be offered.",
         				serverChannel: "Set for the whole server by its administrator (symbol {symbol}).", serverDefault: "Default channel of the server. Its administrator can change it with the symbol {symbol}.",
-        				studioDefault: "Default channel of this Studio, set by the symbol {symbol}. A choice made here takes precedence.", previewFailed: "The pre-release manifest could not be read: only stable versions are offered." },
+        				studioDefault: "Default channel of this Studio, set by the symbol {symbol}. A choice made here takes precedence.", webStudioChannel: "Channel this Studio follows: change it in its preferences (Releases of the local Assistant) or in the Assistant bar.", previewFailed: "The pre-release manifest could not be read: only stable versions are offered." },
         			it: { title: "È disponibile un aggiornamento di Tigo", titlePreview: "È disponibile una pre-release di Tigo", update: "Aggiorna", later: "Più tardi", installing: "Aggiornamento di Tigo...", turnRunning: "Potrai aggiornare al termine del turno in corso.", disabled: "Gli aggiornamenti automatici sono disattivati (simbolo assistant.stack.selfupdate).",
         				channel: "Canale di aggiornamento", channelStable: "Stabile", channelPreview: "Pre-release", stableHint: "Vengono proposte solo le versioni stabili.", previewHint: "Le pre-release verificate vengono proposte prima della versione stabile. Tornare al canale stabile non riporta indietro nulla: verrà proposta la prossima versione stabile.",
         				serverChannel: "Impostato per tutto il server dal suo amministratore (simbolo {symbol}).", serverDefault: "Canale predefinito del server. L’amministratore può cambiarlo con il simbolo {symbol}.",
-        				studioDefault: "Canale predefinito di questo Studio, impostato dal simbolo {symbol}. Una scelta fatta qui ha la precedenza.", previewFailed: "Impossibile leggere il manifesto delle pre-release: vengono proposte solo le versioni stabili." },
+        				studioDefault: "Canale predefinito di questo Studio, impostato dal simbolo {symbol}. Una scelta fatta qui ha la precedenza.", webStudioChannel: "Canale seguito da questo Studio: si cambia nelle sue preferenze («Releases of the local Assistant») o nella barra dell’Assistente.", previewFailed: "Impossibile leggere il manifesto delle pre-release: vengono proposte solo le versioni stabili." },
         			es: { title: "Hay una actualización de Tigo disponible", titlePreview: "Hay una versión preliminar de Tigo disponible", update: "Actualizar", later: "Más tarde", installing: "Actualizando Tigo...", turnRunning: "Podrá actualizar cuando termine el turno en curso.", disabled: "Las actualizaciones automáticas están desactivadas (símbolo assistant.stack.selfupdate).",
         				channel: "Canal de actualización", channelStable: "Estable", channelPreview: "Versiones preliminares", stableHint: "Solo se ofrecen las versiones estables.", previewHint: "Las versiones preliminares revisadas se ofrecen antes de su versión estable. Volver al canal estable no revierte nada: se ofrecerá la siguiente versión estable.",
         				serverChannel: "Configurado para todo el servidor por su administrador (símbolo {symbol}).", serverDefault: "Canal predeterminado del servidor. Su administrador puede cambiarlo con el símbolo {symbol}.",
-        				studioDefault: "Canal predeterminado de este Studio, definido por el símbolo {symbol}. Una elección hecha aquí tiene prioridad.", previewFailed: "No se pudo leer el manifiesto de las versiones preliminares: solo se ofrecen las versiones estables." }
+        				studioDefault: "Canal predeterminado de este Studio, definido por el símbolo {symbol}. Una elección hecha aquí tiene prioridad.", webStudioChannel: "Canal que sigue este Studio: se cambia en sus preferencias («Releases of the local Assistant») o en la barra del Asistente.", previewFailed: "No se pudo leer el manifiesto de las versiones preliminares: solo se ofrecen las versiones estables." }
         		};
         		var table = texts[this.agentUiLanguage ? this.agentUiLanguage() : "en"] || texts.en;
         		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
@@ -2414,6 +2428,18 @@ scriptContent:
         			return true;
         		} catch (e) {}
         		return false;
+        	}
+        
+        	// The web Studio installs the agent stack from its own preference (Studio preferences or its Assistant bar, kept in
+        	// this origin as convertigo.studio.preferences.v1): in its panel, that is the channel followed. "" elsewhere (the
+        	// Eclipse Studio, a server) or when it cannot be read.
+        	public getWebStudioChannel() {
+        		try {
+        			if (typeof document === "undefined" || !document.documentElement || !document.documentElement.classList.contains("tigo-studio-web")) { return ""; }
+        			var stored: any = JSON.parse(window.localStorage.getItem("convertigo.studio.preferences.v1") || "{}");
+        			return stored && stored.assistantChannel === "preview" ? "preview" : "stable";
+        		} catch (e) {}
+        		return "";
         	}
         
         	public getAgentStackChannelChoice() {
@@ -2450,13 +2476,15 @@ scriptContent:
         	public getAgentStackChannel() {
         		// "stable", the default, or "preview" for the reviewed pre-releases too. A server follows its engine
         		// (symbol assistant.stack.channel); a Studio takes the choice made in its panel, else its engine''s channel.
+        		var web = this.getWebStudioChannel ? this.getWebStudioChannel() : "";
+        		if (web) { return web; }
         		var choice = this.isAgentStackChannelFixed() ? "" : this.getAgentStackChannelChoice();
         		var server: any = choice ? null : this.getAgentStackServerChannel();
         		return (choice || (server ? server.channel : "stable")) === "preview" ? "preview" : "stable";
         	}
         
         	public setAgentStackChannel(channel) {
-        		if (this.isAgentStackChannelFixed()) { return; }
+        		if (this.isAgentStackChannelFixed() || (this.getWebStudioChannel && this.getWebStudioChannel())) { return; }
         		var next = channel === "preview" ? "preview" : "stable";
         		if (this.getAgentStackChannel() === next) { return; }
         		this.local.AgentStackChannel = next;
@@ -2473,7 +2501,15 @@ scriptContent:
         		var view: any = null;
         		var server: any = this.getAgentStackServerChannel();
         		var previewFailed = this.local && this.local.AgentStackReleasePreviewFailed === true ? " " + this.agentStackOfferText("previewFailed") : "";
-        		if (this.isAgentStackChannelFixed()) {
+        		var web = this.getWebStudioChannel ? this.getWebStudioChannel() : "";
+        		if (web) {
+        			// The web Studio: the channel of its preferences, read-only here (its bar installs from it).
+        			view = {
+        				readOnly: true, channel: web, label: this.agentStackOfferText("channel"),
+        				valueText: this.agentStackOfferText(web === "preview" ? "channelPreview" : "channelStable"),
+        				hint: this.agentStackOfferText("webStudioChannel") + (web === "preview" ? previewFailed : "")
+        			};
+        		} else if (this.isAgentStackChannelFixed()) {
         			// A server shows, read-only, the channel its administrator set; nothing until its status is known.
         			if (!server) { return null; }
         			view = {
@@ -2743,7 +2779,7 @@ scriptContent:
         
         	public installAgentStackOffer() {
         		var view = this.getAgentStackOfferView();
-        		if (!view || !view.canUpdate || view.updateDisabled || this.isAgentStackOfferTurnRunning()) { this.tick(); return false; }
+        		if (!view || !view.canUpdate || view.updateDisabled || this.isAgentStackOfferTurnRunning() || (this.isAgentSetupRunning && this.isAgentSetupRunning())) { this.tick(); return false; }
         		// Only the projects older than the offered release, dependencies first and the Assistant last, as the manifest lists them.
         		var projects = this.getAgentStackOfferProjects().map((project: any) => ({ name: project.name, version: project.version, tag: project.tag, importUrl: project.importUrl }));
         		this.local.AgentStackOfferInstalling = true;
@@ -11998,7 +12034,7 @@ title: Tigo
                             attrValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntime && this.local.AgentRuntime.updateAvailable === true) ? ''agent-runtime-status update'' : ((this.local && this.local.AgentRuntimeError) ? ''agent-runtime-status error'' : ''agent-runtime-status'')'
+                                - MobileSmartSourceType: 'script:(this.local && this.local.AgentRuntime && this.local.AgentRuntime.updateAvailable === true) ? ''agent-runtime-status update'' : ((this.local && (this.local.AgentRuntimeError || (this.local.AgentRuntimeProvider === ''convertigo'' && this.getConvertigoAccessRefusalText && this.getConvertigoAccessRefusalText()))) ? ''agent-runtime-status error'' : ''agent-runtime-status'')'
                           ↓Text [ngx.components.UIText-1785253202545]: 
                             textValue: 
                               - xmlizable: 
@@ -23182,14 +23218,17 @@ title: Tigo
             opacity: 0.55;
           }
           @media (max-width: 768px) {
+            /* the project on two lines at most, a long name cut anywhere, rather than "Project: lib_Conver..." */
             ion-header.modern-header .modern-title-sub.modern-title-sub-project {
-              display: block !important;
+              -webkit-box-orient: vertical;
+              -webkit-line-clamp: 2;
+              display: -webkit-box !important;
               font-size: 10px;
-              line-height: 14px;
+              line-height: 13px;
               max-width: 100%;
               overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
+              overflow-wrap: anywhere;
+              white-space: normal;
             }
             .agent-session-strip {
               min-height: 42px;
@@ -24426,6 +24465,16 @@ title: Tigo
               --padding-end: 6px;
               --padding-start: 10px;
             }
+            /* the title block takes the whole title width (it took the width of "Tigo the agent" only) */
+            ion-header.modern-header ion-title {
+              padding-left: 6px;
+              padding-right: 6px;
+            }
+            ion-header.modern-header .modern-title-wrap {
+              height: auto;
+              min-height: 34px;
+              width: 100%;
+            }
           }
           @media (max-width: 460px) {
             ion-header.modern-header .modern-logo-btn {
@@ -25066,6 +25115,13 @@ title: Tigo
           :host-context(.force-dark) .agent-runtime-status.update {
             color: #7dd3fc;
           }
+          /* an error or a refusal keeps its alert color in the dark theme (#b42318 in the light one) */
+          :host-context(:root.force-dark) .agent-runtime-status.error,
+          :host-context(html.force-dark) .agent-runtime-status.error,
+          :host-context(body.force-dark) .agent-runtime-status.error,
+          :host-context(.force-dark) .agent-runtime-status.error {
+            color: #f87171;
+          }
           :host-context(:root.force-dark) ion-button.agent-runtime-action,
           :host-context(html.force-dark) ion-button.agent-runtime-action,
           :host-context(body.force-dark) ion-button.agent-runtime-action,
@@ -25090,6 +25146,11 @@ title: Tigo
             :host-context(html:not(.force-light)) .agent-runtime-status,
             :host-context(body:not(.force-light)) .agent-runtime-status {
               color: #94a3b8;
+            }
+            :host-context(:root:not(.force-light)) .agent-runtime-status.error,
+            :host-context(html:not(.force-light)) .agent-runtime-status.error,
+            :host-context(body:not(.force-light)) .agent-runtime-status.error {
+              color: #f87171;
             }
             :host-context(:root:not(.force-light)) ion-button.agent-runtime-action,
             :host-context(html:not(.force-light)) ion-button.agent-runtime-action,

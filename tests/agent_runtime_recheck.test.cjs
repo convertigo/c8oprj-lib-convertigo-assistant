@@ -104,3 +104,12 @@ test('the settings refresh: a recheck reads presence only, an answer older than 
   // the note under the agent cards starts the recheck while it says the runtime is not installed
   assert.match(page, /var state = this\.getAgentNotReadyState\(\);\n\s+if \(state !== "install"\) \{\n\s+\(this as any\)\.agentRuntimeRecheckUntil = 0;\n\s+\} else if \(this\.scheduleAgentRuntimeRecheck\) \{\n\s+this\.scheduleAgentRuntimeRecheck\(\);/);
 });
+
+test('the stack is not reinstalled while this panel installs an agent (the reinstall reloads the panel and loses it)', () => {
+  assert.match(page, /public isAgentSetupRunning\(\) \{\n\s+return !!\(this\.local && this\.local\.AgentRuntimeInstallProvider\);/);
+  assert.match(page, /public triggerAgentStackUpdate\(\) \{\n\s+if \(this\.isAgentSetupRunning && this\.isAgentSetupRunning\(\)\) \{\n\s+this\.local\.AgentActivationMessage = this\.t\("Agent_Stack_Wait_Agent_Setup"/);
+  assert.match(page, /view\.updateDisabled \|\| this\.isAgentStackOfferTurnRunning\(\) \|\| \(this\.isAgentSetupRunning && this\.isAgentSetupRunning\(\)\)\) \{ this\.tick\(\); return false; \}/);
+  assert.equal((page.match(/Agent_Stack_Wait_Agent_Setup: "[^"\n]+"/g) || []).length, 4, 'en, fr, it, es');
+  // an offer never proposes a project already at the offered version
+  assert.match(page, /if \(this\.compareAgentStackVersions\(installed, project\.version\) < 0\) \{\n\s+projects\.push/);
+});
