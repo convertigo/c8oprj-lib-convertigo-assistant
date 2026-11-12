@@ -1454,7 +1454,7 @@ scriptContent:
         						var authenticationKey = provider === ''codex'' ? ''Agent_Auth_Codex_Required'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Required'' : (provider === ''convertigo'' ? ''Agent_Auth_Convertigo_Required'' : ''Agent_Auth_Vibe_Required''));
         						var authenticationFallback = provider === ''codex'' ? ''Authentification Codex requise. Utilisez le bouton de connexion.'' : (provider === ''claude'' ? ''Authentification Claude requise. Utilisez le bouton de connexion.'' : (provider === ''convertigo'' ? ''Clé d\''agent Convertigo absente.'' : ''Authentification Mistral requise. Utilisez le bouton de connexion.''));
         						this.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
-        						var accessRefusalText = provider === ''convertigo'' && authenticationRequired && this.getConvertigoAccessRefusalText ? this.getConvertigoAccessRefusalText() : '''';
+        						var accessRefusalText = provider === ''convertigo'' && this.getConvertigoAccessRefusalText ? this.getConvertigoAccessRefusalText() : '''';
         						this.local.AgentRuntimeStatusText = accessRefusalText ? accessRefusalText : authenticationRequired ? tr(authenticationKey, authenticationFallback) : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
         						this.local.AgentRuntimeActionText = authenticationRequired ? tr(provider === ''codex'' ? ''Agent_Auth_Codex_Connect'' : (provider === ''claude'' ? ''Agent_Auth_Claude_Connect'' : (provider === ''convertigo'' ? ''Agent_Auth_Convertigo_Check'' : ''Agent_Auth_Vibe_Connect'')), provider === ''codex'' ? ''Se connecter à Codex'' : (provider === ''claude'' ? ''Se connecter à Claude'' : (provider === ''convertigo'' ? ''Vérifier la clé'' : ''Se connecter à Mistral''))) : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
         						// Zero-configuration Convertigo mode: install the harness automatically instead of asking for a click.
@@ -4583,6 +4583,24 @@ scriptContent:
         			"service_unavailable", "local_installation_failed"];
         		var key = known.indexOf(code) >= 0 ? "Tigo_Refusal_" + code : "Tigo_Refusal_Other";
         		return ("" + this.t(key, "Tigo is not activated: Convertigo refused the access ({code}). Contact Convertigo.")).split("{code}").join(code);
+        	}
+        	// A failed Convertigo setup answers the refusal TigoAccess just gave (or none): the panel shows it at once, the
+        	// next read of the settings takes it from the file of the Studio.
+        	public setConvertigoAccessRefusal(refusal: any) {
+        		try {
+        			var providers: any[] = (this.local && this.local.AgentSettings && this.local.AgentSettings.providers) || [];
+        			var code = refusal && refusal.code ? ("" + refusal.code).replace(/[^A-Za-z0-9_]/g, "").substring(0, 64) : "";
+        			for (var i = 0; i < providers.length; i++) {
+        				var entry: any = providers[i];
+        				if (entry && ("" + entry.id) === "convertigo") {
+        					if (code.length) {
+        						entry.accessRefusal = { code: code, at: "" + (refusal.at || new Date().toISOString()) };
+        					} else {
+        						delete entry.accessRefusal;
+        					}
+        				}
+        			}
+        		} catch (e) {}
         	}
         	public getProjectSubtitle() {
                 if (this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode" && (!this.getEffectiveProjectName || !this.getEffectiveProjectName().length)) {
@@ -9995,7 +10013,9 @@ title: Tigo
                                                 var installed = clean(runtime.installedVersion);
                                                 var latest = clean(runtime.latestVersion);
                                                 page.local.AgentRuntimeVersionText = installed.length ? (tr(''Agent_Runtime_Installed_Prefix'', ''Version installée '') + installed + (latest.length ? tr(''Agent_Runtime_Latest_Infix'', '' · dernière '') + latest : '''')) : tr(''Agent_Runtime_Not_Installed'', ''Runtime non installé'');
-                                                page.local.AgentRuntimeStatusText = authenticationRequired ? tr(''Agent_Auth_Convertigo_Required'', ''Clé d\''agent Convertigo absente. Elle sera fournie automatiquement à l\''activation.'') : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
+                                                // a Convertigo agent refused by TigoAccess: its reason and what to do, whatever the state of the runtime
+                                                var accessRefusalText = page.getConvertigoAccessRefusalText ? page.getConvertigoAccessRefusalText() : '''';
+                                                page.local.AgentRuntimeStatusText = accessRefusalText ? accessRefusalText : authenticationRequired ? tr(''Agent_Auth_Convertigo_Required'', ''Clé d\''agent Convertigo absente. Elle sera fournie automatiquement à l\''activation.'') : (runtime.error ? (tr(''Agent_Runtime_Check_Failed'', ''Vérification impossible : '') + runtime.error) : (runtime.updateAvailable === true ? tr(''Agent_Runtime_Update_Available'', ''Une mise à jour est disponible.'') : (runtime.checked === true && runtime.installed === true ? tr(''Agent_Runtime_Up_To_Date'', ''Le runtime est à jour.'') : (runtime.installed === true ? tr(''Agent_Runtime_Ready'', ''Runtime prêt.'') : tr(''Agent_Runtime_Must_Install'', ''Le runtime doit être installé.'')))));
                                                 page.local.AgentRuntimeActionText = authenticationRequired ? tr(''Agent_Auth_Convertigo_Check'', ''Vérifier la clé'') : (runtime.installed !== true ? tr(''Agent_Runtime_Install'', ''Installer le runtime'') : (runtime.updateAvailable === true ? (tr(''Agent_Runtime_Update'', ''Mettre à jour'') + (latest.length ? tr(''Agent_Runtime_Update_To'', '' vers '') + latest : '''')) : tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'')));
                                                 page.tick();
                                                 resolve();'
@@ -12129,6 +12149,8 @@ title: Tigo
                                               page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSetup'', payload).async().then(function(response) {
                                                   var result = response && response.result ? response.result : {};
                                                   if (result.ok !== true) {
+                                                      // A Convertigo agent refused by TigoAccess: the setup answers the code, the panel tells its reason.
+                                                      if (provider === ''convertigo'' && page.setConvertigoAccessRefusal) { page.setConvertigoAccessRefusal(result.accessRefusal); }
                                                       // The reason of the failure, else the code or the status it answered: never the generic text twice.
                                                       var setupError = result.error && typeof result.error === ''object'' ? (result.error.message || result.error.code || '''') : (result.error || '''');
                                                       throw new Error(String(result.message || setupError || result.code || result.status || ''no reason given''));
@@ -12244,7 +12266,8 @@ title: Tigo
                                                   page.local.AgentRuntimeInstallProvider = '''';
                                                   var setupFailure = ('''' + (error && error.message ? error.message : error)).replace(/^Error:\s*/, '''');
                                                   page.local.AgentRuntimeError = setupFailure;
-                                                  page.local.AgentRuntimeStatusText = tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible : '') + setupFailure;
+                                                  var accessRefusalText = provider === ''convertigo'' && page.getConvertigoAccessRefusalText ? page.getConvertigoAccessRefusalText() : '''';
+                                                  page.local.AgentRuntimeStatusText = accessRefusalText ? accessRefusalText : tr(''Agent_Runtime_Installation_Failed'', ''Installation impossible : '') + setupFailure;
                                                   page.tick();
                                                   resolve();
                                               });'

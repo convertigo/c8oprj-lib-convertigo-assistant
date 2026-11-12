@@ -7241,6 +7241,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     try {
       var settings = bridgeCall(options, "agent_settings", payload, 120000);
       settings.ok = settings.ok !== false;
+      // every reader of the settings (the settings screen, a new conversation, the answer of a setup) sees the refusal
+      attachTigoAccessRefusal(settings);
       return applyNoCodeServerDefaults(options, settings);
     } catch (e) {
       return {
@@ -7666,7 +7668,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var provider = trim(options.provider).length ? normalizeProviderSelector(options.provider) : "all";
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var settings = agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
-    attachTigoAccessRefusal(settings);
     sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
     var conversations = publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options));
     sendMark("conversations");

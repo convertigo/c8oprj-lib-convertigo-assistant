@@ -89,7 +89,10 @@ test('the settings of a desktop Studio attach the last refusal to the Convertigo
   const none = settings();
   settingsBox({ kind: 'electron' }).attachTigoAccessRefusal(none);
   assert.equal(none.providers[0].accessRefusal, undefined, 'no refusal file');
-  assert.match(read('js/agent_bridge_client.js'), /var settings = agentSettingsForOptions\(options, workspaceRoot, userKey, projectFilter, provider\);\n\s+attachTigoAccessRefusal\(settings\);/);
+  // in the one read of the settings: the settings screen, a new conversation and the answer of a setup all carry it
+  const client = read('js/agent_bridge_client.js');
+  assert.match(client, /var settings = bridgeCall\(options, "agent_settings", payload, 120000\);\n\s+settings\.ok = settings\.ok !== false;\n\s+\/\/[^\n]*\n\s+attachTigoAccessRefusal\(settings\);/);
+  assert.equal((client.match(/attachTigoAccessRefusal\(settings\);/g) || []).length, 1);
 });
 
 function pageMethods() {
@@ -127,5 +130,46 @@ test('the panel tells the reason and what to do for every refusal code, a generi
   assert.match(page, /Tigo_Refusal_user_budget_migration_required: "Tigo n’est pas activé : votre accès doit être migré par un administrateur Convertigo\. Contactez Convertigo\."/);
   // under the name of the agent, and in "Runtime and stack" instead of "key missing"
   assert.match(page, /MobileSmartSourceType: 'script:this\.getConvertigoAccessRefusalText\(\) \|\| this\.t\(''Agent_Provider_Convertigo_Copy''/);
-  assert.match(page, /var accessRefusalText = provider === ''convertigo'' && authenticationRequired && this\.getConvertigoAccessRefusalText \? this\.getConvertigoAccessRefusalText\(\) : '''';\n\s+this\.local\.AgentRuntimeStatusText = accessRefusalText \? accessRefusalText :/);
+  // whatever the state of the runtime: not installed yet, a failed setup, after a restart of the Studio
+  assert.match(page, /var accessRefusalText = provider === ''convertigo'' && this\.getConvertigoAccessRefusalText \? this\.getConvertigoAccessRefusalText\(\) : '''';\n\s+this\.local\.AgentRuntimeStatusText = accessRefusalText \? accessRefusalText :/);
+  assert.match(page, /var accessRefusalText = page\.getConvertigoAccessRefusalText \? page\.getConvertigoAccessRefusalText\(\) : '''';\n\s+page\.local\.AgentRuntimeStatusText = accessRefusalText \? accessRefusalText : authenticationRequired \? tr\(''Agent_Auth_Convertigo_Required''/);
+  assert.doesNotMatch(page, /accessRefusalText = [^\n]*authenticationRequired &&/);
+});
+
+function setupRun() {
+  const yaml = read('_c8oProject/sequences/AgentSetup.yaml');
+  const start = yaml.indexOf('↓Run [steps.SimpleStep-1781810000101]');
+  const body = yaml.slice(yaml.indexOf('  expression: |\n', start) + 16, yaml.indexOf('↓AttachAccessState', start));
+  let code = body.split('\n').map(l => l.slice(4)).join('\n').trim();
+  assert.ok(code.startsWith("'") && code.endsWith("'"));
+  return code.slice(1, -1).replace(/''/g, "'");
+}
+
+test('a setup refused by TigoAccess answers the code, the panel shows its reason in Runtime and stack at once', () => {
+  const run = response => {
+    const box = { tigoActivation: { document: { response } }, include() { throw new Error('the runtime is not set up on a refusal'); } };
+    vm.runInNewContext(setupRun() + '\nthis.result = result;', box);
+    return box.result;
+  };
+  const refused = run({ status: 'error', code: 'user_budget_migration_required', error: 'migration' });
+  assert.equal(refused.status, 'setup_required');
+  assert.deepEqual({ ...refused.accessRefusal }, { code: 'user_budget_migration_required' });
+  assert.equal(run({ status: 'error', code: 'odd<b>' }).accessRefusal.code, 'oddb', 'only a plain code');
+  assert.equal(run({ status: 'error', code: 'authentication_required' }).accessRefusal, undefined, 'a missing Studio session is not a refusal');
+  assert.equal(run({ status: 'error' }).accessRefusal, undefined);
+
+  const P = pageMethods();
+  const page = new P();
+  page.local = { AgentSettings: { providers: [{ id: 'convertigo', status: 'authentication_required' }, { id: 'codex', status: 'ready' }] } };
+  page.isAgentProviderReady = p => p.status === 'ready';
+  page.t = (key, fallback) => (key === 'Tigo_Refusal_access_revoked' ? 'revoked' : fallback);
+  page.setConvertigoAccessRefusal(run({ status: 'error', code: 'access_revoked' }).accessRefusal);
+  assert.equal(page.getConvertigoAccessRefusalText(), 'revoked');
+  assert.equal(page.local.AgentSettings.providers[1].accessRefusal, undefined);
+  page.setConvertigoAccessRefusal(undefined);
+  assert.equal(page.getConvertigoAccessRefusalText(), '', 'a setup that failed for another reason drops it');
+
+  const source = read('_c8oProject/mobilePages/Page.yaml');
+  assert.match(source, /if \(provider === ''convertigo'' && page\.setConvertigoAccessRefusal\) \{ page\.setConvertigoAccessRefusal\(result\.accessRefusal\); \}\n[^\n]*\n\s+var setupError =/);
+  assert.match(source, /var accessRefusalText = provider === ''convertigo'' && page\.getConvertigoAccessRefusalText \? page\.getConvertigoAccessRefusalText\(\) : '''';\n\s+page\.local\.AgentRuntimeStatusText = accessRefusalText \? accessRefusalText : tr\(''Agent_Runtime_Installation_Failed''/);
 });
