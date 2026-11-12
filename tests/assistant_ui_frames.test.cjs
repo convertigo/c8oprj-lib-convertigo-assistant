@@ -42,6 +42,11 @@ test('other surfaces: the home card list, the tool cards and the code blocks kee
   }
 });
 
+test('settings in server mode: the notice of the server settings keeps the padding of the sections', () => {
+  assert.match(page, /class="tigo-server-scope" role="note" style="margin: 10px 18px 0;/);
+  assert.doesNotMatch(page, /class="tigo-server-scope" role="note" style="margin: 6px 2px 12px;/);
+});
+
 test('the project subtitle is translated', () => {
   assert.match(page, /return heading\.length \? this\.t\("Agent_Project_Prefix", "Project: "\) \+ heading : "";/);
   assert.doesNotMatch(page, /"Projet : " \+ heading/);
