@@ -1287,7 +1287,9 @@ scriptContent:
         		} catch (e) {}
         	}
         
-        	public refreshAgentSettingsAfterHostContext(forceFullSettings = false) {
+        	// presenceRecheck: a light read of what is installed while the chosen agent waits for its runtime
+        	// (scheduleAgentRuntimeRecheck); applied only once that runtime is there.
+        	public refreshAgentSettingsAfterHostContext(forceFullSettings = false, presenceRecheck = false) {
         		var noCode = this.isEmbeddedNoCodeAgent();
         		var settingsTimer: any = null;
         		try {
@@ -1298,7 +1300,7 @@ scriptContent:
         				this.refreshAgentStackRelease();
         			}
         			if (this.local.AgentSettingsRefreshRunning === true) { return; }
-        			if (forceFullSettings !== true && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded()) { return; }
+        			if (forceFullSettings !== true && presenceRecheck !== true && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded()) { return; }
         			if (!this.isEmbeddedNoCodeAgent() && (!this.hasLocalAgentBridgeCapability || !this.hasLocalAgentBridgeCapability())) { return; }
         			this.local.AgentSettingsRefreshRunning = true;
         			// A settings page refresh answers for the page that asked. Closed meanwhile (gear or Continue), its late answer or
@@ -1353,6 +1355,7 @@ scriptContent:
         				''updateCheckCacheMs'': 21600000,
         				''__context'': noCode ? ''agent_nocode_settings'' : ''byside''
         			};
+        			var requestedAt = Date.now();
         			var settingsRequest: any;
         			if (noCode) {
         				settingsRequest = new Promise((resolve, reject) => {
@@ -1371,6 +1374,14 @@ scriptContent:
         			settingsRequest.then((settingsResponse) => {
         				if (settingsTimer !== null) { clearTimeout(settingsTimer); }
         				if (settingsPageLeft()) { dropLeftSettingsPage(); return; }
+        				// Read before a setup of this panel brought its settings (an install that ended meanwhile), the answer is older
+        				// than them: dropped. A recheck that still finds the runtime of the chosen agent missing changes nothing.
+        				if ((this.local.AgentSettingsFreshAt || 0) > requestedAt || (presenceRecheck === true && !this.isAgentRuntimeInstalledIn(settingsResponse))) {
+        					this.local.AgentSettingsRefreshRunning = false;
+        					this.local.AgentSettingsRefreshDone = true;
+        					this.tick();
+        					return;
+        				}
         				if (noCode) {
         					var checked = settingsResponse && settingsResponse.result;
         					var checkedSettings = checked && checked.settings;
@@ -3431,6 +3442,53 @@ scriptContent:
             }
             return "";
         }
+        // The runtime of the chosen agent is in a settings answer.
+        public isAgentRuntimeInstalledIn(settingsResponse) {
+            try {
+                var result: any = settingsResponse && settingsResponse.result ? settingsResponse.result : {};
+                var settings: any = result.settings || {};
+                if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
+                var provider = this.normalizeAgentProviderValue(this.local && this.local.AgentProvider);
+                var providers: any[] = settings.providers || [];
+                for (var i = 0; i < providers.length; i++) {
+                    if (providers[i] && provider.length && this.normalizeAgentProviderValue(providers[i].id) === provider) {
+                        return !!(providers[i].runtime && providers[i].runtime.installed === true) || this.isAgentProviderReady(providers[i]);
+                    }
+                }
+            } catch (e) {}
+            return false;
+        }
+        // A runtime installed outside this panel (another panel of the Studio reloaded during the install, the Studio
+        // itself, a terminal): while the chosen agent waits for its runtime, what is installed is read again every 10 s,
+        // for 10 minutes, and the settings follow once it is there. A setup of this panel answers by itself.
+        public scheduleAgentRuntimeRecheck() {
+            var self: any = this;
+            if (self.agentRuntimeRecheckTimer || !this.local || (this.isEmbeddedNoCodeAgent && this.isEmbeddedNoCodeAgent())) {
+                return;
+            }
+            if (!self.agentRuntimeRecheckUntil) {
+                self.agentRuntimeRecheckUntil = Date.now() + 600000;
+            }
+            if (Date.now() > self.agentRuntimeRecheckUntil) {
+                return;
+            }
+            self.agentRuntimeRecheckTimer = setTimeout(() => {
+                self.agentRuntimeRecheckTimer = null;
+                try {
+                    if (!this.getAgentNotReadyState || this.getAgentNotReadyState() !== "install") {
+                        self.agentRuntimeRecheckUntil = 0;
+                        return;
+                    }
+                    var busy = this.local.AgentRuntimeLoading === true || this.local.AgentSettingsRefreshRunning === true || !!this.local.AgentRuntimeInstallProvider
+                        || (typeof document !== "undefined" && document.hidden === true);
+                    if (busy) {
+                        this.scheduleAgentRuntimeRecheck();
+                        return;
+                    }
+                    this.refreshAgentSettingsAfterHostContext(false, true);
+                } catch (e) {}
+            }, 10000);
+        }
         public getAgentNotReadyState() {
             // Why the chosen agent cannot be used yet, for the note under the agent cards; empty once it is ready.
             if (!this.local || !(this.isAgentBridgeMode && this.isAgentBridgeMode())) {
@@ -3454,6 +3512,11 @@ scriptContent:
         }
         public getAgentNotReadyText() {
             var state = this.getAgentNotReadyState();
+            if (state !== "install") {
+                (this as any).agentRuntimeRecheckUntil = 0;
+            } else if (this.scheduleAgentRuntimeRecheck) {
+                this.scheduleAgentRuntimeRecheck();
+            }
             if (!state.length) {
                 return "";
             }
@@ -12157,7 +12220,7 @@ title: Tigo
                                                   }
                                                   var settings = result.settings || {};
                                                   if (settings.settings && settings.settings.providers && !settings.providers) { settings = settings.settings; }
-                                                  if (settings.providers) { page.local.AgentSettings = settings; }
+                                                  if (settings.providers) { page.local.AgentSettings = settings; page.local.AgentSettingsFreshAt = Date.now(); }
                                                   var providers = settings.providers || [];
                                                   var selected = null;
                                                   for (var i = 0; i < providers.length; i++) {
@@ -14397,6 +14460,7 @@ title: Tigo
                                             settings.defaults = settings.defaults || {};
                                             settings.defaults.provider = provider;
                                             page.local.AgentSettings = settings;
+                                            page.local.AgentSettingsFreshAt = Date.now();
                                             page.local.AgentProvider = provider;
                                             var models = selectedProvider && selectedProvider.models ? selectedProvider.models : [];
                                             
