@@ -7872,7 +7872,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       codexHomeScope: codexHomeScopeForRun(options),
       codexPath: trim(options.codexPath || options.commandPath),
       vibeHome: trim(options.vibeHome || options.agentHome),
-      vibeHomeScope: trim(options.vibeHomeScope || options.homeScope),
+      vibeHomeScope: providerHomeScopeForRun(options, "vibeHomeScope"),
       vibeProfile: vibeProfileForProvider(providerFilter),
       model: trim(options.model),
       reasoningEffort: trim(options.reasoningEffort || options.reasoningLevel),
@@ -7881,7 +7881,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       settingsTimeoutMs: trim(options.settingsTimeoutMs),
       checkUpdates: typeof options.checkUpdates === "undefined" ? "" : options.checkUpdates,
       refreshUpdateCheck: typeof options.refreshUpdateCheck === "undefined" ? "" : options.refreshUpdateCheck,
-      refreshModelCatalog: typeof options.refreshModelCatalog === "undefined" ? "" : options.refreshModelCatalog,
+      refreshModelCatalog: trim(options.refreshModelCatalog).length ? options.refreshModelCatalog : !boolValue(options.runtimePresenceOnly, false),
       updateCheckTimeoutMs: trim(options.updateCheckTimeoutMs),
       updateCheckCacheMs: trim(options.updateCheckCacheMs),
       runtimePresenceOnly: typeof options.runtimePresenceOnly === "undefined" ? "" : options.runtimePresenceOnly

@@ -763,3 +763,12 @@ rediscovering the same context.
 - Behind TLS termination, configure the server's public HTTPS URL as described
   in docs/nocode-server-settings.md.
 - Run `node --test tests/nocode-server-settings.test.cjs` for T9, T9b and T9c.
+
+## Provider settings home and model catalog
+
+- Settings use providerHomeScopeForRun for Vibe, as installation/start do: user
+  by default, conversation when a viewer is attached, explicit paths preserved.
+  Do not read a shared-home catalog for an agent installed in a user home.
+- A full settings read refreshes the ACP catalog by default. Presence-only
+  startup stays passive; an explicit refresh choice is retained.
+- Run tests/assistant_settings_home.test.cjs with setup and panel-start tests.
