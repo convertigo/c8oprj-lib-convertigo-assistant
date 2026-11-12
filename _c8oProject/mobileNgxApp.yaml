@@ -4159,7 +4159,9 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
             background: var(--tsw-hover) !important;
           }
           
-          html.tigo-studio-web .agent-project-choice.agent-session-strip {
+          /* the start choice the first message will use, whichever it is (it was always the project one) */
+          html.tigo-studio-web .agent-start-choice.agent-choice-selected.agent-session-strip,
+          html.tigo-studio-web .agent-start-choice.agent-choice-selected.agent-session-strip:hover {
             background: var(--tsw-selection) !important;
             border-color: var(--tsw-accent) !important;
           }

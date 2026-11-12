@@ -56,3 +56,9 @@ test('one start choice is highlighted at a time: "Start now" only without a proj
   // the project choice: a known project, not "none"
   assert.match(page, /\(\(this\.local && this\.local\.CurrentStudioProject\) \|\| \(this\.global && this\.global\.projectName\) \|\| ''''\) && this\.local\.ConversationProjectMode !== ''none''/);
 });
+
+test('the Studio web theme highlights the chosen start choice, never the project one by default', () => {
+  const app = read('_c8oProject/mobileNgxApp.yaml');
+  assert.match(app, /html\.tigo-studio-web \.agent-start-choice\.agent-choice-selected\.agent-session-strip,\n\s+html\.tigo-studio-web \.agent-start-choice\.agent-choice-selected\.agent-session-strip:hover \{\n\s+background: var\(--tsw-selection\) !important;/);
+  assert.doesNotMatch(app, /html\.tigo-studio-web \.agent-project-choice\.agent-session-strip \{/);
+});
