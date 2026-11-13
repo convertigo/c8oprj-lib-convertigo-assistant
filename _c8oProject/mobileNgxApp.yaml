@@ -546,6 +546,18 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
                             try { page.c8o.log.warn(''[Assistant] unable to merge host context'', eMerge); } catch (eLog) {}
                         }
                     };
+                    // The page asks for its context after an init. A host that sends its context with its init has answered already;
+                    // and one that answered each request with init + context + select (web Studio before 8.5.0) kept the two in a loop
+                    // at about 25 round trips a second: no request then, and at most one every 2 s after an init.
+                    var hostContextSeq = 0;
+                    var lastInitContextRequestAt = null;
+                    var requestAssistantContextAfterInit = function(seqAtInit) {
+                        if (hostContextSeq !== seqAtInit) { return; }
+                        var now = Date.now();
+                        if (lastInitContextRequestAt !== null && now - lastInitContextRequestAt < 2000) { return; }
+                        lastInitContextRequestAt = now;
+                        requestAssistantContext();
+                    };
                     var requestAssistantContext = function() {
                         try {
                             if (window[''sendToHost'']) {
@@ -581,9 +593,11 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
                         }
                         if (''init'' == msg.type) {
                             page.global.studio = true;
-                            setTimeout(requestAssistantContext, 0);
+                            var seqAtInit = hostContextSeq;
+                            setTimeout(() => requestAssistantContextAfterInit(seqAtInit), 50);
                         }
                         if (''lib_ConvertigoAssistant.context'' == msg.type || ''convertigo-assistant-context'' == msg.type) {
+                            hostContextSeq++;
                             mergeAgentHostContext(msg.payload || msg.context || msg);
                             page.tick();
                             setTimeout(autoOpenAgentFromStudioView, 0);
