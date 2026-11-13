@@ -22,7 +22,7 @@ function assignment(name) {
   }
 }
 
-const NAMES = ['c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigoGateway', 'newGatewayKeyHandle', 'sessionGatewayKeyHandle', 'callLocalSequenceQuietly',
+const NAMES = ['isLocalStudio', 'c8oformsSequenceAvailable', 'userGatewayKeysOn', 'usesConvertigoGateway', 'newGatewayKeyHandle', 'sessionGatewayKeyHandle', 'callLocalSequenceQuietly',
   'userGatewayKeyHandle', 'forgetUserGatewayKey', 'userTigoQuota', 'usdValue', 'tigoBudgetScope', 'effectiveTigoBalance', 'twoDigits',
   'formatResetDate', 'budgetExhaustedMessage', 'userKeyRefusalMessage', 'convertigoTurnRefusalResponse', 'convertigoTurnRefusal',
   'readConvertigoBalance', 'isBudgetError', 'budgetErrorAnswer', 'gatewayRateLimitIsBudget', 'bridgeRefusalAnswer', 'attachGatewayKeyHandle',
@@ -33,7 +33,7 @@ const CONSTANTS = ['USER_KEY_SEQUENCE', 'USER_QUOTA_SEQUENCE', 'USER_KEY_SERVER_
   'TIGO_BUDGET_SCOPES', 'AGENT_ACCESS_PROJECT', 'TRANSLATIONS'];
 const USER_KEY = 'sk-user-' + 'a'.repeat(32);
 
-function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUserQuota'], key = { status: 'ok', key: USER_KEY, generation: 2 },
+function load({ studio = false, desktop = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUserQuota'], key = { status: 'ok', key: USER_KEY, generation: 2 },
   quota = null, tigoAccess = { status: 'ok', state: 'ready', quota: null }, tigoStatus = null, nolog = null, registered = true } = {}) {
   const calls = [];
   const mdc = [];
@@ -68,6 +68,7 @@ function load({ studio = false, sequences = ['APIV2_TigoUserKey', 'APIV2_TigoUse
       remove: k => { mdcValue = null; mdc.push(['remove', k]); } } } } } },
     Engine: {
       isStudioMode: () => studio,
+      isDesktopStudio: () => desktop,
       theApp: { databaseObjectsManager: {
         getOriginalProjectByName: name => (name === 'C8Oforms' ? { getSequenceByName: sequence => (sequences.includes(sequence) ? {} : null) } : null),
         symbolsGetValue: name => (name === 'C8Oforms.tigo.server.id' && registered ? 'server-test' : null)
@@ -150,6 +151,22 @@ test('Studio: a Convertigo turn on an exhausted TigoAccess quota is refused befo
   const kept = {};
   assert.equal(load({ studio: true, tigoAccess: failed }).sandbox.convertigoTurnRefusal(Object.assign({}, STUDIO), kept), null);
   assert.equal(kept.tigoAccessResult, failed);
+});
+
+test('the desktop Studio (not in Studio mode) has the same budget gate and balance read as the Eclipse Studio', () => {
+  const exhausted = { status: 'ok', state: 'ready', quota: { activeScope: 'personal', balanceUsd: 0, keyState: 'exhausted' } };
+  const desktop = load({ desktop: true, tigoAccess: exhausted, tigoStatus: exhausted });
+  const options = {};
+  const refused = desktop.sandbox.convertigoTurnRefusal(Object.assign({}, STUDIO), options);
+  assert.equal(refused.error.code, 'budget_exceeded');
+  assert.equal(options.tigoAccessResult, exhausted);
+  const event = { code: 'budget_exceeded', scope: 'key', retryable: false, message: 'budget_exceeded' };
+  assert.equal(desktop.sandbox.budgetErrorAnswer(Object.assign({ runid: 'd1' }, STUDIO), event), 'Le crédit Tigo de cette clé est épuisé.');
+  assert.ok(desktop.calls.some(call => call.sequence === 'TigoAccessStatus'), 'the balance is read again after the gateway stopped the turn');
+  // a server is neither: no TigoAccess call for a low-code profile there
+  const server = load({ tigoAccess: exhausted });
+  assert.equal(server.sandbox.convertigoTurnRefusal(Object.assign({}, STUDIO), {}), null);
+  assert.equal(server.calls.length, 0);
 });
 
 test('No Code: the user key is asked to C8Oforms without a log, kept behind a handle, and the turn refused at zero', () => {

@@ -2363,7 +2363,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       options.gatewayKeyHandle = key.handle;
       var read = userTigoQuota(state);
       balance = read && read.ok ? effectiveTigoBalance(read.quota) : null;
-    } else if (normalizeSkillProfile(state) !== "nocode" && Engine.isStudioMode() && normalizeProvider(state.provider) === "convertigo") {
+    } else if (normalizeSkillProfile(state) !== "nocode" && isLocalStudio() && normalizeProvider(state.provider) === "convertigo") {
       var access;
       try {
         access = C8O.assistantAgentBridge.refreshTigoAccess();
@@ -2388,7 +2388,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         var read = userTigoQuota(state);
         return read && read.ok ? { ok: true, balance: effectiveTigoBalance(read.quota) } : { ok: false };
       }
-      if (Engine.isStudioMode() && normalizeSkillProfile(state) !== "nocode") {
+      if (isLocalStudio() && normalizeSkillProfile(state) !== "nocode") {
         var result = callLocalSequence("lib_ConvertigoAssistant", "TigoAccessStatus", {});
         result = result && (result.document || result.doc || result);
         result = result && (result.document || result);
