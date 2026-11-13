@@ -10,6 +10,8 @@ const ast = ts.createSourceFile(
 );
 const names = [
   "tigoText",
+  "tigoMcpProposalPreview",
+  "answerTigoMcpProposal",
   "requestTigoResources",
   "applyTigoResources",
   "filterTigoResources",
@@ -237,4 +239,38 @@ test("new skills start with plain instructions and pasting a full SKILL.md does 
  assert.equal(page.splitTigoSkillDocument(saved.translations.fr.body).body,'Dire bonjour.');
  assert.match(saved.translations.fr.body,/allowed-tools: Read/);
  assert.equal((saved.translations.fr.body.match(/^---$/gm)||[]).length,2);
+});
+
+
+test("MCP review sends only the displayed proposal identity and never enables it", () => {
+  const {page,events}=fixture();
+  const proposal={id:"p1",digest:"digest",expiresAt:Date.now()+60000,scope:"workspace",project:"",data:{id:"docs",connection:{transport:"http",url:"https://docs.example.com/mcp"}}};
+  page.local.ResourceCatalog={csrf:"session-csrf",proposals:[proposal]};
+  assert.equal(JSON.parse(page.tigoMcpProposalPreview(proposal)).declaration.connection.url,"https://docs.example.com/mcp");
+  assert.match(page.tigoText("proposalHint"),/lancer du code/);
+  assert.equal(events.length,0,"displaying a proposal never executes or adds it");
+  page.answerTigoMcpProposal("p1","digest",true);
+  assert.equal(events.length,1);
+  assert.deepEqual(plain(events[0].payload.request),{action:"confirmProposal",input:{id:"p1",digest:"digest"},language:"fr",threadid:"",csrf:"session-csrf"});
+  page.answerTigoMcpProposal("p1","digest",true);
+  assert.equal(events.length,1,"duplicate click is suppressed while loading");
+  page.local.ResourceLoading=false;
+  page.answerTigoMcpProposal("p1","digest",false);
+  assert.equal(events[1].payload.request.action,"rejectProposal");
+  page.local.ResourceLoading=false;
+  page.answerTigoMcpProposal("p1","changed",true);
+  assert.notEqual(events[2].payload.request.action,"confirmProposal","stale preview refreshes instead of approving");
+});
+
+test("proposal buttons use their own repeated-row event scope", () => {
+  const {formattedEntries}=require('./helpers/assistant-source.cjs');
+  const handlers=formattedEntries('_c8oProject/mobilePages/Page.yaml')
+    .map(entry=>entry.code).filter(raw=>/^page\.answerTigoMcpProposal\(/.test(raw));
+  assert.equal(handlers.length,2);
+  const calls=[];
+  for(const handler of handlers){
+    const action=new Function('page','props','vars','event','resolve','reject',handler);
+    action({answerTigoMcpProposal:(...args)=>calls.push(args)}, {stack:{root:{scope:{mcpProposal:{id:'shown',digest:'revision'}}}}}, {}, null, ()=>{}, err=>{throw err;});
+  }
+  assert.deepEqual(calls,[['shown','revision',true],['shown','revision',false]]);
 });

@@ -45,6 +45,8 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user', 
     noCodeAgentRefusal: () => null,
     withNoCodeServerSettings: options => options,
     noCodeAgentChanged: () => null,
+    convertigoTurnRefusal: () => null,
+    bridgeRefusalAnswer: () => '',
     withCallerUserId: options => options || {}, sendMark() {}, takePrewarmedConversation: () => ''
   };
   vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName', 'runningTurnOf', 'turnRunningResponse']) + '\nvar sendMessage = ' + send + ';', sandbox);

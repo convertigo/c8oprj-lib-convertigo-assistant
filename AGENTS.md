@@ -581,9 +581,12 @@ rediscovering the same context.
 - MCP activation uses an opaque private-memory handle and conversation homes;
   raw secrets never enter browser state, prompts, records or generated configs.
   Keep the managed Convertigo skill/MCP intact.
-- `tigo-resources` in lib_ConvertigoMCP delegates project-only operations to this
-  core and must independently require a full MCP bearer token. It cannot alter
-  favorites, activation, personal resources or secrets.
+- `tigo-resources` in lib_ConvertigoMCP independently requires a full MCP bearer.
+  Local Studio owners can author project or personal prompts/skills. MCP saves
+  produce pending proposals, never declarations or activation. The authenticated
+  UI alone confirms a displayed proposal (digest/revision checked, 15-minute TTL).
+  Agent calls cannot confirm, alter favorites/activation or read/write secrets.
+  No Code self-configuration stays disabled; keep server confinement unchanged.
 - Run `node --test tests/tigo_resources*.test.cjs` plus the existing Assistant
   and NoCode checks. Quota tests require a current canonical Page snapshot
   with the current LightRagFooterComponent tree in `snapshot.footer`.
@@ -717,3 +720,58 @@ rediscovering the same context.
   on these settings.
 - Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`
   and `tests/nocode-server-settings-ui.test.cjs`.
+
+
+
+## Tigo budget gate and No Code per-user keys
+
+- Contract `tigo-nocode-contract.md` sections 5, 6 and 8 (convertigo/c8oprj-tigoaccess#5). Design and the
+  isolation analysis: lib_ConvertigoAgentBridge `docs/nocode-user-keys.md`.
+- `convertigoTurnRefusal` runs before a Convertigo turn writes anything (`sendMessage`, before `starting`). It
+  refuses the turn when the effective balance is zero or below: TigoAccess in the Studio (the refresh is kept in
+  `options.tigoAccessResult`), C8Oforms `APIV2_TigoUserQuota` on a No Code server. An unknown balance lets the turn go.
+- On a No Code server registered with TigoAccess (`C8Oforms.tigo.server.id`) whose C8Oforms has `APIV2_TigoUserKey`,
+  the user's key is asked under the log4j MDC
+  `nolog` (`callLocalSequenceQuietly`, which restores the previous value). It is kept in `context.server` behind a
+  random handle, `lib_ConvertigoAssistant.gatewayKey.<random>`: 10 min for new starts, at least 5 left when a turn
+  starts, purged 2 h after that. A renewal that returns the same key keeps its handle (one copy in server memory); a
+  new key gets a new handle. The HTTP session that obtained it holds the handle, and a cached key is served only to
+  that session while its user owns it. Only that handle goes to the Bridge (`attachGatewayKeyHandle`, which drops any
+  handle that came with the request), and it is fetched for a gateway agent only. A conversation of another account is
+  refused (`conversation_not_owned`). A key never stays past its `expiresAt` minus 15 min (TigoAccess expires
+  server keys in LiteLLM). A running turn asks for it again every 10 min (`keepUserGatewayKeyAlive`), which keeps the
+  same key alive. An expired or rejected key (`userGatewayKeyRejected`) ends the turn with `userKeyExpired` and is
+  asked for again, never read as a budget. `context.server` can be read by any Rhino code of the engine: see the Bridge's
+  `docs/nocode-user-keys.md` about co-hosted low-code projects.
+  A refused key ends the turn with its reason (`userKeyRefusalMessage`), never with another key. A withdrawn right
+  or a 401 forgets it.
+- A turn the gateway stopped (`budget_exceeded`, or a gateway rate limit while the quota reads zero) ends with
+  `budgetErrorAnswer`: the quota is read again for the level and the reset date, or the generic sentence if that read
+  fails. `AgentQuota` serves No Code through `noCodeTigoQuota`, in the shape of the Studio's TigoAccess quota. The
+  team figure is `team.allocatableUsd`, else spent + balance, never `team.envelopeUsd`: TigoAccess counts the team
+  balance against the envelope minus its safety margin. The gate reads `effective.balanceUsd` only.
+- Run `node --test tests/tigo_budget_gate.test.cjs`.
+
+## Server settings request contract
+
+- Every global No Code settings save, including the implicit admin preference path,
+  requires POST. A supplied Origin must match the server before any session token
+  is considered; a missing Origin requires an existing engine session token.
+  Empty and opaque origins are refused. Reads do not require these write checks.
+- Compare session tokens with MessageDigest.isEqual. A token-fetch header is not
+  an existing token. The shared save helper owns the request checks.
+- Behind TLS termination, configure the server's public HTTPS URL as described
+  in docs/nocode-server-settings.md.
+- Run `node --test tests/nocode-server-settings.test.cjs` for T9, T9b and T9c.
+
+## Provider settings home and model catalog
+
+- Settings use providerHomeScopeForRun for Vibe, as installation/start do: user
+  by default, conversation when a viewer is attached, explicit paths preserved.
+  Do not read a shared-home catalog for an agent installed in a user home.
+- A settings read that says it is full (runtimePresenceOnly false) refreshes the
+  ACP catalog by default. Presence-only startup stays passive; an explicit refresh
+  choice is retained. A panel start or a conversation creation says neither and
+  keeps the Bridge's caches: a refresh starts a Vibe process, probes the gateway
+  models' efforts and starts the wrapper metadata process.
+- Run tests/assistant_settings_home.test.cjs with setup and panel-start tests.

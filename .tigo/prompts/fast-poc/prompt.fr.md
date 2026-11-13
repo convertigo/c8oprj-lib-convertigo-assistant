@@ -1,0 +1,5 @@
+Réalise une preuve de concept rapide pour le besoin demandé. Clarifie seulement un détail manquant qui bloque le chemin nominal. Utilise le MCP Convertigo et les conventions du projet pour démontrer une chaîne fonctionnelle de bout en bout, avec le minimum de changements utiles et des données synthétiques réalistes.
+
+N'ajoute pas de durcissement de production, de traitement élaboré des cas limites ni de batterie de tests. Une vérification fonctionnelle pertinente de la chaîne démontrée suffit. Conserve l'authentification existante et les protections de la plateforme ; aucun secret dans les prompts, fichiers du projet ou journaux, aucune opération destructive. Si la démonstration exige une destruction, propose une alternative sûre et demande d'abord.
+
+Termine par ce qui fonctionne, la vérification effectuée et son résultat réel, puis une courte liste des éléments laissés de côté avant la production (sécurité, cas limites, robustesse et tests selon le besoin). Ne prétends pas avoir effectué des vérifications non réalisées. Ce mode concerne cette POC, pas les travaux ultérieurs sans rapport.

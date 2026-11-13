@@ -119,12 +119,13 @@ function resourcesIdentity(kind, admin, user) {
 
 test('Tigo library: the desktop Studio has the Studio identity and prompts, a server user their own', () => {
   for (const kind of DESKTOP) {
-    assert.deepEqual(resourcesIdentity(kind, true, 'c8o:admin'), { admin: true, surface: 'studio', user: 'studio', owner: 'studio', key: 'studio' }, kind);
+    assert.deepEqual(resourcesIdentity(kind, true, 'c8o:admin'), { admin: true, studio: true, surface: 'studio', user: 'studio', owner: 'studio', key: 'studio' }, kind);
     assert.throws(() => resourcesIdentity(kind, false, 'forms-user'), /authentication_required/, kind);
   }
   for (const kind of ['server', 'server84']) {
     const identity = resourcesIdentity(kind, false, 'alice@example.com');
     assert.equal(identity.surface, 'nocode', kind);
+    assert.equal(identity.studio, false, kind);
     assert.equal(identity.user, 'alice@example.com', kind);
     assert.equal(identity.key, '0102ff', kind);
   }

@@ -178,7 +178,7 @@ test('NoCode uses the deployed bridge library and surfaces engine errors; Studio
     trim: value => String(value ?? '').trim(),
     flowCapabilityAvailable: () => false,
     postForm: (...args) => { calls.push(args); return response; },
-    requireBridgeCaller() {}, isOwnBridgeUrl: () => false, sendMark() {},
+    requireBridgeCaller() {}, isOwnBridgeUrl: () => false, sendMark() {}, attachGatewayKeyHandle() {},
     callerSessionId: () => 'session', java: { lang: { Integer: { toHexString: value => (value >>> 0).toString(16) }, String: function () { this.hashCode = () => 42; } } }
   };
   vm.runInNewContext(snippets, context);

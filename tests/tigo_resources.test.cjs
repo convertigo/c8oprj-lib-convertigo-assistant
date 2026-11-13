@@ -435,3 +435,73 @@ test("Studio and NoCode built-ins are scoped to their surface with language fall
   assert.equal(catalog.items[0].body, "NoCode prompt");
   assert.equal(catalog.favorites.length, 1);
 });
+
+function studioProposalFixture() {
+  const f = fixture();
+  f.host.identity = () => ({admin:true,studio:true,surface:'studio',user:'studio',owner:'studio',key:'studio'});
+  f.api = lib.create(f.host);
+  return f;
+}
+function connectionData(id='connection') {
+  return {...data(id),connection:{transport:'http',url:'https://example.invalid/mcp',env:['COMPANY_TOKEN'],headers:{}}};
+}
+function proposeConnection(f,scope='workspace') {
+  f.host.agentInitiated=true;
+  return f.api.execute({action:'save',kind:'mcp',scope,project:'Demo',input:connectionData()});
+}
+test('agent MCP saves only propose; human approval adds without enabling',()=>{
+  const f=studioProposalFixture(),p=proposeConnection(f);
+  assert.equal(p.approvalRequired,true);
+  assert.equal(f.files.has('users/studio/mcp.json'),false);
+  const before=f.api.execute({action:'list'});assert.equal(before.items.length,0);assert.equal(before.proposals.length,1);
+  const proposal=before.proposals[0];
+  assert.throws(()=>f.api.execute({action:'confirmProposal',confirmed:true,input:{id:proposal.id,digest:proposal.digest}}),/human_review_required/);
+  f.host.agentInitiated=false;
+  const result=f.api.execute({action:'confirmProposal',input:{id:proposal.id,digest:proposal.digest}});
+  assert.equal(result.item.scope,'workspace');assert.equal(f.api.execute({action:'list'}).selection.mcp.length,0);
+  assert.equal(f.api.execute({action:'list'}).proposals.length,0);
+});
+test('proposal digest, expiry, revision and rejection fail closed',()=>{
+  for(const mode of ['digest','expiry','revision','tamper','reject']) {
+    const f=studioProposalFixture();proposeConnection(f,'project');let p=f.api.execute({action:'list'}).proposals[0];f.host.agentInitiated=false;
+    if(mode==='digest')p.digest='wrong';
+    if(mode==='expiry')f.host.now=()=>10000000;
+    if(mode==='revision')f.api.execute({action:'save',kind:'mcp',scope:'project',project:'Demo',input:connectionData()});
+    if(mode==='tamper'){const d=JSON.parse(f.files.get('users/studio/mcp-proposals.json'));d.items[0].data.connection.url='https://changed.invalid/mcp';f.files.set('users/studio/mcp-proposals.json',JSON.stringify(d));}
+    if(mode==='reject') {f.api.execute({action:'rejectProposal',input:{id:p.id,digest:p.digest}});assert.equal(f.files.has('project/Demo/mcp.json'),false);continue;}
+    assert.throws(()=>f.api.execute({action:'confirmProposal',input:{id:p.id,digest:p.digest}}),/proposal_expired_or_changed|revision_conflict/);
+  }
+});
+test('No Code and non-Studio hosts cannot propose; personal approval stays with its owner',()=>{
+  const f=fixture();f.host.agentInitiated=true;
+  assert.throws(()=>proposeConnection(f),/studio_configuration_required/);
+  const owner=studioProposalFixture();proposeConnection(owner);
+  owner.host.identity=()=>({admin:true,studio:true,user:'other',key:'other',owner:'other'});
+  assert.equal(lib.create(owner.host).execute({action:'list'}).proposals.length,0);
+});
+test('agent proposals reject literal credentials and remain idempotent',()=>{
+  const f=studioProposalFixture();proposeConnection(f);proposeConnection(f);
+  assert.equal(f.api.execute({action:'list'}).proposals.length,1);
+  const v=connectionData();v.connection.url='https://user:password@example.invalid/mcp';
+  assert.throws(()=>f.api.execute({action:'save',kind:'mcp',scope:'workspace',input:v}),/mcp_url_credentials_forbidden|mcp_https_or_loopback_required/);
+});
+test('Fast POC and Security check ship bilingual and only to Studio',()=>{
+  const f=studioProposalFixture();
+  for(const id of ['fast-poc','security-check']) {
+    const base=path.join(__dirname,'../.tigo/prompts',id),meta=JSON.parse(fs.readFileSync(path.join(base,'prompt.json'),'utf8'));
+    assert.deepEqual(meta.surfaces,['studio']);
+    for(const name of ['prompt.json','prompt.en.md','prompt.fr.md'])f.files.set('builtin/prompts/'+id+'/'+name,fs.readFileSync(path.join(base,name),'utf8'));
+  }
+  for(const language of ['en','fr'])assert.equal(f.api.execute({action:'list',language}).items.length,2);
+  f.host.identity=()=>({admin:false,surface:'nocode',user:'person',key:'person',owner:'person'});
+  assert.equal(lib.create(f.host).execute({action:'list'}).items.length,0);
+});
+
+test("an agent cannot duplicate a connection by disguising its requested kind", () => {
+  const f=fixture();f.host.identity=()=>({admin:true,studio:true,key:"studio",owner:"studio"});
+  const value=data("original");value.connection={transport:"http",url:"https://docs.example.com/mcp",env:[],headers:{}};
+  const original=save(f,"mcp",value);
+  f.host.agentInitiated=true;const agent=lib.create(f.host);
+  assert.throws(()=>agent.execute({action:"duplicate",kind:"prompt",scope:"workspace",key:original.key,input:{id:"hidden-copy"}}),/human_review_required/);
+  assert.equal(f.files.get("users/studio/mcp.json").includes("hidden-copy"),false);
+});
