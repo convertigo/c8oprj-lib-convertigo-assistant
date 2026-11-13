@@ -775,3 +775,17 @@ rediscovering the same context.
   keeps the Bridge's caches: a refresh starts a Vibe process, probes the gateway
   models' efforts and starts the wrapper metadata process.
 - Run tests/assistant_settings_home.test.cjs with setup and panel-start tests.
+
+## Reviewed skill selections
+
+- Skill activation goes through `reviewSkill` and then `select` with the displayed
+  `reviewKey` and `reviewRevision`. Keep activation a human action; agent tools
+  cannot select resources.
+- Pin the complete revision in `skillRevisions`; changes to instructions or any
+  support file suspend future loading and set `requiresReview`. Unrelated
+  selection updates must never approve a changed skill.
+- Preserve private approved instruction, metadata, reference and script snapshots
+  for the review diff. Render contents as plain text and binary assets as hashes. Bind review confirmation to conversation and
+  user identity, and reject stale revisions on the server.
+- Run `tests/tigo_skill_pins.test.cjs`, `tests/tigo_resources.test.cjs` and
+  `tests/tigo_resources_ui.test.cjs` after resource-selection changes.

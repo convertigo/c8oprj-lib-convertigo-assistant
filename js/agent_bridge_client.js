@@ -8929,6 +8929,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (result.ok !== false) {
       rememberCodexSessionFromResult(state, result);
       state.resourceSkillVersions = resources.versions;
+      state.resourceSkillsRequiringReview = resources.requiresReview || [];
       state.resourceContextEpoch = state.provider + ":" + String(state.externalSessionId || "");
       state.resourceMcpFingerprint = resources.fingerprint;
     }
@@ -8951,6 +8952,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (result.ok && args.action && args.action !== "list" && args.action !== "get") {
       var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid});
       catalog.saved = result.item || null;
+      if (args.action === "reviewSkill") { catalog.skillReview = result.review; }
       catalog.csrf = csrf;
       return catalog;
     }
