@@ -1024,6 +1024,24 @@ scriptContent:
         		return this.getC8OformsText ? this.getC8OformsText(''currentForm'', '''') : ''Formulaire courant'';
         	}
         
+        	public notifyStudioAgentRun(runid, running) {
+        		// The web and desktop Studio follow the agent while it works (its activity, the pause of the follow): it is told when
+        		// a turn starts and when it ends, once each. Only there: the Eclipse Studio and No Code Studio have their own ways.
+        		try {
+        			var w: any = window;
+        			if (!w || !w.parent || w === w.parent || !document.documentElement || !document.documentElement.classList.contains("tigo-studio-web")) { return false; }
+        			var id = String(runid == null ? "" : runid);
+        			if (!id.length || !this.local) { return false; }
+        			var conversation = String(this.local.Conversation || "");
+        			var key = conversation + ":" + id + ":" + (running === true);
+        			if (this.local.StudioAgentRunNotified === key) { return false; }
+        			this.local.StudioAgentRunNotified = key;
+        			w.parent.postMessage({ type: "convertigo:assistant-run", running: running === true, runid: id, conversation: conversation }, "*");
+        			return true;
+        		} catch (e) {}
+        		return false;
+        	}
+        
         	public endAgentHostTurn(runid) {
         		// The end of a turn (completed, failed or stopped) ends the share of the No Code Studio tab its previews were
         		// captured in (nocode-form-preview-capture): the page stops it, once per turn. It also closes the cards of the
@@ -20161,6 +20179,8 @@ title: Tigo
             		if (runid != null && ("" + runid).length) {
             			page.local.RunID = "" + runid;
             		}
+            		// The web Studio follows the agent while a turn runs: it is told when one starts and when it ends.
+            		if (page.notifyStudioAgentRun) { page.notifyStudioAgentRun(runid, !(isCompleted || isFailed)); }
             		// The end of a turn ends the share of the No Code Studio tab for the captures of its previews.
             		if ((isCompleted || isFailed) && page.endAgentHostTurn) {
             			page.endAgentHostTurn(state.runid != null ? state.runid : response.id);
