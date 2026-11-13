@@ -20271,6 +20271,9 @@ title: Tigo
             		}
             		// The web Studio follows the agent while a turn runs: it is told when one starts and when it ends.
             		if (page.notifyStudioAgentRun) { page.notifyStudioAgentRun(runid, !(isCompleted || isFailed)); }
+            		// Stop targets the conversation whose turn runs, kept here from its reads: local.Conversation can be reset or change
+            		// during the turn (a new conversation opened, the project the agent created and revealed).
+            		page.local.AgentRunConversation = (isCompleted || isFailed) ? "" : String(state.threadid || response.threadid || page.local.Conversation || "");
             		// The end of a turn ends the share of the No Code Studio tab for the captures of its previews.
             		if ((isCompleted || isFailed) && page.endAgentHostTurn) {
             			page.endAgentHostTurn(state.runid != null ? state.runid : response.id);
@@ -22930,10 +22933,11 @@ title: Tigo
            "noLoading": "plain:true"
           }'
         ↓threadid [ngx.components.UIControlVariable-1781872839640]: 
+          comment: The conversation whose turn runs, kept by the reads of the turn (local.Conversation can be reset or change meanwhile), else the open one.
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: source:{"filter":"Local","project":"lib_ConvertigoAssistant","input":"","model":{"data":[{"localObject":"local"}],"path":"?.Conversation","prefix":"","suffix":"","custom":"","useCustom":false}
+              - MobileSmartSourceType: script:(this.local && (this.local.AgentRunConversation || this.local.Conversation)) || ''
         ↓provider [ngx.components.UIControlVariable-1782147693044]: 
           varValue: 
             - xmlizable: 

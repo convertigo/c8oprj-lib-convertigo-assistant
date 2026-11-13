@@ -7487,7 +7487,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options = options || {};
     options.threadid = threadid;
     var state = createState(options);
-    if (state.status !== "completed" && state.status !== "closed") {
+    if (state.status === "cancelled") {
+      // A turn stopped by the user stays stopped: when the stop had to close the agent, its record is all that is left,
+      // and reading it back as running ended it as a lost agent process after several "still running" reads.
+      state.answer = trim(state.answer).length ? state.answer : lang(state).closedEarly;
+      state.answerIsFinal = true;
+    } else if (state.status !== "completed" && state.status !== "closed") {
       state.status = "in_progress";
       appendProgress(state, lang(state).thinking);
     }
@@ -7733,6 +7738,40 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return true;
     }
     return false;
+  }
+
+  // The Bridge keeps the entry of an agent process that exited (killed, crashed): its reads answer at once, with no event.
+  function bridgeProcessGone(bridgeState) {
+    bridgeState = bridgeState || {};
+    var status = trim(bridgeState.status).toLowerCase();
+    return bridgeState.alive !== true && (status === "exited" || status === "closed" || status === "error");
+  }
+
+  // The end of a turn stopped by the user. The interrupt waits for the agent while the page keeps reading the turn: the
+  // latest saved state is the base (the copy read before the wait lost what the reads recorded meanwhile, the end of the
+  // turn included), recorded under the lock of the readers, and a turn still running ends as cancelled with the stop
+  // notice, as its turn/end would have ended it.
+  function recordTurnStopped(state) {
+    var held = lockConversationRead(state);
+    try {
+      state = latestSavedState(state);
+      if (!isTerminalStatus(state.status)) {
+        markProgressEventsIdle(state);
+        state.status = "cancelled";
+        state.error = "";
+        state.answer = lang(state).closedEarly;
+        state.answerIsFinal = true;
+        if (state.answerTranscriptRunid !== state.runid) {
+          appendTranscript(state, "assistant", state.answer);
+          state.answerTranscriptRunid = state.runid;
+        }
+      }
+      state.updatedAt = now();
+      saveState(state);
+      return state;
+    } finally {
+      unlockConversationRead(held);
+    }
   }
 
   function shouldInstallForRun(options, provider) {
@@ -9904,7 +9943,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         }
         throw new Error(events.error || ("agent_events " + (bridgeStatus || "failed")));
       }
-      state.readErrors = 0;
+      // Only a read that finds the agent process alive, or brings events, clears the failed reads: an exited process
+      // answers every read at once with no event, and clearing them there kept its turn "in progress" for ever.
+      if (!bridgeProcessGone(events.state) || (events.events && events.events.length)) {
+        state.readErrors = 0;
+      }
       var wasTerminal = isTerminalStatus(state.status);
       var list = [];
       var fetched = events.events || [];
@@ -10074,8 +10117,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       readEarlyAgentCommands(state);
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
-      var bridgeStatus = trim(bridgeState.status).toLowerCase();
-      if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled" && !list.length && bridgeState.alive !== true && (bridgeStatus === "exited" || bridgeStatus === "closed" || bridgeStatus === "error")) {
+      if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled" && !list.length && bridgeProcessGone(bridgeState)) {
         if (trim(state.answer).length) {
           state.status = "completed";
           state.answerIsFinal = true;
@@ -10426,7 +10468,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var userKey = normalizeUserKey(options.userId);
       var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
       var providerFilter = trim(options.provider || options.agentProvider);
-      var latest = latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, providerFilter, normalizeSkillProfile(options));
+      var skillProfile = normalizeSkillProfile(options);
+      var latest = latestActiveConversationRecord(workspaceRoot, userKey, projectFilter, providerFilter, skillProfile);
+      if (!latest && projectFilter.length) {
+        // The running turn can belong to a conversation of another project, or of none: an agent that creates its project
+        // during the turn leaves a conversation the Studio's current project does not match. A turn of the user runs: stop it.
+        latest = latestActiveConversationRecord(workspaceRoot, userKey, "", providerFilter, skillProfile);
+      }
       if (latest) {
         threadid = normalizeConversationId(latest.conversationId || latest.threadid);
         options.threadid = threadid;
@@ -10477,9 +10525,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     if (interrupted && interrupted.ok === true) {
-      state.status = "cancelled";
-      state.updatedAt = now();
-      saveState(state);
+      state = recordTurnStopped(state);
       setBuffer("", "");
       return {
         ok: true,
@@ -10501,9 +10547,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         error: String(e)
       };
     }
-    state.status = "cancelled";
-    state.updatedAt = now();
-    saveState(state);
+    // The turn did not stop (a Vibe program of tool calls can outlive session/cancel) or the agent was already gone: the
+    // process is closed, and the turn ends here as stopped (the reads find it so, not as a lost agent process).
+    state = recordTurnStopped(state);
     removeState(threadid);
     setBuffer("", "");
     return {
