@@ -4013,6 +4013,103 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
             --tsw-muted: #616161;
             --tsw-accent: #079ecc;
           }
+          /* The Ionic colors follow the Studio too. The dark and light palettes of the panel set them on :root.force-dark
+             and :root.force-light and on body, ion-app, ion-content and ion-menu, which outrank html.tigo-studio-web:
+             without !important, the side menu, the popovers (Usage, model and effort lists) and the modals kept the old
+             navy (#020617, #0f172a). */
+          html.tigo-studio-web {
+            --tsw-bg-rgb: 31, 31, 31;
+            --tsw-text-rgb: 204, 204, 204;
+            --tsw-muted-rgb: 133, 133, 133;
+            --tsw-accent-rgb: 24, 207, 255;
+            --tsw-accent-shade: #15b6e0;
+            --tsw-accent-tint: #2fd4ff;
+            --tsw-on-accent-rgb: 0, 47, 83;
+          }
+          html.tigo-studio-web.force-light {
+            --tsw-bg-rgb: 255, 255, 255;
+            --tsw-text-rgb: 59, 59, 59;
+            --tsw-muted-rgb: 97, 97, 97;
+            --tsw-accent-rgb: 7, 158, 204;
+            --tsw-accent-shade: #068bb4;
+            --tsw-accent-tint: #20a8d1;
+          }
+          html.tigo-studio-web,
+          html.tigo-studio-web body,
+          html.tigo-studio-web ion-app,
+          html.tigo-studio-web ion-content,
+          html.tigo-studio-web ion-menu,
+          html.tigo-studio-web ion-popover,
+          html.tigo-studio-web ion-modal {
+            --ion-background-color: var(--tsw-bg) !important;
+            --ion-background-color-rgb: var(--tsw-bg-rgb) !important;
+            --ion-text-color: var(--tsw-text) !important;
+            --ion-text-color-rgb: var(--tsw-text-rgb) !important;
+            --ion-border-color: var(--tsw-line) !important;
+            --ion-item-background: var(--tsw-card) !important;
+            --ion-card-background: var(--tsw-card) !important;
+            --ion-toolbar-background: var(--tsw-chrome) !important;
+            --ion-tab-bar-background: var(--tsw-chrome) !important;
+            --ion-color-primary: var(--tsw-accent) !important;
+            --ion-color-primary-rgb: var(--tsw-accent-rgb) !important;
+            --ion-color-primary-contrast: var(--tsw-on-accent) !important;
+            --ion-color-primary-contrast-rgb: var(--tsw-on-accent-rgb) !important;
+            --ion-color-primary-shade: var(--tsw-accent-shade) !important;
+            --ion-color-primary-tint: var(--tsw-accent-tint) !important;
+            --ion-color-medium: var(--tsw-muted) !important;
+            --ion-color-medium-rgb: var(--tsw-muted-rgb) !important;
+          }
+          /* Side menu: the flat chrome of the Studio side bars, not the tinted gradient. */
+          html.tigo-studio-web:root ion-menu::part(container) {
+            background-color: var(--tsw-chrome) !important;
+            border-right: 1px solid var(--tsw-line) !important;
+          }
+          html.tigo-studio-web ion-menu ion-header,
+          html.tigo-studio-web ion-menu ion-toolbar,
+          html.tigo-studio-web ion-menu ion-content,
+          html.tigo-studio-web ion-menu ion-content::part(background),
+          html.tigo-studio-web ion-menu ion-footer {
+            --background: var(--tsw-chrome) !important;
+            background: var(--tsw-chrome) !important;
+          }
+          html.tigo-studio-web ion-menu ion-title,
+          html.tigo-studio-web ion-menu ion-footer {
+            color: var(--tsw-muted) !important;
+          }
+          html.tigo-studio-web ion-menu ion-item::part(native) {
+            background: transparent !important;
+            color: var(--tsw-text) !important;
+            box-shadow: none !important;
+          }
+          html.tigo-studio-web ion-menu ion-item ion-label {
+            color: var(--tsw-text) !important;
+          }
+          html.tigo-studio-web ion-menu ion-item ion-icon {
+            color: var(--tsw-muted) !important;
+          }
+          html.tigo-studio-web ion-menu ion-list ion-item:hover::part(native) {
+            background: var(--tsw-hover) !important;
+          }
+          html.tigo-studio-web ion-menu ion-item.selected::part(native) {
+            background: var(--tsw-selection) !important;
+          }
+          html.tigo-studio-web ion-menu ion-item.selected ion-label {
+            color: var(--tsw-strong) !important;
+          }
+          html.tigo-studio-web ion-menu ion-item.selected ion-icon {
+            color: var(--tsw-accent) !important;
+          }
+          /* Usage window: a Studio popover. */
+          html.tigo-studio-web .agent-quota-popover {
+            --background: var(--tsw-chrome) !important;
+            --box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+          }
+          html.tigo-studio-web .agent-quota-popover::part(content) {
+            border: 1px solid var(--tsw-line);
+          }
+          html.tigo-studio-web .agent-quota-popover .quota-popup {
+            color: var(--tsw-text) !important;
+          }
           
           html.tigo-studio-web app-root {
             --modern-bg: var(--tsw-bg) !important;

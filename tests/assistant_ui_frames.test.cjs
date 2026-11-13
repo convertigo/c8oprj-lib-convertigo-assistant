@@ -146,3 +146,25 @@ test('the Studio web theme paints the round Reveal button, never a square behind
   assert.doesNotMatch(rule, /\n\s+(background|border-color): var\(--tsw-control/);
   assert.match(app, /html\.tigo-studio-web ion-header ion-select\.toolbar-lang-select \{\n\s+--background: var\(--tsw-control\) !important;/);
 });
+
+test('the Studio web theme also sets the Ionic colors: the side menu and the Usage window leave the old navy', () => {
+  // The dark palette sets them on :root.force-dark and on body, ion-app, ion-content and ion-menu, which outrank
+  // html.tigo-studio-web: the theme sets them on the same elements, with !important, from the Studio variables.
+  const tokens = app.match(/ {10}html\.tigo-studio-web,\n\s+html\.tigo-studio-web body,\n\s+html\.tigo-studio-web ion-app,\n\s+html\.tigo-studio-web ion-content,\n\s+html\.tigo-studio-web ion-menu,\n\s+html\.tigo-studio-web ion-popover,\n\s+html\.tigo-studio-web ion-modal \{[^}]*\}/)[0];
+  for (const [name, value] of [['background-color', 'bg'], ['background-color-rgb', 'bg-rgb'], ['text-color', 'text'], ['text-color-rgb', 'text-rgb'],
+    ['border-color', 'line'], ['item-background', 'card'], ['card-background', 'card'], ['toolbar-background', 'chrome'],
+    ['color-primary', 'accent'], ['color-primary-rgb', 'accent-rgb'], ['color-medium', 'muted']]) {
+    assert.match(tokens, new RegExp(`--ion-${name}: var\\(--tsw-${value}\\) !important;`), name);
+  }
+  for (const [name, dark, light] of [['bg-rgb', '31, 31, 31', '255, 255, 255'], ['text-rgb', '204, 204, 204', '59, 59, 59'], ['accent-rgb', '24, 207, 255', '7, 158, 204']]) {
+    assert.match(app, new RegExp(`html\\.tigo-studio-web \\{\\n\\s+(?=--tsw-bg-rgb)[^}]*?--tsw-${name}: ${dark};`), name);
+    assert.match(app, new RegExp(`html\\.tigo-studio-web\\.force-light \\{\\n\\s+(?=--tsw-bg-rgb)[^}]*?--tsw-${name}: ${light};`), name);
+  }
+  // the menu: flat chrome over its fixed navy container (#0f172a under :root.force-dark)
+  assert.match(app, /html\.tigo-studio-web:root ion-menu::part\(container\) \{\n\s+background-color: var\(--tsw-chrome\) !important;/);
+  assert.match(app, /html\.tigo-studio-web ion-menu ion-content::part\(background\),\n\s+html\.tigo-studio-web ion-menu ion-footer \{\n\s+--background: var\(--tsw-chrome\) !important;\n\s+background: var\(--tsw-chrome\) !important;/);
+  assert.match(app, /html\.tigo-studio-web ion-menu ion-item\.selected::part\(native\) \{\n\s+background: var\(--tsw-selection\) !important;/);
+  // the Usage window
+  assert.match(app, /html\.tigo-studio-web \.agent-quota-popover \{\n\s+--background: var\(--tsw-chrome\) !important;/);
+  assert.match(read('_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml'), /\.agent-quota-popover \{ [^}]*--background:var\(--ion-background-color,#fff\);/);
+});
