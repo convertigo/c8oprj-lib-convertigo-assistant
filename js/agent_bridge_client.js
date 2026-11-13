@@ -5757,6 +5757,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // The model's reasoning kept per step: a block of up to 8,000 characters whole, a longer one as its start and end.
   var REASONING_KEEP_HEAD = 3000;
   var REASONING_KEEP_TAIL = 5000;
+  // A longer block is also written whole beside the run's history (runs/<runid>.reasoning/<id>.txt, at most 400,000
+  // characters), for the "show all" of the work log (AgentReasoningText). Written by pieces of 4,000 characters.
+  var REASONING_FULL_MAX = 400000;
+  var REASONING_FULL_FLUSH = 4000;
+  // The live reasoning handed to the page: the last lines of the block streaming now, for the thinking bubble.
+  var REASONING_LIVE_CHARS = 700;
 
   function runDetailsFile(state, runid) {
     var id = trim(runid || (state && state.runid));
@@ -5938,6 +5944,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (separate && pending.chars) {
       text = "\n\n" + text;
     }
+    keepFullReasoning(state, pending, text);
     pending.chars += text.length;
     pending.updatedAt = now();
     var room = REASONING_KEEP_HEAD - pending.head.length;
@@ -5953,22 +5960,89 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
   }
 
+  function reasoningFullFile(state, runid, id) {
+    var runs = runDetailsFile(state, runid);
+    if (runs === null || !/^r[0-9]{1,6}$/.test(String(id || ""))) {
+      return null;
+    }
+    return new File(new File(runs.getParentFile(), trim(runid) + ".reasoning"), id + ".txt");
+  }
+
+  function keepFullReasoning(state, pending, text) {
+    // Called before the chunk is counted. Until a block passes the kept size its head and tail are the whole block: the
+    // file starts with them, then takes every chunk. A block whose file cannot be written keeps only its head and tail.
+    if (pending.full) {
+      var room = REASONING_FULL_MAX - Number(pending.fullChars || 0);
+      if (room > 0) {
+        var piece = text.substring(0, room);
+        pending.fullBuffer = String(pending.fullBuffer || "") + piece;
+        pending.fullChars = Number(pending.fullChars || 0) + piece.length;
+        if (pending.fullBuffer.length >= REASONING_FULL_FLUSH) {
+          flushFullReasoning(state, pending);
+        }
+      }
+      return;
+    }
+    if (pending.fullFailed || Number(pending.chars || 0) + text.length <= REASONING_KEEP_HEAD + REASONING_KEEP_TAIL) {
+      return;
+    }
+    var runid = trim(state && state.runid);
+    var seq = (Number(state && state.reasoningFullSeq) || 0) + 1;
+    if (reasoningFullFile(state, runid, "r" + seq) === null) {
+      pending.fullFailed = true;
+      return;
+    }
+    state.reasoningFullSeq = seq;
+    pending.full = { run: runid, f: "r" + seq };
+    pending.fullBuffer = (String(pending.head || "") + String(pending.tail || "") + text).substring(0, REASONING_FULL_MAX);
+    pending.fullChars = pending.fullBuffer.length;
+    flushFullReasoning(state, pending);
+  }
+
+  function flushFullReasoning(state, pending) {
+    if (!pending || !pending.full || !String(pending.fullBuffer || "").length) {
+      return;
+    }
+    try {
+      appendTextFile(reasoningFullFile(state, pending.full.run, pending.full.f), pending.fullBuffer);
+      pending.fullBuffer = "";
+    } catch (_ignoreFullReasoning) {
+      pending.full = null;
+      pending.fullBuffer = "";
+      pending.fullFailed = true;
+    }
+  }
+
   function reasoningText(reasoning) {
     return String(reasoning.head || "") + (reasoning.omitted ? "\n\n[\u2026]\n\n" : "") + String(reasoning.tail || "");
   }
 
   function finishedReasoning(pending) {
-    // What a step keeps: its start, its end, how many characters were left out between them, and how long it took.
+    // What a step keeps: its start, its end, how many characters were left out between them, and how long it took. A
+    // block with its whole text in a file says where (full), so the work log can show it all.
     if (!pending || !pending.chars || !trim(pending.head + pending.tail).length) {
       return null;
     }
-    return {
+    var finished = {
       head: pending.head,
       tail: pending.tail,
       chars: pending.chars,
       omitted: Math.max(0, pending.chars - pending.head.length - pending.tail.length),
       ms: Math.max(0, Number(pending.updatedAt || 0) - Number(pending.startedAt || 0))
     };
+    if (pending.full && finished.omitted > 0) {
+      finished.full = [{ run: pending.full.run, f: pending.full.f }];
+    }
+    return finished;
+  }
+
+  function fullReasoningParts(reasoning) {
+    // The parts of a merged block's whole text: the files of the long blocks, the text of the short ones. Null when a
+    // long block has no file (its middle is lost).
+    if (reasoning.full) {
+      return reasoning.full;
+    }
+    return reasoning.omitted ? null : [{ t: String(reasoning.head || "") + String(reasoning.tail || "") }];
   }
 
   function mergeReasoning(first, second) {
@@ -5981,10 +6055,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     result.chars = Number(first.chars || 0) + Number(second.chars || 0);
     result.omitted = Math.max(0, result.chars - result.head.length - result.tail.length);
     result.ms = Number(first.ms || 0) + Number(second.ms || 0);
+    var firstParts = fullReasoningParts(first);
+    var secondParts = fullReasoningParts(second);
+    if (result.omitted > 0 && firstParts && secondParts && (first.full || second.full)) {
+      result.full = firstParts.concat(secondParts);
+    }
     return result;
   }
 
   function settleReasoning(state) {
+    if (state && state.reasoningPending) {
+      flushFullReasoning(state, state.reasoningPending);
+    }
     var finished = finishedReasoning(state && state.reasoningPending);
     if (state) {
       state.reasoningPending = null;
@@ -6245,17 +6327,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function liveReasoning(state) {
-    // The end of the reasoning that is streaming now, for the status dock: its last sentence or so.
+    // The end of the reasoning that is streaming now, for the thinking bubble of the conversation: its last lines (the
+    // page shows three or four of them), starting at a line, a sentence or a word, one line break per paragraph and
+    // without markdown emphasis.
     var pending = state && state.reasoningPending;
     if (!pending || !pending.chars) {
       return null;
     }
-    var text = trim(String((pending.tail.length ? pending.head.substring(Math.max(0, pending.head.length - 400)) + pending.tail : pending.head) || "").replace(/\s+/g, " "));
-    if (text.length > 160) {
-      text = text.substring(text.length - 160);
-      var cut = text.search(/[.!?:;]\s/);
-      if (cut !== -1 && cut < 100) {
-        text = text.substring(cut + 2);
+    var raw = String((pending.tail.length ? pending.head.substring(Math.max(0, pending.head.length - REASONING_LIVE_CHARS)) + pending.tail : pending.head) || "");
+    raw = raw.substring(Math.max(0, raw.length - REASONING_LIVE_CHARS - 200));
+    var text = trim(raw.replace(/\r/g, "").replace(/\*\*|__/g, "").replace(/^[ \t]*#{1,6}[ \t]+/gm, "")
+      .replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").replace(/\n{2,}/g, "\n"));
+    if (text.length > REASONING_LIVE_CHARS) {
+      text = text.substring(text.length - REASONING_LIVE_CHARS);
+      var line = text.indexOf("\n");
+      var sentence = text.search(/[.!?:;]\s/);
+      if (line !== -1 && line < 240) {
+        text = text.substring(line + 1);
+      } else if (sentence !== -1 && sentence < 240) {
+        text = text.substring(sentence + 2);
       } else {
         text = text.substring(text.indexOf(" ") + 1);
       }
@@ -9509,6 +9599,42 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     return { ok: true, threadid: threadid, runid: runid, events: events, plan: details ? details.plan : null };
+  };
+
+  // "Show all" of a long reasoning in the work log (AgentReasoningText): the whole blocks written beside a run's history
+  // (keepFullReasoning), read from the caller's own conversation folder only. parts: JSON [{run, f}], at most 50.
+  C8O.assistantAgentBridge.reasoningText = function (options) {
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    var threadid = normalizeThreadId(options.threadid);
+    if (!threadid.length) {
+      return { ok: false, error: { code: "unknown_conversation" } };
+    }
+    var record = readConversationRecord(resolveWorkspaceRoot(options), normalizeUserKey(options.userId), threadid, options.provider);
+    if (!record || !record.conversationDir) {
+      return { ok: false, error: { code: "unknown_conversation" } };
+    }
+    var parts = [];
+    try {
+      parts = JSON.parse(String(options.parts || "[]"));
+    } catch (_ignoreParts) {}
+    var runs = new File(new File(String(record.conversationDir)), "runs");
+    var texts = {};
+    for (var i = 0; parts && i < parts.length && i < 50; i++) {
+      var run = trim(parts[i] && parts[i].run);
+      var id = trim(parts[i] && parts[i].f);
+      if (!/^[A-Za-z0-9_-][A-Za-z0-9._-]{0,119}$/.test(run) || run === "pending" || !/^r[0-9]{1,6}$/.test(id)) {
+        continue;
+      }
+      var file = new File(new File(runs, run + ".reasoning"), id + ".txt");
+      if (file.exists()) {
+        texts[run + "/" + id] = readTextFile(file);
+      }
+    }
+    return { ok: true, threadid: threadid, texts: texts };
   };
 
   // A read of the turn also hands the panel what the MCP asks of its page (js/agent_host_requests.js): the captures of

@@ -1,0 +1,34 @@
+accessibility: Hidden
+comment: The whole text of the long model reasoning blocks of a conversation (runs/<runid>.reasoning), for the "show all" of the Tigo work log. Only the caller's own conversations.
+includeResponseElement: false
+↓Run [steps.SimpleStep-1794620000001]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    try {
+        response = C8O.assistantAgentBridge.reasoningText({
+            threadid: typeof threadid === "undefined" ? "" : String(threadid || ""),
+            parts: typeof parts === "undefined" ? "" : String(parts || ""),
+            userId: typeof userId === "undefined" ? "" : String(userId || "")
+        });
+    } catch (e) {
+        response = {ok:false,error:{code:"read_error"}};
+    }'
+↓Response [steps.JsonToXmlStep-1794620000003]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: response
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: response
+↓threadid [variables.RequestableVariable-1794620000005]: 
+  comment: Agent conversation id.
+↓parts [variables.RequestableVariable-1794620000007]: 
+  comment: JSON array of the reasoning files to read, [{run, f}] as the work log step carries them.
+↓userId [variables.RequestableVariable-1794620000009]: 
+  comment: The page's user; a server always uses its authenticated user.

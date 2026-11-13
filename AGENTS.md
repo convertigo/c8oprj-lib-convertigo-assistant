@@ -280,6 +280,20 @@ rediscovering the same context.
 - Vibe emits each agent narration through the same ACP message event. When a
   narration is followed by a tool call, move it into progress and clear the
   answer buffer; only the narration remaining at turn end is the final answer.
+- Model reasoning (Vibe/Convertigo `agent_thought_chunk`, Claude `thinking_delta`;
+  Codex reasoning summaries stay comments) is shown in two places only. While it
+  streams, the live card at the end of the work log becomes a thinking bubble
+  (`.agent-live.is-thinking`): the last lines of `reasoningLive.text` (700
+  characters from the client), italic, newest at the bottom, with a light sweeping
+  its accent border, no animation under `prefers-reduced-motion`. The dock and the
+  side column keep the plan line, never the reasoning. Once settled, the reasoning
+  folds into its work log step: a bulb, "Réflexion · duration — first sentence"
+  in the accent colour (size in the tooltip), the latest one of the turn open
+  (`isLatestReasoningStep`), the text in the normal colour. A block over 8,000
+  characters keeps its head and tail with an "omitted" marker, and the client
+  also writes it whole to `runs/<runid>.reasoning/r<n>.txt` (`full` refs), which
+  "show all" reads through `AgentReasoningText` (caller's own conversation only).
+  Cover with `node --test tests/assistant_reasoning_steps.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.
