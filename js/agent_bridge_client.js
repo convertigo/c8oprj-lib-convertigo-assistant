@@ -6495,8 +6495,45 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return Math.max(0, (run.status === "running" || !last ? now() : last) - startedAt);
   }
 
+  // A sub-agent's activity holds its steps (navigate, click, ...), its network lines and, since MCP 0.3.0-beta.20, what
+  // it says it checks at each turn (kind "thought", with the model's reasoning when the gateway returns one). The block
+  // shows the latest steps without the successful network lines, and the latest thought: its reasoning (end) then what
+  // it says, the newest last, for the live card of the turn.
+  function subagentSteps(activity) {
+    var steps = [];
+    for (var i = 0; i < (activity || []).length; i++) {
+      var entry = activity[i] || {};
+      var text = trim(entry.text);
+      if (!text.length || entry.kind === "thought" || (/^N\d+$/.test(trim(entry.id)) && /: HTTP [23]\d\d$/.test(text))) {
+        continue;
+      }
+      steps.push(text.substring(0, 140));
+    }
+    return steps.slice(-6);
+  }
+
+  function subagentThought(activity) {
+    for (var i = (activity || []).length - 1; i >= 0; i--) {
+      var entry = activity[i] || {};
+      if (entry.kind !== "thought") {
+        continue;
+      }
+      var reasoning = trim(entry.reasoning).replace(/\s+\n/g, "\n").replace(/\n{2,}/g, "\n");
+      if (reasoning.length > 500) {
+        reasoning = reasoning.substring(reasoning.length - 500);
+        var start = reasoning.search(/[.!?:;\n]\s/);
+        reasoning = start !== -1 && start < 200 ? reasoning.substring(start + 2) : reasoning.substring(reasoning.indexOf(" ") + 1);
+      }
+      var said = trim(entry.text);
+      var text = reasoning.length && reasoning !== said ? reasoning + (said.length ? "\n" + said : "") : said;
+      return { text: trim(text).substring(0, 700), at: Number(entry.at) || 0 };
+    }
+    return { text: "", at: 0 };
+  }
+
   function subagentEventDetail(run) {
     var report = (run.output && run.output.report) || {};
+    var thought = run.status === "running" ? subagentThought(run.activity) : { text: "", at: 0 };
     var usage = (run.output && run.output.usage) || {};
     var cost = usage.cost === null || usage.cost === undefined || !isFinite(Number(usage.cost)) ? null : Number(usage.cost);
     return JSON.stringify({
@@ -6507,7 +6544,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       status: run.status,
       startedAt: run.startedAt,
       durationMs: subagentDurationMs(run),
-      activity: (run.activity || []).slice(-6).map(function (a) { return trim(a && a.text).substring(0, 140); }),
+      activity: subagentSteps(run.activity),
+      thought: thought.text,
+      thoughtAt: thought.at,
       verdict: trim(report.verdict),
       summary: trim(report.summary).substring(0, 900),
       // A constructor reports the objects it created and modified (QNames) and what is left open.
@@ -6594,8 +6633,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var activity = [];
       var activityFile = new File(dir, "activity.jsonl");
       if (activityFile.isFile()) {
+        // Enough lines to find the latest thought behind the steps and network lines of its turn.
         var entries = read(activityFile).split(/\r?\n/);
-        for (var a = Math.max(0, entries.length - 8); a < entries.length; a++) {
+        for (var a = Math.max(0, entries.length - 60); a < entries.length; a++) {
           try { if (trim(entries[a]).length) { activity.push(JSON.parse(entries[a])); } } catch (_partialLine) {}
         }
       }

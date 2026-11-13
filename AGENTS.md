@@ -294,6 +294,15 @@ rediscovering the same context.
   also writes it whole to `runs/<runid>.reasoning/r<n>.txt` (`full` refs), which
   "show all" reads through `AgentReasoningText` (caller's own conversation only).
   Cover with `node --test tests/assistant_reasoning_steps.test.cjs`.
+- A sub-agent at work (browser-verify, subagent-run) takes that live card: title
+  "Sous-agent vérificateur au travail · model", what it says it checks with the
+  end of its reasoning (activity lines of kind "thought", MCP 0.3.0-beta.20) in
+  the bubble style, then its two latest steps. The client reads them from
+  `<user workspace>/subagents/<runId>/activity.jsonl` at each read
+  (`syncSubagentRuns`, `subagentSteps` without the successful network lines,
+  `subagentThought`); the block of the run keeps its steps and report. The main
+  agent's bubble is six lines high. Cover with
+  `node --test tests/assistant_subagent_live.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.

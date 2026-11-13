@@ -317,12 +317,12 @@ test('while the model reasons, the bubble shows it and the dock keeps the plan: 
 
 test('the page wires the bubble, the open latest reasoning, the bulb line and "show all"; every text in four languages', () => {
   const yaml = read('_c8oProject/mobilePages/Page.yaml');
-  assert.match(yaml, /MobileSmartSourceType: 'script:''agent-live'' \+ \(this\.getAgentRunView\(\)\.thought \? '' is-thinking'' : ''''\)'/);
+  assert.match(yaml, /MobileSmartSourceType: 'script:''agent-live'' \+ \(this\.getAgentRunView\(\)\.thought \|\| this\.getAgentRunView\(\)\.subagent \? '' is-thinking'' : ''''\)/);
   assert.match(yaml, /↓HasThought \[[^\]]+\]: \n[^\n]*\n {20}directiveName: If\n[\s\S]{0,260}script:this\.getAgentRunView\(\)\.thought\n {20}↓Thought /);
   assert.match(yaml, /attrName: '\[open\]'\n[\s\S]{0,400}script:this\.isLatestReasoningStep\(item, step\)\n {24}↓Summary /);
   assert.match(yaml, /"IconName":"plain:bulb-outline"/);
   assert.match(yaml, /page\.toggleReasoningFull\(props\.stack\.root\.scope\.step\);/);
-  assert.match(yaml, /\.agent-live-thought \{[^}]*font-style: italic;[^}]*max-height: 76px;/);
+  assert.match(yaml, /\.agent-live-thought \{[^}]*font-style: italic;[^}]*max-height: 114px;/);
   assert.match(yaml, /attrName: '\[innerText\]'\n[\s\S]{0,300}script:this\.getAgentRunView\(\)\.thought\n/, 'line breaks as br, no template white space');
   assert.match(yaml, /@media \(prefers-reduced-motion: reduce\) \{ \.agent-live\.is-thinking \{ animation: none; \} \}/);
   assert.match(yaml, /\.agent-worklog-reasoning-body \{[^}]*color: var\(--modern-text, #0f172a\);[^}]*max-height: min\(60vh, 480px\);/);
