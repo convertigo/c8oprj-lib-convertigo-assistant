@@ -399,20 +399,28 @@ C8O.tigoResources = (function () {
     }
     function skillSnapshot(item) {
       var origin = source(item.scope, item.project), total = 0;
-      var scripts = (host.files ? host.files(origin.base, "skills/" + item.id) : []).slice().sort()
-        .filter(function (path) { return path.indexOf("scripts/") === 0; })
-        .map(function (path) {
-          var rel = "skills/" + item.id + "/" + path;
-          var content = host.read(origin.base, rel);
-          if (content === null) { fail("revision_conflict"); }
-          total += content.length;
-          if (total > 1048576) { fail("skill_review_too_large"); }
-          var digest = host.hash(content);
-          if (host.fileHash && digest !== host.fileHash(origin.base, rel)) { fail("revision_conflict"); }
-          return { path: path, hash: digest, content: content };
-        });
+      var pathsToReview = ["skill.json", "SKILL.md"];
+      Object.keys(item.data.translations || {}).forEach(function (code) {
+        if (code !== item.data.defaultLanguage) { pathsToReview.push("SKILL." + code + ".md"); }
+      });
+      pathsToReview = pathsToReview.concat(host.files ? host.files(origin.base, "skills/" + item.id) : []).sort();
+      var files = [];
+      pathsToReview.forEach(function (path) {
+        var rel = "skills/" + item.id + "/" + path;
+        var content = host.read(origin.base, rel);
+        if (content === null) { return; }
+        var digest = host.fileHash ? host.fileHash(origin.base, rel) : host.hash(content);
+        var textContent = path.indexOf("assets/") !== 0;
+        if (textContent && host.hash(content) !== digest) {
+          if (path.indexOf("references/") === 0) { textContent = false; }
+          else { fail("skill_review_text_required"); }
+        }
+        if (textContent) { total += content.length; }
+        if (total > 1048576) { fail("skill_review_too_large"); }
+        files.push({path:path, hash:digest, content:textContent ? content : null});
+      });
       if (entry(item.key).revision !== item.revision) { fail("revision_conflict"); }
-      var snapshot = { key: item.key, revision: item.revision, scripts: scripts };
+      var snapshot = {key:item.key, revision:item.revision, files:files};
       // Keep persisted approvals readable under the host's one-MiB UTF-8 limit.
       if (JSON.stringify(snapshot).length > 250000) { fail("skill_review_too_large"); }
       return snapshot;
@@ -436,17 +444,19 @@ C8O.tigoResources = (function () {
       var selectedState = selected(args.threadid), previous = selectedState.skillApprovals[item.key] || "";
       var approved = previous ? object(host.read(personal, skillApprovalPath(item.key, previous))) : {};
       var current = skillSnapshot(item), before = {}, after = {};
-      (approved.scripts || []).forEach(function (file) { before[file.path] = file; });
-      current.scripts.forEach(function (file) { after[file.path] = file; });
+      (approved.files || approved.scripts || []).forEach(function (file) { before[file.path] = file; });
+      current.files.forEach(function (file) { after[file.path] = file; });
       var paths = Object.keys(before).concat(Object.keys(after)).filter(function (path, index, all) { return all.indexOf(path) === index; }).sort();
-      return { key: item.key, revision: item.revision, approvedRevision: previous,
-        scripts: paths.map(function (path) {
-          var a = before[path], b = after[path];
-          return { path: path, status: !a ? "added" : !b ? "removed" : a.hash === b.hash ? "unchanged" : "modified",
-            beforeHash: a ? a.hash : "", afterHash: b ? b.hash : "",
-            diff: skillScriptDiff(a ? a.content : null, b ? b.content : null) };
-        }) };
+      var files = paths.map(function (path) {
+        var a = before[path], b = after[path];
+        return {path:path, status:!a ? "added" : !b ? "removed" : a.hash === b.hash ? "unchanged" : "modified",
+          beforeHash:a ? a.hash : "", afterHash:b ? b.hash : "",
+          diff:skillScriptDiff(a ? a.content : null, b ? b.content : null)};
+      });
+      return {key:item.key, revision:item.revision, approvedRevision:previous, scope:item.scope, project:item.project,
+        files:files, scripts:files.filter(function (file) { return file.path.indexOf("scripts/") === 0; })};
     }
+
     function proposals() {
       var rows = object(host.read(personal, "mcp-proposals.json")).items || [];
       return rows.filter(function (p) { return p && p.expiresAt > host.now(); });

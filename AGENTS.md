@@ -784,8 +784,8 @@ rediscovering the same context.
 - Pin the complete revision in `skillRevisions`; changes to instructions or any
   support file suspend future loading and set `requiresReview`. Unrelated
   selection updates must never approve a changed skill.
-- Preserve private approved script snapshots for the review diff. Render all
-  script contents as plain text. Bind review confirmation to conversation and
+- Preserve private approved instruction, metadata, reference and script snapshots
+  for the review diff. Render contents as plain text and binary assets as hashes. Bind review confirmation to conversation and
   user identity, and reject stale revisions on the server.
 - Run `tests/tigo_skill_pins.test.cjs`, `tests/tigo_resources.test.cjs` and
   `tests/tigo_resources_ui.test.cjs` after resource-selection changes.

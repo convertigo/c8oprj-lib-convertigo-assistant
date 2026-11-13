@@ -76,3 +76,37 @@ test('unversioned legacy selections require review, and disabling preserves the 
   assert.equal(review.scripts[0].status,'modified');assert.match(review.scripts[0].diff,/-old/);
   assert.throws(()=>f.api.execute({action:'select',threadid:f.state.threadid,input:{skills:[item.key],mcp:[]}}),/skill_review_required/);
 });
+
+test('review includes changed instructions, translations, metadata, references and asset hashes', t=>{
+  const f=fixture(t),item=f.make();
+  f.host.write('users/studio','skills/example/references/guide.md','Old reference');
+  f.host.write('users/studio','skills/example/assets/icon.bin','Old asset');
+  f.approve(item);
+  const previous=f.api.execute({action:'get',key:item.key}).item;
+  const data=JSON.parse(JSON.stringify(previous.data));
+  data.translations.en.body+='\nRevised instructions.';
+  data.translations.fr={title:'Exemple',body:'---\nname: example\ndescription: Exemple\n---\nConsignes françaises.'};
+  f.agent.execute({action:'save',kind:'skill',scope:'workspace',revision:previous.revision,input:data});
+  f.host.write('users/studio','skills/example/references/guide.md','New reference');
+  f.host.write('users/studio','skills/example/assets/icon.bin','New asset');
+  const review=f.api.execute({action:'reviewSkill',key:item.key,threadid:f.state.threadid}).review;
+  const files=Object.fromEntries(review.files.map(file=>[file.path,file]));
+  assert.match(files['SKILL.md'].diff,/\+Revised instructions/);
+  assert.match(files['SKILL.fr.md'].diff,/Consignes françaises/);
+  assert.match(files['skill.json'].diff,/Exemple/);
+  assert.match(files['references/guide.md'].diff,/-Old reference/);
+  assert.match(files['references/guide.md'].diff,/\+New reference/);
+  assert.equal(files['assets/icon.bin'].status,'modified');
+  assert.notEqual(files['assets/icon.bin'].beforeHash,files['assets/icon.bin'].afterHash);
+  assert.equal(files['assets/icon.bin'].diff,'');
+  assert.equal(JSON.stringify(files['assets/icon.bin']).includes('New asset'),false);
+});
+test('an instructions-only agent edit is shown for renewed approval',t=>{
+  const f=fixture(t),item=f.make();f.approve(item);
+  const data=JSON.parse(JSON.stringify(f.api.execute({action:'get',key:item.key}).item.data));
+  data.translations.en.body+='\nNew instruction line.';
+  f.agent.execute({action:'save',kind:'skill',scope:'workspace',revision:item.revision,input:data});
+  assert.equal(f.api.prepare(f.state).requiresReview[0],item.key);
+  const review=f.api.execute({action:'reviewSkill',key:item.key,threadid:f.state.threadid}).review;
+  assert.match(review.files.find(file=>file.path==='SKILL.md').diff,/\+New instruction line/);
+});

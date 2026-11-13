@@ -55,8 +55,9 @@ a skill with no external tools needs no connection. Supporting files remain in
 `references/`, `scripts/`, and `assets/`; duplicating a skill copies those files.
 
 Enable a skill for the current conversation, or before its first message.
-Before enabling it, Tigo lists its scripts and shows additions, changes and
-removals against the last approved version. Confirming approves the exact
+Before enabling it, Tigo lists instructions and their translations, metadata,
+references and scripts, and shows additions, changes and removals against the
+last approved version. Assets show their paths, status and hashes, without content. Confirming approves the exact
 revision displayed; a concurrent edit requires a fresh review. Text is shown
 as text, including script contents.
 
@@ -69,17 +70,18 @@ from older installations require review once. New resources created by an agent
 remain inactive. There is no skill proposal queue.
 
 Personal conversation settings keep `skillRevisions` and the last approved
-`skillApprovals`. Script snapshots are stored privately under `skill-approvals/`
+`skillApprovals`. Review snapshots are stored privately under `skill-approvals/`
 for later comparisons, including after disabling a skill. Review snapshots are
-bounded; oversized or non-UTF-8 scripts must be reduced or converted before
-activation. Existing support-file count/depth limits fail closed.
+bounded; oversized text must be reduced and non-UTF-8 instructions or scripts
+converted before activation. Binary references show hashes only, as assets do. Existing support-file count/depth limits fail closed.
 
 Tigo supplies approved instructions once per revision and provider session.
 Reloading the same provider session keeps the injection state; switching to a
 new provider session supplies the selected, unchanged skills again.
 
 Disabling a skill stops future injection and does not erase earlier instructions
-from the model's history. Start a new conversation for a fresh context. Missing
+from the model's history. It also cannot intercept a later filesystem read of
+a support path already present in that history. Start a new conversation for a fresh context. Missing
 resources or missing required MCP connections block the next send with guidance;
 the library can remove unavailable selections. Changes wait until the current
 turn is finished.
