@@ -55,11 +55,28 @@ a skill with no external tools needs no connection. Supporting files remain in
 `references/`, `scripts/`, and `assets/`; duplicating a skill copies those files.
 
 Enable a skill for the current conversation, or before its first message.
-Tigo supplies its instructions on the next turn, once per content revision and
-provider session. The supplied text identifies the skill directory so the agent
-can read references when needed. Changes to support files also change its
-revision. Reloading the same provider session keeps the injection state;
-switching to a new provider session supplies the selected skills again.
+Before enabling it, Tigo lists its scripts and shows additions, changes and
+removals against the last approved version. Confirming approves the exact
+revision displayed; a concurrent edit requires a fresh review. Text is shown
+as text, including script contents.
+
+Each selection pins the full skill revision: instructions (including translations)
+and every file under `scripts/`, `references/` and `assets/`. Before each turn,
+Tigo recomputes that revision. If it differs, the skill is marked `requiresReview`
+and its current instructions are not supplied. This also detects edits made
+outside Tigo, such as a filesystem edit or a Git pull. Unversioned selections
+from older installations require review once. New resources created by an agent
+remain inactive. There is no skill proposal queue.
+
+Personal conversation settings keep `skillRevisions` and the last approved
+`skillApprovals`. Script snapshots are stored privately under `skill-approvals/`
+for later comparisons, including after disabling a skill. Review snapshots are
+bounded; oversized or non-UTF-8 scripts must be reduced or converted before
+activation. Existing support-file count/depth limits fail closed.
+
+Tigo supplies approved instructions once per revision and provider session.
+Reloading the same provider session keeps the injection state; switching to a
+new provider session supplies the selected, unchanged skills again.
 
 Disabling a skill stops future injection and does not erase earlier instructions
 from the model's history. Start a new conversation for a fresh context. Missing

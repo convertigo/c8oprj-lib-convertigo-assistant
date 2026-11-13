@@ -329,7 +329,7 @@ C8O.tigoResources = (function () {
       var value = normalize(kind, doc),
         support =
           kind === "skill" && host.files
-            ? host.files(s.base, "skills/" + slug)
+            ? host.files(s.base, "skills/" + slug).slice().sort()
             : [];
       var revision = host.hash(
         JSON.stringify(value) +
@@ -389,8 +389,63 @@ C8O.tigoResources = (function () {
       return {
         skills: unique(v.skills),
         mcp: unique(v.mcp),
-        mcpRevisions: v.mcpRevisions || {}
+        mcpRevisions: v.mcpRevisions || {},
+        skillRevisions: v.skillRevisions || {},
+        skillApprovals: v.skillApprovals || {}
       };
+    }
+    function skillApprovalPath(k, revision) {
+      return "skill-approvals/" + host.hash(k + "\n" + revision) + ".json";
+    }
+    function skillSnapshot(item) {
+      var origin = source(item.scope, item.project), total = 0;
+      var scripts = (host.files ? host.files(origin.base, "skills/" + item.id) : []).slice().sort()
+        .filter(function (path) { return path.indexOf("scripts/") === 0; })
+        .map(function (path) {
+          var rel = "skills/" + item.id + "/" + path;
+          var content = host.read(origin.base, rel);
+          if (content === null) { fail("revision_conflict"); }
+          total += content.length;
+          if (total > 1048576) { fail("skill_review_too_large"); }
+          var digest = host.hash(content);
+          if (host.fileHash && digest !== host.fileHash(origin.base, rel)) { fail("revision_conflict"); }
+          return { path: path, hash: digest, content: content };
+        });
+      if (entry(item.key).revision !== item.revision) { fail("revision_conflict"); }
+      var snapshot = { key: item.key, revision: item.revision, scripts: scripts };
+      // Keep persisted approvals readable under the host's one-MiB UTF-8 limit.
+      if (JSON.stringify(snapshot).length > 250000) { fail("skill_review_too_large"); }
+      return snapshot;
+    }
+    function skillScriptDiff(before, after) {
+      if (before === after) { return ""; }
+      var a = before === null ? [] : before.split("\n"), b = after === null ? [] : after.split("\n");
+      var start = 0, tail = 0;
+      while (start < a.length && start < b.length && a[start] === b[start]) { start++; }
+      while (tail < a.length - start && tail < b.length - start && a[a.length - 1 - tail] === b[b.length - 1 - tail]) { tail++; }
+      return ["--- approved", "+++ current"].concat(
+        a.slice(Math.max(0, start - 3), start).map(function (line) { return " " + line; }),
+        a.slice(start, a.length - tail).map(function (line) { return "-" + line; }),
+        b.slice(start, b.length - tail).map(function (line) { return "+" + line; }),
+        b.slice(b.length - tail, b.length - tail + 3).map(function (line) { return " " + line; })
+      ).join("\n");
+    }
+    function reviewSkill(args) {
+      var item = entry(args.key);
+      if (item.kind !== "skill") { fail("not_a_skill"); }
+      var selectedState = selected(args.threadid), previous = selectedState.skillApprovals[item.key] || "";
+      var approved = previous ? object(host.read(personal, skillApprovalPath(item.key, previous))) : {};
+      var current = skillSnapshot(item), before = {}, after = {};
+      (approved.scripts || []).forEach(function (file) { before[file.path] = file; });
+      current.scripts.forEach(function (file) { after[file.path] = file; });
+      var paths = Object.keys(before).concat(Object.keys(after)).filter(function (path, index, all) { return all.indexOf(path) === index; }).sort();
+      return { key: item.key, revision: item.revision, approvedRevision: previous,
+        scripts: paths.map(function (path) {
+          var a = before[path], b = after[path];
+          return { path: path, status: !a ? "added" : !b ? "removed" : a.hash === b.hash ? "unchanged" : "modified",
+            beforeHash: a ? a.hash : "", afterHash: b ? b.hash : "",
+            diff: skillScriptDiff(a ? a.content : null, b ? b.content : null) };
+        }) };
     }
     function proposals() {
       var rows = object(host.read(personal, "mcp-proposals.json")).items || [];
@@ -524,7 +579,8 @@ C8O.tigoResources = (function () {
         x.favorite = favorites.indexOf(x.key) >= 0;
         x.enabled = (x.kind === "skill" ? s.skills : s.mcp).indexOf(x.key) >= 0;
         x.requiresReview =
-          x.kind === "mcp" && x.enabled && s.mcpRevisions[x.key] !== x.revision;
+          x.enabled && (x.kind === "mcp" ? s.mcpRevisions[x.key] : s.skillRevisions[x.key]) !== x.revision;
+        x.active = x.enabled && !x.requiresReview;
       });
       return {
         ok: true,
@@ -601,6 +657,8 @@ C8O.tigoResources = (function () {
       args = object(args);
       var action = text(args.action || "list"),
         input = object(args.input);
+      if (action === "reviewSkill") { return { ok: true, review: reviewSkill(args) }; }
+      if (host.agentInitiated === true && action === "select") { fail("human_review_required"); }
       if (action === "propose") { return propose(args); }
       if (action === "confirmProposal" || action === "rejectProposal") { return answerProposal(args); }
       if (host.agentInitiated === true && args.kind === "mcp" && action === "save") { return propose(args); }
@@ -783,11 +841,17 @@ C8O.tigoResources = (function () {
         var skills = unique(input.skills),
           mcp = unique(input.mcp),
           previous = selected(args.threadid),
-          approved = {};
+          approved = {}, skillPins = {}, skillApprovals = object(JSON.stringify(previous.skillApprovals));
         skills.forEach(function (k) {
-          if (entry(k).kind !== "skill") {
-            fail("not_a_skill");
-          }
+          var item = entry(k);
+          if (item.kind !== "skill") { fail("not_a_skill"); }
+          if (previous.skills.indexOf(k) < 0 || input.reviewKey === k) {
+            if (input.reviewKey !== k || input.reviewRevision !== item.revision) { fail("skill_review_required"); }
+            var snapshot = skillSnapshot(item);
+            host.write(personal, skillApprovalPath(k, item.revision), JSON.stringify(snapshot));
+            skillPins[k] = item.revision;
+            skillApprovals[k] = item.revision;
+          } else { skillPins[k] = previous.skillRevisions[k] || ""; }
         });
         mcp.forEach(function (k) {
           var item = entry(k);
@@ -802,7 +866,7 @@ C8O.tigoResources = (function () {
         if (mcp.length && !who.admin) {
           fail("mcp_activation_admin_required");
         }
-        var value = { skills: skills, mcp: mcp, mcpRevisions: approved };
+        var value = { skills: skills, mcp: mcp, mcpRevisions: approved, skillRevisions: skillPins, skillApprovals: skillApprovals };
         host.write(personal, selection(args.threadid), JSON.stringify(value));
         return { ok: true, selection: value };
       }
@@ -832,7 +896,7 @@ C8O.tigoResources = (function () {
         epoch = text(state.provider) + ":" + text(state.externalSessionId),
         sections = [],
         versions = {},
-        connections = [];
+        connections = [], requiresReview = [];
       if (state.resourceContextEpoch !== epoch) {
         loaded = {};
       }
@@ -842,6 +906,7 @@ C8O.tigoResources = (function () {
           t =
             item.data.translations[l] ||
             item.data.translations[item.data.defaultLanguage];
+        if (s.skillRevisions[k] !== item.revision) { requiresReview.push(k); return; }
         (item.data.requiresMcp || []).forEach(function (required) {
           if (s.mcp.indexOf(required) < 0) {
             fail("skill_mcp_dependency_missing");
@@ -900,6 +965,7 @@ C8O.tigoResources = (function () {
             "\n</activated-tigo-skills>"
           : "",
         versions: versions,
+        requiresReview: requiresReview,
         connections: connections,
         fingerprint: host.hash(JSON.stringify(connections))
       };
@@ -907,7 +973,7 @@ C8O.tigoResources = (function () {
     return {
       execute: function (args) {
         if (
-          ["list", "get", "readFile"].indexOf(
+          ["list", "get", "readFile", "reviewSkill"].indexOf(
             text((args && args.action) || "list")
           ) >= 0
         ) {

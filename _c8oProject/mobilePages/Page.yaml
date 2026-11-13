@@ -7590,15 +7590,16 @@ scriptContent:
             public applyTigoResources(out: any, request: any) {
                 if (request.requestId !== this.local.ResourceRequestId) { return; }
                 this.local.ResourceLoading = false;
-                if (request.conversation !== String(this.local.Conversation || '''') || request.identity !== String(this.getAgentContextUserId?.() || '''')) { this.requestTigoResources(true); return; }
+                if (request.conversation !== String(this.local.Conversation || '''') || request.identity !== String(this.getAgentContextUserId?.() || '''')) { this.local.ResourceSkillReview = null; this.requestTigoResources(true); return; }
                 const body = out?.response;
-                if (!body?.ok) { this.local.ResourceError = this.tigoText(body?.error?.code || ''failed''); this.tick(); return; }
+                if (!body?.ok) { this.local.ResourceError = [''skill_review_required'',''skill_review_too_large''].includes(body?.error?.code) ? this.tigoSkillReviewText(body.error.code) : this.tigoText(body?.error?.code || ''failed''); this.tick(); return; }
                 if (!Array.isArray(body.items)) { this.local.ResourceError = this.tigoText(''failed''); this.tick(); return; }
                 this.local.ResourceCatalog = body;
                 this.local.ResourceLoadedKey = request.key;
                 this.filterTigoResources();
                 if (request.request.action === ''save'' || request.request.action === ''duplicate'' || request.request.action === ''delete'') { this.local.ResourceEditorOpen = false; this.local.ResourceEditorPending = false; this.local.ResourceNotice = this.tigoText(''saved''); }
-                if (request.request.action === ''select'') { this.local.ResourceNotice = this.tigoText(''selected''); }
+                if (request.request.action === ''reviewSkill'') { this.local.ResourceSkillReview = {...body.skillReview, conversation:request.conversation, identity:request.identity}; }
+                if (request.request.action === ''select'') { this.local.ResourceSkillReview = null; this.local.ResourceNotice = this.tigoText(''selected''); }
                 if (request.request.action === ''confirmProposal'') { this.local.ResourceNotice = this.tigoText(''proposalAdded''); }
                 if (request.request.action === ''rejectProposal'') { this.local.ResourceNotice = this.tigoText(''proposalRejected''); }
                 this.local.ResourceSecretValue = '''';
@@ -7653,9 +7654,29 @@ scriptContent:
             public toggleTigoResource(item: any) {
                 const selection = JSON.parse(JSON.stringify(this.local.ResourceCatalog?.selection || {skills:[],mcp:[]}));
                 const list = item.kind === ''skill'' ? selection.skills : selection.mcp; const index = list.indexOf(item.key);
+                if (item.kind === ''skill'' && (index < 0 || item.requiresReview)) { this.requestTigoResources(true,{action:''reviewSkill'',key:item.key}); return; }
                 if(item.requiresReview) { selection.reviewKey=item.key; this.requestTigoResources(true,{action:''select'',input:selection}); return; }
                 if(index >= 0) { list.splice(index,1); } else { list.push(item.key); }
                 this.requestTigoResources(true,{action:''select'',input:selection});
+            }
+            public isTigoSkillReviewCurrent() {
+                const review = this.local.ResourceSkillReview;
+                return !!review && review.conversation === String(this.local.Conversation || '''') && review.identity === String(this.getAgentContextUserId?.() || '''');
+            }
+            public cancelTigoSkillReview() { this.local.ResourceSkillReview = null; this.tick(); }
+            public confirmTigoSkillReview() {
+                if (!this.isTigoSkillReviewCurrent() || this.local.ResourceLoading) { return; }
+                const review = this.local.ResourceSkillReview;
+                const selection = JSON.parse(JSON.stringify(this.local.ResourceCatalog?.selection || {skills:[],mcp:[]}));
+                if (!selection.skills.includes(review.key)) { selection.skills.push(review.key); }
+                selection.reviewKey = review.key;
+                selection.reviewRevision = review.revision;
+                this.requestTigoResources(true,{action:''select'',input:selection});
+            }
+            public tigoSkillReviewText(key: string) {
+                const en = {title:''Review skill before enabling'',hint:''Review the scripts and their changes since your last approval. Any later change pauses this skill until you review it again.'',empty:''This skill contains no scripts.'',enable:''Enable this reviewed version'',added:''Added'',removed:''Removed'',modified:''Modified'',unchanged:''Unchanged'',cancel:''Cancel'',skill_review_required:''Review this skill before enabling it.'',skill_review_too_large:''The scripts are too large to review here. Reduce their size before enabling the skill.''};
+                const fr = {title:''Vérifier la skill avant de l’activer'',hint:''Vérifiez les scripts et leurs différences depuis votre dernière validation. Tout changement ultérieur suspend cette skill jusqu’à une nouvelle vérification.'',empty:''Cette skill ne contient aucun script.'',enable:''Activer cette version vérifiée'',added:''Ajouté'',removed:''Supprimé'',modified:''Modifié'',unchanged:''Inchangé'',cancel:''Annuler'',skill_review_required:''Vérifiez cette skill avant de l’activer.'',skill_review_too_large:''Les scripts sont trop volumineux pour être vérifiés ici. Réduisez leur taille avant d’activer la skill.''};
+                return (String(this.translate?.currentLang || ''en'').toLowerCase().startsWith(''fr'') ? fr : en)[key] || en[key] || key;
             }
             public useTigoPrompt(item: any) {
                 this.events.publish(''TigoPromptInsert'', {text:item.body});
@@ -27068,3 +27089,20 @@ title: Tigo
             }
           }
           '
+↓SkillActivationReview [ngx.components.UICustom-1794568281172]: 
+  htmlTemplate: <section *ngIf="isTigoSkillReviewCurrent()" class="tigo-skill-review-backdrop"><div class="tigo-skill-review" role="dialog" aria-modal="true" aria-labelledby="tigo-skill-review-title"><h2 id="tigo-skill-review-title">{{tigoSkillReviewText('title')}}</h2><p>{{tigoSkillReviewText('hint')}}</p><code>{{local.ResourceSkillReview.key}}</code><p *ngIf="!local.ResourceSkillReview.scripts?.length">{{tigoSkillReviewText('empty')}}</p><div *ngFor="let script of local.ResourceSkillReview.scripts" class="tigo-skill-review-file"><strong>{{script.path}}</strong><span>{{tigoSkillReviewText(script.status)}}</span><pre *ngIf="script.diff">{{script.diff}}</pre></div><p role="alert" *ngIf="local.ResourceError">{{local.ResourceError}}</p><div class="tigo-skill-review-actions"><button type="button" (click)="cancelTigoSkillReview()">{{tigoSkillReviewText('cancel')}}</button><button type="button" [disabled]="local.ResourceLoading" (click)="confirmTigoSkillReview()">{{tigoSkillReviewText('enable')}}</button></div></div></section>
+↓SkillActivationReviewStyle [ngx.components.UIStyle-1794568281726]: 
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.tigo-skill-review-backdrop { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.55); }
+          .tigo-skill-review { width: min(760px,100%); max-height: 85vh; overflow: auto; border-radius: 14px; padding: 20px; color: var(--ion-text-color,#e2e8f0); background: var(--ion-background-color,#0f172a); box-shadow: 0 12px 48px rgba(0,0,0,.3); }
+          .tigo-skill-review h2 { font-size: 20px; margin-top: 0; }
+          .tigo-skill-review > code { overflow-wrap: anywhere; }
+          .tigo-skill-review-file { margin: 16px 0; border: 1px solid var(--ion-color-medium,#64748b); border-radius: 8px; padding: 12px; }
+          .tigo-skill-review-file strong { overflow-wrap: anywhere; } .tigo-skill-review-file span { margin-left: 12px; }
+          .tigo-skill-review-file pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; padding: 10px; background: rgba(127,127,127,.12); }
+          .tigo-skill-review-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; position: sticky; bottom: -20px; padding: 12px 0; background: var(--ion-background-color,#0f172a); }
+          .tigo-skill-review-actions button { padding: 12px 16px; border-radius: 8px; color: var(--ion-text-color,#e2e8f0); background: var(--ion-color-light,#334155); border: 1px solid var(--ion-color-medium,#64748b); } .tigo-skill-review-actions button:last-child { background: var(--ion-color-primary,#0891b2); color: var(--ion-color-primary-contrast,#fff); } .tigo-skill-review-actions button:disabled { opacity: .5; }'
