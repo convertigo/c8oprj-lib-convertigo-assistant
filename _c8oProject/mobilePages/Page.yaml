@@ -4112,10 +4112,19 @@ scriptContent:
         		var fallback = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...") : this.t("Question_Placeholder", "Demandez comment construire quelque chose...");
         		var otherFallback = (this.isAgentBridgeMode && this.isAgentBridgeMode()) ? this.t("Question_Placeholder", "Demandez comment construire quelque chose...") : this.t("Agent_Question_Placeholder", "Demandez à l''agent d''intervenir sur le projet...");
         		var placeholder = "" + (this.local.QuestionPlaceholder == null ? "" : this.local.QuestionPlaceholder);
-        		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage() || placeholder === otherFallback) {
+        		if (!placeholder.trim().length || placeholder === this.getNoProjectSelectedMessage() || (placeholder !== fallback && this.isDefaultFooterPlaceholder(placeholder, otherFallback))) {
         			this.local.QuestionPlaceholder = fallback;
         		}
         	}
+        		isDefaultFooterPlaceholder(text, otherFallback) {
+        			// A question placeholder set before the translations or the agent mode were known (the French text of the
+        			// other mode, in an English panel) is a default too: it gives way to the one of the current mode and language.
+        			var defaults = [otherFallback, "Ask how to build something...", "Ask the agent to work on the project...",
+        				"Demandez comment construire quelque chose...", "Demandez à l''agent d''intervenir sur le projet...",
+        				"Chiedi come costruire qualcosa...", "Chiedi all''agente di intervenire sul progetto...",
+        				"Pregunta cómo construir algo...", "Pide al agente que intervenga en el proyecto..."];
+        			return defaults.indexOf("" + text) >= 0;
+        		}
         		refreshFooterLocale() {
         		if (!this.local) {
         			this.local = {};
