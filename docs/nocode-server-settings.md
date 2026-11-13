@@ -24,3 +24,9 @@ request checks to accommodate an internal URL.
 
 Verify the public scheme, hostname and port after ingress or endpoint changes.
 The same rules apply to implicit administrator preference saves.
+
+The same public URL is also the base used by `defaultBridgeUrl` and
+`defaultMcpEndpoint`. Switching it from an internal address to the public HTTPS
+address therefore also changes the Assistant-to-Bridge calls and the agents' MCP
+endpoint. Check routing, reachability and proxy settings from both the engine and
+its agent processes when changing it.
