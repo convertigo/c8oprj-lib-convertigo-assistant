@@ -40,6 +40,18 @@ test('presence-only settings stay passive and explicit refresh choices are prese
   assert.equal(settings({ runtimePresenceOnly: true, refreshModelCatalog: true }).refreshModelCatalog, true);
 });
 
+test('a panel start or a conversation creation keeps the Bridge catalog caches', () => {
+  // AgentCreateConversation forwards neither refreshModelCatalog nor runtimePresenceOnly: a refresh there would start a
+  // Vibe process, probe every gateway model's efforts and start the wrapper metadata process at each panel start and
+  // each new conversation.
+  const created = settings({ threadid: '', provider: '', includeSettings: '', targetProject: 'Demo', userId: 'studio' });
+  assert.equal(created.refreshModelCatalog, '');
+  assert.equal(settings({ skillProfile: 'nocode', userId: 'ann' }).refreshModelCatalog, '');
+  // the settings screen says what it wants
+  assert.equal(settings({ runtimePresenceOnly: false, refreshModelCatalog: true }).refreshModelCatalog, true);
+  assert.equal(settings({ runtimePresenceOnly: 'false' }).refreshModelCatalog, true);
+});
+
 test('settings preserve explicit homes and the viewer conversation scope', () => {
   const explicit = settings({ vibeHome: '/custom/home', vibeHomeScope: 'explicit' });
   assert.equal(explicit.vibeHome, '/custom/home');

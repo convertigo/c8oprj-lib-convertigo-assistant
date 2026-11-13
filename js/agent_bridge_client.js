@@ -7881,7 +7881,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       settingsTimeoutMs: trim(options.settingsTimeoutMs),
       checkUpdates: typeof options.checkUpdates === "undefined" ? "" : options.checkUpdates,
       refreshUpdateCheck: typeof options.refreshUpdateCheck === "undefined" ? "" : options.refreshUpdateCheck,
-      refreshModelCatalog: trim(options.refreshModelCatalog).length ? options.refreshModelCatalog : !boolValue(options.runtimePresenceOnly, false),
+      // A read that says it is full (runtimePresenceOnly false) refreshes the catalog unless it chose otherwise. A panel
+      // start or a conversation creation says neither: it keeps the Bridge's caches (a refresh starts a Vibe process,
+      // probes every gateway model's efforts and starts the wrapper metadata process).
+      refreshModelCatalog: trim(options.refreshModelCatalog).length ? options.refreshModelCatalog
+        : (trim(options.runtimePresenceOnly).length ? !boolValue(options.runtimePresenceOnly, false) : ""),
       updateCheckTimeoutMs: trim(options.updateCheckTimeoutMs),
       updateCheckCacheMs: trim(options.updateCheckCacheMs),
       runtimePresenceOnly: typeof options.runtimePresenceOnly === "undefined" ? "" : options.runtimePresenceOnly

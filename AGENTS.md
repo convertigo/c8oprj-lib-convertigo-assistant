@@ -769,6 +769,9 @@ rediscovering the same context.
 - Settings use providerHomeScopeForRun for Vibe, as installation/start do: user
   by default, conversation when a viewer is attached, explicit paths preserved.
   Do not read a shared-home catalog for an agent installed in a user home.
-- A full settings read refreshes the ACP catalog by default. Presence-only
-  startup stays passive; an explicit refresh choice is retained.
+- A settings read that says it is full (runtimePresenceOnly false) refreshes the
+  ACP catalog by default. Presence-only startup stays passive; an explicit refresh
+  choice is retained. A panel start or a conversation creation says neither and
+  keeps the Bridge's caches: a refresh starts a Vibe process, probes the gateway
+  models' efforts and starts the wrapper metadata process.
 - Run tests/assistant_settings_home.test.cjs with setup and panel-start tests.
