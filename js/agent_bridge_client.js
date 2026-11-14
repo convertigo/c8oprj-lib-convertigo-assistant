@@ -7736,6 +7736,26 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
+  // The agent process ended before its turn did (killed, crashed, closed): the text the turn showed so far is the agent's
+  // narration, not an answer. The panel ended such a turn as completed on "...then I read the capabilities" (Portage,
+  // 14/11, vibe-acp killed between two tool calls). The turn ends as interrupted, its text kept in its progress.
+  function endTurnOnLostAgent(state, bridgeState) {
+    finishTurnReasoning(state);
+    if (typeof flushVibeInterimAnswerToProgress === "function") {
+      flushVibeInterimAnswerToProgress(state);
+    }
+    state.status = "failed";
+    state.error = bridgeProcessLostMessage(state, bridgeState);
+    state.answer = state.error;
+    state.answerIsFinal = true;
+    state.lastStatusText = "";
+    if (state.answerTranscriptRunid !== state.runid) {
+      appendTranscript(state, "assistant", state.answer);
+      state.answerTranscriptRunid = state.runid;
+    }
+    collectFeedbackRuntimeError(state, "agent process ended before its turn");
+  }
+
   function bridgeProcessLostMessage(state, bridgeState) {
     var message = lang(state).bridgeProcessLost;
     var detail = trim(bridgeState && bridgeState.lastError);
@@ -10125,17 +10145,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             state.answerTranscriptRunid = state.runid;
           }
         } else if (type === "system/closed" && !isTerminalStatus(state.status)) {
-          finishTurnReasoning(state);
-          if (trim(state.answer).length) {
-            state.status = "completed";
-            state.answerIsFinal = true;
-            appendProgress(state, lang(state).closedAfterAnswer);
-          } else {
-            state.status = "failed";
-            state.error = lang(state).closedEarly;
-            appendProgress(state, state.error);
-            collectFeedbackRuntimeError(state, "agent process closed before answering");
-          }
+          // Closed before this run's turn/end, which every managed protocol sends at the end of a turn: an interruption,
+          // whatever text the turn showed.
+          endTurnOnLostAgent(state, events.state);
         }
       }
       state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
@@ -10143,19 +10155,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       syncSubagentRuns(state);
       var bridgeState = events.state || {};
       if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled" && !list.length && bridgeProcessGone(bridgeState)) {
-        if (trim(state.answer).length) {
-          state.status = "completed";
-          state.answerIsFinal = true;
-        } else if (keepRunAliveAfterBridgeReadFailure(state, lang(state).bridgeStateRecover)) {
+        // No turn/end was read for this run (it would have ended it): the process died during the turn.
+        if (keepRunAliveAfterBridgeReadFailure(state, lang(state).bridgeStateRecover)) {
           state.status = "in_progress";
         } else {
-          state.status = "failed";
-          state.error = bridgeProcessLostMessage(state, bridgeState);
-          state.answer = state.error;
-          state.answerIsFinal = true;
-          appendProgress(state, state.error);
-          appendTranscript(state, "assistant", state.answer);
-          state.answerTranscriptRunid = state.runid;
+          endTurnOnLostAgent(state, bridgeState);
         }
       }
       // The turn can end without this client reading its turn/end (page reloaded during the run,

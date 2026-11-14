@@ -199,9 +199,18 @@ function readFixture(stored, events) {
     appendProgress(state, text) { state.progressLog = (state.progressLog ? state.progressLog + '\n' : '') + text; },
     appendTranscript() {}, now: () => 1, readEarlyAgentCommands() {}, syncSubagentRuns() {}, markProgressEventsIdle() {},
     cancellationRequested: () => false, ingestFeedback() {}, completedFallbackAnswer: () => '', answerLooksIncomplete: () => false,
-    saveState: s => { store = clone(s); }, setStateBuffer() {}, responseForState: s => ({ status: s.status, explanation: s.answer || s.error || '' })
+    saveState: s => { store = clone(s); }, setStateBuffer() {}, responseForState: s => ({ status: s.status, explanation: s.answer || s.error || '' }),
+    finishTurnReasoning() {}, collectFeedbackRuntimeError() {},
+    flushVibeInterimAnswerToProgress(state) {
+      if (!String(state.answer || '').trim().length) return false;
+      state.progressLog = (state.progressLog ? state.progressLog + '\n' : '') + state.answer;
+      state.answer = '';
+      state.answerIsFinal = false;
+      return true;
+    }
   };
-  vm.runInNewContext(backendParts(['readResponseOf', 'bridgeProcessGone', 'keepRunAliveAfterBridgeReadFailure', 'bridgeProcessLostMessage', 'isTerminalStatus'],
+  vm.runInNewContext(backendParts(['readResponseOf', 'bridgeProcessGone', 'keepRunAliveAfterBridgeReadFailure', 'bridgeProcessLostMessage', 'isTerminalStatus',
+    'endTurnOnLostAgent'],
     ['MAX_TRANSIENT_READ_ERRORS']), sandbox);
   return { read: () => sandbox.readResponseOf({ threadid: 'agent-crm', runid: 'run-4' }), saved: () => store, max: sandbox.MAX_TRANSIENT_READ_ERRORS };
 }
@@ -261,4 +270,30 @@ test('an ended turn does not repeat its answer in its progress, phase or narrati
   assert.deepEqual(running, { log: lost, events: [], phase: lost });
   assert.match(client, /function responseForState\(state\) \{\n    var progressShown = progressWithoutAnswer\(state\);/);
   assert.match(client, /function setStateBuffer\(state\) \{\n    var progressShown = progressWithoutAnswer\(state\);/);
+});
+
+// Portage, dev Electron Studio (14/11): vibe-acp killed between two tool calls ended its turn as "completed" on its last
+// narration ("...then I read the capabilities"), with no notice: a turn that had text was taken for answered.
+test('an agent process that ends before its turn is an interruption, whatever text the turn showed', () => {
+  const narration = '...puis je lis les capacités et la liste des ressources MCP.';
+  // The process is gone between two reads.
+  const gone = readFixture(Object.assign(runningCrm(), { answer: narration, answerIsFinal: false }),
+    { ok: true, status: 'ok', events: [], nextCursor: 1505, state: { status: 'exited', alive: false, turnActive: true } });
+  const statuses = [];
+  for (let i = 0; i <= gone.max + 1 && !statuses.includes('failed'); i++) statuses.push(gone.read().status);
+  assert.equal(statuses.at(-1), 'failed', statuses.join(','));
+  assert.ok(!statuses.includes('completed'));
+  assert.equal(gone.saved().answer, texts.bridgeProcessLost);
+  assert.match(gone.saved().progressLog, /puis je lis les capacités/, 'the narration stays in the progress');
+  // The Bridge reports it closed in the events of the read.
+  const closed = readFixture(Object.assign(runningCrm(), { answer: narration, answerIsFinal: false }),
+    { ok: true, status: 'ok', events: [{ type: 'system/closed', data: { exitCode: 143 } }], nextCursor: 1506, state: { status: 'closed', alive: false } });
+  assert.equal(closed.read().status, 'failed');
+  assert.equal(closed.saved().answer, texts.bridgeProcessLost);
+  // A turn that ended before its process closed keeps its end.
+  const ended = readFixture(Object.assign(runningCrm(), { answer: 'Vous avez 2 applications.', answerIsFinal: false }),
+    { ok: true, status: 'ok', events: [{ type: 'turn/end', data: {} }, { type: 'system/closed', data: { exitCode: 0 } }], nextCursor: 1507,
+      state: { status: 'closed', alive: false } });
+  assert.equal(ended.read().status, 'completed');
+  assert.equal(ended.saved().answer, 'Vous avez 2 applications.');
 });
