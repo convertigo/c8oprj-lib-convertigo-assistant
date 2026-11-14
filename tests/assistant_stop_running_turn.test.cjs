@@ -231,3 +231,34 @@ test('a live agent with no new event keeps its turn and clears the failed reads'
   for (let i = 0; i < 10; i++) assert.equal(f.read().status, 'in_progress');
   assert.equal(f.saved().readErrors, 0);
 });
+
+// Portage, dev Electron Studio (14/11): once its vibe-acp process was killed, the panel showed "The task was interrupted..."
+// twice in a row: as the turn's answer and as the last line of its progress. A stop showed its notice twice the same way.
+test('an ended turn does not repeat its answer in its progress, phase or narrative events', () => {
+  const ast = ts.createSourceFile('bridge.js', client, ts.ScriptTarget.Latest, true);
+  const declared = {};
+  (function visit(node) {
+    if (ts.isFunctionDeclaration(node) && node.name) declared[node.name.text] = node.getText(ast);
+    ts.forEachChild(node, visit);
+  })(ast);
+  const code = ['trim', 'compactLine', 'isTerminalStatus', 'progressWithoutAnswer'].map(name => {
+    assert.ok(declared[name], name);
+    return declared[name];
+  }).join('\n');
+  const progressWithoutAnswer = vm.runInNewContext(code + '\nprogressWithoutAnswer');
+  const lost = texts.bridgeProcessLost;
+  const ended = clone(progressWithoutAnswer({ status: 'failed', answer: lost, error: lost, lastStatusText: lost,
+    progressLog: 'I am analysing the request.\n' + texts.bridgeStateRecover + '\n' + lost,
+    progressEvents: [{ type: 'narrative', text: texts.bridgeStateRecover }, { type: 'narrative', text: lost }, { type: 'tool', text: lost }] }));
+  assert.equal(ended.log, 'I am analysing the request.\n' + texts.bridgeStateRecover);
+  assert.deepEqual(ended.events, [{ type: 'narrative', text: texts.bridgeStateRecover }, { type: 'tool', text: lost }]);
+  assert.equal(ended.phase, '');
+  const stopped = clone(progressWithoutAnswer({ status: 'cancelled', answer: texts.closedEarly, progressLog: 'Reading.\n' + texts.closedEarly,
+    lastStatusText: texts.closedEarly, progressEvents: [] }));
+  assert.equal(stopped.log, 'Reading.');
+  // A running turn keeps everything.
+  const running = clone(progressWithoutAnswer({ status: 'in_progress', answer: lost, progressLog: lost, lastStatusText: lost, progressEvents: [] }));
+  assert.deepEqual(running, { log: lost, events: [], phase: lost });
+  assert.match(client, /function responseForState\(state\) \{\n    var progressShown = progressWithoutAnswer\(state\);/);
+  assert.match(client, /function setStateBuffer\(state\) \{\n    var progressShown = progressWithoutAnswer\(state\);/);
+});

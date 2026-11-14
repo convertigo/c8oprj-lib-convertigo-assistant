@@ -7058,12 +7058,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function setStateBuffer(state) {
+    var progressShown = progressWithoutAnswer(state);
     setBuffer(displayContent(state), state.status, {
       runid: state.runid || "",
       threadid: state.threadid || "",
-      phase: state.lastStatusText || "",
-      progress: state.progressLog || "",
-      progressEvents: state.progressEvents || [],
+      phase: progressShown.phase,
+      progress: progressShown.log,
+      progressEvents: progressShown.events,
       warnings: state.warnings || []
     });
   }
@@ -7639,10 +7640,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectId: state.projectId,
       primaryProject: state.primaryProject || state.projectId || "",
       projectNames: state.projectNames || [],
-      progress: state.progressLog || "",
-      progressEvents: state.progressEvents || [],
+      progress: progressWithoutAnswer(state).log,
+      progressEvents: progressWithoutAnswer(state).events,
       reasoningLive: liveReasoning(state),
-      phase: state.lastStatusText || "",
+      phase: progressWithoutAnswer(state).phase,
       warnings: state.warnings || [],
       plan: state.plan || null,
       usage: state.usage || null,
@@ -7675,16 +7676,40 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       threadid: state.threadid,
       status: state.status || "",
       runid: state.runid || "",
-      progress: state.progressLog || "",
-      progressEvents: state.progressEvents || [],
-      phase: state.lastStatusText || "",
+      progress: progressWithoutAnswer(state).log,
+      progressEvents: progressWithoutAnswer(state).events,
+      phase: progressWithoutAnswer(state).phase,
       warnings: state.warnings || [],
       state: publicState(state),
       messages: transcriptMessages(state, historyLimit)
     };
   }
 
+  // A turn that ends on a notice (a stop, a lost agent process, an agent closed early) gives it as its answer; the same
+  // text was also a line of its progress, so the panel showed it twice in a row under "still running" (13/11). An ended
+  // turn's progress leaves out what its answer says.
+  function progressWithoutAnswer(state) {
+    var log = String(state.progressLog || "");
+    var events = state.progressEvents || [];
+    var finalText = compactLine(state.answer || state.error || "");
+    var phase = String(state.lastStatusText || "");
+    if (!isTerminalStatus(state.status) || !finalText.length) {
+      return { log: log, events: events, phase: phase };
+    }
+    var sameAsAnswer = function (text) {
+      return compactLine(text) === finalText;
+    };
+    return {
+      phase: sameAsAnswer(phase) ? "" : phase,
+      log: log.split("\n").filter(function (line) { return !sameAsAnswer(line); }).join("\n"),
+      events: events.filter(function (e) {
+        return !(e && trim(e.type || "narrative") === "narrative" && sameAsAnswer(e.text || e.title || ""));
+      })
+    };
+  }
+
   function responseForState(state) {
+    var progressShown = progressWithoutAnswer(state);
     return {
       id: state.runid || state.threadid,
       object: "agent.run",
@@ -7698,8 +7723,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         type: "agent",
         threadid: state.threadid,
         explanation: state.answer || state.error || "",
-        progress: state.progressLog || "",
-        progressEvents: state.progressEvents || [],
+        progress: progressShown.log,
+        progressEvents: progressShown.events,
         reasoningLive: liveReasoning(state),
         formMutation: state.formMutation || null,
         setupRequired: state.setupRequired === true,
