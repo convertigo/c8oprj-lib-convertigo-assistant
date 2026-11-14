@@ -1,8 +1,9 @@
 /*
  * Requests the Convertigo MCP leaves for the page that hosts the Tigo panel: nocode-form-preview-capture of
  * lib_ConvertigoMCP (js/nocode_preview_capture.js) asks the open No Code Studio page for an image of a form's preview,
- * and a No Code write held while the user has "Confirmer avant de modifier" on (js/nocode_write_confirm.js there) waits
- * for the user's answer on a card of the panel ("write-confirm", answered through js/agent_write_confirm.js).
+ * and a write held while the user has "Confirmer avant de modifier" on (js/nocode_write_confirm.js there in No Code,
+ * js/studio_write_confirm.js in a Studio: scope "studio", its projects) waits for the user's answer on a card of the
+ * panel ("write-confirm", answered through js/agent_write_confirm.js).
  *
  * The MCP keeps them in context.server under lib_ConvertigoAssistant.hostRequests: a map of the Tigo conversations,
  * each one a map of its requests, one JSON string per request. readResponse hands the panel the pending requests of its
@@ -78,7 +79,8 @@ C8O.assistantHostRequests = C8O.assistantHostRequests || {};
       if (request.kind === "write-confirm" && (request.status === "pending" || request.status === "taken")) {
         var held = request.status === "pending" ? update(map, id, request, { status: "taken", takenAt: now }) : request;
         if (held) {
-          taken.push({ requestId: held.id, kind: held.kind, tool: held.tool, formId: held.formId, formName: held.formName, items: held.items || [], expiresAt: held.expiresAt });
+          taken.push({ requestId: held.id, kind: held.kind, tool: held.tool, formId: held.formId, formName: held.formName, items: held.items || [], expiresAt: held.expiresAt,
+            scope: held.scope || "nocode", project: held.project || "", projects: held.projects || [] });
         }
         continue;
       }

@@ -1,5 +1,5 @@
 accessibility: Hidden
-comment: '"Confirmer avant de modifier" of a No Code user (js/agent_write_confirm.js): reads (status) or sets (set, with enabled) the user''s choice, kept for them and published for the Convertigo MCP, answers a change waiting for confirmation (answer, with threadid, requestId and decision: allow, allow_turn or refuse), or closes the cards of a turn that ended (turn_end, with threadid). Always for the authenticated user, never one the page names.'
+comment: '"Confirmer avant de modifier" of a No Code user or of the Studio (js/agent_write_confirm.js): reads (status) or sets (set, with mode off, confirm or, in a Studio, readonly; or with enabled) the user''s choice, kept for them and published for the Convertigo MCP, answers a change waiting for confirmation (answer, with threadid, requestId and decision: allow, allow_turn or refuse), or closes the cards of a turn that ended (turn_end, with threadid). Always for the authenticated user, never one the page names; the Studio''s choice (user studio) from a WEB_ADMIN session only.'
 includeResponseElement: false
 responseTimeout: 30
 ↓Run [steps.SimpleStep-1793290000101]: 
@@ -8,6 +8,7 @@ responseTimeout: 30
     result = C8O.assistantAgentBridge.writeConfirm({
       action: typeof action === "undefined" ? "" : action,
       enabled: typeof enabled === "undefined" ? "" : enabled,
+      mode: typeof mode === "undefined" ? "" : mode,
       threadid: typeof threadid === "undefined" ? "" : threadid,
       requestId: typeof requestId === "undefined" ? "" : requestId,
       decision: typeof decision === "undefined" ? "" : decision,
@@ -32,6 +33,9 @@ responseTimeout: 30
 ↓enabled [variables.RequestableVariable-1793290000104]: 
   comment: For set, true to confirm each change, false to stop.
   description: For set, true to confirm each change, false to stop.
+↓mode [variables.RequestableVariable-1794560000101]: 
+  comment: For set, off, confirm (each change waits for a card) or readonly (every change refused, in a Studio only). Wins over enabled.
+  description: For set, off, confirm (each change waits for a card) or readonly (every change refused, in a Studio only). Wins over enabled.
 ↓threadid [variables.RequestableVariable-1793290000105]: 
   comment: For answer and turn_end, the Tigo conversation of the cards.
   description: For answer and turn_end, the Tigo conversation of the cards.

@@ -9641,6 +9641,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("- Project selection is optional in this surface. Do not require an Eclipse/Studio selected project before inspecting or explaining C8Oforms/no-code resources.");
     }
     promptParts.push("- Assistant conversation/thread id: " + (selectedThread.length ? selectedThread : "none"));
+    // The change mode of the Studio ("Confirmer avant de modifier", "Lecture seule"): the MCP enforces it, the line says it.
+    if (!isNoCodeSurface) {
+      try {
+        promptParts.push(writeConfirmModule().studioPromptLine(studioWriteConfirmMode(options)));
+      } catch (_ignoreChangeMode) {}
+    }
     var normalizedProvider = trim(options.provider).toLowerCase();
     var isVibeProvider = isVibeHarness(normalizedProvider);
     var promptMcpEndpoint = trim(options.mcpEndpoint);
@@ -10143,11 +10149,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     enrichViewerDebugOptions(options, state);
     collectFeedbackContextNames(state, options);
-    // A message starts a turn: the user's "Confirmer avant de modifier" is published for the MCP, and what the last turn
-    // left (its cards, its "allow all for this turn") is dropped. Never a reason not to send.
-    if (normalizeSkillProfile(state) === "nocode") {
+    // A message starts a turn: the user's "Confirmer avant de modifier" (in a Studio, or "Lecture seule") is published
+    // for the MCP, and what the last turn left (its cards, its "allow all for this turn") is dropped. Never a reason not
+    // to send.
+    if (normalizeSkillProfile(state) === "nocode" || trim(options.userId).toLowerCase() === "studio") {
       try {
         options.writeConfirmOn = writeConfirmModule().newTurn(state.threadid, options.userId, writeConfirmHost(options));
+        options.writeConfirmMode = writeConfirmModule().lastMode;
       } catch (_ignoreWriteConfirm) {}
     }
     // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
@@ -10623,9 +10631,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
-  // "Confirmer avant de modifier" of a No Code user (js/agent_write_confirm.js), through AgentWriteConfirm: status, set
-  // (enabled), answer (threadid, requestId, decision: allow, allow_turn or refuse) and turn_end (threadid). Always for the
-  // authenticated user, never the one the page names.
+  // "Confirmer avant de modifier" of a No Code user or of the Studio (js/agent_write_confirm.js), through
+  // AgentWriteConfirm: status, set (mode: off, confirm or, in a Studio, readonly; or enabled), answer (threadid,
+  // requestId, decision: allow, allow_turn or refuse) and turn_end (threadid). Always for the authenticated user, never
+  // the one the page names; the Studio's choice ("studio", one per engine) for a WEB_ADMIN session only.
   C8O.assistantAgentBridge.writeConfirm = function (options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
@@ -10635,11 +10644,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!trim(options.userId).length) {
       return { status: "error", error: { code: "unavailable", message: "No user to keep the choice for." } };
     }
+    var studio = writeConfirmStudioUser(options.userId);
+    if (studio && !isLocalStudio() && !callerIsWebAdmin()) {
+      return { status: "error", error: { code: "authentication_required", message: "The Studio's choice is changed from a WEB_ADMIN session only." } };
+    }
     var module = writeConfirmModule();
     var host = writeConfirmHost(options);
     var action = trim(options.action).toLowerCase() || "status";
     if (action === "set") {
-      return module.choose(options.userId, boolValue(options.enabled, false), host);
+      var mode = trim(options.mode).length ? module.modeOf(trim(options.mode)) : (boolValue(options.enabled, false) ? "confirm" : "off");
+      if (mode === "readonly" && !studio) {
+        return { status: "error", error: { code: "invalid_mode", message: "Read-only mode exists in the Studio only." } };
+      }
+      return module.choose(options.userId, mode, host);
     }
     if (action === "answer") {
       return module.answer({ conversationId: normalizeThreadId(options.threadid), userId: options.userId, requestId: options.requestId, decision: options.decision }, host);
@@ -10647,10 +10664,23 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (action === "turn_end") {
       return module.endTurn(normalizeThreadId(options.threadid), options.userId, host);
     }
-    var on = module.isOn(host);
-    module.publish(options.userId, on, host);
-    return { status: "ok", on: on };
+    var current = module.mode(host);
+    module.publish(options.userId, current, host);
+    return { status: "ok", on: current !== "off", mode: current, studio: studio };
   };
+
+  // The Studio panel names its user "studio" (getAgentContextUserId); a No Code user is never named so.
+  function writeConfirmStudioUser(userId) {
+    return trim(userId).toLowerCase() === "studio";
+  }
+
+  function callerIsWebAdmin() {
+    try {
+      return Engine.authenticatedSessionManager.hasRole(context.httpSession, Packages.com.twinsoft.convertigo.engine.AuthenticatedSessionManager.Role.WEB_ADMIN) === true;
+    } catch (_ignoreAdminRole) {
+      return false;
+    }
+  }
 
   function writeConfirmModule() {
     if (typeof C8O.assistantWriteConfirm === "undefined" || typeof C8O.assistantWriteConfirm.newTurn !== "function") {
@@ -10659,10 +10689,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return C8O.assistantWriteConfirm;
   }
 
-  // The user's choice lives beside their No Code MCP token: agents/nocode/users/<userKey>/write-confirm.json.
+  // The user's choice lives beside their No Code MCP token: agents/nocode/users/<userKey>/write-confirm.json; the
+  // Studio's in agents/assistant/write-confirm.json.
   function writeConfirmHost(options) {
     var root = new File(resolveWorkspaceRoot(options), "agents");
-    var file = new File(new File(new File(new File(root, "nocode"), "users"), safePathPart(normalizeUserKey(options.userId))), "write-confirm.json");
+    var studio = writeConfirmStudioUser(options.userId);
+    var file = studio ? new File(new File(root, "assistant"), "write-confirm.json")
+      : new File(new File(new File(new File(root, "nocode"), "users"), safePathPart(normalizeUserKey(options.userId))), "write-confirm.json");
     var host = hostRequestsHost();
     host.newMap = function () {
       return new java.util.concurrent.ConcurrentHashMap();
@@ -10670,8 +10703,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     host.readChoice = function () {
       return readJsonFile(file);
     };
-    // a user who never chose: the server's default (assistant.nocode.write_confirm)
+    // a No Code user who never chose: the server's default (assistant.nocode.write_confirm); the Studio: off
     host.defaultOn = function () {
+      if (studio) {
+        return false;
+      }
       var server = noCodeServerSettings(options);
       return server !== null && server.writeConfirm === "on";
     };
@@ -10679,6 +10715,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       writeJsonFile(file, record);
     };
     return host;
+  }
+
+  // The Studio's choice for the prompt: the one the message published (newTurn), else the one kept.
+  function studioWriteConfirmMode(options) {
+    if (options && typeof options.writeConfirmMode === "string" && options.writeConfirmMode.length) {
+      return options.writeConfirmMode;
+    }
+    try {
+      return writeConfirmModule().mode(writeConfirmHost({ userId: "studio", workspaceRoot: options && options.workspaceRoot }));
+    } catch (_ignoreChoice) {
+      return "off";
+    }
   }
 
   function noCodeWriteConfirmOn(options) {

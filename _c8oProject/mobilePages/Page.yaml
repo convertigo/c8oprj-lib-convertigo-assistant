@@ -6722,7 +6722,7 @@ scriptContent:
         				off: "Désactivé", on: "Activé", help: "Confirmer avant de modifier : chaque modification attend votre accord", hint: "on · off", saving: "Enregistrement…",
         				modeOn: "Confirmer avant de modifier : activé. Chaque modification de Tigo attendra votre accord, dès la prochaine.",
         				modeOff: "Confirmer avant de modifier : désactivé. Tigo modifie sans demander.", saveError: "Le réglage n’a pas pu être enregistré.",
-        				unknownCommand: "Commande inconnue : /confirmer, /confirmer on ou /confirmer off.", unavailable: "Confirmer avant de modifier n’existe que dans No Code Studio.",
+        				unknownCommand: "Commande inconnue : /confirmer, /confirmer on ou /confirmer off.", unavailable: "Confirmer avant de modifier n’est disponible qu’avec Tigo, dans le Studio ou dans No Code Studio.", readonlyUnavailable: "La lecture seule n’existe que dans le Studio.",
         				offerTitle: "Confirmer avant de modifier ?", offerText: "Pour que Tigo ne modifie rien sans votre accord, activez « Confirmer avant de modifier » : chaque modification attendra votre clic sur une carte comme celle-ci.",
         				offerOn: "Activer", offerNo: "Non merci", offerDeclined: "D’accord. L’interrupteur « Confirmer avant de modifier », au-dessus de la zone de saisie, reste disponible.",
         				labelSuffix: "(« {label} »)", inPage: "dans « {page} »", withTables: "avec les tables {tables}", anonymous: ", accessible sans connexion",
@@ -6746,7 +6746,7 @@ scriptContent:
         				off: "Off", on: "On", help: "Confirm before changing: each change waits for your agreement", hint: "on · off", saving: "Saving…",
         				modeOn: "Confirm before changing: on. Each change of Tigo will wait for your agreement, from the next one.",
         				modeOff: "Confirm before changing: off. Tigo changes without asking.", saveError: "The setting could not be saved.",
-        				unknownCommand: "Unknown command: /confirm, /confirm on or /confirm off.", unavailable: "Confirm before changing exists in No Code Studio only.",
+        				unknownCommand: "Unknown command: /confirm, /confirm on or /confirm off.", unavailable: "Confirm before changing is available with Tigo only, in the Studio or in No Code Studio.", readonlyUnavailable: "Read-only exists in the Studio only.",
         				offerTitle: "Confirm before changing?", offerText: "So that Tigo changes nothing without your agreement, turn on “Confirm before changing”: each change will wait for your click on a card like this one.",
         				offerOn: "Turn on", offerNo: "No thanks", offerDeclined: "All right. The switch “Confirm before changing”, above the input bar, stays available.",
         				labelSuffix: "(“{label}”)", inPage: "in “{page}”", withTables: "with the tables {tables}", anonymous: ", open without signing in",
@@ -6770,7 +6770,7 @@ scriptContent:
         				off: "Disattivato", on: "Attivo", help: "Conferma prima di modificare: ogni modifica attende il tuo consenso", hint: "on · off", saving: "Salvataggio…",
         				modeOn: "Conferma prima di modificare: attivo. Ogni modifica di Tigo attenderà il tuo consenso, a partire dalla prossima.",
         				modeOff: "Conferma prima di modificare: disattivato. Tigo modifica senza chiedere.", saveError: "Impossibile salvare l’impostazione.",
-        				unknownCommand: "Comando sconosciuto: /confirm, /confirm on o /confirm off.", unavailable: "Conferma prima di modificare esiste solo in No Code Studio.",
+        				unknownCommand: "Comando sconosciuto: /confirm, /confirm on o /confirm off.", unavailable: "Conferma prima di modificare è disponibile solo con Tigo, nello Studio o in No Code Studio.", readonlyUnavailable: "La sola lettura esiste solo nello Studio.",
         				offerTitle: "Confermare prima di modificare?", offerText: "Perché Tigo non modifichi nulla senza il tuo consenso, attiva «Conferma prima di modificare»: ogni modifica attenderà il tuo clic su una scheda come questa.",
         				offerOn: "Attiva", offerNo: "No, grazie", offerDeclined: "D’accordo. L’interruttore «Conferma prima di modificare», sopra la barra di inserimento, resta disponibile.",
         				labelSuffix: "(«{label}»)", inPage: "in «{page}»", withTables: "con le tabelle {tables}", anonymous: ", accessibile senza accesso",
@@ -6794,7 +6794,7 @@ scriptContent:
         				off: "Desactivado", on: "Activado", help: "Confirmar antes de modificar: cada cambio espera su acuerdo", hint: "on · off", saving: "Guardando…",
         				modeOn: "Confirmar antes de modificar: activado. Cada cambio de Tigo esperará su acuerdo, a partir del próximo.",
         				modeOff: "Confirmar antes de modificar: desactivado. Tigo modifica sin preguntar.", saveError: "No se ha podido guardar el ajuste.",
-        				unknownCommand: "Comando desconocido: /confirm, /confirm on o /confirm off.", unavailable: "Confirmar antes de modificar solo existe en No Code Studio.",
+        				unknownCommand: "Comando desconocido: /confirm, /confirm on o /confirm off.", unavailable: "Confirmar antes de modificar solo está disponible con Tigo, en el Studio o en No Code Studio.", readonlyUnavailable: "El modo solo lectura solo existe en el Studio.",
         				offerTitle: "¿Confirmar antes de modificar?", offerText: "Para que Tigo no modifique nada sin su acuerdo, active «Confirmar antes de modificar»: cada cambio esperará su clic en una tarjeta como esta.",
         				offerOn: "Activar", offerNo: "No, gracias", offerDeclined: "De acuerdo. El interruptor «Confirmar antes de modificar», encima de la barra de entrada, sigue disponible.",
         				labelSuffix: "(«{label}»)", inPage: "en «{page}»", withTables: "con las tablas {tables}", anonymous: ", accesible sin iniciar sesión",
@@ -6806,12 +6806,100 @@ scriptContent:
         				op_publish: "publicar «{target}»", op_create_form: "crear el formulario «{target}» ({pages} páginas, {fields} campos)", op_create_app: "crear la aplicación «{target}»",
         				op_apply_schema: "modificar la estructura de la base «{target}»", op_more: "y otros cambios", op_change: "un cambio", op_other: "{action} {target}" }
         		};
-        		var table = texts[this.agentUiLanguage()] || texts.en;
-        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        		// The Studio (its Tigo panel, js/studio_write_confirm.js of lib_ConvertigoMCP): the projects instead of the forms, and a
+        		// third choice, "Lecture seule". A key missing here is the one of No Code.
+        		var studio: any = {
+        			fr: { settingLabel: "Modifications des projets", settingText: "Confirmer : chaque modification d’un projet par Tigo (objets, pages, séquences, fichiers js, enregistrement, import, planification) attend votre accord sur une carte de la conversation. Lecture seule : Tigo lit, vérifie et propose, et toute modification est refusée. Les lectures et les vérifications ne demandent rien. Aussi : l’interrupteur au-dessus de la zone de saisie, ou /confirmer.",
+        				on: "Confirmer", readonly: "Lecture seule", help: "Confirmer avant de modifier, ou lecture seule", hint: "on · off · lecture",
+        				switchOnTitle: "Activé : chaque modification de vos projets par Tigo attend votre accord. Cliquez pour désactiver.",
+        				switchOffTitle: "Désactivé : Tigo modifie vos projets sans demander. Cliquez pour que chaque modification attende votre accord.",
+        				switchReadonlyLabel: "Lecture seule", switchReadonlyTitle: "Lecture seule : toute modification de Tigo est refusée. Cliquez pour désactiver.",
+        				modeOn: "Confirmer avant de modifier : activé. Chaque modification de vos projets par Tigo attendra votre accord, dès la prochaine.",
+        				modeReadonly: "Lecture seule : activée. Tigo ne modifie plus rien : il lit, vérifie et propose.", readonlyClosed: "Lecture seule activée : cette modification est refusée.",
+        				unknownCommand: "Commande inconnue : /confirmer, /confirmer on, /confirmer off ou /confirmer lecture.",
+        				offerText: "Pour que Tigo ne modifie rien sans votre accord, activez « Confirmer avant de modifier » : chaque modification attendra votre clic sur une carte comme celle-ci. Les réglages proposent aussi la lecture seule.",
+        				introProject: "Tigo veut modifier le projet « {project} » :", introProjects: "Tigo veut modifier les projets {projects} :", introStudio: "Tigo veut modifier :",
+        				op_tree_apply: "modifier {target}", op_tree_create: "créer dans {target}", op_tree_insert: "créer à côté de {target}", op_delete: "supprimer {target}", op_move: "déplacer {target} vers {to}", op_rename: "renommer {target} en « {name} »",
+        				op_create_sequence: "créer la séquence « {name} »", op_create_transactions: "créer des transactions SQL dans {target}", op_crud: "construire l’accès aux données",
+        				op_create_page: "créer la page « {name} »", op_apply_theme: "appliquer un thème", op_write_js: "écrire le fichier {name}", op_save: "enregistrer le projet {project}",
+        				op_delete_project: "supprimer le projet {project}", op_reload: "recharger {project} depuis ses fichiers (ses modifications non enregistrées sont perdues)", op_build: "construire l’application de {project} pour la production",
+        				op_import: "importer {name}", importTo: "pour {to}", op_schedule: "planifier « {name} »", op_unschedule: "retirer la planification « {name} »",
+        				op_write_stub: "écrire la réponse simulée de {target}", op_tags: "modifier les étiquettes de {project}", op_execute: "exécuter {target}",
+        				op_subagent: "confier à un sous-agent la construction dans {project} : « {detail} »", replaceDetail: "remplace ses enfants", carDetail: "et son archive .car", inProject: "dans {project}" },
+        			en: { settingLabel: "Project changes", settingText: "Confirm: each change Tigo makes to a project (objects, pages, sequences, js files, save, import, scheduling) waits for your agreement on a card of the conversation. Read-only: Tigo reads, checks and proposes, and every change is refused. Reads and checks ask nothing. Also: the switch above the input bar, or /confirm.",
+        				on: "Confirm", readonly: "Read-only", help: "Confirm before changing, or read-only", hint: "on · off · readonly",
+        				switchOnTitle: "On: each change Tigo makes to your projects waits for your agreement. Click to turn it off.",
+        				switchOffTitle: "Off: Tigo changes your projects without asking. Click to make each change wait for your agreement.",
+        				switchReadonlyLabel: "Read-only", switchReadonlyTitle: "Read-only: every change of Tigo is refused. Click to turn it off.",
+        				modeOn: "Confirm before changing: on. Each change Tigo makes to your projects will wait for your agreement, from the next one.",
+        				modeReadonly: "Read-only: on. Tigo changes nothing any more: it reads, checks and proposes.", readonlyClosed: "Read-only is on: this change is refused.",
+        				unknownCommand: "Unknown command: /confirm, /confirm on, /confirm off or /confirm readonly.",
+        				offerText: "So that Tigo changes nothing without your agreement, turn on “Confirm before changing”: each change will wait for your click on a card like this one. The settings also offer read-only.",
+        				introProject: "Tigo wants to change the project “{project}”:", introProjects: "Tigo wants to change the projects {projects}:", introStudio: "Tigo wants to change:",
+        				op_tree_apply: "change {target}", op_tree_create: "create in {target}", op_tree_insert: "create next to {target}", op_delete: "delete {target}", op_move: "move {target} to {to}", op_rename: "rename {target} to “{name}”",
+        				op_create_sequence: "create the sequence “{name}”", op_create_transactions: "create SQL transactions in {target}", op_crud: "build the data access",
+        				op_create_page: "create the page “{name}”", op_apply_theme: "apply a theme", op_write_js: "write the file {name}", op_save: "save the project {project}",
+        				op_delete_project: "delete the project {project}", op_reload: "reload {project} from its files (its unsaved changes are lost)", op_build: "build the application of {project} for production",
+        				op_import: "import {name}", importTo: "for {to}", op_schedule: "schedule “{name}”", op_unschedule: "remove the schedule “{name}”",
+        				op_write_stub: "write the stub response of {target}", op_tags: "change the tags of {project}", op_execute: "run {target}",
+        				op_subagent: "hand the building in {project} to a sub-agent: “{detail}”", replaceDetail: "replaces its children", carDetail: "and its .car archive", inProject: "in {project}" },
+        			it: { settingLabel: "Modifiche dei progetti", settingText: "Conferma: ogni modifica di un progetto da parte di Tigo (oggetti, pagine, sequenze, file js, salvataggio, importazione, pianificazione) attende il tuo consenso su una scheda della conversazione. Sola lettura: Tigo legge, verifica e propone, e ogni modifica è rifiutata. Letture e verifiche non chiedono nulla. Anche: l’interruttore sopra la barra di inserimento, o /confirm.",
+        				on: "Conferma", readonly: "Sola lettura", help: "Conferma prima di modificare, o sola lettura", hint: "on · off · readonly",
+        				switchOnTitle: "Attivo: ogni modifica dei tuoi progetti da parte di Tigo attende il tuo consenso. Clicca per disattivare.",
+        				switchOffTitle: "Disattivato: Tigo modifica i tuoi progetti senza chiedere. Clicca perché ogni modifica attenda il tuo consenso.",
+        				switchReadonlyLabel: "Sola lettura", switchReadonlyTitle: "Sola lettura: ogni modifica di Tigo è rifiutata. Clicca per disattivare.",
+        				modeOn: "Conferma prima di modificare: attivo. Ogni modifica dei tuoi progetti da parte di Tigo attenderà il tuo consenso, a partire dalla prossima.",
+        				modeReadonly: "Sola lettura: attiva. Tigo non modifica più nulla: legge, verifica e propone.", readonlyClosed: "Sola lettura attiva: questa modifica è rifiutata.",
+        				unknownCommand: "Comando sconosciuto: /confirm, /confirm on, /confirm off o /confirm readonly.",
+        				offerText: "Perché Tigo non modifichi nulla senza il tuo consenso, attiva «Conferma prima di modificare»: ogni modifica attenderà il tuo clic su una scheda come questa. Le impostazioni offrono anche la sola lettura.",
+        				introProject: "Tigo vuole modificare il progetto «{project}»:", introProjects: "Tigo vuole modificare i progetti {projects}:", introStudio: "Tigo vuole modificare:",
+        				op_tree_apply: "modificare {target}", op_tree_create: "creare in {target}", op_tree_insert: "creare accanto a {target}", op_delete: "eliminare {target}", op_move: "spostare {target} in {to}", op_rename: "rinominare {target} in «{name}»",
+        				op_create_sequence: "creare la sequenza «{name}»", op_create_transactions: "creare transazioni SQL in {target}", op_crud: "costruire l’accesso ai dati",
+        				op_create_page: "creare la pagina «{name}»", op_apply_theme: "applicare un tema", op_write_js: "scrivere il file {name}", op_save: "salvare il progetto {project}",
+        				op_delete_project: "eliminare il progetto {project}", op_reload: "ricaricare {project} dai suoi file (le modifiche non salvate vanno perse)", op_build: "compilare l’applicazione di {project} per la produzione",
+        				op_import: "importare {name}", importTo: "per {to}", op_schedule: "pianificare «{name}»", op_unschedule: "rimuovere la pianificazione «{name}»",
+        				op_write_stub: "scrivere la risposta simulata di {target}", op_tags: "modificare le etichette di {project}", op_execute: "eseguire {target}",
+        				op_subagent: "affidare a un sotto-agente la costruzione in {project}: «{detail}»", replaceDetail: "sostituisce i suoi figli", carDetail: "e il suo archivio .car", inProject: "in {project}" },
+        			es: { settingLabel: "Cambios de los proyectos", settingText: "Confirmar: cada cambio de un proyecto por Tigo (objetos, páginas, secuencias, archivos js, guardado, importación, planificación) espera su acuerdo en una tarjeta de la conversación. Solo lectura: Tigo lee, comprueba y propone, y todo cambio se rechaza. Las lecturas y las comprobaciones no piden nada. También: el interruptor encima de la barra de entrada, o /confirm.",
+        				on: "Confirmar", readonly: "Solo lectura", help: "Confirmar antes de modificar, o solo lectura", hint: "on · off · readonly",
+        				switchOnTitle: "Activado: cada cambio de sus proyectos por Tigo espera su acuerdo. Haga clic para desactivarlo.",
+        				switchOffTitle: "Desactivado: Tigo modifica sus proyectos sin preguntar. Haga clic para que cada cambio espere su acuerdo.",
+        				switchReadonlyLabel: "Solo lectura", switchReadonlyTitle: "Solo lectura: todo cambio de Tigo se rechaza. Haga clic para desactivarlo.",
+        				modeOn: "Confirmar antes de modificar: activado. Cada cambio de sus proyectos por Tigo esperará su acuerdo, a partir del próximo.",
+        				modeReadonly: "Solo lectura: activada. Tigo ya no modifica nada: lee, comprueba y propone.", readonlyClosed: "Solo lectura activada: este cambio se rechaza.",
+        				unknownCommand: "Comando desconocido: /confirm, /confirm on, /confirm off o /confirm readonly.",
+        				offerText: "Para que Tigo no modifique nada sin su acuerdo, active «Confirmar antes de modificar»: cada cambio esperará su clic en una tarjeta como esta. Los ajustes también ofrecen el modo solo lectura.",
+        				introProject: "Tigo quiere modificar el proyecto «{project}»:", introProjects: "Tigo quiere modificar los proyectos {projects}:", introStudio: "Tigo quiere modificar:",
+        				op_tree_apply: "modificar {target}", op_tree_create: "crear en {target}", op_tree_insert: "crear junto a {target}", op_delete: "eliminar {target}", op_move: "mover {target} a {to}", op_rename: "renombrar {target} a «{name}»",
+        				op_create_sequence: "crear la secuencia «{name}»", op_create_transactions: "crear transacciones SQL en {target}", op_crud: "construir el acceso a los datos",
+        				op_create_page: "crear la página «{name}»", op_apply_theme: "aplicar un tema", op_write_js: "escribir el archivo {name}", op_save: "guardar el proyecto {project}",
+        				op_delete_project: "eliminar el proyecto {project}", op_reload: "recargar {project} desde sus archivos (sus cambios no guardados se pierden)", op_build: "compilar la aplicación de {project} para producción",
+        				op_import: "importar {name}", importTo: "para {to}", op_schedule: "planificar «{name}»", op_unschedule: "quitar la planificación «{name}»",
+        				op_write_stub: "escribir la respuesta simulada de {target}", op_tags: "modificar las etiquetas de {project}", op_execute: "ejecutar {target}",
+        				op_subagent: "confiar a un subagente la construcción en {project}: «{detail}»", replaceDetail: "sustituye sus hijos", carDetail: "y su archivo .car", inProject: "en {project}" }
+        		};
+        		var language = this.agentUiLanguage();
+        		if (this.writeConfirmStudio()) {
+        			var studioTable = studio[language] || studio.en;
+        			if (studioTable[key] != null) {
+        				return studioTable[key];
+        			}
+        		}
+        		var table = texts[language] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : (studio.en[key] != null ? studio.en[key] : key));
         	}
         	public writeConfirmAvailable() {
-        		// No Code only: the MCP holds the writes of No Code tokens.
-        		return !!(this.isEmbeddedNoCodeAgent && this.isEmbeddedNoCodeAgent());
+        		// No Code (the MCP holds the writes of No Code tokens) and the Tigo panel of a Studio (those of the managed tokens).
+        		return !!((this.isEmbeddedNoCodeAgent && this.isEmbeddedNoCodeAgent()) || this.writeConfirmStudio());
+        	}
+        	public writeConfirmStudio() {
+        		// The Tigo panel of a Studio (Eclipse, web or Electron): its user is "studio", and it offers "Lecture seule" too.
+        		try {
+        			return !(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) && !!(this.isAgentBridgeOperational && this.isAgentBridgeOperational())
+        				&& this.writeConfirmUserId() === "studio";
+        		} catch (e) {
+        			return false;
+        		}
         	}
         	public writeConfirmUserId() {
         		return this.getAgentContextUserId ? this.getAgentContextUserId() : "";
@@ -6836,7 +6924,7 @@ scriptContent:
         					var result = this.writeConfirmResult(response);
         					self.writeConfirmLoading = false;
         					if (this.local.WriteConfirm === undefined) {
-        						this.local.WriteConfirm = result && result.status === "ok" ? { on: result.on === true } : null;
+        						this.local.WriteConfirm = result && result.status === "ok" ? this.writeConfirmState(result) : null;
         					}
         					this.tick();
         				}).catch(() => {
@@ -6850,25 +6938,56 @@ scriptContent:
         		}
         		return !!(this.local.WriteConfirm && this.local.WriteConfirm.on === true);
         	}
+        	public writeConfirmState(result) {
+        		// {on, mode} of an AgentWriteConfirm answer: mode off, confirm or readonly (a server older than the Studio modes says on only).
+        		var mode = "" + ((result && result.mode) || "");
+        		if (mode !== "off" && mode !== "confirm" && mode !== "readonly") {
+        			mode = result && result.on === true ? "confirm" : "off";
+        		}
+        		return { on: mode !== "off", mode: mode };
+        	}
+        	public writeConfirmChoice() {
+        		// The choice the settings show: off, on (confirm) or readonly.
+        		if (!this.writeConfirmOn()) {
+        			return "off";
+        		}
+        		return this.local && this.local.WriteConfirm && this.local.WriteConfirm.mode === "readonly" ? "readonly" : "on";
+        	}
         	public writeConfirmChoices() {
-        		// A stable list: the template iterates over it at every change detection.
+        		// A stable list: the template iterates over it at every change detection. The Studio adds "Lecture seule".
         		var self: any = this;
+        		if (this.writeConfirmStudio()) {
+        			return self.writeConfirmStudioChoicesList || (self.writeConfirmStudioChoicesList = ["off", "on", "readonly"]);
+        		}
         		return self.writeConfirmChoicesList || (self.writeConfirmChoicesList = ["off", "on"]);
         	}
+        	public writeConfirmSwitchLabel() {
+        		return this.agentConfirmText(this.writeConfirmChoice() === "readonly" ? "switchReadonlyLabel" : "switchLabel");
+        	}
+        	public writeConfirmSwitchTitle() {
+        		var choice = this.writeConfirmChoice();
+        		return this.agentConfirmText(choice === "readonly" ? "switchReadonlyTitle" : (choice === "on" ? "switchOnTitle" : "switchOffTitle"));
+        	}
         	public toggleWriteConfirm() {
-        		this.setWriteConfirm(!this.writeConfirmOn(), null);
+        		// The switch above the input bar: off to on (confirm); on or read-only to off.
+        		this.setWriteConfirmMode(this.writeConfirmOn() ? "off" : "on", null);
         	}
         	public setWriteConfirm(on, card) {
+        		this.setWriteConfirmMode(on === true ? "on" : "off", card);
+        	}
+        	public setWriteConfirmMode(choice, card) {
         		// Takes effect at the agent''s next write, also in the middle of a turn. Off answers no open card: it waits for the user.
+        		// Read-only (the Studio) refuses the open cards at once.
         		var self: any = this;
         		var t = (key: any) => this.agentConfirmText(key);
-        		on = on === true;
+        		var mode = choice === "readonly" ? "readonly" : (choice === "on" || choice === "confirm" || choice === true ? "confirm" : "off");
+        		var on = mode !== "off";
         		if (!this.local || self.writeConfirmSaving) {
         			return;
         		}
         		self.writeConfirmSaving = true;
         		var previous = this.local.WriteConfirm;
-        		this.local.WriteConfirm = { on: on };
+        		this.local.WriteConfirm = { on: on, mode: mode };
         		var failed = () => {
         			self.writeConfirmSaving = false;
         			this.local.WriteConfirm = previous;
@@ -6880,21 +6999,24 @@ scriptContent:
         		};
         		this.tick();
         		try {
-        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "set", enabled: on ? "true" : "false", userId: this.writeConfirmUserId() }).async().then((response: any) => {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentWriteConfirm", { action: "set", mode: mode, enabled: on ? "true" : "false", userId: this.writeConfirmUserId() }).async().then((response: any) => {
         				var result = this.writeConfirmResult(response);
         				if (!result || result.status !== "ok") {
         					failed();
         					return;
         				}
         				self.writeConfirmSaving = false;
-        				this.local.WriteConfirm = { on: result.on === true };
+        				this.local.WriteConfirm = this.writeConfirmState(result);
+        				var saved = this.local.WriteConfirm.mode;
         				if (card) {
         					card.state = "ready";
         					card.actions = [];
-        					card.message = t(result.on === true ? "modeOn" : "modeOff");
+        					card.message = t(saved === "readonly" ? "modeReadonly" : (saved === "confirm" ? "modeOn" : "modeOff"));
         				}
-        				if (result.on !== true) {
+        				if (saved === "off") {
         					this.noteOpenWriteConfirmCards();
+        				} else if (saved === "readonly") {
+        					this.closeWriteConfirmCardsReadonly();
         				}
         				this.tick();
         			}).catch(() => failed());
@@ -6913,6 +7035,18 @@ scriptContent:
         			}
         		}
         	}
+        	public closeWriteConfirmCardsReadonly() {
+        		// Read-only refuses the changes that wait: the MCP answers them refused, their cards lose their buttons.
+        		var list = (this.local && this.local.Messages) || [];
+        		for (var i = 0; i < list.length; i++) {
+        			var card = list[i];
+        			if (card && card.type === "feedback" && card.variant === "confirm" && card.actions && card.actions.length) {
+        				card.actions = [];
+        				card.busy = false;
+        				card.message = card.summary + "\n\n" + this.agentConfirmText("readonlyClosed");
+        			}
+        		}
+        	}
         	public writeConfirmCommand(text) {
         		// /confirmer and /confirm, with on or off (on without a word): never sent to the agent.
         		var match = /^\/(confirmer|confirm)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
@@ -6920,9 +7054,10 @@ scriptContent:
         			return false;
         		}
         		var arg = ("" + (match[2] || "")).toLowerCase();
-        		var choices: any = { "": true, on: true, oui: true, yes: true, si: true, "sí": true, activer: true, enable: true, attiva: true, activar: true,
-        			off: false, non: false, no: false, desactiver: false, "désactiver": false, disable: false, disattiva: false, desactivar: false };
-        		var card: any = this.feedbackCard("confirm-mode", this.agentConfirmText("switchLabel"), "", []);
+        		var choices: any = { "": "on", on: "on", oui: "on", yes: "on", si: "on", "sí": "on", activer: "on", enable: "on", attiva: "on", activar: "on", confirm: "on", confirmer: "on",
+        			off: "off", non: "off", no: "off", desactiver: "off", "désactiver": "off", disable: "off", disattiva: "off", desactivar: "off",
+        			readonly: "readonly", "read-only": "readonly", lecture: "readonly", "lecture-seule": "readonly", lettura: "readonly", "sola-lettura": "readonly", lectura: "readonly", "solo-lectura": "readonly" };
+        		var card: any = this.feedbackCard("confirm-mode", this.agentConfirmText(this.writeConfirmStudio() ? "settingLabel" : "switchLabel"), "", []);
         		this.local.Messages = this.local.Messages || [];
         		this.local.Messages.push(card);
         		if (!this.writeConfirmAvailable()) {
@@ -6931,9 +7066,12 @@ scriptContent:
         		} else if (!Object.prototype.hasOwnProperty.call(choices, arg)) {
         			card.state = "error";
         			card.message = this.agentConfirmText("unknownCommand");
+        		} else if (choices[arg] === "readonly" && !this.writeConfirmStudio()) {
+        			card.state = "error";
+        			card.message = this.agentConfirmText("readonlyUnavailable");
         		} else {
         			card.message = this.agentConfirmText("saving");
-        			this.setWriteConfirm(choices[arg], card);
+        			this.setWriteConfirmMode(choices[arg], card);
         		}
         		this.tick();
         		this.scrollChatBottom(0, true);
@@ -6998,6 +7136,18 @@ scriptContent:
         	}
         	public writeConfirmSummary(request) {
         		var t = (key: any) => this.agentConfirmText(key);
+        		if (request && request.scope === "studio") {
+        			// A Studio change: the projects it changes, then each change (an object by its QName, a page, a file...).
+        			var projects = [].concat(request.projects || []).map((p: any) => ("" + (p == null ? "" : p)).trim()).filter((p: any) => p.length);
+        			var intro = projects.length > 1 ? t("introProjects").replace("{projects}", projects.join(", "))
+        				: (projects.length ? t("introProject").replace("{project}", projects[0]) : t("introStudio"));
+        			var studioLines = [intro];
+        			var studioItems = request.items || [];
+        			for (var s = 0; s < studioItems.length; s++) {
+        				studioLines.push("• " + this.writeConfirmItemText(studioItems[s] || {}, projects.length > 1));
+        			}
+        			return studioLines.join("\n");
+        		}
         		var name = this.normalizeAgentHostContextValue(request.formName) || this.normalizeAgentHostContextValue(request.formId);
         		var tool = "" + (request.tool || "");
         		var intro = /create$/.test(tool) ? t("introCreate") : (/schema/.test(tool) ? t("introBase") : t("introForm"));
@@ -7008,15 +7158,38 @@ scriptContent:
         		}
         		return lines.join("\n");
         	}
-        	public writeConfirmItemText(item) {
-        		// One operation of the change, as the MCP describes it: an action and the names the user knows.
+        	public writeConfirmItemText(item, withProject?) {
+        		// One operation of the change, as the MCP describes it: an action and the names the user knows. A Studio change names
+        		// the object by its QName (target), what it creates (name, names), where it goes (to) and its project.
         		var t = (key: any) => this.agentConfirmText(key);
         		var value = (text: any) => ("" + (text == null ? "" : text)).trim();
         		var action = value(item.action);
         		var template = t("op_" + action);
         		var text = template === "op_" + action ? t("op_other").replace("{action}", action.replace(/_/g, " ")) : template;
         		text = text.replace("{target}", value(item.target)).replace("{flow}", value(item.flow))
+        			.replace("{name}", value(item.name)).replace("{to}", value(item.to)).replace("{project}", value(item.project)).replace("{detail}", value(item.detail))
         			.replace("{pages}", "" + (item.pages || 0)).replace("{fields}", "" + (item.fields || 0)).replace(/\s+$/, "");
+        		if (action === "change" && value(item.target).length && template.indexOf("{target}") < 0) {
+        			text += " (" + value(item.target) + ")";
+        		}
+        		if (item.names && item.names.length && action !== "update_field" && !item.tables) {
+        			text += " : " + item.names.join(", ");
+        		}
+        		if (action === "import" && value(item.to).length) {
+        			text += " " + t("importTo").replace("{to}", value(item.to));
+        		}
+        		if ((action === "schedule" || action === "tags" || action === "move") && value(item.detail).length) {
+        			text += " (" + value(item.detail) + ")";
+        		}
+        		if (/^tree_/.test(action) && value(item.detail) === "replace") {
+        			text += " (" + t("replaceDetail") + ")";
+        		}
+        		if (action === "delete_project" && value(item.detail) === "car") {
+        			text += " " + t("carDetail");
+        		}
+        		if (withProject === true && value(item.project).length && text.indexOf(value(item.project)) < 0) {
+        			text += " " + t("inProject").replace("{project}", value(item.project));
+        		}
         		if (value(item.label).length) {
         			text += " " + t("labelSuffix").replace("{label}", value(item.label));
         		}
@@ -11579,7 +11752,7 @@ title: Tigo
                                 attrValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:''agent-choice-button'' + ((this.writeConfirmOn() ? ''on'' : ''off'') === choice ? '' active'' : '''')'
+                                    - MobileSmartSourceType: 'script:''agent-choice-button'' + (this.writeConfirmChoice() === choice ? '' active'' : '''')'
                               ↓Text [ngx.components.UIText-1793290000269]: 
                                 textValue: 
                                   - xmlizable: 
@@ -11592,7 +11765,7 @@ title: Tigo
                                       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                                       - com.twinsoft.convertigo.beans.common.FormatedContent: 
                                         →: |
-                                          		page.setWriteConfirm(props.stack.root.scope.choice === 'on', null);
+                                          		page.setWriteConfirmMode(props.stack.root.scope.choice, null);
                                           		resolve();
                       ↓ServerPrefsSettings [ngx.components.UIDynamicElement-1793876639658]: 
                         beanData: '{"ionBean":"DivTag"}'
@@ -22076,7 +22249,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:''agent-confirm-switch'' + (this.writeConfirmOn() ? '' is-on'' : '''')'
+              - MobileSmartSourceType: 'script:''agent-confirm-switch'' + (this.writeConfirmOn() ? '' is-on'' : '''') + (this.writeConfirmChoice() === ''readonly'' ? '' is-readonly'' : '''')'
         ↓Type [ngx.components.UIAttribute-1793290000211]: 
           attrName: type
           attrValue: 
@@ -22100,7 +22273,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:this.agentConfirmText(this.writeConfirmOn() ? ''switchOnTitle'' : ''switchOffTitle'')'
+              - MobileSmartSourceType: script:this.writeConfirmSwitchTitle()
         ↓Track [ngx.components.UIDynamicElement-1793290000219]: 
           beanData: '{"ionBean":"DivTag"}'
           tagName: span
@@ -22123,7 +22296,7 @@ title: Tigo
             textValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: script:this.agentConfirmText('switchLabel')
+                - MobileSmartSourceType: script:this.writeConfirmSwitchLabel()
         ↓Event [ngx.components.UIControlEvent-1793290000229]: 
           ↓Toggle [ngx.components.UICustomAction-1793290000231]: 
             actionValue: 
@@ -26957,6 +27130,7 @@ title: Tigo
           .agent-confirm-switch.is-on { color: var(--modern-text, #0f172a); font-weight: 600; }
           .agent-confirm-switch.is-on .agent-confirm-track { background: var(--modern-cyan, #06b6d4); }
           .agent-confirm-switch.is-on .agent-confirm-track::after { transform: translateX(12px); }
+          .agent-confirm-switch.is-readonly .agent-confirm-track { background: var(--modern-amber, #f59e0b); }
           .agent-feedback-card.is-confirm { border-color: color-mix(in srgb, #d97706 55%, transparent 45%); }
           .agent-feedback-card.is-confirm .agent-metrics-card-message, .agent-feedback-card.is-confirm-mode .agent-metrics-card-message { white-space: pre-line; }
           /* Long texts of the side column wrap or shorten inside their card: the column never scrolls sideways. */

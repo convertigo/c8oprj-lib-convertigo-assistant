@@ -194,7 +194,7 @@ test('the entry points apply the server settings right after the caller, the con
     assert.match(body.slice(0, 400), new RegExp('options = withCallerUserId\\([^\\n]+\\);\\n    options = withNoCodeServerSettings\\(options' + (name === 'settings' ? ', true' : '') + '\\);'), name);
   }
   assert.match(source, /return applyNoCodeServerDefaults\(options, settings\);/);
-  assert.match(source, /host\.defaultOn = function \(\) \{\n\s+var server = noCodeServerSettings\(options\);\n\s+return server !== null && server\.writeConfirm === "on";/);
+  assert.match(source, /host\.defaultOn = function \(\) \{\n\s+if \(studio\) \{\n\s+return false;\n\s+\}\n\s+var server = noCodeServerSettings\(options\);\n\s+return server !== null && server\.writeConfirm === "on";/, 'the No Code default, never the Studio\'s');
   const sandbox = { C8O: {} };
   vm.runInNewContext(read('js/agent_write_confirm.js'), sandbox);
   const isOn = (choice, defaultOn) => sandbox.C8O.assistantWriteConfirm.isOn({ readChoice: () => choice, defaultOn: () => defaultOn });

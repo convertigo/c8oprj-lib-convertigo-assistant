@@ -199,6 +199,17 @@ rediscovering the same context.
   such as "ne modifie rien sans mon accord" while it is off offers it once per
   conversation. The prompt's No Code block says whether it is on. Texts in
   `agentConfirmText` (fr, en, it, es). Cover with `node --test tests/nocode-write-confirm.test.cjs`.
+- The Studio (Eclipse 8.4, web and Electron 8.5) has the same choice with a third value:
+  "Modifications des projets" is off, Confirmer (each write of a Tigo agent, held by
+  lib_ConvertigoMCP `js/studio_write_confirm.js` for the managed tokens, waits for a card)
+  or Lecture seule (every write refused, the agent told why). The Studio panel's user is
+  `studio` (one choice per engine, `agents/assistant/write-confirm.json`, published as
+  `user:studio` {on, mode}); its cards have `scope: "studio"`, the projects and the items
+  (action, project, target QName, name, names, to, detail), worded by `writeConfirmItemText`
+  with the Studio texts of `agentConfirmText`. Read-only is refused for a No Code user; the
+  Studio's choice is changed from a WEB_ADMIN session only. `/confirmer lecture` (or
+  `/confirm readonly`) sets read-only; the switch above the input bar turns it off. The
+  Studio prompt says the mode ("Change mode"). Cover with `node --test tests/studio-write-confirm.test.cjs`.
 - Embedded C8Oforms startup (`embedMode=c8oforms` and the `nocode` profile) must
   query server agent settings and conversations without waiting for Studio's
   local-stack capability flags. Keep the Studio capability checks unchanged.

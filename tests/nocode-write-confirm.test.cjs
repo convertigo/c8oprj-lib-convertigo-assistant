@@ -56,8 +56,8 @@ test('the choice is off until the user turns it on; it is kept for them and publ
   const w = serverWorld();
   assert.equal(confirm.isOn(w.host), false);
   assert.equal(plain(confirm.choose('google:42:GregoryV@convertigo.com', true, w.host)).on, true);
-  assert.deepEqual(w.files.choice, { schema: 'tigo-write-confirm/1', on: true, updatedAt: 1793000000000 });
-  assert.deepEqual(w.choice('gregoryv@convertigo.com'), { on: true, at: 1793000000000 }, 'the owner the MCP names, in lower case');
+  assert.deepEqual(w.files.choice, { schema: 'tigo-write-confirm/1', on: true, mode: 'confirm', updatedAt: 1793000000000 });
+  assert.deepEqual(w.choice('gregoryv@convertigo.com'), { on: true, mode: 'confirm', at: 1793000000000 }, 'the owner the MCP names, in lower case; on is what the No Code MCP reads');
   confirm.choose('gregoryv@convertigo.com', false, w.host);
   assert.equal(w.choice('gregoryv@convertigo.com').on, false);
   assert.equal(confirm.isOn(w.host), false);
@@ -84,7 +84,7 @@ test('the panel takes a held change with its summary, and again while it waits; 
   w.hold('wc-1');
   const first = plain(hostRequests.take('agent-1', 'gregoryv@convertigo.com', w.host));
   assert.deepEqual(first, [{ requestId: 'wc-1', kind: 'write-confirm', tool: 'nocode-form-edit', formId: '1793268150601', formName: 'Skyjo',
-    items: [{ action: 'remove_field', target: 'button2' }], expiresAt: 1793000300000 }]);
+    items: [{ action: 'remove_field', target: 'button2' }], expiresAt: 1793000300000, scope: 'nocode', project: '', projects: [] }]);
   assert.equal(w.request('wc-1').status, 'taken');
   assert.equal(plain(hostRequests.take('agent-1', 'gregoryv@convertigo.com', w.host)).length, 1, 'a panel opened again shows it again');
   assert.equal(plain(hostRequests.take('agent-1', 'other@convertigo.com', w.host)).length, 0);
@@ -157,9 +157,11 @@ test('the sequence and the client entry point: always the authenticated user, se
   const client = read('js/agent_bridge_client.js');
   const entry = client.slice(client.indexOf('C8O.assistantAgentBridge.writeConfirm = function'), client.indexOf('function writeConfirmModule()'));
   assert.match(entry, /bridgeCallerRefusal\(\)[\s\S]*withCallerUserId\(options\)/);
-  assert.match(entry, /module\.choose\(options\.userId, boolValue\(options\.enabled, false\), host\)/);
-  assert.match(client, /agents"\);\n    var file = new File\(new File\(new File\(new File\(root, "nocode"\), "users"\), safePathPart\(normalizeUserKey\(options\.userId\)\)\), "write-confirm\.json"\);/);
-  assert.match(client, /if \(normalizeSkillProfile\(state\) === "nocode"\) \{\n      try \{\n        options\.writeConfirmOn = writeConfirmModule\(\)\.newTurn\(state\.threadid, options\.userId, writeConfirmHost\(options\)\);/);
+  assert.match(entry, /var mode = trim\(options\.mode\)\.length \? module\.modeOf\(trim\(options\.mode\)\) : \(boolValue\(options\.enabled, false\) \? "confirm" : "off"\);/, 'set takes enabled, or a mode');
+  assert.match(entry, /module\.choose\(options\.userId, mode, host\)/);
+  assert.match(entry, /if \(mode === "readonly" && !studio\) \{\n        return \{ status: "error", error: \{ code: "invalid_mode"/, 'No Code has no read-only mode');
+  assert.match(client, /: new File\(new File\(new File\(new File\(root, "nocode"\), "users"\), safePathPart\(normalizeUserKey\(options\.userId\)\)\), "write-confirm\.json"\);/);
+  assert.match(client, /if \(normalizeSkillProfile\(state\) === "nocode" \|\| trim\(options\.userId\)\.toLowerCase\(\) === "studio"\) \{\n      try \{\n        options\.writeConfirmOn = writeConfirmModule\(\)\.newTurn\(state\.threadid, options\.userId, writeConfirmHost\(options\)\);/);
 });
 
 // ---- The page ----------------------------------------------------------------------------------------------------
@@ -168,7 +170,9 @@ const METHODS = ['agentConfirmText', 'writeConfirmAvailable', 'writeConfirmUserI
   'setWriteConfirm', 'noteOpenWriteConfirmCards', 'writeConfirmCommand', 'writeConfirmAsked', 'offerWriteConfirmFor', 'offerWriteConfirm',
   'writeConfirmSummary', 'writeConfirmItemText', 'onWriteConfirmCta', 'closeWriteConfirmCards', 'forwardAgentHostRequests', 'onFeedbackCta',
   'feedbackCard', 'agentUiLanguage', 'normalizeAgentHostContextValue', 'runLocalCommand', 'feedbackCommand', 'endAgentHostTurn',
-  'dropOpenFeedbackCards', 'localSlashCommands', 'agentMetricsText', 'agentFeedbackText', 'writeConfirmResult'];
+  'dropOpenFeedbackCards', 'localSlashCommands', 'agentMetricsText', 'agentFeedbackText', 'writeConfirmResult',
+  'writeConfirmStudio', 'writeConfirmState', 'writeConfirmChoice', 'writeConfirmSwitchLabel', 'writeConfirmSwitchTitle', 'setWriteConfirmMode',
+  'closeWriteConfirmCardsReadonly'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter((m) => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map((m) => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -315,7 +319,7 @@ test('the switch: off by default, one click turns it on at once, off keeps an op
   view.toggleWriteConfirm();
   assert.equal(view.writeConfirmOn(), true, 'shown on at once');
   await flush();
-  assert.deepEqual(calls[1], ['lib_ConvertigoAssistant.AgentWriteConfirm', { action: 'set', enabled: 'true', userId: 'gregoryv@convertigo.com' }]);
+  assert.deepEqual(calls[1], ['lib_ConvertigoAssistant.AgentWriteConfirm', { action: 'set', mode: 'confirm', enabled: 'true', userId: 'gregoryv@convertigo.com' }]);
   view.forwardAgentHostRequests([held()], 'agent-1');
   view.toggleWriteConfirm();
   await flush();
@@ -373,7 +377,7 @@ test('outside No Code there is no switch, no status call and no command', () => 
   assert.equal(calls.length, 0);
   assert.equal(view.localSlashCommands().some((c) => /^confirm/.test(c.name)), false);
   assert.equal(view.runLocalCommand('/confirmer'), true, 'a local command all the same');
-  assert.match(cards(view)[0].message, /n’existe que dans No Code Studio/);
+  assert.match(cards(view)[0].message, /n’est disponible qu’avec Tigo, dans le Studio ou dans No Code Studio/);
 });
 
 test('/confirmer and /confirm: on, off, an unknown word; listed in the "/" menu of No Code', async () => {
@@ -462,7 +466,8 @@ test('the template: the switch above the input bar and the setting, No Code only
   const setting = page.slice(page.indexOf('↓ConfirmSettings ['), page.indexOf('↓RuntimeCategory [ngx.components.UIDynamicElement-1792084635803]'));
   assert.match(setting, /script:!this\.writeConfirmAvailable\(\)/);
   assert.match(setting, /script:this\.writeConfirmChoices\(\)/);
-  assert.match(setting, /page\.setWriteConfirm\(props\.stack\.root\.scope\.choice === 'on', null\);/);
+  assert.match(setting, /page\.setWriteConfirmMode\(props\.stack\.root\.scope\.choice, null\);/);
+  assert.match(setting, /script:''agent-choice-button'' \+ \(this\.writeConfirmChoice\(\) === choice \? '' active'' : ''''\)'/);
   assert.match(page, /\.agent-feedback-card\.is-confirm \.agent-metrics-card-message, \.agent-feedback-card\.is-confirm-mode \.agent-metrics-card-message \{ white-space: pre-line; \}/);
   const ids = [...page.matchAll(/-(17932900002\d\d)\]: /g)].map((m) => m[1]);
   assert.equal(new Set(ids).size, ids.length, 'unique bean ids');
