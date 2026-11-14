@@ -20,6 +20,10 @@ const names = [
   "toggleTigoFavorite",
   "moveTigoFavorite",
   "toggleTigoResource",
+  "isTigoSkillReviewCurrent",
+  "confirmTigoSkillReview",
+  "cancelTigoSkillReview",
+  "tigoSkillReviewText",
   "useTigoPrompt",
   "editTigoResource",
   "revealTigoResourceEditor",
@@ -273,4 +277,31 @@ test("proposal buttons use their own repeated-row event scope", () => {
     action({answerTigoMcpProposal:(...args)=>calls.push(args)}, {stack:{root:{scope:{mcpProposal:{id:'shown',digest:'revision'}}}}}, {}, null, ()=>{}, err=>{throw err;});
   }
   assert.deepEqual(calls,[['shown','revision',true],['shown','revision',false]]);
+});
+
+test("skill activation opens a file review and sends only its displayed revision after confirmation", () => {
+  const {page,events}=fixture();
+  page.local.Conversation="one";
+  page.local.ResourceCatalog={csrf:"token",selection:{skills:[],mcp:[]}};
+  page.toggleTigoResource({kind:"skill",key:"workspace::skill:example"});
+  assert.equal(events[0].payload.request.action,"reviewSkill");
+  assert.equal(events[0].payload.request.input,undefined);
+  const request=events[0].payload;
+  page.applyTigoResources({response:{ok:true,items:[],selection:{skills:[],mcp:[]},skillReview:{key:"workspace::skill:example",revision:"displayed",scripts:[{path:"scripts/check.js",status:"added",diff:"+check()"}]}}},request);
+  assert.equal(page.isTigoSkillReviewCurrent(),true);
+  assert.equal(events.length,1);
+  page.confirmTigoSkillReview();
+  assert.equal(events[1].payload.request.action,"select");
+  assert.equal(events[1].payload.request.input.reviewRevision,"displayed");
+  assert.deepEqual(plain(events[1].payload.request.input.skills),["workspace::skill:example"]);
+});
+test("a pending skill review cannot enable it in a different conversation or identity", () => {
+  const {page,events}=fixture();
+  page.local.Conversation="two";
+  page.local.ResourceSkillReview={key:"workspace::skill:example",revision:"r1",conversation:"one",identity:"studio"};
+  assert.equal(page.isTigoSkillReviewCurrent(),false);
+  page.confirmTigoSkillReview();assert.equal(events.length,0);
+  page.local.Conversation="one";page.getAgentContextUserId=()=>"another";
+  page.confirmTigoSkillReview();assert.equal(events.length,0);
+  page.cancelTigoSkillReview();assert.equal(page.local.ResourceSkillReview,null);
 });

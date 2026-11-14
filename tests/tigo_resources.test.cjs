@@ -150,7 +150,7 @@ test("skill contents are injected once per revision and session, disabled skills
   f.api.execute({
     action: "select",
     threadid: "conversation",
-    input: { skills: [s.key], mcp: [] },
+    input: { skills: [s.key], mcp: [], reviewKey: s.key, reviewRevision: s.revision },
   });
   const state = {
     threadid: "conversation",
@@ -169,7 +169,8 @@ test("skill contents are injected once per revision and session, disabled skills
   const changed = data("example", "skill");
   changed.translations.fr.body += "\nUpdated";
   s = save(f, "skill", changed, "workspace", s.revision);
-  assert.match(f.api.prepare(state).text, /Updated/);
+  assert.equal(f.api.prepare(state).text, "");
+  assert.deepEqual(plain(f.api.prepare(state).requiresReview), [s.key]);
   f.api.execute({
     action: "select",
     threadid: "conversation",
@@ -225,7 +226,7 @@ test("skills requiring an unselected MCP fail before prompting", () => {
     d = data("example", "skill");
   d.requiresMcp = ["project:Demo:mcp:data-api"];
   const s = save(f, "skill", d);
-  f.api.execute({ action: "select", input: { skills: [s.key], mcp: [] } });
+  f.api.execute({ action: "select", input: { skills: [s.key], mcp: [], reviewKey: s.key, reviewRevision: s.revision } });
   assert.throws(
     () => f.api.prepare({ threadid: "new", provider: "codex" }),
     /skill_mcp_dependency_missing/,
@@ -357,7 +358,7 @@ test("deleted favorites are omitted and unavailable active selections can be rem
     p = save(f, "prompt", data()),
     s = save(f, "skill", data("method", "skill"));
   f.api.execute({ action: "favorites", input: { favorites: [p.key] } });
-  f.api.execute({ action: "select", input: { skills: [s.key], mcp: [] } });
+  f.api.execute({ action: "select", input: { skills: [s.key], mcp: [], reviewKey: s.key, reviewRevision: s.revision } });
   for (const item of [p, s])
     f.api.execute({ action: "delete", key: item.key, revision: item.revision });
   const catalog = f.api.execute({ action: "list" });
