@@ -5,12 +5,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { ts, read, pageClass, backendParts } = require('./helpers/assistant-source.cjs');
+const { ts, read, pageClass, backendParts, SECRET_MASK_FUNCTIONS, SECRET_MASK_CONSTANTS } = require('./helpers/assistant-source.cjs');
 
 const BACKEND = ['reasoningCaptured', 'appendReasoningChunk', 'reasoningText', 'finishedReasoning', 'mergeReasoning', 'settleReasoning',
   'holdStepReasoning', 'takeStepReasoning', 'finishTurnReasoning', 'liveReasoning', 'pushProgressEvent', 'markProgressEventsIdle',
   'appendNarrativeEvent', 'runDetailEvent', 'attachReasoningToComment', 'compactLine', 'runDetailsFile', 'reasoningFullFile',
-  'keepFullReasoning', 'flushFullReasoning', 'fullReasoningParts'];
+  'keepFullReasoning', 'flushFullReasoning', 'fullReasoningParts', ...SECRET_MASK_FUNCTIONS];
 
 // A java.io.File stand-in: paths only, the files themselves live in a map.
 class FakeFile {
@@ -42,7 +42,7 @@ function backend() {
     }
   };
   vm.runInNewContext(backendParts(BACKEND, ['REASONING_KEEP_HEAD', 'REASONING_KEEP_TAIL', 'RUN_DETAIL_MAX_DETAIL', 'REASONING_FULL_MAX',
-    'REASONING_FULL_FLUSH', 'REASONING_LIVE_CHARS']), sandbox);
+    'REASONING_FULL_FLUSH', 'REASONING_LIVE_CHARS', ...SECRET_MASK_CONSTANTS]), sandbox);
   sandbox.tick = ms => { clock += ms; };
   sandbox.saved = saved;
   sandbox.files = files;

@@ -4146,6 +4146,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         resourceContext = savedNoCodeContext(live);
       }
     }
+    // The conversation list shows a record's preview and progress: masked, records written before the masking too.
+    var secrets = { secretValues: [] };
+    var preview = maskSecretText(secrets, String(record.lastAnswerPreview || ""));
+    var progress = maskSecretText(secrets, String(record.progress || ""));
+    var phase = maskSecretText(secrets, String(record.phase || ""));
+    var events = record.progressEvents || [];
+    var known = secrets.secretValues.length;
+    maskRecordedEvents(events, secrets);
+    if (secrets.secretValues.length > known) {
+      preview = maskKnownSecrets(preview, secrets.secretValues);
+      progress = maskKnownSecrets(progress, secrets.secretValues);
+      phase = maskKnownSecrets(phase, secrets.secretValues);
+    }
     return {
       conversationId: String(record.conversationId || record.threadid || ""),
       title: conversationTitleForRecord(record || {}),
@@ -4163,14 +4176,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       updatedAt: Number(record.updatedAt || 0),
       lastCursor: Number(record.lastCursor || 0),
       lastRunId: String(record.lastRunId || ""),
-      lastAnswerPreview: String(record.lastAnswerPreview || ""),
-      progress: String(record.progress || ""),
-      progressEvents: record.progressEvents || [],
-      phase: String(record.phase || ""),
+      lastAnswerPreview: preview,
+      progress: progress,
+      progressEvents: events,
+      phase: phase,
       model: String(record.model || ""),
       reasoningEffort: String(record.reasoningEffort || ""),
       serviceTier: String(record.serviceTier || ""),
-      warnings: record.warnings || [],
+      warnings: panelWarnings(secrets, record.warnings || []),
       vibeHome: isResidentProvider(provider) ? "" : String(record.vibeHome || ""),
       agentHome: isResidentProvider(provider) ? "" : String(record.agentHome || record.vibeHome || ""),
       codexHome: provider === "codex" ? sanitizeCodexHome(record.codexHome) : "",
@@ -4311,7 +4324,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var previous = readJsonFile(new File(state.conversationFile)) || {};
     var lastUserMessage = trim(state.userQuestion || previous.lastUserMessage || "");
     var title = conversationTitleFromText(state.title) || conversationTitleFromText(lastUserMessage) || trim(previous.title);
-    var answer = state.answerIsFinal === true || state.status === "completed" || state.status === "closed" ? String(state.answer || "") : "";
+    // What the panel can show of the record is masked like the panel's reads (the events already are).
+    var answer = state.answerIsFinal === true || state.status === "completed" || state.status === "closed" ? answerForPanel(state, String(state.answer || "")) : "";
+    maskStateSecrets(state, false);
     var record = {
       version: 1,
       conversationId: state.conversationId || state.threadid,
@@ -4351,11 +4366,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       lastCursor: Number(state.cursor || 0),
       lastRunId: String(state.runid || ""),
       lastAnswerPreview: answer.length > 500 ? answer.substring(0, 500) : answer,
-      progress: String(state.progressLog || ""),
+      progress: maskSecretText(state, String(state.progressLog || "")),
       progressEvents: state.progressEvents || [],
-      phase: String(state.lastStatusText || ""),
-      warnings: state.warnings || [],
-      plan: state.plan || null,
+      phase: maskSecretText(state, String(state.lastStatusText || "")),
+      warnings: panelWarnings(state, state.warnings || []),
+      plan: panelPlan(state, state.plan || null),
       usage: state.usage || null,
       commands: state.commands || [],
       deleted: state.status === "deleted" || state.deleted === true
@@ -4368,6 +4383,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!text.length || !state || !state.transcriptFile) {
       return;
     }
+    // An answer keeps its credentials only for a user who asked for them; the user's message is kept as typed.
+    if (role === "assistant" && !userAsksForCredentials(state.userQuestion || state.lastUserMessage)) {
+      text = maskSecretText(state, text);
+    }
     appendTextFile(new File(state.transcriptFile), JSON.stringify({
       time: now(),
       role: role,
@@ -4375,7 +4394,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       content: text
     }) + "\n");
     if (role === "assistant" && state.plan && state.plan.entries && state.plan.entries.length) {
-      appendRunDetail(state, { kind: "plan", plan: state.plan });
+      appendRunDetail(state, { kind: "plan", plan: panelPlan(state, state.plan) });
     }
   }
 
@@ -4479,6 +4498,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var lines = readTextFile(file).split(/\r?\n/);
     var messages = [];
     var lastAnswer = "";
+    // The user's message of the turn an answer ends (its credentials are kept when it asked for them), and the secrets
+    // seen in the turns read so far.
+    var question = "";
+    var secrets = { secretValues: (state.secretValues || []).slice(0) };
     for (var i = 0; i < lines.length; i++) {
       var line = trim(lines[i]);
       if (!line.length) {
@@ -4500,6 +4523,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (role === "assistant" && String(item.runid || "") === String(state.runid || "") && state.status === "completed" && answerLooksIncomplete(state, content)) {
           content = incompleteFinalAnswer(state);
         }
+        var details = role === "assistant" && item.runid ? readRunDetails(state, item.runid) : null;
+        if (role === "user") {
+          question = content;
+        } else {
+          rememberSecretValues(secrets, details ? details.secrets : []);
+          if (!userAsksForCredentials(question)) {
+            content = maskSecretText(secrets, content);
+          }
+        }
         var message = {
           type: role,
           msg: content,
@@ -4508,7 +4540,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           id: item.runid || i
         };
         if (role === "assistant") {
-          var details = item.runid ? readRunDetails(state, item.runid) : null;
           if (details && details.events.length) {
             message.runEvents = details.events;
             message.runPlan = details.plan;
@@ -5825,7 +5856,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         if (item && item.kind === "plan") {
           plan = item.plan || null;
         } else if (item && trim(item.key).length) {
-          if (!byKey[item.key]) {
+          // An event masked after it was saved (maskStateSecrets) takes the place of its lines under its former key.
+          var previous = trim(item.previousKey);
+          delete item.previousKey;
+          if (previous.length && previous !== item.key && byKey[previous]) {
+            var place = order.indexOf(previous);
+            delete byKey[previous];
+            if (byKey[item.key]) {
+              order.splice(place, 1);
+            } else {
+              order[place] = item.key;
+            }
+          } else if (!byKey[item.key]) {
             order.push(item.key);
           }
           byKey[item.key] = item;
@@ -5836,7 +5878,710 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     for (var k = Math.max(0, order.length - RUN_DETAIL_MAX_EVENTS); k < order.length; k++) {
       events.push(byKey[order[k]]);
     }
-    return { events: events, plan: plan };
+    // Runs recorded before the masking hold their secrets in clear: their own tool arguments name them. The secrets of
+    // the live conversation, if any, are masked too.
+    var holder = { secretValues: (state && state.secretValues || []).slice(0) };
+    maskRecordedEvents(events, holder);
+    return { events: events, plan: panelPlan(holder, plan), secrets: holder.secretValues };
+  }
+
+  // Secret values in what the panel shows. CRM promo run (Mistral Large 4 through Vibe, 13/11): the demo
+  // account's password showed in clear in about 720 frames, from the tool cards (requestable-execute variables, the step
+  // variables of seed_demo, the tasks of browser-verify) and the narration that repeated it, long before the final
+  // answer the user had asked it for. A value is secret when it is the value of a key, a variable or a column named like
+  // a password, a secret, a token or a key; once seen, its other occurrences are masked too (the model writes
+  // "demo@x.com / <password>" in its narration and in the tasks of its sub-agents). The progress events are masked as
+  // they are recorded (state, conversation.json, runs/<runid>.ndjson); the texts that stream (answer, progress log, live
+  // reasoning) when they are handed to the panel. The final answer keeps its credentials only when the user's message of
+  // the turn asks for them; the user's own message is never masked.
+  var SECRET_MASK = "\u2022\u2022\u2022\u2022\u2022\u2022";
+  var SECRET_VALUES_MAX = 50;
+  // The words a secret key ends with, searched first (a key is then read whole around them and checked).
+  var SECRET_WORD_SOURCE = "pass(?:word|wd|wort|phrase|e)?|pwd|mdp|secret|token|api[_-]?key|access[_-]?key|private[_-]?key";
+  // After a key: its closing quote, a separator (":", "=", "=>", markdown bold around them), then the value, quoted
+  // (JSON, maybe escaped inside another JSON string; SQL; markdown code) or bare. An unclosed quote still takes the value
+  // (an answer streaming).
+  var SECRET_VALUE_TAIL = /^(\\*["'`])?[*_ \t]*(?:=>|[:=])[*_ \t]*(?:\\*"([^"\\\n]{1,200})|'([^'\n]{1,200})|`+([^`\n]{1,200})|([^\s"'`,;&<>()\[\]{}|\\*]{1,200}))/;
+  var SECRET_NOT_VALUES = /^(true|false|null|nil|none|undefined|nan|yes|no|on|off|ok|string|str|text|varchar|char|number|int|integer|long|bool|boolean|object|array|any|void|date|required|optional|hidden|masked|redacted|empty|unknown|unset|set|value|values|password|passwd|pwd|pass|mdp|secret|token|key|hash|the|a|an|your|my|our|their|its|this|that|same|see|le|la|les|un|une|des|du|votre|vos|notre|mon|ma|son|sa|leur|ce|cette|not|pas|non|aucun|aucune|voir|tbd|todo|n\/a)$/;
+  // The user's message of a turn asks for credentials: its final answer keeps them.
+  var CREDENTIALS_REQUEST = /\b(identifiants?|credentials?|logins?|log[ -]in|mots? de passe|passwords?|passwd|mdp|comptes? (?:de )?d[e\u00e9]mo|demo (?:accounts?|users?|logins?)|comptes? de test|test (?:accounts?|users?))\b/i;
+  // Before an "email / value" pair, what says it is a sign-in.
+  var CREDENTIALS_CONTEXT = /sign|log|account|compte|credential|identifiant|connexion|connect|d[e\u00e9]mo|user|utilisateur|password|passe|admin|test|auth/i;
+
+  // A key, variable or column named like a secret: password, userPassword, DB_PASS, pwd, mot_de_passe, motDePasse,
+  // "mot de passe", client_secret, accessToken, X-Api-Key, password_hash. Not passwordLabel, passwordMinLength, tokens
+  // (a count) or bypass; a boolean or a short number after a secret key is not masked either (showPassword: false).
+  function secretKeyName(name) {
+    var raw = String(name == null ? "" : name);
+    if (!raw.length || raw.length > 64) {
+      return false;
+    }
+    var parts = raw.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/);
+    var words = [];
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].length) {
+        words.push(parts[i]);
+      }
+    }
+    if (!words.length) {
+      return false;
+    }
+    var last = words[words.length - 1];
+    var joined = words.join("");
+    if (/^(password|passwd|passwort|passphrase|pwd|pass|mdp|secret|token)$/.test(last)) {
+      return true;
+    }
+    if (/(password|passwd|pwd|motdepasse|motsdepasse|apikey|accesskey|secretkey|privatekey)$/.test(joined)) {
+      return true;
+    }
+    return last === "hash" && words.length > 1 && /^(password|passwd|pwd|pass)$/.test(words[words.length - 2]);
+  }
+
+  // A value worth masking: not a type, a placeholder, a reference in code, a boolean, a path or an email.
+  function secretValueMaskable(value) {
+    var text = trim(value);
+    if (text.length < 3 || text.length > 200 || text.indexOf("\u2022") !== -1) {
+      return false;
+    }
+    if (SECRET_NOT_VALUES.test(text.toLowerCase()) || /^[*xX.#_-]+$/.test(text) || /^\d{1,3}$/.test(text)) {
+      return false;
+    }
+    // ${password}, {{secret}}, <password>, [hidden], :pwd, ?, $1, %s, @pwd
+    if (/^(\$\{.*\}|\{\{.*\}\}|\{[^{}]*\}|<[^<>]*>|\[[^\[\]]*\]|%[a-z]|\?+|:[A-Za-z_]\w*|\$\d+|@[A-Za-z_]\w*)$/.test(text)) {
+      return false;
+    }
+    // this.password, form.value.pwd, userPassword, newPwd: code naming the secret, not the secret
+    if (/^[a-z_$][\w$]*(\.[A-Za-z_$][\w$]*)+$/.test(text) || (/^[a-z_$][A-Za-z_$]*$/.test(text) && /pass|pwd|secret|token/i.test(text))) {
+      return false;
+    }
+    return !/^(\/|~\/|[A-Za-z]:\\)/.test(text) && !/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(text);
+  }
+
+  // A secret also masked wherever else it shows in the turn: long enough and not a plain word (masking "welcome" would
+  // mask that word everywhere), nor the name of a project of the conversation.
+  function secretValueSpreads(state, value) {
+    var text = trim(value);
+    if (!secretValueMaskable(text) || text.length < 6 || /\s/.test(text) || !/[^A-Za-z]/.test(text)) {
+      return false;
+    }
+    var projects = [].concat(state && state.projectNames || [], state && state.primaryProject ? [state.primaryProject] : []);
+    for (var i = 0; i < projects.length; i++) {
+      if (trim(projects[i]).toLowerCase() === text.toLowerCase()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function rememberSecretValues(state, values) {
+    if (!state || !values || !values.length) {
+      return 0;
+    }
+    var known = state.secretValues && typeof state.secretValues.length !== "undefined" ? state.secretValues : [];
+    var added = 0;
+    for (var i = 0; i < values.length; i++) {
+      var value = trim(values[i]);
+      if (known.indexOf(value) === -1 && secretValueSpreads(state, value)) {
+        known.push(value);
+        added++;
+      }
+    }
+    if (added) {
+      // The longest first: a secret that contains another is masked whole.
+      known.sort(function (x, y) { return y.length - x.length; });
+      while (known.length > SECRET_VALUES_MAX) {
+        known.pop();
+      }
+    }
+    state.secretValues = known;
+    return added;
+  }
+
+  function secretWordChar(c) {
+    return /[A-Za-z0-9_]/.test(c || "");
+  }
+
+  // A known secret where it stands alone (not inside a longer word); "\n" written as an escape before it counts as a
+  // break.
+  function replaceSecretValue(text, value) {
+    var at = text.indexOf(value);
+    if (at === -1) {
+      return text;
+    }
+    var openStart = secretWordChar(value.charAt(0));
+    var openEnd = secretWordChar(value.charAt(value.length - 1));
+    var out = "";
+    var from = 0;
+    while (at !== -1) {
+      var end = at + value.length;
+      var before = at > 0 ? text.charAt(at - 1) : "";
+      var escapedBreak = at > 1 && text.charAt(at - 2) === "\\" && /[nrt]/.test(before);
+      if ((!openStart || !secretWordChar(before) || escapedBreak) && (!openEnd || !secretWordChar(text.charAt(end)))) {
+        out += text.substring(from, at) + SECRET_MASK;
+        from = end;
+        at = text.indexOf(value, end);
+      } else {
+        at = text.indexOf(value, at + 1);
+      }
+    }
+    return out + text.substring(from);
+  }
+
+  // A known secret cut by the end of a text: held back at the end of a text still streaming ("stream", "live": the next
+  // read shows it whole, then masked), masked before an ellipsis ("\u2026", "...") and at the start of a text cut before
+  // it ("start", "live"). A mask is shown only for a part that tells more than the secret's leading letters: a QName
+  // cut after "AcmeSho..." is the project's name, not the start of "AcmeShop-Demo1".
+  function secretPartTells(part, value) {
+    return /[^A-Za-z]/.test(part) || part.length >= value.length * 0.75;
+  }
+
+  function maskSecretEdges(text, values, edges) {
+    for (var i = 0; i < values.length; i++) {
+      var value = String(values[i] || "");
+      if (value.length < 5) {
+        continue;
+      }
+      var ellipsis = /(\u2026|\.\.\.)\s*$/.exec(text);
+      var cut = ellipsis ? ellipsis.index : (edges === "stream" || edges === "live" ? text.length : -1);
+      for (var n = Math.min(value.length - 1, cut); cut > 0 && n >= 4; n--) {
+        var at = cut - n;
+        var head = value.substring(0, n);
+        if (text.substring(at, cut) === head && (at === 0 || !secretWordChar(text.charAt(at - 1)) || !secretWordChar(value.charAt(0)))) {
+          if (!ellipsis) {
+            text = text.substring(0, at);
+          } else if (secretPartTells(head, value)) {
+            text = text.substring(0, at) + SECRET_MASK + text.substring(cut);
+          }
+          break;
+        }
+      }
+      if (edges !== "start" && edges !== "live") {
+        continue;
+      }
+      var lead = /^\s*(?:\u2026|\.\.\.)?\s*/.exec(text)[0].length;
+      for (var m = Math.min(value.length - 1, text.length - lead); m >= 4; m--) {
+        var after = lead + m;
+        var end = value.substring(value.length - m);
+        if (text.substring(lead, after) === end && (!secretWordChar(text.charAt(after)) || !secretWordChar(value.charAt(value.length - 1)))) {
+          if (secretPartTells(end, value)) {
+            text = text.substring(0, lead) + SECRET_MASK + text.substring(after);
+          }
+          break;
+        }
+      }
+    }
+    return text;
+  }
+
+  function maskKnownSecrets(text, values, edges) {
+    if (text === null || typeof text === "undefined") {
+      return text;
+    }
+    text = String(text);
+    if (!text.length || !values || !values.length) {
+      return text;
+    }
+    for (var i = 0; i < values.length; i++) {
+      var value = String(values[i] || "");
+      if (value.length < 3) {
+        continue;
+      }
+      // As written, escaped once or twice in JSON (a JSON string inside another), in lower case (a tool's group key).
+      var forms = [value];
+      var escaped = JSON.stringify(value).slice(1, -1);
+      if (escaped !== value) {
+        forms.push(escaped, JSON.stringify(escaped).slice(1, -1));
+      }
+      if (value.toLowerCase() !== value) {
+        forms.push(value.toLowerCase());
+      }
+      for (var f = 0; f < forms.length; f++) {
+        text = replaceSecretValue(text, forms[f]);
+      }
+    }
+    return edges || /(\u2026|\.\.\.)\s*$/.test(text) ? maskSecretEdges(text, values, edges) : text;
+  }
+
+  function maskSecretSpans(text, spans) {
+    if (!spans.length) {
+      return text;
+    }
+    spans.sort(function (x, y) { return x[0] - y[0]; });
+    var out = "";
+    var from = 0;
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i][0] < from) {
+        continue;
+      }
+      out += text.substring(from, spans[i][0]) + SECRET_MASK;
+      from = spans[i][1];
+    }
+    return out + text.substring(from);
+  }
+
+  // password: X, "password":"X", \"pwd\":\"X\", PASSWORD=X, ?pwd=X&, **Mot de passe :** `X`, apiKey = 'X', --password X.
+  function maskKeyedSecrets(text, found) {
+    var words = new RegExp(SECRET_WORD_SOURCE, "gi");
+    var spans = [];
+    var from = 0;
+    var m;
+    while ((m = words.exec(text)) !== null) {
+      var start = m.index;
+      var end = words.lastIndex;
+      if (start < from) {
+        continue;
+      }
+      while (start > from && m.index - start < 40 && /[A-Za-z0-9_.-]/.test(text.charAt(start - 1))) {
+        start--;
+      }
+      while (end < text.length && end - words.lastIndex < 24 && /[A-Za-z0-9_-]/.test(text.charAt(end))) {
+        end++;
+      }
+      words.lastIndex = end;
+      var key = text.substring(start, end);
+      var phrase = /^passe$/i.test(key) ? /(mots?[ _-]de[ _-])$/i.exec(text.substring(Math.max(from, start - 8), start)) : null;
+      if (!secretKeyName(phrase ? phrase[1] + key : key)) {
+        continue;
+      }
+      var rest = text.substring(end, end + 260);
+      var tail = SECRET_VALUE_TAIL.exec(rest) || (key.charAt(0) === "-" ? /^[ \t]+()()()([^\s"'`]{1,200})/.exec(rest) : null);
+      if (!tail) {
+        continue;
+      }
+      var raw = tail[2] || tail[3] || tail[4] || tail[5] || "";
+      // A bare value ends a sentence before its final dot.
+      var value = tail[5] ? raw.replace(/[.:]+$/, "") : raw;
+      var valueStart = end + tail[0].length - raw.length;
+      // A token is long and not a word: "unexpected token: FOREIGN" is a parser's message.
+      if (!secretValueMaskable(value) || (/token$/i.test(key) && (value.length < 8 || !/[^A-Za-z]/.test(value)))) {
+        continue;
+      }
+      spans.push([valueStart, valueStart + value.length]);
+      found.push(value);
+      from = valueStart + value.length;
+      words.lastIndex = Math.max(words.lastIndex, from);
+    }
+    return maskSecretSpans(text, spans);
+  }
+
+  // A variable or a field named like a secret, its value beside its name in the same JSON object:
+  // {"name":"password","className":"variables.StepVariable","properties":{"value":"X"}}.
+  function maskNamedSecretValues(text, found) {
+    if (!/value|default/i.test(text)) {
+      return text;
+    }
+    var names = /\\*"(?:name|key|variable|field|param|parameter|property)\\*"\s*:\s*\\*"([^"\\]{1,64})\\*"/g;
+    var spans = [];
+    var m;
+    while ((m = names.exec(text)) !== null) {
+      if (!secretKeyName(m[1])) {
+        continue;
+      }
+      var scope = text.substring(names.lastIndex, Math.min(text.length, names.lastIndex + 600));
+      var next = scope.search(/\\*"(?:name|variable|field|param|parameter|property)\\*"\s*:/);
+      if (next !== -1) {
+        scope = scope.substring(0, next);
+      }
+      var v = /\\*"(?:value|defaultValue|default|text)\\*"\s*:\s*\\*"([^"\\\n]{1,200})/.exec(scope);
+      if (!v) {
+        continue;
+      }
+      // Within the object of the name: no brace closes it before the value.
+      var depth = 0;
+      var inside = true;
+      for (var i = 0; i < v.index && inside; i++) {
+        var c = scope.charAt(i);
+        if (c === "{" || c === "[") {
+          depth++;
+        } else if ((c === "}" || c === "]") && --depth < 0) {
+          inside = false;
+        }
+      }
+      if (inside && secretValueMaskable(v[1])) {
+        var start = names.lastIndex + v.index + v[0].length - v[1].length;
+        spans.push([start, start + v[1].length]);
+        found.push(v[1]);
+      }
+    }
+    return maskSecretSpans(text, spans);
+  }
+
+  // The values of a VALUES tuple from its "(": per value, the string literal it is (start and end of its text), or null
+  // for any other expression. Null when the tuple does not close within 4,000 characters. "\n" written as an escape
+  // (SQL inside a JSON string) is a space.
+  function sqlTupleValues(text, at) {
+    var values = [];
+    var depth = 0;
+    var literal = null;
+    var other = false;
+    var limit = Math.min(text.length, at + 4000);
+    for (var i = at + 1; i < limit; i++) {
+      var c = text.charAt(i);
+      if (c === "'") {
+        var j = i + 1;
+        while (j < limit) {
+          var d = text.charAt(j);
+          if (d === "\\") {
+            j += 2;
+          } else if (d === "'" && text.charAt(j + 1) === "'") {
+            j += 2;
+          } else if (d === "'") {
+            break;
+          } else {
+            j++;
+          }
+        }
+        if (j >= limit) {
+          return null;
+        }
+        if (depth === 0 && literal === null && !other) {
+          literal = { start: i + 1, end: j, text: text.substring(i + 1, j) };
+        } else {
+          other = true;
+        }
+        i = j;
+      } else if (c === "\\" && /[nrt]/.test(text.charAt(i + 1))) {
+        i++;
+      } else if (c === "(") {
+        depth++;
+        other = true;
+      } else if (c === ")" && depth > 0) {
+        depth--;
+      } else if ((c === "," || c === ")") && depth === 0) {
+        values.push(literal !== null && !other ? literal : null);
+        literal = null;
+        other = false;
+        if (c === ")") {
+          return { values: values, end: i + 1 };
+        }
+      } else if (!/\s/.test(c)) {
+        other = true;
+      }
+    }
+    return null;
+  }
+
+  // INSERT INTO users (email, password) VALUES ('demo@x.com', 'X'), (...): the string literals of the secret columns,
+  // when every tuple has one value per column.
+  function maskSqlInsertSecrets(text, found) {
+    if (!/insert/i.test(text)) {
+      return text;
+    }
+    // Spaces may be written as escapes ("\n" of a SQL inside a JSON string).
+    var insert = /\binsert(?:\s|\\[nrt])+(?:or(?:\s|\\[nrt])+\w+(?:\s|\\[nrt])+)?into(?:\s|\\[nrt])+[^\s(]{1,128}?(?:\s|\\[nrt])*\(([^()]{1,2000})\)(?:\s|\\[nrt])*values(?:\s|\\[nrt])*/gi;
+    var spans = [];
+    var m;
+    while ((m = insert.exec(text)) !== null) {
+      var columns = m[1].split(",");
+      var secret = [];
+      var any = false;
+      for (var c = 0; c < columns.length; c++) {
+        secret.push(secretKeyName(columns[c].replace(/\\[nrt]/g, " ").replace(/[\\`"\[\]\s]/g, "")));
+        any = any || secret[c];
+      }
+      if (!any) {
+        continue;
+      }
+      var at = insert.lastIndex;
+      for (var row = 0; row < 500 && text.charAt(at) === "("; row++) {
+        var tuple = sqlTupleValues(text, at);
+        if (!tuple) {
+          break;
+        }
+        for (var k = 0; tuple.values.length === columns.length && k < columns.length; k++) {
+          var literal = tuple.values[k];
+          if (secret[k] && literal && secretValueMaskable(literal.text)) {
+            spans.push([literal.start, literal.end]);
+            found.push(literal.text);
+          }
+        }
+        at = tuple.end;
+        var next = /^(?:\s|\\[nrt])*,(?:\s|\\[nrt])*/.exec(text.substring(at, at + 40));
+        if (!next) {
+          break;
+        }
+        at += next[0].length;
+      }
+      insert.lastIndex = Math.max(insert.lastIndex, at);
+    }
+    return maskSecretSpans(text, spans);
+  }
+
+  // Secrets by their form: the password of a URL (scheme://user:secret@host), an Authorization value, a JWT, an
+  // sk- key.
+  function maskTokenSecrets(text, found) {
+    if (text.indexOf("://") !== -1) {
+      text = text.replace(/\b([a-z][a-z0-9+.-]{1,15}:\/\/[^\s:\/@"'`]{1,64}:)([^\s@\/"'`]{1,128})@/gi, function (all, head, secret) {
+        if (!secretValueMaskable(secret)) {
+          return all;
+        }
+        found.push(secret);
+        return head + SECRET_MASK + "@";
+      });
+    }
+    if (/bearer|basic/i.test(text)) {
+      text = text.replace(/\b(Bearer|Basic)(\s+)([A-Za-z0-9._~+\/=-]{12,})/gi, function (all, scheme, space, token) {
+        return /[0-9+\/=._-]/.test(token) ? scheme + space + SECRET_MASK : all;
+      });
+    }
+    if (text.indexOf("eyJ") !== -1) {
+      text = text.replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, SECRET_MASK);
+    }
+    if (text.indexOf("sk-") !== -1) {
+      text = text.replace(/\bsk-[A-Za-z0-9_-]{16,}/g, SECRET_MASK);
+    }
+    return text;
+  }
+
+  // "Sign in with demo@x.com / X", "Demo account `demo@x.com` / `X`": the value after an email and a slash, in a
+  // sign-in context, when it looks like a password (letters with digits or signs, not a role like SALES).
+  function maskCredentialPairs(text, found) {
+    if (text.indexOf("@") === -1 || text.indexOf("/") === -1) {
+      return text;
+    }
+    return text.replace(/([A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})*\.[A-Za-z]{2,24})([*_`'"]{0,3}[ \t]*\/[ \t]*[*_`'"]{0,3})([^\s`*"'<>(),;|\\]{4,128})/g, function (all, email, between, value, at, whole) {
+      var secret = value.replace(/[.:]+$/, "");
+      var context = String(whole).substring(Math.max(0, at - 80), at) + email;
+      if (!/[A-Za-z]/.test(secret) || !/[^A-Za-z]/.test(secret) || !secretValueMaskable(secret) || !CREDENTIALS_CONTEXT.test(context)) {
+        return all;
+      }
+      found.push(secret);
+      return email + between + SECRET_MASK + value.substring(secret.length);
+    });
+  }
+
+  // The secrets a text shows by itself, masked; found gets each value (the caller keeps those worth following).
+  function detectSecretValues(text, found) {
+    if (!/pass|pwd|mdp|secret|token|key|insert|:\/\/|bearer|basic|eyJ|sk-|@/i.test(text)) {
+      return text;
+    }
+    text = maskKeyedSecrets(text, found);
+    text = maskNamedSecretValues(text, found);
+    text = maskSqlInsertSecrets(text, found);
+    text = maskTokenSecrets(text, found);
+    return maskCredentialPairs(text, found);
+  }
+
+  // A text as the panel may show it: the secrets it shows by itself and those seen before in the turn, masked. The
+  // secrets found are remembered in the state (never written to the conversation's files).
+  function maskSecretText(state, text, edges) {
+    if (text === null || typeof text === "undefined") {
+      return text;
+    }
+    text = String(text);
+    if (!text.length) {
+      return text;
+    }
+    var found = [];
+    text = detectSecretValues(text, found);
+    rememberSecretValues(state, found);
+    return maskKnownSecrets(text, state && state.secretValues, edges);
+  }
+
+  // The texts of a progress event (its card, its details, its arguments, its key) and of the reasoning it holds.
+  // detect: look for secrets in it; otherwise only those already known are masked. True when it changed.
+  function maskSecretFields(state, event, detect) {
+    if (!event || typeof event !== "object") {
+      return false;
+    }
+    var changed = false;
+    var fields = ["key", "text", "title", "detail", "input", "toolName", "groupKey"];
+    var mask = function (value, edges) {
+      return detect ? maskSecretText(state, value, edges) : maskKnownSecrets(value, state && state.secretValues, edges);
+    };
+    for (var i = 0; i < fields.length; i++) {
+      var value = event[fields[i]];
+      if (typeof value === "string" && value.length) {
+        var masked = mask(value);
+        if (masked !== value) {
+          event[fields[i]] = masked;
+          changed = true;
+        }
+      }
+    }
+    var reasoning = event.reasoning;
+    if (reasoning && typeof reasoning === "object") {
+      var head = String(reasoning.head || "");
+      var tail = String(reasoning.tail || "");
+      if (!reasoning.omitted) {
+        // Head and tail are one text: a secret can straddle them.
+        var whole = mask(head + tail);
+        if (whole !== head + tail) {
+          reasoning.head = whole;
+          reasoning.tail = "";
+          changed = true;
+        }
+      } else {
+        var maskedHead = mask(head, "stream");
+        var maskedTail = mask(tail, "start");
+        if (maskedHead !== head || maskedTail !== tail) {
+          reasoning.head = maskedHead;
+          reasoning.tail = maskedTail;
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
+  // The progress events of the state: those recorded before the masking are looked into once, then every event gets
+  // the secrets known since. save: write the events that changed again to the run's history (the last line of a key
+  // wins), for a secret seen after the narration that already showed it.
+  function maskStateSecrets(state, save) {
+    var events = state && state.progressEvents;
+    if (!events || typeof events.length === "undefined") {
+      return;
+    }
+    for (var i = 0; i < events.length; i++) {
+      if (events[i] && events[i].secretsMasked !== true) {
+        maskSecretFields(state, events[i], true);
+        events[i].secretsMasked = true;
+      }
+    }
+    if (!state.secretValues || !state.secretValues.length) {
+      return;
+    }
+    for (var j = 0; j < events.length; j++) {
+      var previousKey = events[j] ? events[j].key : "";
+      if (maskSecretFields(state, events[j], false) && save) {
+        // A key made of the event's text changes with it: the history then leaves out the lines of the key it had.
+        var line = runDetailEvent(events[j]);
+        if (line.key !== previousKey) {
+          line.previousKey = previousKey;
+        }
+        appendRunDetail(state, line);
+      }
+    }
+  }
+
+  // Recorded events (a run's history, a conversation record): looked into, then masked with every secret found in any
+  // of them. holder.secretValues gets those secrets.
+  function maskRecordedEvents(events, holder) {
+    if (!events || !events.length) {
+      return;
+    }
+    for (var i = 0; i < events.length; i++) {
+      if (events[i] && events[i].secretsMasked !== true) {
+        maskSecretFields(holder, events[i], true);
+      }
+    }
+    if (!holder.secretValues || !holder.secretValues.length) {
+      return;
+    }
+    for (var j = 0; j < events.length; j++) {
+      maskSecretFields(holder, events[j], false);
+    }
+  }
+
+  // A sub-agent run as read from its folder (task, steps, thoughts, report), masked before its block is cut to size.
+  function maskSecretsDeep(state, value, depth) {
+    if (typeof value === "string") {
+      return maskSecretText(state, value);
+    }
+    if (!value || typeof value !== "object" || (depth || 0) > 6) {
+      return value;
+    }
+    for (var key in value) {
+      if (Object.prototype.hasOwnProperty.call(value, key)) {
+        value[key] = maskSecretsDeep(state, value[key], (depth || 0) + 1);
+      }
+    }
+    return value;
+  }
+
+  function userAsksForCredentials(text) {
+    return CREDENTIALS_REQUEST.test(String(text == null ? "" : text));
+  }
+
+  // The answer (or the notice) of the turn as the panel shows it: masked while the turn runs (it is the narration until
+  // the turn ends), and at its end unless the user's message of the turn asked for credentials.
+  function answerForPanel(state, text) {
+    if (text === null || typeof text === "undefined" || !state) {
+      return text;
+    }
+    text = String(text);
+    if (!text.length || (state.status === "completed" && userAsksForCredentials(state.userQuestion || state.lastUserMessage))) {
+      return text;
+    }
+    return maskSecretText(state, text, isTerminalStatus(state.status) ? "" : "stream");
+  }
+
+  // The progress of the turn as the panel shows it (progressWithoutAnswer, masked).
+  function panelProgress(state) {
+    var shown = progressWithoutAnswer(state);
+    maskStateSecrets(state, false);
+    return {
+      log: maskSecretText(state, shown.log, isTerminalStatus(state.status) ? "" : "stream"),
+      events: shown.events,
+      phase: maskSecretText(state, shown.phase)
+    };
+  }
+
+  function panelLiveReasoning(state) {
+    var live = liveReasoning(state);
+    if (live) {
+      live.text = maskSecretText(state, live.text, "live");
+    }
+    return live;
+  }
+
+  function panelPlan(state, plan) {
+    if (!plan || !plan.entries || !plan.entries.length) {
+      return plan || null;
+    }
+    var copy = {};
+    for (var key in plan) {
+      if (Object.prototype.hasOwnProperty.call(plan, key)) {
+        copy[key] = plan[key];
+      }
+    }
+    copy.entries = [];
+    for (var i = 0; i < plan.entries.length; i++) {
+      var entry = plan.entries[i] || {};
+      var masked = {};
+      for (var field in entry) {
+        if (Object.prototype.hasOwnProperty.call(entry, field)) {
+          masked[field] = entry[field];
+        }
+      }
+      masked.content = maskSecretText(state, entry.content);
+      copy.entries.push(masked);
+    }
+    return copy;
+  }
+
+  function panelWarnings(state, warnings) {
+    if (!warnings || !warnings.length) {
+      return warnings || [];
+    }
+    var shown = [];
+    for (var i = 0; i < warnings.length; i++) {
+      var warning = warnings[i];
+      if (warning && typeof warning === "object") {
+        var copy = {};
+        for (var key in warning) {
+          if (Object.prototype.hasOwnProperty.call(warning, key)) {
+            copy[key] = typeof warning[key] === "string" ? maskSecretText(state, warning[key]) : warning[key];
+          }
+        }
+        shown.push(copy);
+      } else {
+        shown.push(typeof warning === "string" ? maskSecretText(state, warning) : warning);
+      }
+    }
+    return shown;
+  }
+
+  // A progress item with its texts masked before it is recorded.
+  function maskedProgressItem(state, item) {
+    var copy = {};
+    for (var key in item) {
+      if (Object.prototype.hasOwnProperty.call(item, key)) {
+        copy[key] = item[key];
+      }
+    }
+    maskSecretFields(state, copy, true);
+    return copy;
   }
 
   function pushProgressEvent(state, item) {
@@ -5846,7 +6591,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (!state.progressEvents || typeof state.progressEvents.length === "undefined") {
       state.progressEvents = [];
     }
-    item = item || {};
+    // Masked before anything is compared or recorded; a secret seen for the first time masks the turn's earlier events.
+    var knownSecrets = state.secretValues && state.secretValues.length ? state.secretValues.length : 0;
+    item = maskedProgressItem(state, item || {});
     var text = cleanEventText(normalizeProgressLine(state, item.text || item.title || ""));
     var title = trim(normalizeProgressLine(state, item.title || text));
     if (!text.length && !title.length) {
@@ -5877,11 +6624,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           existing.completedAt = existing.completedAt || now();
           existing.current = false;
         }
+        existing.secretsMasked = true;
+        maskSecretFields(state, existing, false);
         // Sub-agent runs are pushed again at every read: save an event again only when it changed (a run history of
         // 13.9 MB was mostly copies of the same sub-agent blocks).
         var saved = runDetailEvent(existing);
         if (JSON.stringify(saved) !== savedBefore) {
           appendRunDetail(state, saved);
+        }
+        if (state.secretValues && state.secretValues.length > knownSecrets) {
+          maskStateSecrets(state, true);
         }
         return existing;
       }
@@ -5899,18 +6651,24 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       toolName: trim(item.toolName || ""),
       groupKey: trim(item.groupKey || ""),
       current: item.current === true,
+      secretsMasked: true,
       at: now(),
       updatedAt: now()
     });
+    var pushed = state.progressEvents[state.progressEvents.length - 1];
     var reasoning = item.reasoning || (kind === "narrative" || kind === "tool" ? takeStepReasoning(state) : null);
     if (reasoning) {
-      state.progressEvents[state.progressEvents.length - 1].reasoning = reasoning;
+      pushed.reasoning = reasoning;
+      maskSecretFields(state, pushed, false);
     }
-    appendRunDetail(state, runDetailEvent(state.progressEvents[state.progressEvents.length - 1]));
+    appendRunDetail(state, runDetailEvent(pushed));
     while (state.progressEvents.length > 80) {
       state.progressEvents.shift();
     }
-    return state.progressEvents[state.progressEvents.length - 1];
+    if (state.secretValues && state.secretValues.length > knownSecrets) {
+      maskStateSecrets(state, true);
+    }
+    return pushed;
   }
 
   function markProgressEventsIdle(state) {
@@ -5999,13 +6757,31 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     flushFullReasoning(state, pending);
   }
 
-  function flushFullReasoning(state, pending) {
+  function flushFullReasoning(state, pending, all) {
     if (!pending || !pending.full || !String(pending.fullBuffer || "").length) {
       return;
     }
+    // Written masked. While the block streams, its last line (or words) waits for the next piece: a secret cut between
+    // two pieces would be masked in neither. A cut never parts a key ("password:", "pwd=") or an email ("x@y.com /")
+    // from the value after it.
+    var text = String(pending.fullBuffer);
+    var keep = "";
+    if (all !== true) {
+      var cut = text.lastIndexOf("\n");
+      if (cut < text.length - 400) {
+        cut = text.length;
+        do {
+          cut = text.lastIndexOf(" ", cut - 1);
+        } while (cut > 0 && cut >= text.length - 400 && /[:=\/]$/.test(text.substring(Math.max(0, cut - 40), cut).replace(/[\s*_`"']+$/, "")));
+      }
+      if (cut > 0 && cut >= text.length - 400) {
+        keep = text.substring(cut);
+        text = text.substring(0, cut);
+      }
+    }
     try {
-      appendTextFile(reasoningFullFile(state, pending.full.run, pending.full.f), pending.fullBuffer);
-      pending.fullBuffer = "";
+      appendTextFile(reasoningFullFile(state, pending.full.run, pending.full.f), maskSecretText(state, text));
+      pending.fullBuffer = keep;
     } catch (_ignoreFullReasoning) {
       pending.full = null;
       pending.fullBuffer = "";
@@ -6065,11 +6841,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function settleReasoning(state) {
     if (state && state.reasoningPending) {
-      flushFullReasoning(state, state.reasoningPending);
+      flushFullReasoning(state, state.reasoningPending, true);
     }
     var finished = finishedReasoning(state && state.reasoningPending);
     if (state) {
       state.reasoningPending = null;
+    }
+    if (finished && state) {
+      maskSecretFields(state, { reasoning: finished }, true);
     }
     return finished;
   }
@@ -6282,8 +7061,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function attachReasoningToComment(state, text, reasoning) {
     // The comment of a message is the narrative that starts with its first line: the status lines the Assistant adds
-    // itself ("J'utilise le MCP Convertigo.") can be written to the work log just before it.
-    var lines = String(text || "").split(/\n/);
+    // itself ("J'utilise le MCP Convertigo.") can be written to the work log just before it. Masked as the comments are.
+    var lines = String(maskSecretText(state, text) || "").split(/\n/);
     var first = "";
     for (var i = 0; i < lines.length && !first.length; i++) {
       first = trim(cleanEventText(compactLine(normalizeProgressLine(state, lines[i]))).replace(/\s+/g, " "));
@@ -6354,7 +7133,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function appendNarrativeEvent(state, text, source) {
-    text = cleanEventText(text);
+    // Masked first: the events it is compared with are.
+    text = cleanEventText(maskSecretText(state, text));
     if (!state || !text.length) {
       return;
     }
@@ -6573,7 +7353,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return;
     }
     for (var i = 0; i < runs.length; i++) {
-      var run = runs[i];
+      // Masked whole before its texts are cut to the size of the block: a cut secret would not be found.
+      var run = maskSecretsDeep(state, runs[i], 0);
       var title = subagentProfileLabel(state, run.profile) + " · " + trim(run.model).replace(/^.*\//, "");
       pushProgressEvent(state, {
         key: "subagent:" + run.runId,
@@ -7058,14 +7839,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function setStateBuffer(state) {
-    var progressShown = progressWithoutAnswer(state);
-    setBuffer(displayContent(state), state.status, {
+    var progressShown = panelProgress(state);
+    setBuffer(answerForPanel(state, displayContent(state)), state.status, {
       runid: state.runid || "",
       threadid: state.threadid || "",
       phase: progressShown.phase,
       progress: progressShown.log,
       progressEvents: progressShown.events,
-      warnings: state.warnings || []
+      warnings: panelWarnings(state, state.warnings || [])
     });
   }
 
@@ -7590,6 +8371,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       resourceConversationHome: record && record.resourceConversationHome === true,
       language: normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage || (record && record.language)) || detectLanguage(options.userQuestion || options.Question || ""),
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
+      // The user's message of the turn a recreated state ended: whether its answer keeps the credentials it gives.
+      lastUserMessage: record ? String(record.lastUserMessage || "") : "",
       status: record && trim(record.status).length ? trim(record.status) : "created",
       cursor: record && record.lastCursor ? Number(record.lastCursor) : 0,
       runid: record && record.lastRunId ? String(record.lastRunId) : "",
@@ -7613,6 +8396,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function publicState(state) {
+    var progressShown = panelProgress(state);
     return {
       threadid: state.threadid,
       handle: state.handle,
@@ -7640,12 +8424,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       projectId: state.projectId,
       primaryProject: state.primaryProject || state.projectId || "",
       projectNames: state.projectNames || [],
-      progress: progressWithoutAnswer(state).log,
-      progressEvents: progressWithoutAnswer(state).events,
-      reasoningLive: liveReasoning(state),
-      phase: progressWithoutAnswer(state).phase,
-      warnings: state.warnings || [],
-      plan: state.plan || null,
+      progress: progressShown.log,
+      progressEvents: progressShown.events,
+      reasoningLive: panelLiveReasoning(state),
+      phase: progressShown.phase,
+      warnings: panelWarnings(state, state.warnings || []),
+      plan: panelPlan(state, state.plan || null),
       usage: state.usage || null,
       commands: agentCommandsFor(state),
       formMutation: state.formMutation || null,
@@ -7667,19 +8451,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return [{
       type: "assistant",
       id: state.runid || -1,
-      msg: state.answer
+      msg: answerForPanel(state, state.answer)
     }];
   }
 
   function conversationAIData(state, historyLimit) {
+    var progressShown = panelProgress(state);
     return {
       threadid: state.threadid,
       status: state.status || "",
       runid: state.runid || "",
-      progress: progressWithoutAnswer(state).log,
-      progressEvents: progressWithoutAnswer(state).events,
-      phase: progressWithoutAnswer(state).phase,
-      warnings: state.warnings || [],
+      progress: progressShown.log,
+      progressEvents: progressShown.events,
+      phase: progressShown.phase,
+      warnings: panelWarnings(state, state.warnings || []),
       state: publicState(state),
       messages: transcriptMessages(state, historyLimit)
     };
@@ -7709,7 +8494,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   function responseForState(state) {
-    var progressShown = progressWithoutAnswer(state);
+    var progressShown = panelProgress(state);
     return {
       id: state.runid || state.threadid,
       object: "agent.run",
@@ -7722,14 +8507,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       AIData: {
         type: "agent",
         threadid: state.threadid,
-        explanation: state.answer || state.error || "",
+        explanation: answerForPanel(state, state.answer || state.error || ""),
         progress: progressShown.log,
         progressEvents: progressShown.events,
-        reasoningLive: liveReasoning(state),
+        reasoningLive: panelLiveReasoning(state),
         formMutation: state.formMutation || null,
         setupRequired: state.setupRequired === true,
         setup: state.setupReport || null,
-        warnings: state.warnings || [],
+        warnings: panelWarnings(state, state.warnings || []),
         messages: responseMessages(state)
       },
       state: publicState(state)
@@ -9747,6 +10532,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreParts) {}
     var runs = new File(new File(String(record.conversationDir)), "runs");
     var texts = {};
+    // The blocks are written masked with the secrets known while they streamed; those written before the masking are
+    // masked here with the secrets their runs' events name (from the same folder, never another session's state).
+    var secrets = { secretValues: [] };
+    var runsRead = {};
+    var recordState = { conversationFile: filePath(new File(new File(String(record.conversationDir)), "conversation.json")) };
     for (var i = 0; parts && i < parts.length && i < 50; i++) {
       var run = trim(parts[i] && parts[i].run);
       var id = trim(parts[i] && parts[i].f);
@@ -9755,7 +10545,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       var file = new File(new File(runs, run + ".reasoning"), id + ".txt");
       if (file.exists()) {
-        texts[run + "/" + id] = readTextFile(file);
+        if (!runsRead[run]) {
+          runsRead[run] = true;
+          var details = readRunDetails(recordState, run);
+          rememberSecretValues(secrets, details ? details.secrets : []);
+        }
+        texts[run + "/" + id] = maskSecretText(secrets, readTextFile(file));
       }
     }
     return { ok: true, threadid: threadid, texts: texts };

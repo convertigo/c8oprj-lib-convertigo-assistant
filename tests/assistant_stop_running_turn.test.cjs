@@ -268,8 +268,10 @@ test('an ended turn does not repeat its answer in its progress, phase or narrati
   // A running turn keeps everything.
   const running = clone(progressWithoutAnswer({ status: 'in_progress', answer: lost, progressLog: lost, lastStatusText: lost, progressEvents: [] }));
   assert.deepEqual(running, { log: lost, events: [], phase: lost });
-  assert.match(client, /function responseForState\(state\) \{\n    var progressShown = progressWithoutAnswer\(state\);/);
-  assert.match(client, /function setStateBuffer\(state\) \{\n    var progressShown = progressWithoutAnswer\(state\);/);
+  // Through panelProgress, which also masks the secrets of the turn (assistant_secret_mask.test.cjs).
+  assert.match(client, /function panelProgress\(state\) \{\n    var shown = progressWithoutAnswer\(state\);/);
+  assert.match(client, /function responseForState\(state\) \{\n    var progressShown = panelProgress\(state\);/);
+  assert.match(client, /function setStateBuffer\(state\) \{\n    var progressShown = panelProgress\(state\);/);
 });
 
 // Portage, dev Electron Studio (14/11): vibe-acp killed between two tool calls ended its turn as "completed" on its last

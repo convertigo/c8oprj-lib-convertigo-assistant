@@ -52,4 +52,13 @@ function backendParts(names, constants = []) {
   // The bootstrap references the two endpoint constants.
   return 'var FALLBACK_MCP_PATH = "/api/mcp", FALLBACK_FLOW_MCP_PATH = "/api/flow-mcp";\n' + parts.join('\n');
 }
-module.exports = { ts, read, formattedEntries, formattedBlocks, blockWith, pageClass, backendParts };
+// The secret masking of js/agent_bridge_client.js (tests/assistant_secret_mask.test.cjs): extracted with any function
+// that calls it (the progress events, the reasoning, the response builders).
+const SECRET_MASK_FUNCTIONS = ['secretKeyName', 'secretValueMaskable', 'secretValueSpreads', 'rememberSecretValues', 'secretWordChar',
+  'replaceSecretValue', 'secretPartTells', 'maskSecretEdges', 'maskKnownSecrets', 'maskSecretSpans', 'maskKeyedSecrets',
+  'maskNamedSecretValues', 'sqlTupleValues', 'maskSqlInsertSecrets', 'maskTokenSecrets', 'maskCredentialPairs', 'detectSecretValues',
+  'maskSecretText', 'maskSecretFields', 'maskStateSecrets', 'maskRecordedEvents', 'maskSecretsDeep', 'userAsksForCredentials',
+  'answerForPanel', 'panelProgress', 'panelLiveReasoning', 'panelPlan', 'panelWarnings', 'maskedProgressItem'];
+const SECRET_MASK_CONSTANTS = ['SECRET_MASK', 'SECRET_VALUES_MAX', 'SECRET_WORD_SOURCE', 'SECRET_VALUE_TAIL', 'SECRET_NOT_VALUES',
+  'CREDENTIALS_REQUEST', 'CREDENTIALS_CONTEXT'];
+module.exports = { ts, read, formattedEntries, formattedBlocks, blockWith, pageClass, backendParts, SECRET_MASK_FUNCTIONS, SECRET_MASK_CONSTANTS };

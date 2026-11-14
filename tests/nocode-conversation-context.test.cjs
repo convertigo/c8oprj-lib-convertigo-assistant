@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { blockWith, pageClass } = require('./helpers/assistant-source.cjs');
+const { blockWith, pageClass, SECRET_MASK_FUNCTIONS, SECRET_MASK_CONSTANTS } = require('./helpers/assistant-source.cjs');
 const root = path.resolve(__dirname, '..');
 const ts = require(path.join(root, '_private/ionic/node_modules/typescript'));
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
@@ -114,10 +114,15 @@ test('legacy and failed resumes preserve messages without inventing a resource',
 
 test('persisted/public context contains resource identity only, and Studio has none', () => {
   const source = sourceFile(read('js/agent_bridge_client.js'));
-  const names = new Set(['noCodeConversationContext', 'savedNoCodeContext', 'writeConversationRecord', 'publicState', 'publicConversation', 'liveReasoning', 'publicSessionSandbox', 'progressWithoutAnswer', 'compactLine', 'isTerminalStatus']);
-  const snippets = [];
-  function visit(n) { if (ts.isFunctionDeclaration(n) && names.has(n.name?.text)) snippets.push(n.getText(source)); ts.forEachChild(n, visit); }
-  visit(source); assert.equal(snippets.length, names.size);
+  const names = new Set(['noCodeConversationContext', 'savedNoCodeContext', 'writeConversationRecord', 'publicState', 'publicConversation', 'liveReasoning', 'publicSessionSandbox', 'progressWithoutAnswer', 'compactLine', 'isTerminalStatus', ...SECRET_MASK_FUNCTIONS]);
+  const snippets = [], constants = [];
+  function visit(n) {
+    if (ts.isFunctionDeclaration(n) && names.has(n.name?.text)) snippets.push(n.getText(source));
+    if (ts.isVariableDeclaration(n) && SECRET_MASK_CONSTANTS.includes(n.name?.getText(source))) constants.push('var ' + n.getText(source) + ';');
+    ts.forEachChild(n, visit);
+  }
+  visit(source); assert.equal(snippets.length, names.size); assert.equal(constants.length, SECRET_MASK_CONSTANTS.length);
+  snippets.unshift(...constants);
   let record;
   const ctx = run(snippets.join('\n'), {
     trim: v => String(v ?? '').trim(), normalizeSkillProfile: s => s.skillProfile || 'studio', normalizeProvider: v => v || 'codex',

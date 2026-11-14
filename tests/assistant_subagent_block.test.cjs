@@ -4,7 +4,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { ts, pageClass, backendParts } = require('./helpers/assistant-source.cjs');
+const { ts, pageClass, backendParts, SECRET_MASK_FUNCTIONS, SECRET_MASK_CONSTANTS } = require('./helpers/assistant-source.cjs');
 
 const METHODS = ['getSubagentView', 'subagentShots', 'subagentProfileLabel', 'agentUiText', 'agentUiLanguage', 'formatAgentNumber', 'formatAgentTokens', 'formatAgentCost', 'formatAgentDuration'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
@@ -53,7 +53,8 @@ test('a running run shows its latest steps, no report; an unknown cost is left o
 
 test('the client turns the runs of the conversation into subagent events of the turn', () => {
   const sandbox = { trim: v => String(v ?? '').trim(), now: () => 1792269300000 };
-  vm.runInNewContext(backendParts(['subagentProfileLabel', 'subagentDurationMs', 'subagentEventDetail', 'subagentSteps', 'subagentThought', 'syncSubagentRuns'], ['SUBAGENT_LABELS']), sandbox);
+  vm.runInNewContext(backendParts(['subagentProfileLabel', 'subagentDurationMs', 'subagentEventDetail', 'subagentSteps', 'subagentThought', 'syncSubagentRuns',
+    ...SECRET_MASK_FUNCTIONS], ['SUBAGENT_LABELS', ...SECRET_MASK_CONSTANTS]), sandbox);
   const pushed = [];
   let asked = null;
   sandbox.pushProgressEvent = (state, item) => pushed.push(item);
