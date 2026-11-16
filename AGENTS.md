@@ -674,8 +674,10 @@ rediscovering the same context.
   up after 30 s, and saves nothing for a No Code user. Full settings reads use a
   Bridge context of their own (`studio_assistant_settings_full_<session>`): the
   engine serializes the requests of one context, and a Continue waited ~40 s behind
-  the full check of its screen. Cover with `node --test tests/settings-wait.test.cjs
-  tests/nocode-panel-start-cost.test.cjs`.
+  the full check of its screen. The screen's check, Continue and the setup refresh
+  send `withConversations` false: `settingsSteps` lists no conversations for them
+  (5 s per call for a No Code user with many). Cover with `node --test
+  tests/settings-wait.test.cjs tests/nocode-panel-start-cost.test.cjs`.
 - Keep Ionic standalone component imports out of shared actions in this 8.4.6
   module template. Its IonicModule already provides those components; importing
   both forms causes Angular NG0300 at runtime.

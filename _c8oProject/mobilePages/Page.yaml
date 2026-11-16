@@ -1415,6 +1415,8 @@ scriptContent:
                         ''refreshModelCatalog'': refreshCatalog === true,
         				// a page opening keeps the cached provider settings up to a week: no settings Vibe start to rediscover them
         				''settingsCacheMaxAgeMs'': (forceFullSettings === true && refreshCatalog !== true) ? 604800000 : "",
+        				// only the settings are read here: no list of conversations (5 s for a No Code user with many)
+        				''withConversations'': false,
         				''updateCheckCacheMs'': 21600000,
         				''__context'': noCode ? ''agent_nocode_settings'' : ''byside''
         			};
@@ -15161,6 +15163,7 @@ title: Tigo
                                     skillProfile: page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
                                     runtimePresenceOnly: true,
                                     checkUpdates: false,
+                                    withConversations: false,
                                     __context: ''byside''
                                 };
                                 page.local.AgentServerSettingsError = '''';
@@ -15475,6 +15478,7 @@ title: Tigo
                                                 ''homeScope'': page.getAgentHomeScope ? page.getAgentHomeScope(provider) : ''user'',
                                                 ''agentProfile'': page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
                                                 ''skillProfile'': page.getAgentSkillProfile ? page.getAgentSkillProfile() : '''',
+                                                ''withConversations'': false,
                                                 ''__context'': ''byside''
                                             };
                                             page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSettings'', settingsPayload).async().then(function(settingsResponse) {

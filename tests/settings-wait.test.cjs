@@ -159,3 +159,21 @@ test('Continue shows its save, is disabled until it answers, and gives up after 
   // disabled while it saves
   assert.match(pageYaml, /"Disabled": "script:!this\.local \|\| this\.local\.AgentSettingsSaving === true \|\|/);
 });
+
+test('a settings-only read lists no conversations; the screen, Continue and the setup refresh ask for none', () => {
+  const { backendParts } = require('./helpers/assistant-source.cjs');
+  const listed = [];
+  const sandbox = {
+    trim: (value) => String(value ?? '').trim(),
+    resolveWorkspaceRoot: () => '/workspace', normalizeUserKey: (value) => String(value), normalizeProviderSelector: (value) => value,
+    normalizeSkillProfile: () => 'nocode', sendMark() {}, now: () => 1,
+    agentSettingsForOptions: () => ({ ok: true, providers: [{ id: 'convertigo' }], defaults: { provider: 'convertigo' } }),
+    publicConversations: () => { listed.push(true); return [{ conversationId: 'agent-1' }]; }
+  };
+  vm.runInNewContext(backendParts(['settingsSteps']), sandbox);
+  assert.equal(sandbox.settingsSteps({ userId: 'u' }).conversations.length, 1, 'by default, as before');
+  assert.equal(sandbox.settingsSteps({ userId: 'u', withConversations: 'false' }).conversations.length, 0);
+  assert.equal(listed.length, 1);
+  assert.match(read('js/agent_bridge_client.js'), /"settingsTimeoutMs", "settingsCacheMaxAgeMs", "withConversations",/);
+  assert.equal((pageYaml.match(/withConversations'*: false,/g) || []).length, 3);
+});

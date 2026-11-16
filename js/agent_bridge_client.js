@@ -313,7 +313,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "contextTargetKind", "baserowWorkspaceId", "baserowWorkspaceName",
       "baserowDatabaseId", "baserowDatabaseName", "baserowTableId", "baserowTableName",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
-      "settingsTimeoutMs", "settingsCacheMaxAgeMs", "checkUpdates", "refreshUpdateCheck", "refreshModelCatalog", "updateCheckTimeoutMs",
+      "settingsTimeoutMs", "settingsCacheMaxAgeMs", "withConversations", "checkUpdates", "refreshUpdateCheck", "refreshModelCatalog", "updateCheckTimeoutMs",
       "updateCheckCacheMs", "runtimePresenceOnly", "updateRuntime", "forceRuntimeUpdate",
       "model", "reasoningEffort", "reasoningLevel", "serviceTier", "savePreferences",
       "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
@@ -9576,7 +9576,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var projectFilter = trim(options.targetProject || options.projectName || options.projectId);
     var settings = agentSettingsForOptions(options, workspaceRoot, userKey, projectFilter, provider);
     sendMark("settings", { workspaceRoot: workspaceRoot, provider: provider });
-    var conversations = publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options));
+    // the settings screen and its saves read only the settings: listing a No Code user's conversations took 5 s of each
+    // of their calls (test-nocode, 16/11)
+    var conversations = trim(options.withConversations).toLowerCase() === "false" ? []
+      : publicConversations(workspaceRoot, userKey, "", false, "all", normalizeSkillProfile(options));
     sendMark("conversations");
     return {
       ok: settings.ok !== false,
