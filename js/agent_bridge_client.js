@@ -9613,37 +9613,68 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return "";
   }
 
+  function isImageAttachment(file) {
+    var path = sequenceFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath"]);
+    var type = sequenceFileValue(file, ["type", "mime", "mimeType", "content_type", "contentType"]).toLowerCase();
+    var name = sequenceFileValue(file, ["filename", "name", "file_name"]).toLowerCase();
+    return type.indexOf("image/") === 0 || /\.(png|jpe?g|gif|webp)$/.test(name) || /\.(png|jpe?g|gif|webp)$/.test(path.toLowerCase());
+  }
+
   function attachedImagePaths(value) {
     var files = parseSequenceFiles(value);
     var paths = [];
     for (var i = 0; i < files.length; i++) {
       var file = files[i] || {};
       var path = sequenceFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath"]);
-      var type = sequenceFileValue(file, ["type", "mime", "mimeType", "content_type", "contentType"]).toLowerCase();
-      var name = sequenceFileValue(file, ["filename", "name", "file_name"]).toLowerCase();
-      var isImage = type.indexOf("image/") === 0 || /\.(png|jpe?g|gif|webp)$/.test(name) || /\.(png|jpe?g|gif|webp)$/.test(path.toLowerCase());
-      if (path.length && isImage && paths.indexOf(path) === -1) {
+      if (path.length && isImageAttachment(file) && paths.indexOf(path) === -1) {
         paths.push(path);
       }
     }
     return paths;
   }
 
-  function sequenceAttachmentLine(file, index) {
+  // A file the user attaches that is not an image reaches the agent by its name, and the MCP reads it: its sheets and
+  // rows, or its text (lib_ConvertigoMCP js/attachment_read.js). Only the images go to the Agent Bridge, and a No Code
+  // agent cannot open the attachments folder (its tool policy and Landlock, lib_ConvertigoAgentBridge agentSandbox):
+  // test-nocode 16/11, an attached xlsx answered "permission denied" to the agent's shell and file tools. Its line gives
+  // the tool and no path. An MCP older than the tool keeps the former line. Checked at each prompt: an MCP installed
+  // after this project is seen at once.
+  var ATTACHMENT_READ_TOOLS = {
+    nocode: { sequence: "tools_nocode_attachment_read", tool: "nocode-attachment-read" },
+    studio: { sequence: "tools_attachment_read", tool: "attachment-read" }
+  };
+  var attachmentReadProbe = function (sequenceName) {
+    try {
+      var project = Engine.theApp.databaseObjectsManager.getOriginalProjectByName("lib_ConvertigoMCP");
+      return project != null && project.getSequenceByName(sequenceName) != null;
+    } catch (_ignoreNoMcp) {
+      return false;
+    }
+  };
+
+  function attachmentReadTool(noCode) {
+    var entry = ATTACHMENT_READ_TOOLS[noCode ? "nocode" : "studio"];
+    return attachmentReadProbe(entry.sequence) === true ? entry.tool : "";
+  }
+
+  // readTool: the MCP tool that reads a file that is not an image ("" without it); noCode: the agent cannot open the path
+  function sequenceAttachmentLine(file, index, readTool, noCode) {
     var label = sequenceFileValue(file, ["filename", "name", "file_name", "id", "object"]);
     var path = sequenceFileValue(file, ["path", "filepath", "filePath", "localPath", "absolutePath", "file"]);
     var type = sequenceFileValue(file, ["type", "mime", "mimeType", "content_type", "contentType"]);
     var id = sequenceFileValue(file, ["id", "file_id", "fileId"]);
     var size = sequenceFileValue(file, ["bytes", "size", "length"]);
     var raw = sequenceFileValue(file, ["raw"]);
+    var readable = trim(readTool).length > 0 && label.length > 0 && !isImageAttachment(file);
     var parts = [];
     parts.push("attachment " + (index + 1));
     if (label.length) parts.push("name=" + label);
-    if (path.length) parts.push("path=" + path);
+    if (path.length && !(readable && noCode)) parts.push("path=" + path);
     if (type.length) parts.push("type=" + type);
     if (id.length) parts.push("id=" + id);
     if (size.length) parts.push("size=" + size);
     if (raw.length) parts.push("raw=" + raw);
+    if (readable) parts.push("read it with `" + readTool + "` {\"name\": " + JSON.stringify(label) + "}");
     return parts.join("; ");
   }
 
@@ -9824,12 +9855,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     promptParts.push("- Do not expose secrets, credentials, API keys, or private environment values.");
     promptParts.push("- If installation, credentials, network access, or permissions block the work, explain the blocker and the next action clearly.");
     if (uploadedFiles.length) {
+      var otherFiles = false;
+      for (var otherIndex = 0; otherIndex < uploadedFiles.length; otherIndex++) {
+        otherFiles = otherFiles || !isImageAttachment(uploadedFiles[otherIndex] || {});
+      }
+      var readTool = otherFiles ? attachmentReadTool(isNoCodeSurface) : "";
       promptParts.push("");
       promptParts.push("User attachments:");
       promptParts.push("The user attached file metadata through Convertigo Assistant. Image attachments are usually screenshots or UI evidence; inspect the referenced local file/path when one is available before acting on visual issues.");
       promptParts.push("If this provider or bridge cannot access the binary image content, say it clearly and use the attachment metadata plus the user's description instead of pretending you saw the image.");
+      if (readTool.length) {
+        promptParts.push("Read every other attached file (spreadsheet, CSV, PDF, Word, text) with the `" + readTool + "` MCP tool by its name, as its line says: it answers a spreadsheet's sheets and rows, or a document's text, a page at a time."
+          + (isNoCodeSurface ? " Your sandbox cannot open the attachments folder: never try their path with a shell, a file tool or code." : ""));
+      }
       for (var fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
-        promptParts.push("- " + sequenceAttachmentLine(uploadedFiles[fileIndex], fileIndex));
+        promptParts.push("- " + sequenceAttachmentLine(uploadedFiles[fileIndex], fileIndex, readTool, isNoCodeSurface));
       }
     }
     promptParts.push("");
