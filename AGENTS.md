@@ -747,13 +747,29 @@ rediscovering the same context.
   Preferences tab sets the default of "confirm before changing" and the feedback
   policy, the Runtime tab the update channel (`AgentServerSettings`). A user
   keeps Reveal, confirm before changing, feedback when the policy is `user`,
-  prompts and skills; no agent, runtime or MCP tab, no model in the composer.
+  prompts and skills, and their own reasoning effort; no agent, runtime or MCP tab.
   The page keys this on `serverSettings.managed === true` (never on the surface
-  alone); the composer offers no model or effort when the server sets them,
-  administrators included. The C8Oforms GESTION menu entry "Tigo" opens the panel
-  on these settings.
-- Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`
-  and `tests/nocode-server-settings-ui.test.cjs`.
+  alone). Every user, administrators included, sees the server's agent and model
+  read only (composer label `AgentProviderLabel`, settings note
+  `getNoCodeAgentNote`) and chooses their own effort among the levels of that
+  model (`getNoCodeServerAgent`, `setNoCodeUserReasoning`; composer select and the
+  first block of the Preferences tab): `AgentServerSettings` action `reasoning`
+  (`saveCallerReasoning`) checks the level against the Bridge's cached catalog and
+  keeps it in `agents/nocode/users/<userKey>/reasoning.json` with the agent and
+  model it was chosen for; `withNoCodeServerSettings` runs the user's turns on it
+  while the server keeps that agent and model, else on the server default
+  (`noCodeUserReasoning`). The answers carry it as `serverSettings.userReasoning`.
+  The C8Oforms GESTION menu entry "Tigo" opens the panel on these settings.
+- Server settings writes (`noCodeServerSettingsWriteRefusal`): a supplied
+  `x-xsrf-token` is compared with the session's only when the engine issued one to
+  that session; otherwise the server Origin decides. The panel's c8o SDK sends the
+  token the engine's administration console left in the origin's localStorage, and
+  the engine issues none to a No Code session: before this, every save of such an
+  administrator was refused (`request_token_required`, beta.18 to beta.30) and the
+  Agent tab closed on the old model. Continue now keeps the screen open on
+  `serverSettings.saveError` (`ServerSaveError`). See `docs/nocode-server-settings.md`.
+- Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`,
+  `tests/nocode-server-settings-ui.test.cjs` and `tests/nocode-user-reasoning.test.cjs`.
 
 
 

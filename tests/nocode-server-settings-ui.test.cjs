@@ -31,10 +31,10 @@ test('the tabs: no agent, runtime nor MCP tab for a user, a note of who sets the
   assert.match(tabs, /\['agent', 'runtime', 'mcp'\]\.includes\(local\?\.ResourceAccordion \|\| 'agent'\)\) \? 'prefs'/, 'a user lands on the preferences');
   assert.match(tabs, /<p \*ngIf="tab\.admin" class="tigo-server-scope"/);
   assert.match(tabs, /<p \*ngIf="tab\.managed" class="tigo-server-scope"/);
-  assert.match(tabs, /réglé par les administrateurs du No Code Studio/);
+  assert.match(tabs, /<p \*ngIf="tab\.managed" class="tigo-server-scope"[^>]*>\{\{getNoCodeAgentNote\(\)\}\}<\/p>/, 'the agent and the model, read only');
 });
 
-test('the categories of the administrators are left out for a user, the footer offers no model', () => {
+test('the categories of the administrators are left out for a user, the footer offers no model choice', () => {
   for (const name of ['AgentCategory', 'RuntimeCategory', 'McpCategory']) {
     const category = bean(name);
     // a structural attribute takes a plain expression: in script mode Mobile Builder writes *ngIf="{{...}}", which
@@ -43,10 +43,11 @@ test('the categories of the administrators are left out for a user, the footer o
   }
   assert.doesNotMatch(page, /attrName: '\*ngIf'\n\s+attrValue: \n\s+- xmlizable: \n\s+- ↑classname: [^\n]+\n\s+- MobileSmartSourceType: '?script:/, 'no *ngIf in script mode in the page');
   assert.ok(bean('SettingsCategories').includes(`(${MANAGED} && ['agent', 'runtime', 'mcp'].includes(this.local?.ResourceAccordion || 'agent')) ? 'prefs' : this.local?.ResourceAccordion`));
-  for (const name of ['AgentModels', 'AgentReasoningLevels']) {
-    const variable = page.slice(page.indexOf('↓' + name + ' [ngx.components.UIUseVariable-'));
-    assert.match(variable.slice(0, 600).replace(/''/g, "'"), /serverSettings\.managed === true\) \? \[\] :/, name);
-  }
+  const models = page.slice(page.indexOf('↓AgentModels [ngx.components.UIUseVariable-'));
+  assert.match(models.slice(0, 600).replace(/''/g, "'"), /serverSettings\.managed === true\) \? \[\] :/, 'no model to choose');
+  // the effort is each user's own: the levels of the server's model (tests/nocode-user-reasoning.test.cjs)
+  const levels = page.slice(page.indexOf('↓AgentReasoningLevels [ngx.components.UIUseVariable-'));
+  assert.match(levels.slice(0, 600), /this\.getNoCodeServerAgent\(\)\) \? this\.getNoCodeServerAgent\(\)\.levels :/);
   assert.match(bean('FeedbackSettings'), /this\.local\?\.AgentSettings\?\.serverSettings\?\.managed === true && \(this\.local\?\.AgentSettings\?\.serverSettings\?\.feedbackPolicy \|\| 'user'\) !== 'user'/,
     'the feedback choice of a user only when the server lets each user choose');
 });

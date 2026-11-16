@@ -1,5 +1,5 @@
 accessibility: Hidden
-comment: 'Settings of the No Code agent for the whole server (js/agent_bridge_client.js serverSettings): get (default) reads them for any caller of the agent; save (with settings, a JSON object of provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel) writes their global symbols, for an administrator of the No Code Studio, a WEB_ADMIN session or the Studio. An empty value removes its symbol; agents.tool_policy stays the operator''s (read only).'
+comment: 'Settings of the No Code agent for the whole server (js/agent_bridge_client.js serverSettings): get (default) reads them for any caller of the agent; save (with settings, a JSON object of provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel) writes their global symbols, for an administrator of the No Code Studio, a WEB_ADMIN session or the Studio. An empty value removes its symbol; agents.tool_policy stays the operator''s (read only). reasoning (with settings {reasoning}) keeps the effort of the user of the session for the server''s model, among the levels of that model; empty goes back to the server''s default.'
 responseTimeout: 30
 ↓Run [steps.SimpleStep-1793875846341]: 
   expression: |
@@ -22,8 +22,8 @@ responseTimeout: 30
         - ↑mode: PLAIN
         - →→: result
 ↓action [variables.RequestableVariable-1793875846345]: 
-  comment: get (default) or save.
-  description: get (default) or save.
+  comment: get (default), save, or reasoning (the effort of the caller).
+  description: get (default), save, or reasoning (the effort of the caller).
 ↓settings [variables.RequestableVariable-1793875846347]: 
-  comment: 'For save, a JSON object of the settings to write: provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel. A key left out keeps its symbol, an empty value removes it.'
-  description: 'For save, a JSON object of the settings to write: provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel. A key left out keeps its symbol, an empty value removes it.'
+  comment: 'For save, a JSON object of the settings to write: provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel. A key left out keeps its symbol, an empty value removes it. For reasoning, {"reasoning": a level of the server''s model, or empty}.'
+  description: 'For save, a JSON object of the settings to write: provider, model, reasoning, writeConfirm, feedbackPolicy, stackChannel. A key left out keeps its symbol, an empty value removes it. For reasoning, {"reasoning": a level of the server''s model, or empty}.'

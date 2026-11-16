@@ -6,9 +6,17 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { read, backendParts } = require('./helpers/assistant-source.cjs');
 
-function fixture({ studio = false, webAdmin = false, admin = false, user = 'alice@example.com', symbols = {}, platformPolicy = '', c8oformsRight = true, method = 'POST', origin = 'https://settings.example.test', token = '', sessionToken = '', configuredUrl = '', requestUrl = 'https://settings.example.test/convertigo/projects/lib_ConvertigoAssistant/.json' } = {}) {
+function fixture({ studio = false, webAdmin = false, admin = false, user = 'alice@example.com', symbols = {}, platformPolicy = '', c8oformsRight = true, tigoRight = true, method = 'POST', origin = 'https://settings.example.test', token = '', sessionToken = '', configuredUrl = '', requestUrl = 'https://settings.example.test/convertigo/projects/lib_ConvertigoAssistant/.json', bridgeLevels = { 'mistral-large-4': ['low', 'medium', 'high'], 'glm-5-3': ['low', 'high', 'max'] }, bridgeDown = false, files = new Map() } = {}) {
   const store = new Map(Object.entries(symbols));
   const edits = [];
+  const bridgeCalls = [];
+  // a file of the workspace: its path, read and written through the helpers of the Assistant
+  function File(parent, name) { this.path = (parent && parent.path ? parent.path : String(parent)) + '/' + name; }
+  File.prototype.exists = function () { return files.has(this.path); };
+  File.prototype.delete = function () { return files.delete(this.path); };
+  // what the Bridge offers (agent_settings, cached catalog): the Convertigo agent and its models' levels
+  const bridgeSettings = () => ({ ok: true, providers: [{ id: 'convertigo', defaultModel: 'glm-5-3', supports: { reasoning: true },
+    models: Object.keys(bridgeLevels).map(id => ({ id, defaultReasoning: bridgeLevels[id][0], reasoningLevels: bridgeLevels[id].map(level => ({ id: level, label: level })) })) }] });
   const uri = value => {
     const u = new URL(value);
     return { getScheme: () => u.protocol.slice(0, -1), getHost: () => u.hostname,
@@ -46,20 +54,36 @@ function fixture({ studio = false, webAdmin = false, admin = false, user = 'alic
     publicState: state => ({ threadid: state.threadid, provider: state.provider }),
     agentAccessOfSession: () => ({ admin }),
     bridgeCallerRefusal: () => null,
+    noCodeAgentRefusal: () => (tigoRight ? null : { ok: false, status: 'failed', error: { code: 'agent_not_allowed', message: 'agent_not_allowed' } }),
+    withCallerUserId: options => Object.assign(options || {}, { userId: user }),
+    File,
+    resolveWorkspaceRoot: () => '/workspace',
+    safePathPart: value => String(value),
+    normalizeUserKey: value => String(value ?? '').trim().toLowerCase(),
+    readJsonFile: file => (files.has(file.path) ? JSON.parse(files.get(file.path)) : null),
+    writeJsonFile: (file, value) => { files.set(file.path, JSON.stringify(value)); },
+    now: () => 1794850000000,
+    agentSettingsForOptions: (options, workspaceRoot, userKey, projectFilter, provider) => {
+      bridgeCalls.push({ options: { ...options }, userKey, provider });
+      if (bridgeDown) { return { ok: false, status: 'error', error: 'bridge down' }; }
+      return bridgeSettings();
+    },
     C8O: { assistantAgentBridge: {} }
   };
   const requestHelpers = read('js/agent_bridge_client.js').includes('function noCodeServerSettingsWriteRefusal(')
     ? ['noCodeServerSettingsWriteRefusal', 'noCodeSettingsOrigin'] : [];
   vm.runInNewContext(backendParts([...requestHelpers,'serverSymbolValue', 'noCodeServerChoice', 'readNoCodeServerSettings', 'noCodeServerSettings',
     'isNoCodeAdministrator', 'withNoCodeServerSettings', 'applyNoCodeServerDefaults', 'saveNoCodeServerSettings',
-    'keepNoCodeServerValues', 'noCodeAgentChanged'],
+    'keepNoCodeServerValues', 'noCodeAgentChanged', ...['settingsObjectOf', 'noCodeUserReasoningFile', 'noCodeUserReasoning',
+      'noCodeServerModelLevels', 'saveNoCodeUserReasoning', 'saveCallerReasoning', 'providerSettings', 'modelSettings']
+      .filter(name => read('js/agent_bridge_client.js').includes('function ' + name + '('))],
   ['NOCODE_SERVER_SYMBOLS', 'NOCODE_SERVER_PROVIDERS', 'NOCODE_SERVER_REASONING', 'NOCODE_SERVER_CHOICES']), sandbox);
   // the public entry point is an assignment: run it with the same helpers
   const source = read('js/agent_bridge_client.js');
   const start = source.indexOf('  C8O.assistantAgentBridge.serverSettings = function (options) {');
   const end = source.indexOf('\n  };\n', start) + 5;
   vm.runInNewContext(source.slice(start, end), sandbox);
-  return { sandbox, store, edits, user };
+  return { sandbox, store, edits, user, files, bridgeCalls };
 }
 
 test('a No Code user gets the server agent, model and effort, whatever the page sends, and saves none of them', () => {
@@ -269,4 +293,113 @@ test('T9c: TLS termination uses the configured public HTTPS origin', () => {
   assert.equal(save('http://engine:28080/convertigo').ok, false);
   assert.equal(save('http://public.example.test/convertigo').ok, false);
   assert.equal(save('').ok, false);
+});
+
+test('T9d: a token the session never received does not refuse a save from the server origin (test-nocode, 16/11)', () => {
+  // The c8o SDK sends the x-xsrf-token its origin keeps in localStorage, which the engine's administration console
+  // writes; the engine issues none to a No Code session. Every save of a No Code administrator who had once opened the
+  // console in that browser was refused (request_token_required), the Continue of the Agent tab included.
+  const save = options => {
+    const f = fixture({ admin: true, symbols: { 'assistant.nocode.model': 'glm-5-3' }, ...options });
+    return { result: f.sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'save', settings: { model: 'mistral-large-4' } }), f };
+  };
+  const stale = save({ token: 'console-token-of-an-ended-session', sessionToken: '' });
+  assert.equal(stale.result.ok, true, JSON.stringify(stale.result));
+  assert.equal(stale.f.store.get('assistant.nocode.model'), 'mistral-large-4');
+  // the Continue of the Agent tab (AgentSettings with savePreferences) goes through the same check
+  const page = fixture({ admin: true, token: 'console-token-of-an-ended-session', symbols: { 'assistant.nocode.model': 'glm-5-3' } });
+  const options = page.sandbox.withNoCodeServerSettings({ userId: 'alice@example.com', provider: 'convertigo', model: 'mistral-large-4', reasoningEffort: 'medium', savePreferences: 'true' }, true);
+  assert.equal(options.noCodeServerSaved.ok, true, JSON.stringify(options.noCodeServerSaved));
+  assert.equal(page.store.get('assistant.nocode.model'), 'mistral-large-4');
+  assert.equal(page.store.get('assistant.nocode.reasoning'), 'medium');
+  // still refused: another origin, no origin, or a token that differs from the one the session holds
+  for (const refused of [
+    { token: 'console-token', origin: 'https://other.example.test' },
+    { token: 'console-token', origin: null },
+    { token: 'console-token', sessionToken: 'issued-to-this-session' }
+  ]) {
+    const { result, f } = save(refused);
+    assert.equal(result.ok, false, JSON.stringify(refused));
+    assert.equal(f.edits.length, 0, JSON.stringify(refused));
+  }
+});
+
+test('each No Code user chooses their own effort among the levels of the server\'s model', () => {
+  const symbols = { 'assistant.nocode.provider': 'convertigo', 'assistant.nocode.model': 'mistral-large-4', 'assistant.nocode.reasoning': 'high' };
+  const files = new Map();
+  const alice = fixture({ symbols, files });
+  const choose = (f, reasoning) => f.sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'reasoning', settings: JSON.stringify({ reasoning }) });
+  const saved = choose(alice, 'Low');
+  assert.equal(saved.ok, true, JSON.stringify(saved));
+  assert.equal(saved.userReasoning, 'low');
+  assert.deepEqual([...saved.levels], ['low', 'medium', 'high']);
+  assert.deepEqual(JSON.parse(files.get('/workspace/agents/nocode/users/alice@example.com/reasoning.json')),
+    { provider: 'convertigo', model: 'mistral-large-4', reasoning: 'low', at: 1794850000000 });
+  // the levels come from the Bridge's cached catalog, without a runtime check or a catalog refresh
+  const call = alice.bridgeCalls[0];
+  assert.equal(call.provider, 'convertigo');
+  assert.equal(call.options.runtimePresenceOnly, 'true');
+  assert.equal(call.options.refreshModelCatalog, 'false');
+  assert.equal(call.options.savePreferences, 'false');
+  // nothing of the server changes
+  assert.equal(alice.edits.length, 0);
+  assert.equal(alice.store.get('assistant.nocode.reasoning'), 'high');
+  // her turns run on her effort, the agent and the model stay the server's whatever the page sends
+  const turn = alice.sandbox.withNoCodeServerSettings({ userId: 'alice@example.com', provider: 'codex', model: 'gpt', reasoningEffort: 'max' });
+  assert.equal(turn.provider, 'convertigo');
+  assert.equal(turn.model, 'mistral-large-4');
+  assert.equal(turn.reasoningEffort, 'low');
+  assert.equal(alice.sandbox.keepNoCodeServerValues({ ...turn, reasoningEffort: 'max' }).reasoningEffort, 'low');
+  // another user keeps the server's default
+  const bob = fixture({ symbols, files, user: 'bob@example.com' });
+  assert.equal(bob.sandbox.withNoCodeServerSettings({ userId: 'bob@example.com' }).reasoningEffort, 'high');
+  // the settings answer: her effort as her preference, the server's default stays the default
+  const answer = alice.sandbox.applyNoCodeServerDefaults({ userId: 'alice@example.com' }, { providers: [] });
+  assert.equal(answer.serverSettings.userReasoning, 'low');
+  assert.equal(answer.serverSettings.reasoning, 'high');
+  assert.equal(answer.preferences.reasoning, 'low');
+  assert.equal(answer.defaults.reasoning, 'high');
+  // an administrator's screen shows the server's default, their own effort apart
+  const admin = fixture({ symbols, files, admin: true });
+  const adminAnswer = admin.sandbox.applyNoCodeServerDefaults({ userId: 'alice@example.com', noCodeServerAdministrator: true }, { providers: [] });
+  assert.equal(adminAnswer.preferences.reasoning, 'high');
+  assert.equal(adminAnswer.serverSettings.userReasoning, 'low');
+  // refused outside the levels of the server's model, and for a value that is no level
+  for (const wrong of ['max', 'turbo']) {
+    const refused = choose(alice, wrong);
+    assert.equal(refused.ok, false, wrong);
+    assert.equal(refused.error.code, 'invalid_value', wrong);
+  }
+  assert.equal(JSON.parse(files.get('/workspace/agents/nocode/users/alice@example.com/reasoning.json')).reasoning, 'low', 'kept');
+  // the administrators change the model: back on the server's default until she chooses again
+  const changed = fixture({ symbols: { ...symbols, 'assistant.nocode.model': 'glm-5-3' }, files });
+  assert.equal(changed.sandbox.withNoCodeServerSettings({ userId: 'alice@example.com' }).reasoningEffort, 'high');
+  assert.equal(changed.sandbox.applyNoCodeServerDefaults({ userId: 'alice@example.com' }, {}).serverSettings.userReasoning, '');
+  assert.equal(choose(changed, 'max').ok, true, 'max is a level of glm-5-3');
+  // empty: back on the server's default
+  assert.equal(choose(changed, '').ok, true);
+  assert.equal(files.has('/workspace/agents/nocode/users/alice@example.com/reasoning.json'), false);
+  assert.equal(changed.sandbox.withNoCodeServerSettings({ userId: 'alice@example.com' }).reasoningEffort, 'high');
+});
+
+test('the effort of a user: only where the administrators set Tigo, with the right, from the page, with the levels known', () => {
+  const symbols = { 'assistant.nocode.model': 'mistral-large-4' };
+  const choose = (options, reasoning = 'low') => {
+    const f = fixture({ symbols, ...options });
+    return { result: f.sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'reasoning', settings: { reasoning } }), f };
+  };
+  assert.equal(choose({ studio: true }).result.error.code, 'not_managed');
+  assert.equal(choose({ c8oformsRight: false }).result.error.code, 'not_managed');
+  assert.equal(choose({ tigoRight: false }).result.error.code, 'agent_not_allowed');
+  assert.equal(choose({ user: '' }).result.error.code, 'authentication_required');
+  assert.equal(choose({ method: 'GET' }).result.error.code, 'post_required');
+  assert.equal(choose({ origin: 'https://other.example.test' }).result.error.code, 'request_origin_required');
+  const down = choose({ bridgeDown: true });
+  assert.equal(down.result.error.code, 'levels_unavailable');
+  assert.equal(down.f.files.size, 0);
+  assert.equal(fixture({ symbols }).sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'reasoning', settings: 'not json' }).error.code, 'invalid_value');
+  // the server's model left to the agent's default: the levels of that default model
+  const byDefault = choose({ symbols: {} }, 'max');
+  assert.equal(byDefault.result.ok, true, JSON.stringify(byDefault.result));
+  assert.equal(JSON.parse(byDefault.f.files.get('/workspace/agents/nocode/users/alice@example.com/reasoning.json')).model, '');
 });

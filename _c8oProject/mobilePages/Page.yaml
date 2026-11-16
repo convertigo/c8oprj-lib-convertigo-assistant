@@ -3842,6 +3842,128 @@ scriptContent:
             }
             return value.length ? value : ((this.getAgentProviderLabel ? this.getAgentProviderLabel(provider) : "Agent") + " default");
         }
+        public isNoCodeServerManaged() {
+            return !!(this.local && this.local.AgentSettings && this.local.AgentSettings.serverSettings && this.local.AgentSettings.serverSettings.managed === true);
+        }
+        public noCodeEffortText(key) {
+            // Texts of the agent the administrators of the No Code Studio set and of the effort each user chooses.
+            var texts: any = {
+                fr: { userTitle: "Votre effort de raisonnement", userHint: "Pour vos conversations avec {model}, le modèle choisi par les administrateurs du No Code Studio. Un niveau élevé est plus précis, mais plus lent.", adminHint: "Pour vos propres conversations, avec le modèle du serveur. L’effort par défaut de chaque utilisateur se règle dans l’onglet de l’agent.", defaultChoice: "Par défaut ({level})", saveError: "Non enregistré : ", agentNote: "Agent et modèle : {agent}, choisis par les administrateurs du No Code Studio." },
+                en: { userTitle: "Your reasoning effort", userHint: "For your conversations with {model}, the model the administrators of the No Code Studio chose. A higher level is more precise, but slower.", adminHint: "For your own conversations, with the server’s model. The default effort of every user is set in the agent tab.", defaultChoice: "Default ({level})", saveError: "Not saved: ", agentNote: "Agent and model: {agent}, chosen by the administrators of the No Code Studio." },
+                it: { userTitle: "Il tuo livello di ragionamento", userHint: "Per le tue conversazioni con {model}, il modello scelto dagli amministratori del No Code Studio. Un livello alto è più preciso, ma più lento.", adminHint: "Per le tue conversazioni, con il modello del server. Il livello predefinito di ogni utente si imposta nella scheda dell’agente.", defaultChoice: "Predefinito ({level})", saveError: "Non salvato: ", agentNote: "Agente e modello: {agent}, scelti dagli amministratori del No Code Studio." },
+                es: { userTitle: "Su nivel de razonamiento", userHint: "Para sus conversaciones con {model}, el modelo elegido por los administradores del No Code Studio. Un nivel alto es más preciso, pero más lento.", adminHint: "Para sus propias conversaciones, con el modelo del servidor. El nivel predeterminado de cada usuario se ajusta en la pestaña del agente.", defaultChoice: "Predeterminado ({level})", saveError: "No guardado: ", agentNote: "Agente y modelo: {agent}, elegidos por los administradores del No Code Studio." }
+            };
+            var lang = "en";
+            try { lang = ("" + (this.global && this.global.currentLanguage ? this.global.currentLanguage() : "en")).substring(0, 2).toLowerCase(); } catch (e) {}
+            var table: any = texts[lang] || texts.en;
+            return "" + (table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key));
+        }
+        public getNoCodeServerAgent() {
+            // The agent the administrators of the No Code Studio set for the server (serverSettings), as the Bridge offers it:
+            // its model, the levels of that model, the server default effort and the user own one (AgentServerSettings action
+            // reasoning). null outside a server whose administrators set Tigo.
+            if (!this.isNoCodeServerManaged()) {
+                return null;
+            }
+            var server: any = this.local.AgentSettings.serverSettings;
+            var clean = (value: any) => ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+            var provider = this.normalizeAgentProviderValue(server.provider) || "convertigo";
+            var descriptor: any = this.getAgentProviderDescriptor(provider);
+            var settings: any = this.getAgentSettingsRoot ? this.getAgentSettingsRoot() : {};
+            var model = clean(server.model) || clean(descriptor && descriptor.defaultModel) || clean(settings && settings.defaults && settings.defaults.model);
+            var models = descriptor && descriptor.models ? descriptor.models : [];
+            var entry: any = null;
+            for (var i = 0; i < models.length; i++) {
+                if (clean(models[i] && models[i].id) === model) {
+                    entry = models[i];
+                    break;
+                }
+            }
+            var levels = descriptor && descriptor.supports && descriptor.supports.reasoning === true && entry && Array.isArray(entry.reasoningLevels) ? entry.reasoningLevels : [];
+            var offered = (value: any) => {
+                var wanted = clean(value).toLowerCase();
+                for (var l = 0; wanted.length && l < levels.length; l++) {
+                    if (clean(levels[l] && levels[l].id).toLowerCase() === wanted) {
+                        return clean(levels[l].id);
+                    }
+                }
+                return "";
+            };
+            var labelOf = (id: any) => {
+                for (var k = 0; k < levels.length; k++) {
+                    if (clean(levels[k] && levels[k].id) === id) {
+                        return clean(levels[k].label) || id;
+                    }
+                }
+                return id;
+            };
+            var pending = this.local.AgentUserReasoningPending;
+            var own = offered(pending != null ? pending : server.userReasoning);
+            var byDefault = offered(server.reasoning) || offered(entry && entry.defaultReasoning) || (levels.length ? clean(levels[0] && levels[0].id) : "");
+            return {
+                provider: provider,
+                providerLabel: this.getAgentProviderLabel(provider),
+                model: model,
+                modelLabel: entry ? clean(entry.label || entry.name || entry.id) : model,
+                levels: levels,
+                defaultReasoning: byDefault,
+                defaultReasoningLabel: labelOf(byDefault),
+                userReasoning: own,
+                reasoning: own || byDefault,
+                reasoningLabel: labelOf(own || byDefault),
+                administrator: server.administrator === true,
+                saving: this.local.AgentUserReasoningSaving === true,
+                error: clean(this.local.AgentUserReasoningError)
+            };
+        }
+        public getNoCodeAgentNote() {
+            var agent: any = this.getNoCodeServerAgent();
+            if (!agent) {
+                return "";
+            }
+            return this.noCodeEffortText("agentNote").replace("{agent}", agent.providerLabel + (agent.modelLabel ? " · " + agent.modelLabel : ""));
+        }
+        public setNoCodeUserReasoning(reasoning) {
+            // The effort of this user for the server model (AgentServerSettings action reasoning, kept for them on the server);
+            // empty follows the server default. Their next message runs on it. A refused choice leaves the previous one.
+            var agent: any = this.getNoCodeServerAgent();
+            if (!agent || !this.c8o || !this.c8o.callJsonObject || agent.saving) {
+                return;
+            }
+            var clean = (value: any) => ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
+            var wanted = clean(reasoning);
+            if (wanted === agent.userReasoning) {
+                return;
+            }
+            this.local.AgentUserReasoningPending = wanted;
+            this.local.AgentUserReasoningSaving = true;
+            this.local.AgentUserReasoningError = "";
+            this.tick();
+            var done = (saved: any, error: any) => {
+                this.local.AgentUserReasoningSaving = false;
+                this.local.AgentUserReasoningPending = null;
+                var server: any = this.local.AgentSettings && this.local.AgentSettings.serverSettings;
+                if (saved !== null && server) {
+                    server.userReasoning = saved;
+                    if (server.administrator !== true) {
+                        var now: any = this.getNoCodeServerAgent();
+                        this.local.AgentReasoningEffort = now ? now.reasoning : saved;
+                    }
+                }
+                this.local.AgentUserReasoningError = error || "";
+                this.tick();
+            };
+            this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentServerSettings", { action: "reasoning", settings: JSON.stringify({ reasoning: wanted }) }).async().then((response: any) => {
+                var result: any = response && response.result ? response.result : {};
+                if (result.ok === false) {
+                    done(null, (result.error && result.error.message) || "error");
+                    return;
+                }
+                done(clean(result.userReasoning), "");
+            }).catch((error: any) => {
+                done(null, "" + (error && error.message ? error.message : error));
+            });
+        }
         public hasConversationContent() {
             if (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) {
                 return false;
@@ -10226,7 +10348,7 @@ title: Tigo
                 tagName: div
                 ↓SettingsTabs [ngx.components.UICustom-1793872628019]: 
                   comment: 'Settings sections as tabs (narrow) or a side list (wide). The active tab is the open accordion (local.ResourceAccordion); its headers are hidden by TigoSettingsTabsStyle. When the server sets Tigo for the No Code Studio (serverSettings.managed) the agent, runtime and MCP tabs are its administrators'': a user sees the server''s agent instead (managed), an administrator is told the settings apply to every user (admin).'
-                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{feedbackSettingVisible() ? '' · '' + (tab.lang === ''fr'' ? ''Retours'' : (tab.lang === ''it'' ? ''Segnalazioni'' : (tab.lang === ''es'' ? ''Comentarios'' : ''Feedback''))) + '' '' + agentFeedbackText(feedbackSettingMode()) : ''''}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Agent : '' : (tab.lang === ''it'' ? ''Agente: '' : (tab.lang === ''es'' ? ''Agente: '' : ''Agent: ''))}}{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}{{tab.lang === ''fr'' ? '', réglé par les administrateurs du No Code Studio.'' : (tab.lang === ''it'' ? '', impostato dagli amministratori del No Code Studio.'' : (tab.lang === ''es'' ? '', configurado por los administradores del No Code Studio.'' : '', set by the administrators of the No Code Studio.''))}}</p></ng-container>'
+                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{feedbackSettingVisible() ? '' · '' + (tab.lang === ''fr'' ? ''Retours'' : (tab.lang === ''it'' ? ''Segnalazioni'' : (tab.lang === ''es'' ? ''Comentarios'' : ''Feedback''))) + '' '' + agentFeedbackText(feedbackSettingMode()) : ''''}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{getNoCodeAgentNote()}}</p></ng-container>'
                 ↓ResourceSearch [ngx.components.UIDynamicElement-1792084623537]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -11626,6 +11748,9 @@ title: Tigo
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                             - MobileSmartSourceType: plain:content
+                      ↓UserReasoningSettings [ngx.components.UICustom-1794860000001]: 
+                        comment: 'No Code server: the reasoning effort of this user for the model the administrators chose (getNoCodeServerAgent, setNoCodeUserReasoning; AgentServerSettings action reasoning). Default follows the server default effort.'
+                        htmlTemplate: '<ng-container *ngIf="getNoCodeServerAgent() as agent"><div *ngIf="agent.levels.length" class="agent-create-settings-block agent-setting-section agent-user-reasoning-setting"><p class="agent-create-label">{{noCodeEffortText(''userTitle'')}}</p><p class="agent-setting-description">{{noCodeEffortText(agent.administrator ? ''adminHint'' : ''userHint'').replace(''{model}'', agent.modelLabel)}}</p><div class="agent-choice-row"><ion-button fill="clear" size="small" class="agent-choice-button agent-reasoning-option agent-user-reasoning-default" [class.active]="!agent.userReasoning" [disabled]="agent.saving" (click)="setNoCodeUserReasoning('''')">{{noCodeEffortText(''defaultChoice'').replace(''{level}'', agent.defaultReasoningLabel)}}</ion-button><ion-button *ngFor="let level of agent.levels" fill="clear" size="small" class="agent-choice-button agent-reasoning-option" [class.active]="agent.userReasoning === level.id" [disabled]="agent.saving" (click)="setNoCodeUserReasoning(level.id)">{{level.label || level.id}}</ion-button></div><p *ngIf="agent.error" class="agent-setting-description agent-user-reasoning-error" role="alert">{{noCodeEffortText(''saveError'')}}{{agent.error}}</p></div></ng-container>'
                       ↓RevealSettings1 [ngx.components.UIDynamicElement-1782955202301]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -14843,6 +14968,9 @@ title: Tigo
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                           - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Configuration synchronisée'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Configurazione sincronizzata'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Configuración sincronizada'' : ''Settings synchronized''))'
+                  ↓ServerSaveError [ngx.components.UICustom-1794860000002]: 
+                    comment: 'No Code server: why the choice of an administrator for every user was not saved (Continue, serverSettings.saveError; the Preferences server blocks set the same local.AgentServerSettingsError).'
+                    htmlTemplate: '<p *ngIf="local?.AgentServerSettingsError && local?.AgentSettings?.serverSettings?.administrator === true" class="agent-setting-description agent-server-save-error" role="alert" style="margin: 0 0 8px; color: var(--ion-color-danger, #c5000f)">{{noCodeEffortText(''saveError'')}}{{local.AgentServerSettingsError}}</p>'
                   ↓Class [ngx.components.UIAttribute-1785315895964]: 
                     attrName: class
                     attrValue: 
@@ -14943,8 +15071,18 @@ title: Tigo
                                     checkUpdates: false,
                                     __context: ''byside''
                                 };
+                                page.local.AgentServerSettingsError = '''';
                                 page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSettings'', payload).async().then(function(response) {
                                     var result = response && response.result ? response.result : {};
+                                    // No Code server: the choice of an administrator for every user was not saved (serverSettings.saveError):
+                                    // the screen stays open and says why, instead of closing on the previous server values
+                                    var saveError = result.settings && result.settings.serverSettings ? result.settings.serverSettings.saveError : null;
+                                    if (saveError) {
+                                        page.local.AgentServerSettingsError = '''' + (saveError.message || saveError.code || ''error'');
+                                        page.tick();
+                                        resolve();
+                                        return;
+                                    }
                                     if (result.settings) { page.local.AgentSettings = result.settings; }
                                     finish();
                                 }).catch(function(error) {
@@ -23319,12 +23457,12 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.AgentReasoningEffort ? local.AgentReasoningEffort : '''''
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().reasoning : (local && local.AgentReasoningEffort ? local.AgentReasoningEffort : '''')'
     ↓AgentReasoningLevels [ngx.components.UIUseVariable-1782124576600]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(local && local.AgentSettings && local.AgentSettings.serverSettings && local.AgentSettings.serverSettings.managed === true) ? [] : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningLevels) ? local.AgentReasoningLevels : [])'
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().levels : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningLevels) ? local.AgentReasoningLevels : [])'
     ↓AgentModelLabel [ngx.components.UIUseVariable-1782124580836]: 
       varValue: 
         - xmlizable: 
@@ -23334,12 +23472,12 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningEffort) ? this.getAgentReasoningLabel() : '''''
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().reasoningLabel : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningEffort) ? this.getAgentReasoningLabel() : '''')'
     ↓AgentProviderLabel [ngx.components.UIUseVariable-1789743727415]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentProviderLabel && this.getAgentProviderLabel() !== ''Agent'') ? this.getAgentProviderLabel() : '''''
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? (this.getNoCodeServerAgent().providerLabel + (this.getNoCodeServerAgent().modelLabel ? '' · '' + this.getNoCodeServerAgent().modelLabel : '''')) : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentProviderLabel && this.getAgentProviderLabel() !== ''Agent'') ? this.getAgentProviderLabel() : '''')'
     ↓ModelChange [ngx.components.UIControlEvent-1782124897336]: 
       attrName: (ModelChange)
       eventName: ModelChange
@@ -23407,6 +23545,14 @@ title: Tigo
               →: |
                 '		var selected = event && event.reasoning != null ? event.reasoning : (event && event.detail && event.detail.value != null ? event.detail.value : event);
                 		if (!page.local) { page.local = {}; }
+                		// No Code server: the effort is this user own one for the server model, kept for them on the server
+                		var serverAgent = page.getNoCodeServerAgent ? page.getNoCodeServerAgent() : null;
+                		if (serverAgent) {
+                			var chosen = ('''' + (selected == null ? '''' : selected)).replace(/^\s+|\s+$/g, '''');
+                			if (chosen.length && chosen !== serverAgent.reasoning) { page.setNoCodeUserReasoning(chosen); }
+                			resolve();
+                			return;
+                		}
                 		page.local.AgentReasoningEffort = ('''' + (selected == null ? '''' : selected)).replace(/^\s+|\s+$/g, '''');
                 		page.tick();
                 		resolve();

@@ -2712,7 +2712,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return isLocalStudio() || isWebAdminSession() || agentAccessOfSession(true).admin === true;
   }
 
-  // Right after withCallerUserId: a No Code user's agent, model and effort are the server's, whatever the page sends.
+  // Right after withCallerUserId: a No Code user's agent and model are the server's, whatever the page sends, and the
+  // effort is the one the user chose for that model (saved with AgentServerSettings action reasoning), else the server's.
   // The settings screen of an administrator of the No Code Studio is the server's (the Tigo page of the C8Oforms
   // administration opens it): it lists every agent and model, and the choice it saves is the server's.
   function withNoCodeServerSettings(options, forSettings) {
@@ -2736,7 +2737,6 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     options.agentProvider = server.provider;
     options.model = server.model;
     options.agentModel = server.model;
-    options.reasoningEffort = server.reasoning;
     delete options.reasoningLevel;
     delete options.modelReasoningEffort;
     options.serviceTier = "";
@@ -2746,10 +2746,117 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     for (var i = 0; i < runtimeFlags.length; i++) {
       options[runtimeFlags[i]] = "false";
     }
+    // the effort is the user's own for the server's model (noCodeUserReasoning), else the server's default
+    var reasoning = noCodeUserReasoning(options, server) || server.reasoning;
+    options.reasoningEffort = reasoning;
     // the agent of a No Code user is not theirs to save; not empty, so no request parameter fills it again
     options.savePreferences = "false";
-    options.noCodeServerValues = { provider: server.provider, model: server.model, reasoning: server.reasoning };
+    options.noCodeServerValues = { provider: server.provider, model: server.model, reasoning: reasoning };
     return options;
+  }
+
+  // Each No Code user sets their own reasoning effort for the model the administrators chose; the administrators set
+  // the agent, the model and the default effort. Kept for the user beside their MCP token,
+  // agents/nocode/users/<userKey>/reasoning.json {provider, model, reasoning, at}. It applies while the server runs that
+  // agent and that model (the level was checked against the model's levels when saved): once the administrators change
+  // either, the user is back on the server's default until they choose again.
+  function noCodeUserReasoningFile(options) {
+    var root = new File(resolveWorkspaceRoot(options), "agents");
+    return new File(new File(new File(new File(root, "nocode"), "users"), safePathPart(normalizeUserKey(options.userId))), "reasoning.json");
+  }
+
+  function noCodeUserReasoning(options, server) {
+    if (!server || !options || !trim(options.userId).length) {
+      return "";
+    }
+    try {
+      var record = readJsonFile(noCodeUserReasoningFile(options));
+      if (!record || typeof record !== "object") {
+        return "";
+      }
+      var reasoning = noCodeServerChoice("reasoning", trim(record.reasoning), true);
+      return reasoning.length && normalizeProvider(record.provider) === normalizeProvider(server.provider)
+        && trim(record.model) === trim(server.model) ? reasoning : "";
+    } catch (_ignoreNoUserReasoning) {
+      return "";
+    }
+  }
+
+  // The levels of the server's model, as the Bridge offers them (its cached catalog, no runtime check): null when the
+  // Bridge does not answer.
+  function noCodeServerModelLevels(options, server) {
+    var read = {};
+    for (var key in options) {
+      if (Object.prototype.hasOwnProperty.call(options, key)) {
+        read[key] = options[key];
+      }
+    }
+    read.provider = server.provider;
+    read.agentProvider = server.provider;
+    read.model = server.model;
+    read.reasoningEffort = "";
+    read.agentProfile = "nocode";
+    read.skillProfile = "nocode";
+    read.runtimePresenceOnly = "true";
+    read.checkUpdates = "false";
+    read.refreshModelCatalog = "false";
+    read.savePreferences = "false";
+    var settings = agentSettingsForOptions(read, resolveWorkspaceRoot(read), normalizeUserKey(read.userId), "", server.provider);
+    if (!settings || settings.ok === false) {
+      return null;
+    }
+    var descriptor = providerSettings(settings, server.provider);
+    if (!descriptor || normalizeProvider(descriptor.id) !== normalizeProvider(server.provider)) {
+      return null;
+    }
+    var model = modelSettings(descriptor, trim(server.model) || trim(descriptor.defaultModel));
+    var levels = [];
+    var offered = descriptor.supports && descriptor.supports.reasoning === true && model && model.reasoningLevels ? model.reasoningLevels : [];
+    for (var i = 0; i < offered.length; i++) {
+      var id = trim(offered[i] && (offered[i].id != null ? offered[i].id : offered[i])).toLowerCase();
+      if (id.length) {
+        levels.push(id);
+      }
+    }
+    return { model: trim(model && model.id), levels: levels, defaultReasoning: trim(model && model.defaultReasoning).toLowerCase() };
+  }
+
+  // A No Code user chooses their effort (an empty one goes back to the server's default). Only a level the server's
+  // model offers is kept; the caller is the user of the session, checked as a save of the server settings is.
+  function saveNoCodeUserReasoning(options, server, value) {
+    var refused = noCodeServerSettingsWriteRefusal();
+    if (refused !== null) { return refused; }
+    var file = noCodeUserReasoningFile(options);
+    var wanted = trim(value).toLowerCase();
+    if (!wanted.length) {
+      try {
+        if (file.exists()) {
+          file["delete"]();
+        }
+      } catch (deleteError) {
+        return { ok: false, status: "failed", error: { code: "not_saved", message: "not_saved: " + deleteError } };
+      }
+      return { ok: true, reasoning: "" };
+    }
+    var reasoning = noCodeServerChoice("reasoning", wanted, true);
+    if (!reasoning.length) {
+      return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: reasoning" } };
+    }
+    var offer = noCodeServerModelLevels(options, server);
+    if (offer === null) {
+      return { ok: false, status: "failed", error: { code: "levels_unavailable",
+        message: "levels_unavailable: the efforts of the server's model could not be read. Try again." } };
+    }
+    if (offer.levels.indexOf(reasoning) < 0) {
+      return { ok: false, status: "failed", error: { code: "invalid_value",
+        message: "invalid_value: reasoning " + reasoning + " is not offered by " + (offer.model || "the server's model") + " (" + offer.levels.join(", ") + ")" } };
+    }
+    try {
+      writeJsonFile(file, { provider: server.provider, model: server.model, reasoning: reasoning, at: Number(now()) });
+    } catch (writeError) {
+      return { ok: false, status: "failed", error: { code: "not_saved", message: "not_saved: " + writeError } };
+    }
+    return { ok: true, reasoning: reasoning, levels: offer.levels };
   }
 
   // agentSettingsForOptions reads the request parameters again: the server's values stay.
@@ -2792,9 +2899,14 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (options && options.noCodeServerSaved && options.noCodeServerSaved.ok === false) {
       server.saveError = options.noCodeServerSaved.error;
     }
+    // the caller's own effort for the server's model ("" when they follow the server's default); the screen of an
+    // administrator shows the server's default, their composer their own effort
+    server.userReasoning = noCodeUserReasoning(options, server);
+    server.userReasoningAllowed = true;
     var defaults = { provider: server.provider, model: server.model, reasoning: server.reasoning };
     settings.defaults = defaults;
-    settings.preferences = { provider: server.provider, model: server.model, reasoning: server.reasoning, confirmed: true, source: "server" };
+    settings.preferences = { provider: server.provider, model: server.model,
+      reasoning: server.administrator === true ? server.reasoning : (server.userReasoning || server.reasoning), confirmed: true, source: "server" };
     settings.serverSettings = server;
     return settings;
   }
@@ -2821,6 +2933,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   // Server settings writes use POST and check every supplied Origin before considering a session token.
   // Checking the engine token ourselves is intentional: its generic checker can issue a token on first use.
+  // A token is checked against the one the engine issued to this session. The c8o SDK of the panel sends whatever its
+  // origin keeps in localStorage under x-xsrf-token, a key the engine's administration console writes too, and the
+  // engine issues none to a No Code session (API calls and user services answer no token): a token left there by an
+  // ended console session proves nothing either way, and the server's Origin decides, as for "Fetch". It refused every
+  // save of a No Code administrator who had once opened the console in that browser (test-nocode, 16/11).
   function noCodeServerSettingsWriteRefusal() {
     var denied = function (code) {
       return { ok: false, status: "failed", error: { code: code,
@@ -2846,8 +2963,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!supplied.length) { supplied = trim(req.getParameter("__xsrfToken")); }
       if (supplied.length && supplied !== "Fetch") {
         var expected = trim(Packages.com.twinsoft.convertigo.engine.enums.SessionAttribute.xsrfToken.get(context.httpSession));
-        return expected.length && MessageDigest.isEqual(new java.lang.String(supplied).getBytes("UTF-8"),
-          new java.lang.String(expected).getBytes("UTF-8")) ? null : denied("request_token_required");
+        if (expected.length) {
+          return MessageDigest.isEqual(new java.lang.String(supplied).getBytes("UTF-8"),
+            new java.lang.String(expected).getBytes("UTF-8")) ? null : denied("request_token_required");
+        }
       }
       return hasOrigin ? null : denied("request_token_required");
     } catch (_ignoreSettingsRequest) {
@@ -2896,30 +3015,67 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return { ok: true, written: written };
   }
 
+  // A sequence variable is a Java string: only a plain object is taken as it is. null when it is no JSON object.
+  function settingsObjectOf(value) {
+    try {
+      var values = Object.prototype.toString.call(value) === "[object Object]" ? value : JSON.parse(trim(value) || "{}");
+      return values && typeof values === "object" ? values : null;
+    } catch (_ignoreBadSettings) {
+      return null;
+    }
+  }
+
+  // AgentServerSettings action reasoning: the effort of the user of the session for the server's model (settings
+  // {reasoning}; empty goes back to the server's default). A No Code user with the Tigo right, on a server whose C8Oforms
+  // administers Tigo; an administrator sets their own effort here too (the server's default is saved with save).
+  function saveCallerReasoning(options) {
+    if (isLocalStudio() || !agentAccessSequenceAvailable()) {
+      return { ok: false, status: "failed", error: { code: "not_managed",
+        message: "not_managed: the effort of each user exists where the administrators of the No Code Studio set Tigo." } };
+    }
+    var refused = noCodeAgentRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    var caller = withCallerUserId({ userId: "", agentProfile: "nocode", skillProfile: "nocode" });
+    var server = trim(caller.userId).length ? noCodeServerSettings(caller) : null;
+    if (server === null) {
+      return { ok: false, status: "failed", error: { code: "authentication_required",
+        message: "authentication_required: sign in to the No Code Studio to choose your effort." } };
+    }
+    var values = settingsObjectOf(options.settings);
+    if (values === null) {
+      return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: settings is not a JSON object" } };
+    }
+    var saved = saveNoCodeUserReasoning(caller, server, values.reasoning);
+    if (saved.ok === false) {
+      return saved;
+    }
+    try { log.info("(lib_ConvertigoAssistant) No Code effort of a user saved: " + (saved.reasoning || "server default")); } catch (_ignoreNoLog) {}
+    return { ok: true, status: "ok", userReasoning: saved.reasoning, levels: saved.levels || [],
+      settings: { provider: server.provider, model: server.model, reasoning: server.reasoning } };
+  }
+
   // AgentServerSettings: read (any caller of the agent) or save (an administrator of the No Code Studio, a WEB_ADMIN
-  // session, or the Studio) the server settings of the No Code agent.
+  // session, or the Studio) the server settings of the No Code agent; reasoning saves the caller's own effort.
   C8O.assistantAgentBridge.serverSettings = function (options) {
     var refused = bridgeCallerRefusal();
     if (refused !== null) {
       return refused;
     }
     options = options || {};
-    var administrator = isNoCodeAdministrator();
     var action = trim(options.action).toLowerCase() || "get";
+    if (action === "reasoning") {
+      return saveCallerReasoning(options);
+    }
+    var administrator = isNoCodeAdministrator();
     if (action === "save") {
       if (!administrator) {
         return { ok: false, status: "failed", error: { code: "not_administrator",
           message: "not_administrator: only an administrator of the No Code Studio sets Tigo for the server." } };
       }
-      var values = {};
-      try {
-        // a sequence variable is a Java string: only a plain object is taken as it is
-        values = Object.prototype.toString.call(options.settings) === "[object Object]" ? options.settings
-          : JSON.parse(trim(options.settings) || "{}");
-        if (!values || typeof values !== "object") {
-          throw new Error("not an object");
-        }
-      } catch (_ignoreBadSettings) {
+      var values = settingsObjectOf(options.settings);
+      if (values === null) {
         return { ok: false, status: "failed", error: { code: "invalid_value", message: "invalid_value: settings is not a JSON object" } };
       }
       var saved = saveNoCodeServerSettings(values);
