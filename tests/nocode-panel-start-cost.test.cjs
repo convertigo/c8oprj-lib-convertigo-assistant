@@ -30,16 +30,21 @@ function bridgeCallSandbox(sessionId) {
   return { sandbox, posts };
 }
 
-test('the settings are read on a Bridge context of their own, one per caller session', () => {
+test('the settings are read on Bridge contexts of their own, one per caller session and kind of read', () => {
   const { sandbox, posts } = bridgeCallSandbox('session-A');
   sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_settings', { runtimePresenceOnly: true }, 120000);
+  sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_settings', { runtimePresenceOnly: 'true', savePreferences: true }, 120000);
   sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_settings', {}, 120000);
+  sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_settings', { runtimePresenceOnly: false, refreshModelCatalog: true }, 120000);
   sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_vibe_start', { handle: 'agent-1' }, 90000);
   assert.match(posts[0].__context, /^studio_assistant_settings_[0-9a-f]+$/, 'not the context of the starts and prompts');
   assert.equal(posts[1].__context, posts[0].__context, 'stable for the session: no new engine context per read');
-  assert.equal(posts[2].__context, undefined, 'starts, prompts and stops keep the shared context that orders them');
+  // a full read (up to a minute) never holds a light one: a Continue waited ~40 s behind the screen's check (16/11)
+  assert.equal(posts[2].__context, posts[0].__context.replace('studio_assistant_settings_', 'studio_assistant_settings_full_'));
+  assert.equal(posts[3].__context, posts[2].__context, 'one full-read context per session');
+  assert.equal(posts[4].__context, undefined, 'starts, prompts and stops keep the shared context that orders them');
   const other = bridgeCallSandbox('session-B');
-  other.sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_settings', {}, 120000);
+  other.sandbox.bridgeCall({ userId: 'forms-user' }, 'agent_settings', { runtimePresenceOnly: true }, 120000);
   assert.notEqual(other.posts[0].__context, posts[0].__context, 'another browser session');
 });
 

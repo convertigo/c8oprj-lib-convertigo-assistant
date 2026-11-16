@@ -1335,7 +1335,10 @@ scriptContent:
         
         	// presenceRecheck: a light read of what is installed while the chosen agent waits for its runtime
         	// (scheduleAgentRuntimeRecheck); applied only once that runtime is there.
-        	public refreshAgentSettingsAfterHostContext(forceFullSettings = false, presenceRecheck = false) {
+        	// refreshCatalog: the model catalog is fetched again (the Refresh models button, a sign-in or a key that changed). A
+        	// settings page opening reads the cached one: its refresh started a settings Vibe and probed every gateway model,
+        	// 60 to 90 s on test-nocode (16/11), longer than the page waited.
+        	public refreshAgentSettingsAfterHostContext(forceFullSettings = false, presenceRecheck = false, refreshCatalog = false) {
         		var noCode = this.isEmbeddedNoCodeAgent();
         		var settingsTimer: any = null;
         		try {
@@ -1349,6 +1352,18 @@ scriptContent:
         			if (forceFullSettings !== true && presenceRecheck !== true && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded()) { return; }
         			if (!this.isEmbeddedNoCodeAgent() && (!this.hasLocalAgentBridgeCapability || !this.hasLocalAgentBridgeCapability())) { return; }
         			this.local.AgentSettingsRefreshRunning = true;
+        			// what the settings page waits for (getSettingsWaitState); a failure stays until the next check
+        			var checkKind = forceFullSettings === true ? (refreshCatalog === true ? "catalog" : "check") : "";
+        			if (checkKind.length) {
+        				this.local.AgentSettingsCheckKind = checkKind;
+        				this.local.AgentSettingsLastCheckKind = checkKind;
+        				this.local.AgentSettingsCheckError = "";
+        			}
+        			var endCheck = (error: any) => {
+        				if (!checkKind.length) { return; }
+        				this.local.AgentSettingsCheckKind = "";
+        				this.local.AgentSettingsCheckError = error == null ? "" : ("" + error).replace(/^Error:\s*/, "");
+        			};
         			// A settings page refresh answers for the page that asked. Closed meanwhile (gear or Continue), its late answer or
         			// failure neither reopens the page, which hides the composer, nor replaces the choice just confirmed.
         			var settingsPageSeq = this.local.AgentSettingsPageSeq;
@@ -1397,7 +1412,9 @@ scriptContent:
         				''runtimePresenceOnly'': forceFullSettings !== true,
         				''checkUpdates'': forceFullSettings === true,
         				''refreshUpdateCheck'': false,
-                        ''refreshModelCatalog'': forceFullSettings === true,
+                        ''refreshModelCatalog'': refreshCatalog === true,
+        				// a page opening keeps the cached provider settings up to a week: no settings Vibe start to rediscover them
+        				''settingsCacheMaxAgeMs'': (forceFullSettings === true && refreshCatalog !== true) ? 604800000 : "",
         				''updateCheckCacheMs'': 21600000,
         				''__context'': noCode ? ''agent_nocode_settings'' : ''byside''
         			};
@@ -1419,6 +1436,7 @@ scriptContent:
         			}
         			settingsRequest.then((settingsResponse) => {
         				if (settingsTimer !== null) { clearTimeout(settingsTimer); }
+        				endCheck(null);
         				if (settingsPageLeft()) { dropLeftSettingsPage(); return; }
         				// Read before a setup of this panel brought its settings (an install that ended meanwhile), the answer is older
         				// than them: dropped. A recheck that still finds the runtime of the chosen agent missing changes nothing.
@@ -1539,6 +1557,7 @@ scriptContent:
         			}).catch((settingsError) => {
         				if (settingsTimer !== null) { clearTimeout(settingsTimer); }
         				try { this.c8o.log.warn(''[Assistant] Unable to refresh agent settings after host context: '' + settingsError); } catch (eWarn) {}
+        				endCheck(settingsError);
         				if (settingsPageLeft()) { dropLeftSettingsPage(); return; }
         				this.local.AgentSettingsRefreshRunning = false;
         				this.local.AgentSettingsRefreshDone = true;
@@ -1595,6 +1614,8 @@ scriptContent:
         		this.local.AgentSettingsPageSeq = Number(this.local.AgentSettingsPageSeq || 0) + 1;
         		this.local.ShowConversationPanel = false;
         		this.local.ShowAgentConfigPanel = true;
+        		// a save that failed on a previous opening is not this one's
+        		this.local.AgentServerSettingsError = "";
         		// The settings show above the conversation: bring them into view, with their way back to the conversation.
         		setTimeout(() => { try { var content: any = (this as any).content; if (content && content.scrollToTop) { content.scrollToTop(250); } } catch (e) {} }, 60);
         		this.local.AgentRuntimeLoading = true;
@@ -1605,6 +1626,13 @@ scriptContent:
         		this.tick();
         		this.requestAgentHostContext(0);
         		this.refreshAgentStackRelease(true);
+        		// A user of a No Code server sees no agent, runtime or MCP tab: the settings the panel read at its start are enough.
+        		var serverSettings: any = this.local.AgentSettings && this.local.AgentSettings.serverSettings;
+        		if (serverSettings && serverSettings.managed === true && serverSettings.administrator !== true) {
+        			this.local.AgentRuntimeLoading = false;
+        			this.tick();
+        			return;
+        		}
         		this.refreshAgentSettingsAfterHostContext(true);
         	}
         
@@ -8382,7 +8410,49 @@ scriptContent:
         
             public refreshAgentModelCatalog() {
                 if (this.local?.AgentSettingsRefreshRunning) { return; }
-                this.refreshAgentSettingsAfterHostContext(true);
+                this.refreshAgentSettingsAfterHostContext(true, false, true);
+            }
+            public retrySettingsCheck() {
+                if (!this.local || this.local.AgentSettingsRefreshRunning === true) { return; }
+                this.local.AgentSettingsCheckError = "";
+                this.refreshAgentSettingsAfterHostContext(true, false, this.local.AgentSettingsLastCheckKind === "catalog");
+            }
+            public settingsWaitText(key) {
+                // What the settings page waits for, in the banner under its tabs and next to Continue (getSettingsWaitState).
+                var texts: any = {
+                    fr: { check: "Vérification de l’agent et de ses mises à jour…", catalog: "Actualisation de la liste des modèles… Cela peut prendre une minute.", saving: "Enregistrement des réglages…", serverSaving: "Enregistrement pour tout le serveur…", effortSaving: "Enregistrement de votre effort de raisonnement…", lastKnown: "Les réglages affichés sont les derniers connus.", checkFailed: "La vérification n’a pas abouti.", retry: "Réessayer", saveTimeout: "L’enregistrement n’a pas répondu en 30 secondes. Réessayez." },
+                    en: { check: "Checking the agent and its updates…", catalog: "Refreshing the list of models… This can take a minute.", saving: "Saving the settings…", serverSaving: "Saving for the whole server…", effortSaving: "Saving your reasoning effort…", lastKnown: "The settings shown are the last known ones.", checkFailed: "The check did not finish.", retry: "Retry", saveTimeout: "Saving did not answer within 30 seconds. Try again." },
+                    it: { check: "Verifica dell’agente e dei suoi aggiornamenti…", catalog: "Aggiornamento dell’elenco dei modelli… Può richiedere un minuto.", saving: "Salvataggio delle impostazioni…", serverSaving: "Salvataggio per tutto il server…", effortSaving: "Salvataggio del tuo livello di ragionamento…", lastKnown: "Le impostazioni mostrate sono le ultime note.", checkFailed: "La verifica non è terminata.", retry: "Riprova", saveTimeout: "Il salvataggio non ha risposto entro 30 secondi. Riprova." },
+                    es: { check: "Comprobando el agente y sus actualizaciones…", catalog: "Actualizando la lista de modelos… Puede tardar un minuto.", saving: "Guardando los ajustes…", serverSaving: "Guardando para todo el servidor…", effortSaving: "Guardando su nivel de razonamiento…", lastKnown: "Los ajustes mostrados son los últimos conocidos.", checkFailed: "La comprobación no terminó.", retry: "Reintentar", saveTimeout: "El guardado no respondió en 30 segundos. Vuelva a intentarlo." }
+                };
+                var lang = "en";
+                try { lang = ("" + (this.global && this.global.currentLanguage ? this.global.currentLanguage() : "en")).substring(0, 2).toLowerCase(); } catch (e) {}
+                var table: any = texts[lang] || texts.en;
+                return "" + (table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key));
+            }
+            public getSettingsWaitState() {
+                // Every network wait of the settings page, saves first: {kind, text, error, retry}, or null when nothing waits.
+                if (!this.local) {
+                    return null;
+                }
+                var state = (kind: any, text: any, error: any, retry: any) => ({ kind: kind, text: text, error: error === true, retry: retry === true });
+                if (this.local.AgentSettingsSaving === true) {
+                    return state("saving", this.settingsWaitText("saving"), false, false);
+                }
+                if (this.local.AgentServerSettingsSaving) {
+                    return state("serverSaving", this.settingsWaitText("serverSaving"), false, false);
+                }
+                if (this.local.AgentUserReasoningSaving === true) {
+                    return state("effortSaving", this.settingsWaitText("effortSaving"), false, false);
+                }
+                if (this.local.AgentSettingsCheckKind === "catalog" || this.local.AgentSettingsCheckKind === "check") {
+                    return state(this.local.AgentSettingsCheckKind, this.settingsWaitText(this.local.AgentSettingsCheckKind), false, false);
+                }
+                var failed = ("" + (this.local.AgentSettingsCheckError || "")).replace(/^\s+|\s+$/g, "");
+                if (failed.length) {
+                    return state("failed", this.settingsWaitText("checkFailed") + " " + failed + " " + this.settingsWaitText("lastKnown"), true, true);
+                }
+                return null;
             }
             public canMoveTigoFavorite(item: any, direction: number) {
                 const list = this.local.ResourceCatalog?.favorites || [];
@@ -10364,6 +10434,9 @@ title: Tigo
                 ↓SettingsTabs [ngx.components.UICustom-1793872628019]: 
                   comment: 'Settings sections as tabs (narrow) or a side list (wide). The active tab is the open accordion (local.ResourceAccordion); its headers are hidden by TigoSettingsTabsStyle. When the server sets Tigo for the No Code Studio (serverSettings.managed) the agent, runtime and MCP tabs are its administrators'': a user sees the server''s agent instead (managed), an administrator is told the settings apply to every user (admin).'
                   htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{feedbackSettingVisible() ? '' · '' + (tab.lang === ''fr'' ? ''Retours'' : (tab.lang === ''it'' ? ''Segnalazioni'' : (tab.lang === ''es'' ? ''Comentarios'' : ''Feedback''))) + '' '' + agentFeedbackText(feedbackSettingMode()) : ''''}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{getNoCodeAgentNote()}}</p></ng-container>'
+                ↓SettingsWait [ngx.components.UICustom-1794870000001]: 
+                  comment: 'What the settings page waits for (getSettingsWaitState): the check of the agent, a refresh of the model catalog, a save; a check that did not finish says so with Retry. Under the tabs, in every tab.'
+                  htmlTemplate: '<div *ngIf="getSettingsWaitState() as wait" class="tigo-settings-wait" [class.is-error]="wait.error" [attr.role]="wait.error ? ''alert'' : ''status''" aria-live="polite" style="display: flex; align-items: center; gap: 8px; margin: 10px 18px 0; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; color: var(--ion-text-color, inherit)" [style.background]="wait.error ? ''color-mix(in srgb, var(--ion-color-danger, #c5000f) 10%, transparent)'' : ''color-mix(in srgb, var(--ion-color-primary, #2f6fed) 9%, transparent)''"><ion-spinner *ngIf="!wait.error" name="crescent" aria-hidden="true" style="width: 16px; height: 16px; flex: 0 0 auto; color: var(--ion-color-primary, #2f6fed)"></ion-spinner><span style="flex: 1 1 auto">{{wait.text}}</span><ion-button *ngIf="wait.retry" fill="clear" size="small" class="tigo-settings-wait-retry" (click)="retrySettingsCheck()">{{settingsWaitText(''retry'')}}</ion-button></div>'
                 ↓ResourceSearch [ngx.components.UIDynamicElement-1792084623537]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -12894,7 +12967,7 @@ title: Tigo
                                                               page.local.AgentRuntimeActionText = tr(''Agent_Runtime_Reinstall'', ''Réinstaller le runtime'');
                                                               page.local.AgentSettingsRefreshDone = false;
                                                               page.tick();
-                                                              if (page.refreshAgentSettingsAfterHostContext) { page.refreshAgentSettingsAfterHostContext(true); }
+                                                              if (page.refreshAgentSettingsAfterHostContext) { page.refreshAgentSettingsAfterHostContext(true, false, true); }
                                                               resolve();
                                                               return;
                                                           }
@@ -12924,7 +12997,7 @@ title: Tigo
                                                   page.local.AgentRuntimeLoading = true;
                                                   page.local.AgentSettingsRefreshDone = false;
                                                   page.tick();
-                                                  if (page.refreshAgentSettingsAfterHostContext) { page.refreshAgentSettingsAfterHostContext(true); }
+                                                  if (page.refreshAgentSettingsAfterHostContext) { page.refreshAgentSettingsAfterHostContext(true, false, true); }
                                                   page.local.AgentRuntimeLoading = false;
                                                   page.tick();
                                                   resolve();
@@ -14977,15 +15050,15 @@ title: Tigo
                       attrValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: plain:agent-settings-sync-status
+                          - MobileSmartSourceType: 'script:''agent-settings-sync-status'' + (this.getSettingsWaitState && this.getSettingsWaitState() ? (this.getSettingsWaitState().error ? '' is-error'' : '' is-waiting'') : '''')'
                     ↓Text [ngx.components.UIText-1787737440691]: 
                       textValue: 
                         - xmlizable: 
                           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Configuration synchronisée'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Configurazione sincronizzata'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Configuración sincronizada'' : ''Settings synchronized''))'
+                          - MobileSmartSourceType: 'script:(this.getSettingsWaitState && this.getSettingsWaitState()) ? (this.getSettingsWaitState().error ? this.settingsWaitText(''checkFailed'') : this.getSettingsWaitState().text) : (this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Configuration synchronisée'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Configurazione sincronizzata'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''Configuración sincronizada'' : ''Settings synchronized''))'
                   ↓ServerSaveError [ngx.components.UICustom-1794860000002]: 
                     comment: 'No Code server: why the choice of an administrator for every user was not saved (Continue, serverSettings.saveError; the Preferences server blocks set the same local.AgentServerSettingsError).'
-                    htmlTemplate: '<p *ngIf="local?.AgentServerSettingsError && local?.AgentSettings?.serverSettings?.administrator === true" class="agent-setting-description agent-server-save-error" role="alert" style="margin: 0 0 8px; color: var(--ion-color-danger, #c5000f)">{{noCodeEffortText(''saveError'')}}{{local.AgentServerSettingsError}}</p>'
+                    htmlTemplate: '<p *ngIf="local?.AgentServerSettingsError && (local?.AgentSettings?.serverSettings?.administrator === true || !local?.AgentSettings?.serverSettings?.managed)" class="agent-setting-description agent-server-save-error" role="alert" style="margin: 0 0 8px; color: var(--ion-color-danger, #c5000f)">{{noCodeEffortText(''saveError'')}}{{local.AgentServerSettingsError}}</p>'
                   ↓Class [ngx.components.UIAttribute-1785315895964]: 
                     attrName: class
                     attrValue: 
@@ -14996,7 +15069,7 @@ title: Tigo
                     beanData: |
                       '{
                        "ionBean": "Button",
-                       "Disabled": "script:!this.local || (this.local.AgentRuntimeLoading === true && !(this.local.AgentSettingsRefreshRunning === true && !this.local.AgentRuntimeOperation && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded())) || !this.local.AgentProvider || !this.local.AgentModel || !this.hasReadyAgentProvider || !this.hasReadyAgentProvider(this.local.AgentProvider)",
+                       "Disabled": "script:!this.local || this.local.AgentSettingsSaving === true || (this.local.AgentRuntimeLoading === true && !(this.local.AgentSettingsRefreshRunning === true && !this.local.AgentRuntimeOperation && this.hasAgentSettingsProvidersLoaded && this.hasAgentSettingsProvidersLoaded())) || !this.local.AgentProvider || !this.local.AgentModel || !this.hasReadyAgentProvider || !this.hasReadyAgentProvider(this.local.AgentProvider)",
                        "IonFill": "plain:clear",
                        "IonSize": "plain:small"
                       }'
@@ -15028,6 +15101,7 @@ title: Tigo
                             - com.twinsoft.convertigo.beans.common.FormatedContent: 
                               →: |
                                 'if (!page.local) { page.local = {}; }
+                                if (page.local.AgentSettingsSaving === true) { resolve(); return; }
                                 var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
                                 var provider = clean(page.local.AgentProvider).toLowerCase();
                                 var model = clean(page.local.AgentModel);
@@ -15062,7 +15136,10 @@ title: Tigo
                                     if (!hasConversation && page.focusQuestionInput) { page.focusQuestionInput(40); }
                                     resolve();
                                 };
-                                if (!provider.length || !page.c8o || !page.c8o.callJsonObject) {
+                                // a user of a No Code server saves no agent of their own: nothing to wait for
+                                var serverSettings = page.local.AgentSettings && page.local.AgentSettings.serverSettings;
+                                var managedUser = !!(serverSettings && serverSettings.managed === true && serverSettings.administrator !== true);
+                                if (!provider.length || !page.c8o || !page.c8o.callJsonObject || managedUser) {
                                     finish();
                                     return;
                                 }
@@ -15087,7 +15164,29 @@ title: Tigo
                                     __context: ''byside''
                                 };
                                 page.local.AgentServerSettingsError = '''';
+                                // the save shows as waiting (getSettingsWaitState) and Continue is disabled until it answers, 30 s at most
+                                page.local.AgentSettingsSaving = true;
+                                page.tick();
+                                var settled = false;
+                                var settle = function() {
+                                    if (settled) { return false; }
+                                    settled = true;
+                                    clearTimeout(saveTimer);
+                                    page.local.AgentSettingsSaving = false;
+                                    return true;
+                                };
+                                var saveTimer = setTimeout(function() {
+                                    if (!settle()) { return; }
+                                    page.local.AgentServerSettingsError = page.settingsWaitText ? page.settingsWaitText(''saveTimeout'') : ''timeout'';
+                                    if (serverSettings && serverSettings.managed === true && serverSettings.administrator === true) {
+                                        page.tick();
+                                        resolve();
+                                        return;
+                                    }
+                                    finish();
+                                }, 30000);
                                 page.c8o.callJsonObject(''lib_ConvertigoAssistant.AgentSettings'', payload).async().then(function(response) {
+                                    if (!settle()) { return; }
                                     var result = response && response.result ? response.result : {};
                                     // No Code server: the choice of an administrator for every user was not saved (serverSettings.saveError):
                                     // the screen stays open and says why, instead of closing on the previous server values
@@ -15101,6 +15200,7 @@ title: Tigo
                                     if (result.settings) { page.local.AgentSettings = result.settings; }
                                     finish();
                                 }).catch(function(error) {
+                                    if (!settle()) { return; }
                                     try { page.c8o.log.warn(''[Assistant] Unable to persist agent preferences: '' + error); } catch (eWarn) {}
                                     finish();
                                 });'
@@ -26665,6 +26765,17 @@ title: Tigo
             content: "";
             height: 8px;
             width: 8px;
+          }
+          .agent-config-page .agent-settings-sync-status.is-waiting::before {
+            animation: tigo-settings-wait 0.9s ease-in-out infinite alternate;
+            background: var(--ion-color-primary, #2f6fed);
+          }
+          .agent-config-page .agent-settings-sync-status.is-error::before {
+            background: var(--ion-color-danger, #c5000f);
+          }
+          @keyframes tigo-settings-wait {
+            from { opacity: 0.25; }
+            to { opacity: 1; }
           }
           .agent-config-page .agent-settings-footer ion-button {
             margin: 0;

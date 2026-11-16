@@ -658,10 +658,24 @@ rediscovering the same context.
 - Native library inputs use the paired `--modern-surface` / `--modern-text`
   theme variables, including the actual input background. All four provider
   choices live in the same container to keep their widths identical.
-- Opening agent settings or clicking Refresh models explicitly refreshes provider
-  metadata via `refreshModelCatalog`; this must never install/update a runtime.
-  Presence-only startup remains cached. Forward the flag through AgentSettings
-  and its client, independently from package version checks.
+- Refresh models (and a sign-in, or a Convertigo key read again) refreshes provider
+  metadata via `refreshModelCatalog` (`refreshAgentSettingsAfterHostContext(true,
+  false, true)`); this must never install/update a runtime. Opening the settings
+  reads the cached catalog: `refreshModelCatalog` false and `settingsCacheMaxAgeMs`
+  one week, so no settings Vibe starts to rediscover it (60 to 90 s on test-nocode,
+  16/11, longer than the page waited). A user of a No Code server (no agent or
+  runtime tab) opens the settings without a full check. Presence-only startup
+  remains cached. Forward the flags through AgentSettings and its client,
+  independently from package version checks.
+- The settings page says every network wait (`getSettingsWaitState`, texts in
+  `settingsWaitText`, fr/en/it/es): a banner under the tabs (`SettingsWait`, spinner,
+  a check that did not finish with Retry) and the footer status instead of
+  "synchronized". Continue is disabled while it saves (`AgentSettingsSaving`), gives
+  up after 30 s, and saves nothing for a No Code user. Full settings reads use a
+  Bridge context of their own (`studio_assistant_settings_full_<session>`): the
+  engine serializes the requests of one context, and a Continue waited ~40 s behind
+  the full check of its screen. Cover with `node --test tests/settings-wait.test.cjs
+  tests/nocode-panel-start-cost.test.cjs`.
 - Keep Ionic standalone component imports out of shared actions in this 8.4.6
   module template. Its IonicModule already provides those components; importing
   both forms causes Angular NG0300 at runtime.

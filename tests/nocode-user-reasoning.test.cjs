@@ -219,7 +219,7 @@ test('the settings of a user: the effort block first in the preferences; Continu
   assert.match(template, /\*ngFor="let level of agent\.levels"[^>]+\(click\)="setNoCodeUserReasoning\(level\.id\)"/);
   const prefs = pageYaml.indexOf('↓PrefsCategory [');
   assert.ok(prefs < pageYaml.indexOf('↓UserReasoningSettings [') && pageYaml.indexOf('↓UserReasoningSettings [') < pageYaml.indexOf('↓RevealSettings1 ['));
-  assert.match(pageYaml, /↓ServerSaveError \[ngx\.components\.UICustom-\d+\]: \n[^\n]+\n\s+htmlTemplate: '<p \*ngIf="local\?\.AgentServerSettingsError && local\?\.AgentSettings\?\.serverSettings\?\.administrator === true"/);
+  assert.match(pageYaml, /↓ServerSaveError \[ngx\.components\.UICustom-\d+\]: \n[^\n]+\n\s+htmlTemplate: '<p \*ngIf="local\?\.AgentServerSettingsError && \(local\?\.AgentSettings\?\.serverSettings\?\.administrator === true \|\| !local\?\.AgentSettings\?\.serverSettings\?\.managed\)"/);
 
   const code = action('var saveError = result.settings && result.settings.serverSettings ? result.settings.serverSettings.saveError : null;');
   const run = (answer) => {

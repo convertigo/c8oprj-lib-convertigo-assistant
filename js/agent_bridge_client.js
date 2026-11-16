@@ -313,7 +313,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       "contextTargetKind", "baserowWorkspaceId", "baserowWorkspaceName",
       "baserowDatabaseId", "baserowDatabaseName", "baserowTableId", "baserowTableName",
       "codexHome", "vibeHome", "agentHome", "mcpEndpoint", "workspaceRoot",
-      "settingsTimeoutMs", "checkUpdates", "refreshUpdateCheck", "refreshModelCatalog", "updateCheckTimeoutMs",
+      "settingsTimeoutMs", "settingsCacheMaxAgeMs", "checkUpdates", "refreshUpdateCheck", "refreshModelCatalog", "updateCheckTimeoutMs",
       "updateCheckCacheMs", "runtimePresenceOnly", "updateRuntime", "forceRuntimeUpdate",
       "model", "reasoningEffort", "reasoningLevel", "serviceTier", "savePreferences",
       "nocodeMcpTokenHandle", "noCodeMcpTokenHandle",
@@ -3228,9 +3228,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     // The settings are only read: they get a context of their own too. On the shared one, a No Code panel's check of the
     // agent waited 29 s behind the starts of two panels and a prewarmed Vibe, and its 15-s limit opened the settings
-    // (test-nocode, reloads of No Code Studio).
+    // (test-nocode, reloads of No Code Studio). A full read (update checks, a model catalog refresh: up to a minute) has
+    // a context apart from the light ones: the engine serializes the requests of one context, and a Continue or a save
+    // of the settings screen waited ~40 s behind the full check of the same screen (test-nocode, 16/11).
     if (sequence === "agent_settings") {
-      payload.__context = "studio_assistant_settings_" + java.lang.Integer.toHexString(new java.lang.String(callerSessionId()).hashCode());
+      var presenceRead = !!params && (params.runtimePresenceOnly === true || /^(true|1|yes|on)$/i.test(trim(params.runtimePresenceOnly)));
+      var settingsContextKind = presenceRead ? "" : "full_";
+      payload.__context = "studio_assistant_settings_" + settingsContextKind + java.lang.Integer.toHexString(new java.lang.String(callerSessionId()).hashCode());
     }
     var bridgeUrl = trim(options.bridgeBaseUrl) || defaultBridgeUrl(options);
     var headers = {};
@@ -9128,6 +9132,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       serviceTier: trim(options.serviceTier),
       savePreferences: typeof options.savePreferences === "undefined" ? "" : options.savePreferences,
       settingsTimeoutMs: trim(options.settingsTimeoutMs),
+      // how old the cached provider settings may be before a full read rediscovers them (a settings Vibe start, ~45 s)
+      settingsCacheMaxAgeMs: trim(options.settingsCacheMaxAgeMs),
       checkUpdates: typeof options.checkUpdates === "undefined" ? "" : options.checkUpdates,
       refreshUpdateCheck: typeof options.refreshUpdateCheck === "undefined" ? "" : options.refreshUpdateCheck,
       // A read that says it is full (runtimePresenceOnly false) refreshes the catalog unless it chose otherwise. A panel

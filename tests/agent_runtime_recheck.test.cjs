@@ -93,7 +93,7 @@ test('while the chosen agent waits for its runtime, what is installed is read ag
 });
 
 test('the settings refresh: a recheck reads presence only, an answer older than the settings of a setup is dropped', () => {
-  assert.match(page, /public refreshAgentSettingsAfterHostContext\(forceFullSettings = false, presenceRecheck = false\) \{/);
+  assert.match(page, /public refreshAgentSettingsAfterHostContext\(forceFullSettings = false, presenceRecheck = false, refreshCatalog = false\) \{/);
   assert.match(page, /if \(forceFullSettings !== true && presenceRecheck !== true && this\.hasAgentSettingsProvidersLoaded/);
   assert.match(page, /''runtimePresenceOnly'': forceFullSettings !== true,/);
   assert.match(page, /var requestedAt = Date\.now\(\);\n\s+var settingsRequest: any;/);
