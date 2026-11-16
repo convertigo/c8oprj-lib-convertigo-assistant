@@ -83,7 +83,8 @@ test('the turn prompt says the profile; the default prompt is unchanged', () => 
   assert.equal(api.buildSequencePrompt('Add a sequence', Object.assign({}, base, { editProfile: '' })), plain);
   const yaml = api.buildSequencePrompt('Add a sequence', Object.assign({}, base, { editProfile: 'yaml' }));
   assert.ok(yaml.indexOf(api.EDIT_PROFILE_PROMPT_LINES.yaml) >= 0);
-  assert.match(api.EDIT_PROFILE_PROMPT_LINES.yaml, /convertigo:\/\/resources\/convertigo-yaml-editing/);
+  assert.match(api.EDIT_PROFILE_PROMPT_LINES.yaml, /convertigo:\/\/guides\/yaml-editing/);
+  assert.match(api.EDIT_PROFILE_PROMPT_LINES.html, /convertigo:\/\/guides\/html-roundtrip/);
   const html = api.buildSequencePrompt('Show the city', Object.assign({}, base, { editProfile: 'html' }));
   assert.ok(html.indexOf(api.EDIT_PROFILE_PROMPT_LINES.html) >= 0);
   assert.match(api.EDIT_PROFILE_PROMPT_LINES.html, /fromIonic:true/);

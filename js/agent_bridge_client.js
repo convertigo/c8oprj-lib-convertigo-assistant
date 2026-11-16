@@ -224,8 +224,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // applies it to a Vibe conversation (MCP header X-Convertigo-Edit-Profile, file tool permissions, AGENTS.md section).
   var EDIT_PROFILES = { yaml: true, html: true };
   var EDIT_PROFILE_PROMPT_LINES = {
-    yaml: "- Edit profile of this conversation: yaml. Change projects by editing their YAML files (c8oProject.yaml, _c8oProject/**, js/**) with your file tools, then project-reload; the MCP edit tools are not available. Read convertigo://resources/convertigo-yaml-editing first.",
-    html: "- Edit profile of this conversation: html. Visual changes of existing NGX pages and shared components are made in their generated files (mobile-builder-open lists them as ionicFiles), then imported with project-reload(fromIonic:true, ionicTarget); read convertigo://resources/convertigo-ngx-html-roundtrip first. This replaces, for those files only, the rule against editing generated folders."
+    yaml: "- Edit profile of this conversation: yaml. Change projects by editing their YAML files (c8oProject.yaml, _c8oProject/**, js/**) with your file tools, then project-reload; the MCP edit tools are not available. Read convertigo://guides/yaml-editing first.",
+    html: "- Edit profile of this conversation: html. Visual changes of existing NGX pages and shared components are made in their generated files (mobile-builder-open lists them as ionicFiles), then imported with project-reload(fromIonic:true, ionicTarget); read convertigo://guides/html-roundtrip first. This replaces, for those files only, the rule against editing generated folders."
   };
 
   function normalizeEditProfile(value) {
@@ -9804,7 +9804,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       promptParts.push("");
       promptParts.push("Continuation rules for this turn:");
       promptParts.push("- This agent conversation already completed its Convertigo bootstrap for the current MCP endpoint. Reuse the skill and guidance already present in the conversation context.");
-      promptParts.push("- Do not reread an unchanged managed `SKILL.md`, `convertigo://capabilities`, `convertigo://resources/convertigo-start`, or any guide already read in this conversation. If the Agent Bridge preflight reports a changed skill bundle, its exact re-read list takes precedence. Do not repeat catalog discovery.");
+      promptParts.push("- Do not reread an unchanged managed `SKILL.md`, `convertigo://capabilities`, `convertigo://guides/start`, or any guide already read in this conversation. If the Agent Bridge preflight reports a changed skill bundle, its exact re-read list takes precedence. Do not repeat catalog discovery.");
       promptParts.push("- Read only the smallest new specialized recipe if this request introduces a genuinely new route not covered by the conversation, or repeat bootstrap only if the MCP reports a guidance-version mismatch, the endpoint changed, or the Agent Bridge reports a changed skill bundle.");
       promptParts.push("- Reuse object classes, property shapes, target QNames, and tool contracts that already succeeded in this conversation or are present in a targeted tree read. Do not reconfirm them through `palette-list`, `palette-describe`, or `ALL_TOOLS` metadata.");
       promptParts.push("- For `databaseobject-tree-get`, use `childrenDepth` for recursive descendants; `depth` is only a compatibility alias. Request the needed subtree once instead of walking one QName level per call.");

@@ -7,8 +7,8 @@ or with the generated NGX files imported back.
 | Profile | The agent changes a project with | Guide served by the MCP |
 | --- | --- | --- |
 | `mcp` (default) | the MCP edit tools, as before: nothing changes | — |
-| `yaml` | its file tools on `c8oProject.yaml`, `_c8oProject/**` and `js/**`, then `project-reload`; no MCP edit tool | `convertigo://resources/convertigo-yaml-editing` |
-| `html` | the MCP tools, plus its file tools on the generated html, scss and ts of the NGX pages and shared components, imported back by `project-reload(fromIonic:true)` | `convertigo://resources/convertigo-ngx-html-roundtrip` |
+| `yaml` | its file tools on `c8oProject.yaml`, `_c8oProject/**` and `js/**`, then `project-reload`; no MCP edit tool | `convertigo://guides/yaml-editing` |
+| `html` | the MCP tools, plus its file tools on the generated html, scss and ts of the NGX pages and shared components, imported back by `project-reload(fromIonic:true)` | `convertigo://guides/html-roundtrip` |
 
 `html` exists only on an engine of **8.5.0 or more** whose `com.twinsoft.convertigo.engine.util.NgxIonicRoundTripConverter`
 has the static `importIntoLoadedProject(String, String)`, looked up by reflection (the class alone is not enough: an 8.4
