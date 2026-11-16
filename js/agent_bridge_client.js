@@ -2801,6 +2801,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     read.checkUpdates = "false";
     read.refreshModelCatalog = "false";
     read.savePreferences = "false";
+    // within the 30 s of AgentServerSettings: a read that only takes the cached catalog answers in a few seconds
+    read.settingsTimeoutMs = "20000";
     var settings = agentSettingsForOptions(read, resolveWorkspaceRoot(read), normalizeUserKey(read.userId), "", server.provider);
     if (!settings || settings.ok === false) {
       return null;
@@ -2810,6 +2812,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return null;
     }
     var model = modelSettings(descriptor, trim(server.model) || trim(descriptor.defaultModel));
+    // modelSettings falls back on the first model: the levels must be those of the server's model itself
+    if (!model || (trim(server.model).length && trim(model.id) !== trim(server.model))) {
+      return null;
+    }
     var levels = [];
     var offered = descriptor.supports && descriptor.supports.reasoning === true && model && model.reasoningLevels ? model.reasoningLevels : [];
     for (var i = 0; i < offered.length; i++) {

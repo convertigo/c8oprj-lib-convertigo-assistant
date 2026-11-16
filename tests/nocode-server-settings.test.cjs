@@ -398,6 +398,11 @@ test('the effort of a user: only where the administrators set Tigo, with the rig
   assert.equal(down.result.error.code, 'levels_unavailable');
   assert.equal(down.f.files.size, 0);
   assert.equal(fixture({ symbols }).sandbox.C8O.assistantAgentBridge.serverSettings({ action: 'reasoning', settings: 'not json' }).error.code, 'invalid_value');
+  // a server model the Bridge's catalog does not list: no levels of another model stand for it
+  const unknown = choose({ symbols: { 'assistant.nocode.model': 'retired-model' } });
+  assert.equal(unknown.result.error.code, 'levels_unavailable');
+  assert.equal(unknown.f.files.size, 0);
+  assert.equal(choose({ symbols }).f.bridgeCalls[0].options.settingsTimeoutMs, '20000', 'within the 30 s of the sequence');
   // the server's model left to the agent's default: the levels of that default model
   const byDefault = choose({ symbols: {} }, 'max');
   assert.equal(byDefault.result.ok, true, JSON.stringify(byDefault.result));
