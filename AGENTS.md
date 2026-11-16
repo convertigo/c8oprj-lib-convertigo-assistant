@@ -750,8 +750,9 @@ rediscovering the same context.
   prompts and skills, and their own reasoning effort; no agent, runtime or MCP tab.
   The page keys this on `serverSettings.managed === true` (never on the surface
   alone). Every user, administrators included, sees the server's agent and model
-  read only (composer label `AgentProviderLabel`, settings note
-  `getNoCodeAgentNote`) and chooses their own effort among the levels of that
+  read only (the composer's model select holds that model alone, `locked`, and is
+  disabled: `getNoCodeComposerModels`; settings note `getNoCodeAgentNote`) and
+  chooses their own effort among the levels of that
   model (`getNoCodeServerAgent`, `setNoCodeUserReasoning`; composer select and the
   first block of the Preferences tab): `AgentServerSettings` action `reasoning`
   (`saveCallerReasoning`) checks the level against the Bridge's cached catalog and

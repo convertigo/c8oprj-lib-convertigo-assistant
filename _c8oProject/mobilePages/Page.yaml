@@ -3848,10 +3848,10 @@ scriptContent:
         public noCodeEffortText(key) {
             // Texts of the agent the administrators of the No Code Studio set and of the effort each user chooses.
             var texts: any = {
-                fr: { userTitle: "Votre effort de raisonnement", userHint: "Pour vos conversations avec {model}, le modèle choisi par les administrateurs du No Code Studio. Un niveau élevé est plus précis, mais plus lent.", adminHint: "Pour vos propres conversations, avec le modèle du serveur. L’effort par défaut de chaque utilisateur se règle dans l’onglet de l’agent.", defaultChoice: "Par défaut ({level})", saveError: "Non enregistré : ", agentNote: "Agent et modèle : {agent}, choisis par les administrateurs du No Code Studio." },
-                en: { userTitle: "Your reasoning effort", userHint: "For your conversations with {model}, the model the administrators of the No Code Studio chose. A higher level is more precise, but slower.", adminHint: "For your own conversations, with the server’s model. The default effort of every user is set in the agent tab.", defaultChoice: "Default ({level})", saveError: "Not saved: ", agentNote: "Agent and model: {agent}, chosen by the administrators of the No Code Studio." },
-                it: { userTitle: "Il tuo livello di ragionamento", userHint: "Per le tue conversazioni con {model}, il modello scelto dagli amministratori del No Code Studio. Un livello alto è più preciso, ma più lento.", adminHint: "Per le tue conversazioni, con il modello del server. Il livello predefinito di ogni utente si imposta nella scheda dell’agente.", defaultChoice: "Predefinito ({level})", saveError: "Non salvato: ", agentNote: "Agente e modello: {agent}, scelti dagli amministratori del No Code Studio." },
-                es: { userTitle: "Su nivel de razonamiento", userHint: "Para sus conversaciones con {model}, el modelo elegido por los administradores del No Code Studio. Un nivel alto es más preciso, pero más lento.", adminHint: "Para sus propias conversaciones, con el modelo del servidor. El nivel predeterminado de cada usuario se ajusta en la pestaña del agente.", defaultChoice: "Predeterminado ({level})", saveError: "No guardado: ", agentNote: "Agente y modelo: {agent}, elegidos por los administradores del No Code Studio." }
+                fr: { userTitle: "Votre effort de raisonnement", userHint: "Pour vos conversations avec {model}, le modèle choisi par les administrateurs du No Code Studio. Un niveau élevé est plus précis, mais plus lent.", adminHint: "Pour vos propres conversations, avec le modèle du serveur. L’effort par défaut de chaque utilisateur se règle dans l’onglet de l’agent.", defaultChoice: "Par défaut ({level})", saveError: "Non enregistré : ", agentNote: "Agent et modèle : {agent}, choisis par les administrateurs du No Code Studio.", modelLocked: "Modèle choisi par les administrateurs du No Code Studio" },
+                en: { userTitle: "Your reasoning effort", userHint: "For your conversations with {model}, the model the administrators of the No Code Studio chose. A higher level is more precise, but slower.", adminHint: "For your own conversations, with the server’s model. The default effort of every user is set in the agent tab.", defaultChoice: "Default ({level})", saveError: "Not saved: ", agentNote: "Agent and model: {agent}, chosen by the administrators of the No Code Studio.", modelLocked: "Model chosen by the administrators of the No Code Studio" },
+                it: { userTitle: "Il tuo livello di ragionamento", userHint: "Per le tue conversazioni con {model}, il modello scelto dagli amministratori del No Code Studio. Un livello alto è più preciso, ma più lento.", adminHint: "Per le tue conversazioni, con il modello del server. Il livello predefinito di ogni utente si imposta nella scheda dell’agente.", defaultChoice: "Predefinito ({level})", saveError: "Non salvato: ", agentNote: "Agente e modello: {agent}, scelti dagli amministratori del No Code Studio.", modelLocked: "Modello scelto dagli amministratori del No Code Studio" },
+                es: { userTitle: "Su nivel de razonamiento", userHint: "Para sus conversaciones con {model}, el modelo elegido por los administradores del No Code Studio. Un nivel alto es más preciso, pero más lento.", adminHint: "Para sus propias conversaciones, con el modelo del servidor. El nivel predeterminado de cada usuario se ajusta en la pestaña del agente.", defaultChoice: "Predeterminado ({level})", saveError: "No guardado: ", agentNote: "Agente y modelo: {agent}, elegidos por los administradores del No Code Studio.", modelLocked: "Modelo elegido por los administradores del No Code Studio" }
             };
             var lang = "en";
             try { lang = ("" + (this.global && this.global.currentLanguage ? this.global.currentLanguage() : "en")).substring(0, 2).toLowerCase(); } catch (e) {}
@@ -3915,6 +3915,21 @@ scriptContent:
                 saving: this.local.AgentUserReasoningSaving === true,
                 error: clean(this.local.AgentUserReasoningError)
             };
+        }
+        public getNoCodeComposerModels() {
+            // The composer shows the server model read only: that model alone, locked (its select is disabled), with who chose
+            // it as its title. The same array while nothing changes, so the select keeps its option.
+            var agent: any = this.getNoCodeServerAgent();
+            if (!agent || !agent.model) {
+                return [];
+            }
+            var title = this.noCodeEffortText("modelLocked");
+            var cached: any = this.local.NoCodeComposerModels;
+            if (cached && cached.length === 1 && cached[0].id === agent.model && cached[0].label === agent.modelLabel && cached[0].title === title) {
+                return cached;
+            }
+            this.local.NoCodeComposerModels = [{ id: agent.model, label: agent.modelLabel, locked: true, title: title }];
+            return this.local.NoCodeComposerModels;
         }
         public getNoCodeAgentNote() {
             var agent: any = this.getNoCodeServerAgent();
@@ -23447,12 +23462,12 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:local && local.AgentModel ? local.AgentModel : '''''
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().model : (local && local.AgentModel ? local.AgentModel : '''')'
     ↓AgentModels [ngx.components.UIUseVariable-1782124568128]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(local && local.AgentSettings && local.AgentSettings.serverSettings && local.AgentSettings.serverSettings.managed === true) ? [] : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentFooterModelOptions) ? this.getAgentFooterModelOptions() : [])'
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeComposerModels() : ((local && local.AgentSettings && local.AgentSettings.serverSettings && local.AgentSettings.serverSettings.managed === true) ? [] : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentFooterModelOptions) ? this.getAgentFooterModelOptions() : []))'
     ↓AgentReasoningEffort [ngx.components.UIUseVariable-1782124572364]: 
       varValue: 
         - xmlizable: 
@@ -23467,7 +23482,7 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentModelLabel) ? this.getAgentModelLabel() : '''''
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().modelLabel : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentModelLabel) ? this.getAgentModelLabel() : '''')'
     ↓AgentReasoningLabel [ngx.components.UIUseVariable-1782124585072]: 
       varValue: 
         - xmlizable: 
@@ -23477,7 +23492,7 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? (this.getNoCodeServerAgent().providerLabel + (this.getNoCodeServerAgent().modelLabel ? '' · '' + this.getNoCodeServerAgent().modelLabel : '''')) : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentProviderLabel && this.getAgentProviderLabel() !== ''Agent'') ? this.getAgentProviderLabel() : '''')'
+          - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentProviderLabel && this.getAgentProviderLabel() !== ''Agent'') ? this.getAgentProviderLabel() : '''''
     ↓ModelChange [ngx.components.UIControlEvent-1782124897336]: 
       attrName: (ModelChange)
       eventName: ModelChange
@@ -23499,6 +23514,11 @@ title: Tigo
                 		if (!page.local) { page.local = {}; }
                 		if (modelId === "__configure_agent__") {
                 			if (page.openAgentSettingsPage) { page.openAgentSettingsPage(); }
+                			resolve();
+                			return;
+                		}
+                		// No Code server: the model is the administrators one, shown read only
+                		if (page.getNoCodeServerAgent && page.getNoCodeServerAgent()) {
                 			resolve();
                 			return;
                 		}

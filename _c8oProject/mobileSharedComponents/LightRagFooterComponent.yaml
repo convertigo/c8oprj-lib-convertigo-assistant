@@ -2823,6 +2823,7 @@ scriptContent:
             '{
              "ionBean": "Select",
              "ControlName": "plain:agentModel",
+             "Disabled": "script:!!(this.AgentModels && this.AgentModels.length === 1 && this.AgentModels[0] && this.AgentModels[0].locked === true)",
              "Interface": "plain:popover",
              "Justify": "plain:start"
             }'
@@ -2839,6 +2840,13 @@ scriptContent:
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                 - MobileSmartSourceType: script:!(this.AgentModels && this.AgentModels.length > 0)
+          ↓LockedTitle [ngx.components.UIAttribute-1794860000012]: 
+            attrName: '[attr.title]'
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: 'script:(this.AgentModels && this.AgentModels.length === 1 && this.AgentModels[0] && this.AgentModels[0].locked === true) ? (this.AgentModels[0].title || null) : null'
+            comment: A model the page hands alone and locked (the No Code Studio of a server, whose administrators choose it) is shown read only (the select is disabled) with who chose it.
           ↓Aria [ngx.components.UIAttribute-1782125437322]: 
             attrName: '[attr.aria-label]'
             attrValue: 
@@ -4434,6 +4442,9 @@ scriptContent:
           }
           :host-context(ion-footer.legacy-prompt-footer) .agent-prompt-provider-label {
             display: none !important;
+          }
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-model-select.select-disabled {
+            opacity: .9;
           }
           @media (max-width: 640px) {
             :host-context(ion-footer.agent-footer-codex) .agent-prompt-provider-label {

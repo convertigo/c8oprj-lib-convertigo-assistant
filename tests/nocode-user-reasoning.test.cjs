@@ -26,7 +26,7 @@ const LEVELS = [{ id: 'low', label: 'Low' }, { id: 'medium', label: 'Medium' }, 
 
 // A page of the No Code Studio, as the settings answer leaves it (applyNoCodeServerDefaults).
 function noCodePage({ server = {}, language = 'fr', answer = { ok: true, userReasoning: 'low' } } = {}) {
-  const page = subject(['isNoCodeServerManaged', 'noCodeEffortText', 'getNoCodeServerAgent', 'getNoCodeAgentNote', 'setNoCodeUserReasoning']);
+  const page = subject(['isNoCodeServerManaged', 'noCodeEffortText', 'getNoCodeServerAgent', 'getNoCodeAgentNote', 'setNoCodeUserReasoning', 'getNoCodeComposerModels']);
   const calls = [];
   const descriptor = { id: 'convertigo', defaultModel: 'glm-5-3', supports: { reasoning: true }, models: [
     { id: 'glm-5-3', label: 'GLM 5.3', defaultReasoning: 'high', reasoningLevels: [{ id: 'low', label: 'Low' }, { id: 'high', label: 'High' }, { id: 'max', label: 'Max' }] },
@@ -78,7 +78,7 @@ test('every user sees the agent and the model of the server, and their own effor
 });
 
 test('the texts exist in French, English, Italian and Spanish', () => {
-  const keys = ['userTitle', 'userHint', 'adminHint', 'defaultChoice', 'saveError', 'agentNote'];
+  const keys = ['userTitle', 'userHint', 'adminHint', 'defaultChoice', 'saveError', 'agentNote', 'modelLocked'];
   const seen = {};
   for (const language of ['fr', 'en', 'it', 'es']) {
     const { page } = noCodePage({ language });
@@ -143,8 +143,16 @@ test('the composer shows the server\'s agent and model, and offers the user\'s e
   const { page } = noCodePage({ server: { userReasoning: 'medium' } });
   page.isAgentBridgeMode = () => true;
   page.getAgentFooterModelOptions = () => [{ id: 'other' }];
-  assert.deepEqual(useVariable('AgentModels')(page), [], 'no model to choose');
-  assert.equal(useVariable('AgentProviderLabel')(page), 'Convertigo · Mistral Large 4');
+  page.getAgentProviderLabel = () => 'Convertigo';
+  page.local.AgentModel = 'something-else';
+  // the server model alone and locked: the composer's select shows it read only, who chose it as its title
+  const models = useVariable('AgentModels')(page);
+  assert.equal(JSON.stringify(models), JSON.stringify([{ id: 'mistral-large-4', label: 'Mistral Large 4', locked: true,
+    title: 'Modèle choisi par les administrateurs du No Code Studio' }]));
+  assert.equal(useVariable('AgentModels')(page), models, 'the same array while nothing changes');
+  assert.equal(useVariable('AgentModel')(page), 'mistral-large-4');
+  assert.equal(useVariable('AgentModelLabel')(page), 'Mistral Large 4');
+  assert.equal(useVariable('AgentProviderLabel')(page), 'Convertigo');
   assert.deepEqual(useVariable('AgentReasoningLevels')(page).map((level) => level.id), ['low', 'medium', 'high']);
   assert.equal(useVariable('AgentReasoningEffort')(page), 'medium');
   assert.equal(useVariable('AgentReasoningLabel')(page), 'Medium');
@@ -155,6 +163,28 @@ test('the composer shows the server\'s agent and model, and offers the user\'s e
   assert.deepEqual(useVariable('AgentReasoningLevels')(studio), LEVELS);
   assert.equal(useVariable('AgentReasoningEffort')(studio), 'high');
   assert.equal(useVariable('AgentProviderLabel')(studio), 'Convertigo');
+  studio.local.AgentModel = 'gpt';
+  assert.equal(useVariable('AgentModel')(studio), 'gpt');
+  assert.deepEqual(useVariable('AgentModels')(studio).map((model) => model.id), ['gpt']);
+});
+
+test('the composer\'s model select: read only for a locked model, the model change ignored on a No Code server', async () => {
+  const footer = read('_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml');
+  const select = footer.slice(footer.indexOf('↓ModelSelect ['), footer.indexOf('↓ModelOptions ['));
+  assert.match(select, /"Disabled": "script:!!\(this\.AgentModels && this\.AgentModels\.length === 1 && this\.AgentModels\[0\] && this\.AgentModels\[0\]\.locked === true\)"/);
+  assert.doesNotMatch(select, /attrName: '\[disabled\]'/, 'one disabled value for the select');
+  assert.match(select, /attrName: '\[attr\.title\]'/);
+  assert.match(footer, /\.agent-prompt-model-select\.select-disabled \{\n\s+opacity: \.9;/, 'legible, not Ionic\'s 0.3');
+  const code = action('// No Code server: the model is the administrators one, shown read only');
+  const run = (page, model) => new Promise((resolve) => new Function('page', 'event', 'props', 'resolve', code)(page, { model }, {}, resolve));
+  const { page } = noCodePage();
+  page.local.AgentModel = 'mistral-large-4';
+  await run(page, 'glm-5-3');
+  assert.equal(page.local.AgentModel, 'mistral-large-4');
+  let opened = 0;
+  page.openAgentSettingsPage = () => { opened++; };
+  await run(page, '__configure_agent__');
+  assert.equal(opened, 1, 'the settings shortcut stays');
 });
 
 const action = (marker) => {

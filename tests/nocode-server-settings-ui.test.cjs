@@ -34,7 +34,7 @@ test('the tabs: no agent, runtime nor MCP tab for a user, a note of who sets the
   assert.match(tabs, /<p \*ngIf="tab\.managed" class="tigo-server-scope"[^>]*>\{\{getNoCodeAgentNote\(\)\}\}<\/p>/, 'the agent and the model, read only');
 });
 
-test('the categories of the administrators are left out for a user, the footer offers no model choice', () => {
+test('the categories of the administrators are left out for a user, the footer shows the model without a choice', () => {
   for (const name of ['AgentCategory', 'RuntimeCategory', 'McpCategory']) {
     const category = bean(name);
     // a structural attribute takes a plain expression: in script mode Mobile Builder writes *ngIf="{{...}}", which
@@ -44,7 +44,7 @@ test('the categories of the administrators are left out for a user, the footer o
   assert.doesNotMatch(page, /attrName: '\*ngIf'\n\s+attrValue: \n\s+- xmlizable: \n\s+- ↑classname: [^\n]+\n\s+- MobileSmartSourceType: '?script:/, 'no *ngIf in script mode in the page');
   assert.ok(bean('SettingsCategories').includes(`(${MANAGED} && ['agent', 'runtime', 'mcp'].includes(this.local?.ResourceAccordion || 'agent')) ? 'prefs' : this.local?.ResourceAccordion`));
   const models = page.slice(page.indexOf('↓AgentModels [ngx.components.UIUseVariable-'));
-  assert.match(models.slice(0, 600).replace(/''/g, "'"), /serverSettings\.managed === true\) \? \[\] :/, 'no model to choose');
+  assert.match(models.slice(0, 600), /this\.getNoCodeServerAgent\(\)\) \? this\.getNoCodeComposerModels\(\) :/, 'the server model alone, locked');
   // the effort is each user's own: the levels of the server's model (tests/nocode-user-reasoning.test.cjs)
   const levels = page.slice(page.indexOf('↓AgentReasoningLevels [ngx.components.UIUseVariable-'));
   assert.match(levels.slice(0, 600), /this\.getNoCodeServerAgent\(\)\) \? this\.getNoCodeServerAgent\(\)\.levels :/);
