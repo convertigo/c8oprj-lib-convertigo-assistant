@@ -5288,6 +5288,9 @@ scriptContent:
         		}
         		this.local.AgentLastPlanView = plan;
         		this.local.AgentSandbox = state.sandbox ? { threadid: state.threadid, sandbox: state.sandbox } : null;
+        		if (this.rememberAgentEditProfile) {
+        			this.rememberAgentEditProfile(state);
+        		}
         	}
         	public agentSandboxText(key) {
         		// The sandbox badge of the side column and the status dock, in the four Assistant languages.
@@ -7274,12 +7277,88 @@ scriptContent:
         		} catch (e) {}
         		return open;
         	}
+        	public agentEditProfileText(key) {
+        		// The edit profile of a conversation ("/profil"), in the four Assistant languages.
+        		var texts: any = {
+        			fr: { title: "Profil d''édition", help: "Profil d''édition de cette conversation (mesure A/B) : yaml, html ou mcp", hint: "yaml | html | mcp", yaml: "YAML : l''agent modifie les fichiers YAML du projet, sans les outils d''édition du MCP.", html: "HTML : l''agent modifie les fichiers générés des pages NGX puis les importe.", mcp: "MCP : l''agent modifie le projet avec les outils du MCP (par défaut).", next: "S''applique à partir du prochain message de cette conversation (Vibe redémarre sur sa session).", current: "Profil de cette conversation : {profile}.", unknownCommand: "Profils : /profil yaml, /profil html ou /profil mcp.", unavailable: "Le profil d''édition ne s''applique qu''aux conversations Vibe du Studio." },
+        			en: { title: "Edit profile", help: "Edit profile of this conversation (A/B measure): yaml, html or mcp", hint: "yaml | html | mcp", yaml: "YAML: the agent edits the project''s YAML files, without the MCP edit tools.", html: "HTML: the agent edits the generated files of the NGX pages, then imports them.", mcp: "MCP: the agent changes the project with the MCP tools (default).", next: "Applies from the next message of this conversation (Vibe restarts on its session).", current: "Profile of this conversation: {profile}.", unknownCommand: "Profiles: /profile yaml, /profile html or /profile mcp.", unavailable: "The edit profile applies to the Studio''s Vibe conversations only." },
+        			it: { title: "Profilo di modifica", help: "Profilo di modifica di questa conversazione (misura A/B): yaml, html o mcp", hint: "yaml | html | mcp", yaml: "YAML: l''agente modifica i file YAML del progetto, senza gli strumenti di modifica del MCP.", html: "HTML: l''agente modifica i file generati delle pagine NGX, poi li importa.", mcp: "MCP: l''agente modifica il progetto con gli strumenti del MCP (predefinito).", next: "Si applica dal prossimo messaggio di questa conversazione (Vibe riparte sulla sua sessione).", current: "Profilo di questa conversazione: {profile}.", unknownCommand: "Profili: /profilo yaml, /profilo html o /profilo mcp.", unavailable: "Il profilo di modifica si applica solo alle conversazioni Vibe dello Studio." },
+        			es: { title: "Perfil de edición", help: "Perfil de edición de esta conversación (medida A/B): yaml, html o mcp", hint: "yaml | html | mcp", yaml: "YAML: el agente edita los archivos YAML del proyecto, sin las herramientas de edición del MCP.", html: "HTML: el agente edita los archivos generados de las páginas NGX y luego los importa.", mcp: "MCP: el agente modifica el proyecto con las herramientas del MCP (por defecto).", next: "Se aplica desde el próximo mensaje de esta conversación (Vibe se reinicia en su sesión).", current: "Perfil de esta conversación: {profile}.", unknownCommand: "Perfiles: /perfil yaml, /perfil html o /perfil mcp.", unavailable: "El perfil de edición solo se aplica a las conversaciones Vibe del Studio." }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		return table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key);
+        	}
+        	public editProfileAvailable() {
+        		// A Studio conversation run by Vibe: the Bridge writes the profile in its home (never No Code, nor the other harnesses).
+        		if (this.getAgentSkillProfile && this.getAgentSkillProfile() === "nocode") {
+        			return false;
+        		}
+        		var provider = ("" + (this.getAgentProvider ? this.getAgentProvider() : "")).toLowerCase();
+        		return provider !== "codex" && provider !== "claude";
+        	}
+        	public agentEditProfile() {
+        		// Sent with each message while the profile asked by "/profil" is not yet the one of the conversation: the server keeps
+        		// it in the conversation record ("mcp" puts the default back).
+        		return this.local && this.local.AgentEditProfilePending ? "" + this.local.AgentEditProfilePending : "";
+        	}
+        	public agentEditProfileShown() {
+        		// The profile of the open conversation as the server last gave it ("" for the default), or the one asked for it.
+        		if (!this.local) {
+        			return "";
+        		}
+        		if (this.local.AgentEditProfilePending) {
+        			return this.local.AgentEditProfilePending === "mcp" ? "" : "" + this.local.AgentEditProfilePending;
+        		}
+        		var shown = this.local.AgentEditProfileShown;
+        		return shown && shown.threadid && shown.threadid === this.local.Conversation ? "" + (shown.profile || "") : "";
+        	}
+        	public rememberAgentEditProfile(state) {
+        		// The profile a state of the server gives its conversation; the asked one is no longer sent once the server has it.
+        		if (!this.local || !state || !state.threadid) {
+        			return;
+        		}
+        		var profile = "" + (state.editProfile || "");
+        		this.local.AgentEditProfileShown = { threadid: state.threadid, profile: profile };
+        		var pending = this.local.AgentEditProfilePending ? "" + this.local.AgentEditProfilePending : "";
+        		if (pending.length && (pending === "mcp" ? "" : pending) === profile && state.threadid === this.local.Conversation) {
+        			this.local.AgentEditProfilePending = "";
+        		}
+        	}
+        	public editProfileCommand(text) {
+        		// /profil, /profile, /profilo, /perfil with yaml, html or mcp (none: the current profile): never sent to the agent.
+        		var match = /^\/(profil|profile|profilo|perfil)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
+        		if (!match || !this.local) {
+        			return false;
+        		}
+        		var arg = ("" + (match[2] || "")).toLowerCase();
+        		var choices: any = { yaml: "yaml", yml: "yaml", html: "html", ionic: "html", mcp: "mcp", default: "mcp", defaut: "mcp", "défaut": "mcp", predefinito: "mcp", "por-defecto": "mcp" };
+        		var card: any = this.feedbackCard("edit-profile", this.agentEditProfileText("title"), "", []);
+        		this.local.Messages = this.local.Messages || [];
+        		this.local.Messages.push(card);
+        		if (!this.editProfileAvailable()) {
+        			card.state = "error";
+        			card.message = this.agentEditProfileText("unavailable");
+        		} else if (!arg.length) {
+        			var current = this.agentEditProfileShown() || "mcp";
+        			card.message = this.agentEditProfileText("current").replace("{profile}", current) + " " + this.agentEditProfileText(current);
+        		} else if (!Object.prototype.hasOwnProperty.call(choices, arg)) {
+        			card.state = "error";
+        			card.message = this.agentEditProfileText("unknownCommand");
+        		} else {
+        			this.local.AgentEditProfilePending = choices[arg];
+        			card.message = this.agentEditProfileText(choices[arg]) + " " + this.agentEditProfileText("next");
+        		}
+        		this.tick();
+        		this.scrollChatBottom(0, true);
+        		return true;
+        	}
         	public localSlashCommands() {
         		// Commands of the Assistant itself, listed first in the "/" menu; they never reach the agent.
         		var language = this.agentUiLanguage();
         		var self: any = this;
         		var confirm = this.writeConfirmAvailable();
-        		if (self.localSlashCommandsCache && self.localSlashCommandsLanguage === language && self.localSlashCommandsConfirm === confirm) {
+        		var editProfile = !!(this.editProfileAvailable && this.editProfileAvailable());
+        		if (self.localSlashCommandsCache && self.localSlashCommandsLanguage === language && self.localSlashCommandsConfirm === confirm && self.localSlashCommandsEditProfile === editProfile) {
         			return self.localSlashCommandsCache;
         		}
         		var help = this.agentMetricsText("help");
@@ -7295,12 +7374,17 @@ scriptContent:
         			self.localSlashCommandsCache.push({ name: "confirmer", description: this.agentConfirmText("help"), hint: this.agentConfirmText("hint"), local: true },
         				{ name: "confirm", description: this.agentConfirmText("help"), hint: this.agentConfirmText("hint"), local: true });
         		}
+        		if (editProfile) {
+        			self.localSlashCommandsCache.push({ name: "profil", description: this.agentEditProfileText("help"), hint: this.agentEditProfileText("hint"), local: true },
+        				{ name: "profile", description: this.agentEditProfileText("help"), hint: this.agentEditProfileText("hint"), local: true });
+        		}
         		self.localSlashCommandsLanguage = language;
         		self.localSlashCommandsConfirm = confirm;
+        		self.localSlashCommandsEditProfile = editProfile;
         		return self.localSlashCommandsCache;
         	}
         	public runLocalCommand(text) {
-        		if (this.feedbackCommand(text) || this.writeConfirmCommand(text)) {
+        		if (this.feedbackCommand(text) || this.writeConfirmCommand(text) || (this.editProfileCommand && this.editProfileCommand(text))) {
         			return true;
         		}
         		var match = /^\/(mesures|metrics)(?:\s+(\S+))?\s*$/i.exec(("" + (text == null ? "" : text)).trim());
@@ -20431,6 +20515,10 @@ title: Tigo
             		if (state.threadid && state.sandbox) {
             			page.local.AgentSandbox = { threadid: state.threadid, sandbox: state.sandbox };
             		}
+            		// and the edit profile it runs with ("/profil")
+            		if (state.threadid && page.rememberAgentEditProfile) {
+            			page.rememberAgentEditProfile(state);
+            		}
                     if(state.quota && page.applyAgentQuotaSnapshot){page.applyAgentQuotaSnapshot(state.quota,state.provider||page.getAgentProvider());}
                     if(!isCompleted && !isFailed && page.requestAgentQuota){page.requestAgentQuota();}
                     if(isCompleted||isFailed){
@@ -22819,6 +22907,11 @@ title: Tigo
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: 'script:this.local && this.local.AgentServiceTier != null ? this.local.AgentServiceTier : '''''
+                  ↓editProfile [ngx.components.UIControlVariable-1816000000201]: 
+                    varValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:this.agentEditProfile ? this.agentEditProfile() : '''''
                   ↓userId [ngx.components.UIControlVariable-1782407685669]: 
                     varValue: 
                       - xmlizable: 

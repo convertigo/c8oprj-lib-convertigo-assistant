@@ -197,7 +197,7 @@ test('the responses the panel reads mask progress, events, live reasoning, plan 
   const m = masking(['progressWithoutAnswer', 'compactLine', 'isTerminalStatus', 'liveReasoning', 'publicState', 'responseForState',
     'responseMessages', 'runDetailEvent'], ['RUN_DETAIL_MAX_DETAIL', 'REASONING_LIVE_CHARS'], {
     normalizeSkillProfile: () => 'studio', isResidentProvider: () => false, normalizeProvider: v => v, sanitizeCodexHome: () => '',
-    agentCommandsFor: () => [], savedNoCodeContext: () => null, publicSessionSandbox: () => null
+    agentCommandsFor: () => [], savedNoCodeContext: () => null, publicSessionSandbox: () => null, normalizeEditProfile: () => ''
   });
   // a state restored from a conversation.json written before the masking
   const state = { threadid: 'agent-1', provider: 'convertigo', status: 'in_progress', runid: 'run-1', userQuestion: 'Give me the credentials.',
@@ -314,7 +314,7 @@ test('the full reasoning a user opens is masked with the secrets its run names',
 
 test('the conversation list masks a record\'s preview, progress and events', () => {
   const m = masking(['publicConversation'], [], {
-    normalizeProvider: v => v, conversationSkillProfile: () => 'studio', savedNoCodeContext: () => null, normalizeSkillProfile: () => 'studio',
+    normalizeProvider: v => v, conversationSkillProfile: () => 'studio', savedNoCodeContext: () => null, normalizeSkillProfile: () => 'studio', normalizeEditProfile: () => '',
     conversationTitleForRecord: r => r.title, isResidentProvider: () => false, sanitizeCodexHome: () => '', readState: () => null
   });
   const record = { conversationId: 'agent-1', title: 'CRM', provider: 'convertigo',

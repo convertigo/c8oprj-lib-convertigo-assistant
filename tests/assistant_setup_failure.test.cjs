@@ -46,6 +46,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user', 
     withNoCodeServerSettings: options => options,
     noCodeAgentChanged: () => null,
     convertigoTurnRefusal: () => null,
+    editProfileApplies: () => false, normalizeEditProfile: () => '',
     bridgeRefusalAnswer: () => '',
     withCallerUserId: options => options || {}, sendMark() {}, takePrewarmedConversation: () => ''
   };

@@ -6,8 +6,8 @@ const { backendParts } = require('./helpers/assistant-source.cjs');
 const names = ['normalizeSkillProfile', 'assistantProfileDescriptor', 'defaultBridgeUrl', 'bridgeCall',
   'shouldAttachMcpTokenHandle', 'attachMcpTokenHandle', 'isResidentProvider', 'providerHarness',
   'noCodeMcpTokenHandle', 'hasExplicitSkillProfile', 'conversationSkillProfile',
-  'conversationMatchesSkillProfile', 'noCodeConversationContext', 'savedNoCodeContext', 'createState'];
-const snippets = backendParts(names, ['DEFAULT_BRIDGE_PROJECT', 'ASSISTANT_PROFILE_BOOTSTRAP']);
+  'conversationMatchesSkillProfile', 'noCodeConversationContext', 'savedNoCodeContext', 'createState', 'normalizeEditProfile'];
+const snippets = backendParts(names, ['DEFAULT_BRIDGE_PROJECT', 'ASSISTANT_PROFILE_BOOTSTRAP', 'EDIT_PROFILES']);
 const studioUrl = 'https://engine/convertigo/projects/lib_ConvertigoAgentBridge/.json';
 const nocodeUrl = 'https://engine/convertigo/projects/lib_ConvertigoAgentBridge/.json';
 function fixture(record = null) {

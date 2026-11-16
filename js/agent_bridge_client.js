@@ -218,6 +218,33 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return value.length ? value : requestParameter(name);
   }
 
+  // The edit profile of a Studio conversation, for the A/B of the surfaces an agent changes a project with: "" (the
+  // default, the MCP edit tools), "yaml" (the project's YAML files, no MCP edit tool) or "html" (the generated NGX files,
+  // imported back). The panel sets it with "/profil yaml|html|mcp"; the conversation keeps it in its record. The Bridge
+  // applies it to a Vibe conversation (MCP header X-Convertigo-Edit-Profile, file tool permissions, AGENTS.md section).
+  var EDIT_PROFILES = { yaml: true, html: true };
+  var EDIT_PROFILE_PROMPT_LINES = {
+    yaml: "- Edit profile of this conversation: yaml. Change projects by editing their YAML files (c8oProject.yaml, _c8oProject/**, js/**) with your file tools, then project-reload; the MCP edit tools are not available. Read convertigo://resources/convertigo-yaml-editing first.",
+    html: "- Edit profile of this conversation: html. Visual changes of existing NGX pages and shared components are made in their generated files (mobile-builder-open lists them as ionicFiles), then imported with project-reload(fromIonic:true, ionicTarget); read convertigo://resources/convertigo-ngx-html-roundtrip first. This replaces, for those files only, the rule against editing generated folders."
+  };
+
+  function normalizeEditProfile(value) {
+    var profile = trim(value).toLowerCase();
+    return EDIT_PROFILES[profile] === true ? profile : "";
+  }
+
+  // A Studio conversation (never No Code) run by Vibe: the only harness whose home the profile is written in.
+  function editProfileApplies(state, options) {
+    var userId = trim((options && options.userId) || (state && state.userId)).toLowerCase();
+    if (userId.length && userId !== "studio") {
+      return false;
+    }
+    if (normalizeSkillProfile(state || {}) === "nocode") {
+      return false;
+    }
+    return isVibeHarness(trim(state && state.provider).toLowerCase());
+  }
+
   function optionsWithRequestFallbacks(options) {
     options = options || {};
     var copy = {};
@@ -229,7 +256,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     [
       "provider", "agentProvider", "targetProject", "projectName", "projectId",
       "userId", "agentProfile", "skillProfile", "assistantContext",
-      "assistantSurface", "codexHomeScope", "vibeHomeScope", "homeScope",
+      "assistantSurface", "editProfile", "codexHomeScope", "vibeHomeScope", "homeScope",
       "agentRevealMode", "convertigoRevealMode", "uiRevealMode", "revealMode",
       "language", "locale", "assistantLanguage", "currentUrl", "currentRoute", "currentPath", "currentFormId", "currentFormName", "currentFormRevision", "currentFormUrl",
       "nocodeCurrentUrl", "nocodeCurrentRoute", "nocodeCurrentFormId", "nocodeCurrentFormUrl",
@@ -3243,6 +3270,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: state.skillProfile || options.skillProfile || options.agentProfile || "",
       assistantContext: state.assistantContext || options.assistantContext || "",
       assistantSurface: state.assistantSurface || options.assistantSurface || "",
+      // the conversation's edit profile: its MCP header, file tool permissions and instructions (the Bridge, Vibe only)
+      editProfile: normalizeEditProfile(state.editProfile),
       install: installRequested ? "true" : "false",
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
@@ -4181,6 +4210,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       progressEvents: events,
       phase: phase,
       model: String(record.model || ""),
+      editProfile: normalizeEditProfile(record.editProfile),
       reasoningEffort: String(record.reasoningEffort || ""),
       serviceTier: String(record.serviceTier || ""),
       warnings: panelWarnings(secrets, record.warnings || []),
@@ -4338,6 +4368,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
+      editProfile: normalizeEditProfile(state.editProfile),
       nocodeContext: savedNoCodeContext(state),
       resourceSkillVersions: state.resourceSkillVersions || {},
       resourceContextEpoch: state.resourceContextEpoch || "",
@@ -8256,6 +8287,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (typeof state.assistantSurface === "undefined" || state.assistantSurface === null) {
       state.assistantSurface = "";
     }
+    state.editProfile = normalizeEditProfile(state.editProfile);
     if (!state.hostFormContext || typeof state.hostFormContext !== "object") {
       state.hostFormContext = {};
     }
@@ -8343,6 +8375,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       nocodeContext: record ? savedNoCodeContext(record) : null,
       assistantContext: trim(options.assistantContext || (record && record.assistantContext)),
       assistantSurface: trim(options.assistantSurface || (record && record.assistantSurface)),
+      // the edit profile of the conversation ("/profil" in the panel), kept in its record; applied by sendMessage
+      editProfile: normalizeEditProfile(record && record.editProfile),
       model: model,
       reasoningEffort: reasoningEffort,
       serviceTier: serviceTier,
@@ -8405,6 +8439,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       skillProfile: normalizeSkillProfile(state),
       assistantContext: state.assistantContext || "",
       assistantSurface: state.assistantSurface || "",
+      editProfile: normalizeEditProfile(state.editProfile),
       language: state.language || "",
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
@@ -9647,6 +9682,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         promptParts.push(writeConfirmModule().studioPromptLine(studioWriteConfirmMode(options)));
       } catch (_ignoreChangeMode) {}
     }
+    // The edit profile of the conversation (A/B of the editing surfaces): the MCP and the agent's home enforce it.
+    var promptEditProfile = isNoCodeSurface ? "" : normalizeEditProfile(options.editProfile);
+    if (promptEditProfile.length) {
+      promptParts.push(EDIT_PROFILE_PROMPT_LINES[promptEditProfile]);
+    }
     var normalizedProvider = trim(options.provider).toLowerCase();
     var isVibeProvider = isVibeHarness(normalizedProvider);
     var promptMcpEndpoint = trim(options.mcpEndpoint);
@@ -9890,7 +9930,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var names = [
       "threadid", "provider", "bridgeBaseUrl", "mcpEndpoint", "workspaceRoot", "cwd",
       "vibeHome", "agentHome", "codexHome", "codexHomeScope", "homeScope",
-      "agentProfile", "skillProfile", "assistantContext", "assistantSurface", "model",
+      "agentProfile", "skillProfile", "assistantContext", "assistantSurface", "editProfile", "model",
       "bypassApprovalsAndSandbox", "sandbox", "targetProject", "projectName", "userId",
       "install", "installCodex", "installVibe", "codexPath", "nodeVersion", "nodeDir",
       "npmPath", "allowNodeDownload", "codexPackage", "codexVersion", "codexInstallMethod",
@@ -10089,6 +10129,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (trim(options.serviceTier || options.speedTier).length) {
       state.serviceTier = trim(options.serviceTier || options.speedTier);
     }
+    // The edit profile the panel asks for this conversation ("mcp" puts the default back): a Studio Vibe conversation only.
+    var requestedEditProfile = trim(options.editProfile).toLowerCase();
+    if (requestedEditProfile.length && editProfileApplies(state, options)) {
+      state.editProfile = normalizeEditProfile(requestedEditProfile);
+    }
+    options.editProfile = editProfileApplies(state, options) ? normalizeEditProfile(state.editProfile) : "";
     // Before anything of the turn is written: on the Convertigo gateway, the user's key where the server issues one and
     // a balance above zero (tigo-nocode-contract.md section 6); the gateway still enforces on its own.
     var convertigoRefusal = convertigoTurnRefusal(state, options);

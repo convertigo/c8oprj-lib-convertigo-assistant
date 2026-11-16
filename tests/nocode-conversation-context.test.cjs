@@ -125,7 +125,7 @@ test('persisted/public context contains resource identity only, and Studio has n
   snippets.unshift(...constants);
   let record;
   const ctx = run(snippets.join('\n'), {
-    trim: v => String(v ?? '').trim(), normalizeSkillProfile: s => s.skillProfile || 'studio', normalizeProvider: v => v || 'codex',
+    trim: v => String(v ?? '').trim(), normalizeSkillProfile: s => s.skillProfile || 'studio', normalizeEditProfile: () => '', normalizeProvider: v => v || 'codex',
     conversationTitleFromText: v => v || '', conversationTitleForRecord: r => r.title || '', conversationSkillProfile: r => r.skillProfile,
     sanitizeCodexHome: () => '', isResidentProvider: () => true, readJsonFile: () => null,
     now: () => 100, File: function(p) { this.path = p; }, writeJsonFile: (_, r) => { record = r; }, readState: () => null, agentCommandsFor: s => s.commands || []
