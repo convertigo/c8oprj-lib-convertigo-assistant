@@ -1,7 +1,8 @@
 # No Code server settings
 
 Administrators save the No Code agent settings from this server's settings page.
-Saves use POST. A request containing an Origin header must match the server's
+Saves use POST. A request whose `Sec-Fetch-Site` header is `cross-site` is refused
+first, whatever else it carries. A request containing an Origin header must match the server's
 origin, including scheme and port, even when a session token is supplied.
 A client without an Origin header must supply the existing engine session token
 using X-Xsrf-Token or __xsrfToken. Token acquisition is a separate step; Fetch is

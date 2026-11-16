@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { read, backendParts } = require('./helpers/assistant-source.cjs');
 
-function fixture({ studio = false, webAdmin = false, admin = false, user = 'alice@example.com', symbols = {}, platformPolicy = '', c8oformsRight = true, tigoRight = true, method = 'POST', origin = 'https://settings.example.test', token = '', sessionToken = '', configuredUrl = '', requestUrl = 'https://settings.example.test/convertigo/projects/lib_ConvertigoAssistant/.json', bridgeLevels = { 'mistral-large-4': ['low', 'medium', 'high'], 'glm-5-3': ['low', 'high', 'max'] }, bridgeDown = false, files = new Map() } = {}) {
+function fixture({ studio = false, webAdmin = false, admin = false, user = 'alice@example.com', symbols = {}, platformPolicy = '', c8oformsRight = true, tigoRight = true, method = 'POST', origin = 'https://settings.example.test', token = '', sessionToken = '', fetchSite = null, configuredUrl = '', requestUrl = 'https://settings.example.test/convertigo/projects/lib_ConvertigoAssistant/.json', bridgeLevels = { 'mistral-large-4': ['low', 'medium', 'high'], 'glm-5-3': ['low', 'high', 'max'] }, bridgeDown = false, files = new Map() } = {}) {
   const store = new Map(Object.entries(symbols));
   const edits = [];
   const bridgeCalls = [];
@@ -26,7 +26,7 @@ function fixture({ studio = false, webAdmin = false, admin = false, user = 'alic
   const sandbox = {
     context: { httpSession: {}, httpServletRequest: {
       getMethod: () => method,
-      getHeader: name => name.toLowerCase() === 'origin' ? origin : (name.toLowerCase() === 'x-xsrf-token' ? token : null),
+      getHeader: name => name.toLowerCase() === 'origin' ? origin : (name.toLowerCase() === 'x-xsrf-token' ? token : (name.toLowerCase() === 'sec-fetch-site' ? fetchSite : null)),
       getParameter: () => null, getRequestURL: () => requestUrl
     } },
     configuredConvertigoBaseUrl: () => configuredUrl,
@@ -312,10 +312,25 @@ test('T9d: a token the session never received does not refuse a save from the se
   assert.equal(options.noCodeServerSaved.ok, true, JSON.stringify(options.noCodeServerSaved));
   assert.equal(page.store.get('assistant.nocode.model'), 'mistral-large-4');
   assert.equal(page.store.get('assistant.nocode.reasoning'), 'medium');
-  // still refused: another origin, no origin, or a token that differs from the one the session holds
+  // an https server behind a proxy: the engine sees its internal URL, the configured endpoint names the public origin
+  const proxied = save({ token: 'console-token-of-an-ended-session', origin: 'https://public.example.test',
+    requestUrl: 'http://engine:28080/convertigo/projects/lib_ConvertigoAssistant/.json', configuredUrl: 'https://public.example.test/convertigo' });
+  assert.equal(proxied.result.ok, true, JSON.stringify(proxied.result));
+  // the browser's own word on a same-origin request changes nothing
+  assert.equal(save({ token: 'console-token', fetchSite: 'same-origin' }).result.ok, true);
+  // still refused: another origin, another port, no origin, a cross-site request, or a token that differs from the one
+  // the session holds
   for (const refused of [
     { token: 'console-token', origin: 'https://other.example.test' },
+    { token: 'console-token', origin: 'https://settings.example.test:8443' },
+    { token: 'console-token', origin: 'https://public.example.test:8443', requestUrl: 'http://engine:28080/convertigo/projects/lib_ConvertigoAssistant/.json',
+      configuredUrl: 'https://public.example.test/convertigo' },
+    { token: 'console-token', origin: 'http://public.example.test', requestUrl: 'http://engine:28080/convertigo/projects/lib_ConvertigoAssistant/.json',
+      configuredUrl: 'https://public.example.test/convertigo' },
     { token: 'console-token', origin: null },
+    { token: 'console-token', fetchSite: 'cross-site' },
+    { token: '', fetchSite: 'cross-site' },
+    { token: 'issued-to-this-session', sessionToken: 'issued-to-this-session', fetchSite: 'Cross-Site' },
     { token: 'console-token', sessionToken: 'issued-to-this-session' }
   ]) {
     const { result, f } = save(refused);

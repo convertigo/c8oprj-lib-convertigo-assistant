@@ -2943,7 +2943,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   // origin keeps in localStorage under x-xsrf-token, a key the engine's administration console writes too, and the
   // engine issues none to a No Code session (API calls and user services answer no token): a token left there by an
   // ended console session proves nothing either way, and the server's Origin decides, as for "Fetch". It refused every
-  // save of a No Code administrator who had once opened the console in that browser (test-nocode, 16/11).
+  // save of a No Code administrator who had once opened the console in that browser (test-nocode, 16/11). A browser
+  // request marked Sec-Fetch-Site: cross-site is refused whatever else it carries (convertigo/c8oprj-lib-convertigo-assistant#5).
   function noCodeServerSettingsWriteRefusal() {
     var denied = function (code) {
       return { ok: false, status: "failed", error: { code: code,
@@ -2953,6 +2954,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       var req = context.httpServletRequest;
       if (req === null || String(req.getMethod()) !== "POST") {
         return denied("post_required");
+      }
+      // a browser says when another site sent the request: refused before anything else is considered
+      if (trim(req.getHeader("Sec-Fetch-Site")).toLowerCase() === "cross-site") {
+        return denied("request_origin_required");
       }
       var originHeader = req.getHeader("Origin");
       var hasOrigin = originHeader !== null && typeof originHeader !== "undefined";

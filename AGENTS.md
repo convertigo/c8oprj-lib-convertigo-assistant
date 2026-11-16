@@ -768,7 +768,9 @@ rediscovering the same context.
   the engine issues none to a No Code session: before this, every save of such an
   administrator was refused (`request_token_required`, beta.18 to beta.30) and the
   Agent tab closed on the old model. Continue now keeps the screen open on
-  `serverSettings.saveError` (`ServerSaveError`). See `docs/nocode-server-settings.md`.
+  `serverSettings.saveError` (`ServerSaveError`). A request whose `Sec-Fetch-Site`
+  is `cross-site` is refused first (validated with Nicolas in
+  convertigo/c8oprj-lib-convertigo-assistant#5). See `docs/nocode-server-settings.md`.
 - Cover with `tests/nocode-tigo-right.test.cjs`, `tests/nocode-server-settings.test.cjs`,
   `tests/nocode-server-settings-ui.test.cjs` and `tests/nocode-user-reasoning.test.cjs`.
 
