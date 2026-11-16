@@ -22,7 +22,7 @@ const javaProxy = new Proxy(function () {}, {
 function serverApi() {
   const sandbox = { Packages: javaProxy, context: javaProxy, request: javaProxy, log: javaProxy, C8O: {}, java: javaProxy };
   let source = fs.readFileSync(path.join(root, 'js/agent_bridge_client.js'), 'utf8');
-  source = source.replace(/\}\(\)\);\s*$/, 'C8O.assistantAgentBridge._editProfileTest = { normalizeEditProfile, editProfileApplies, agentStartPayload, buildSequencePrompt, EDIT_PROFILE_PROMPT_LINES };}());');
+  source = source.replace(/\}\(\)\);\s*$/, 'C8O.assistantAgentBridge._editProfileTest = { normalizeEditProfile, editProfileApplies, effectiveEditProfile, availableEditProfiles, agentStartPayload, buildSequencePrompt, EDIT_PROFILE_PROMPT_LINES, setHtml: function (v) { htmlEditProfileCache = v; } };}());');
   vm.runInNewContext(source, sandbox, { filename: 'agent_bridge_client.js' });
   return sandbox.C8O.assistantAgentBridge._editProfileTest;
 }
@@ -47,11 +47,33 @@ test('the profile applies to a Studio conversation run by Vibe only', () => {
 });
 
 test('the Vibe start passes the conversation profile to the Bridge, "" by default', () => {
+  api.setHtml(true);
   const options = { userId: 'studio' };
   assert.equal(api.agentStartPayload(studioState({ editProfile: 'yaml' }), options, 'vibe', false).editProfile, 'yaml');
   assert.equal(api.agentStartPayload(studioState({ editProfile: 'html' }), options, 'vibe', false).editProfile, 'html');
   assert.equal(api.agentStartPayload(studioState(), options, 'vibe', false).editProfile, '');
   assert.equal(api.agentStartPayload(studioState({ editProfile: 'nonsense' }), options, 'vibe', false).editProfile, '');
+  // an engine without the round-trip (8.4, or 8.5 without the method): html runs as the default, yaml stays
+  api.setHtml(false);
+  assert.deepEqual(Array.from(api.availableEditProfiles()), ['yaml']);
+  assert.equal(api.agentStartPayload(studioState({ editProfile: 'html' }), options, 'vibe', false).editProfile, '');
+  assert.equal(api.agentStartPayload(studioState({ editProfile: 'yaml' }), options, 'vibe', false).editProfile, 'yaml');
+  assert.equal(api.effectiveEditProfile('html'), '');
+  api.setHtml(true);
+  assert.deepEqual(Array.from(api.availableEditProfiles()), ['yaml', 'html']);
+  assert.equal(api.effectiveEditProfile('html'), 'html');
+  api.setHtml(null);
+});
+
+test('without a Version and the method (this test engine), html is not offered', () => {
+  api.setHtml(null);
+  assert.deepEqual(Array.from(api.availableEditProfiles()), ['yaml']);
+  const source = read('js/agent_bridge_client.js');
+  assert.match(source, /versionAtLeast\(trim\(Packages\.com\.twinsoft\.convertigo\.engine\.Version\.version\), EDIT_PROFILE_HTML_MINIMUM_VERSION\)/);
+  assert.match(source, /String\(methods\[i\]\.getName\(\)\) === "importIntoLoadedProject" && parameters\.length === 2/);
+  assert.match(source, /requestedEditProfile === "mcp" \|\| effectiveEditProfile\(requestedEditProfile\)\.length/);
+  assert.match(read('_c8oProject/sequences/AgentEditProfiles.yaml'), /result = C8O\.assistantAgentBridge\.editProfiles\(\);/);
+  assert.match(read('c8oProject.yaml'), /↓AgentEditProfiles \[sequences\.GenericSequence\]: 🗏 sequences\/AgentEditProfiles\.yaml\n/);
 });
 
 test('the turn prompt says the profile; the default prompt is unchanged', () => {
@@ -77,8 +99,9 @@ test('the conversation keeps its profile: state, record, public views, send and 
   assert.match(source, /editProfile: normalizeEditProfile\(record && record\.editProfile\),/);
   assert.match(source, /state\.editProfile = normalizeEditProfile\(state\.editProfile\);/);
   assert.match(source, /editProfile: normalizeEditProfile\(record\.editProfile\),/);
-  assert.equal((source.match(/editProfile: normalizeEditProfile\(state\.editProfile\),/g) || []).length, 3, 'record, public state, Vibe start');
-  assert.match(source, /if \(requestedEditProfile\.length && editProfileApplies\(state, options\)\) \{\n\s+state\.editProfile = normalizeEditProfile\(requestedEditProfile\);/);
+  assert.equal((source.match(/editProfile: normalizeEditProfile\(state\.editProfile\),/g) || []).length, 2, 'record, public state');
+  assert.match(source, /editProfile: effectiveEditProfile\(state\.editProfile\),/, 'Vibe start: the profile this engine offers');
+  assert.match(source, /if \(requestedEditProfile\.length && editProfileApplies\(state, options\)\n\s+&& \(requestedEditProfile === "mcp" \|\| effectiveEditProfile\(requestedEditProfile\)\.length\)\) \{\n\s+state\.editProfile = normalizeEditProfile\(requestedEditProfile\);/);
   assert.match(source, /"agentProfile", "skillProfile", "assistantContext", "assistantSurface", "editProfile", "model",/);
   assert.match(source, /"assistantSurface", "editProfile", "codexHomeScope",/);
 });
@@ -86,7 +109,7 @@ test('the conversation keeps its profile: state, record, public views, send and 
 // ---- The page ----------------------------------------------------------------------------------------------------
 
 const METHODS = ['agentEditProfileText', 'editProfileAvailable', 'agentEditProfile', 'agentEditProfileShown', 'rememberAgentEditProfile',
-  'editProfileCommand', 'feedbackCard', 'agentUiLanguage', 'runLocalCommand', 'localSlashCommands'];
+  'editProfileCommand', 'editProfileOptions', 'loadEditProfileOptions', 'feedbackCard', 'agentUiLanguage', 'runLocalCommand', 'localSlashCommands'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter((m) => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map((m) => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -94,8 +117,14 @@ const sandbox = {};
 vm.runInNewContext(ts.transpileModule('class View { ' + members.map((m) => m.getText(pageAst)).join('\n') + ' }; this.View = View;',
   { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, sandbox);
 
-function panel({ language = 'fr', provider = 'vibe', nocode = false } = {}) {
+// profiles: what AgentEditProfiles answers (an 8.5 engine with the round-trip by default); its calls are synchronous here
+function panel({ language = 'fr', provider = 'vibe', nocode = false, profiles = ['yaml', 'html'] } = {}) {
   const view = new sandbox.View();
+  view.calls = [];
+  view.c8o = { callJsonObject: (name) => {
+    view.calls.push(name);
+    return { async: () => ({ then: (ok) => ok({ result: { status: 'ok', profiles } }) }) };
+  } };
   view.global = { currentLanguage: () => language };
   view.local = { Messages: [], Conversation: 'agent-1' };
   view.tick = () => {};
@@ -165,4 +194,27 @@ test('the template sends the asked profile and the reopened conversation shows i
   assert.match(page, /↓editProfile \[ngx\.components\.UIControlVariable-\d+\]: \n\s+varValue: \n[\s\S]{0,300}MobileSmartSourceType: 'script:this\.agentEditProfile \? this\.agentEditProfile\(\) : '''''/);
   assert.match(page, /this\.local\.AgentSandbox = state\.sandbox \? \{ threadid: state\.threadid, sandbox: state\.sandbox \} : null;\n\s+if \(this\.rememberAgentEditProfile\) \{\n\s+this\.rememberAgentEditProfile\(state\);/);
   assert.match(page, /page\.rememberAgentEditProfile\(state\);/);
+});
+
+test('/profil html where the engine does not offer it (8.4, or 8.5 without the method): refused, menu without html', () => {
+  const view = panel({ profiles: ['yaml'] });
+  assert.ok(view.localSlashCommands().some((c) => c.name === 'profil' && c.hint === 'yaml | mcp'));
+  assert.deepEqual(view.calls, ['lib_ConvertigoAssistant.AgentEditProfiles'], 'read once, for the menu');
+  view.runLocalCommand('/profil html');
+  assert.equal(lastCard(view).state, 'error');
+  assert.match(lastCard(view).message, /Studio 8\.5/);
+  assert.equal(view.agentEditProfile(), '');
+  view.runLocalCommand('/profil yaml');
+  assert.equal(view.agentEditProfile(), 'yaml');
+  assert.equal(view.calls.length, 1);
+  // html asked before the menu was read: the panel reads the profiles, then answers
+  const fresh = panel({ profiles: ['yaml'] });
+  fresh.runLocalCommand('/profil html');
+  assert.equal(lastCard(fresh).state, 'error');
+  assert.equal(fresh.agentEditProfile(), '');
+  const offered = panel();
+  offered.runLocalCommand('/profil html');
+  assert.equal(lastCard(offered).state, 'ready');
+  assert.equal(offered.agentEditProfile(), 'html');
+  assert.ok(offered.localSlashCommands().some((c) => c.name === 'profil' && c.hint === 'yaml | html | mcp'));
 });

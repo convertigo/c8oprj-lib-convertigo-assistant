@@ -233,6 +233,54 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return EDIT_PROFILES[profile] === true ? profile : "";
   }
 
+  // html exists on an engine of 8.5.0 or more whose NgxIonicRoundTripConverter has the static
+  // importIntoLoadedProject(String, String), looked up by reflection (an 8.4 Studio patched in September has the class
+  // without it), as lib_ConvertigoMCP js/edit_profile.js and the Bridge decide; elsewhere the panel does not offer it
+  // and a conversation that asks for it runs as the default.
+  var EDIT_PROFILE_HTML_MINIMUM_VERSION = "8.5.0";
+  var htmlEditProfileCache = null;
+
+  function htmlEditProfileAvailable() {
+    if (htmlEditProfileCache !== null) {
+      return htmlEditProfileCache;
+    }
+    var available = false;
+    try {
+      if (versionAtLeast(trim(Packages.com.twinsoft.convertigo.engine.Version.version), EDIT_PROFILE_HTML_MINIMUM_VERSION)) {
+        var loader = java.lang.Thread.currentThread().getContextClassLoader();
+        var name = "com.twinsoft.convertigo.engine.util.NgxIonicRoundTripConverter";
+        var type = loader != null ? loader.loadClass(name) : java.lang.Class.forName(name);
+        var methods = type.getMethods();
+        for (var i = 0; i < methods.length && !available; i++) {
+          var parameters = methods[i].getParameterTypes();
+          available = String(methods[i].getName()) === "importIntoLoadedProject" && parameters.length === 2
+            && String(parameters[0].getName()) === "java.lang.String" && String(parameters[1].getName()) === "java.lang.String"
+            && java.lang.reflect.Modifier.isStatic(methods[i].getModifiers());
+        }
+      }
+    } catch (_noRoundTrip) {
+      available = false;
+    }
+    htmlEditProfileCache = available;
+    return available;
+  }
+
+  // The profiles this engine offers besides the default: yaml, and html where the engine has the round-trip import.
+  function availableEditProfiles() {
+    return htmlEditProfileAvailable() ? ["yaml", "html"] : ["yaml"];
+  }
+
+  // The profile a conversation runs with: its own when this engine offers it, else "" (the default).
+  function effectiveEditProfile(profile) {
+    var value = normalizeEditProfile(profile);
+    return value.length && availableEditProfiles().indexOf(value) >= 0 ? value : "";
+  }
+
+  // What the panel may offer ("/profil"): the profiles of this engine.
+  C8O.assistantAgentBridge.editProfiles = function () {
+    return { status: "ok", profiles: availableEditProfiles(), defaultProfile: "mcp" };
+  };
+
   // A Studio conversation (never No Code) run by Vibe: the only harness whose home the profile is written in.
   function editProfileApplies(state, options) {
     var userId = trim((options && options.userId) || (state && state.userId)).toLowerCase();
@@ -3271,7 +3319,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       assistantContext: state.assistantContext || options.assistantContext || "",
       assistantSurface: state.assistantSurface || options.assistantSurface || "",
       // the conversation's edit profile: its MCP header, file tool permissions and instructions (the Bridge, Vibe only)
-      editProfile: normalizeEditProfile(state.editProfile),
+      editProfile: effectiveEditProfile(state.editProfile),
       install: installRequested ? "true" : "false",
       mcpEndpoint: state.mcpEndpoint,
       model: state.model || "",
@@ -10131,10 +10179,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     // The edit profile the panel asks for this conversation ("mcp" puts the default back): a Studio Vibe conversation only.
     var requestedEditProfile = trim(options.editProfile).toLowerCase();
-    if (requestedEditProfile.length && editProfileApplies(state, options)) {
+    if (requestedEditProfile.length && editProfileApplies(state, options)
+        && (requestedEditProfile === "mcp" || effectiveEditProfile(requestedEditProfile).length)) {
       state.editProfile = normalizeEditProfile(requestedEditProfile);
     }
-    options.editProfile = editProfileApplies(state, options) ? normalizeEditProfile(state.editProfile) : "";
+    options.editProfile = editProfileApplies(state, options) ? effectiveEditProfile(state.editProfile) : "";
     // Before anything of the turn is written: on the Convertigo gateway, the user's key where the server issues one and
     // a balance above zero (tigo-nocode-contract.md section 6); the gateway still enforces on its own.
     var convertigoRefusal = convertigoTurnRefusal(state, options);

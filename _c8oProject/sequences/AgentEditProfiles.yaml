@@ -1,0 +1,20 @@
+accessibility: Hidden
+comment: 'The edit profiles this engine offers to a Studio conversation (js/agent_bridge_client.js editProfiles): yaml, and html on an engine of 8.5.0 or more whose NgxIonicRoundTripConverter has importIntoLoadedProject. The panel offers /profil with them.'
+responseTimeout: 30
+↓Run [steps.SimpleStep-1816000000211]: 
+  expression: |
+    include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.editProfiles();
+↓result [steps.JsonToXmlStep-1816000000212]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
