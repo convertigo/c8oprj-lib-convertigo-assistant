@@ -1341,6 +1341,7 @@ scriptContent:
         	public refreshAgentSettingsAfterHostContext(forceFullSettings = false, presenceRecheck = false, refreshCatalog = false) {
         		var noCode = this.isEmbeddedNoCodeAgent();
         		var settingsTimer: any = null;
+        		var endCheck: any = null;
         		try {
         			if (!this.local || !this.c8o || !this.c8o.callJsonObject) { return; }
         			// The repair panel may open automatically when Bridge settings fail.
@@ -1359,7 +1360,7 @@ scriptContent:
         				this.local.AgentSettingsLastCheckKind = checkKind;
         				this.local.AgentSettingsCheckError = "";
         			}
-        			var endCheck = (error: any) => {
+        			endCheck = (error: any) => {
         				if (!checkKind.length) { return; }
         				this.local.AgentSettingsCheckKind = "";
         				this.local.AgentSettingsCheckError = error == null ? "" : ("" + error).replace(/^Error:\s*/, "");
@@ -1418,7 +1419,8 @@ scriptContent:
         				// only the settings are read here: no list of conversations (5 s for a No Code user with many)
         				''withConversations'': false,
         				''updateCheckCacheMs'': 21600000,
-        				''__context'': noCode ? ''agent_nocode_settings'' : ''byside''
+        				// the screen's full check never holds its saves: in the Studio they shared byside, which the engine serializes
+        				''__context'': noCode ? ''agent_nocode_settings'' : (forceFullSettings === true ? ''studio_assistant_settings_check'' : ''byside'')
         			};
         			var requestedAt = Date.now();
         			var settingsRequest: any;
@@ -1581,7 +1583,9 @@ scriptContent:
         			try { this.local.AgentSettingsRefreshRunning = false; } catch (eFlag) {}
         			try { this.local.AgentSettingsRefreshDone = true; } catch (eDone) {}
         			try { this.local.AgentRuntimeLoading = false; } catch (eRuntime) {}
-        			if (noCode && this.tick) { this.tick(); }
+        			// a check that failed before its request left: its wait ends too, with Retry
+        			try { if (endCheck) { endCheck(e); } } catch (eEnd) {}
+        			if (this.tick) { this.tick(); }
         		}
         	}
         

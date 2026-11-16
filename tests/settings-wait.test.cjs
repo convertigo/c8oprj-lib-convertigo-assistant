@@ -85,6 +85,9 @@ test('the opening reads the cached catalog; Refresh models, a sign-in and a re-r
   assert.match(method, /''settingsCacheMaxAgeMs'': \(forceFullSettings === true && refreshCatalog !== true\) \? 604800000 : "",/);
   assert.match(method, /var checkKind = forceFullSettings === true \? \(refreshCatalog === true \? "catalog" : "check"\) : "";/);
   assert.equal((method.match(/endCheck\((null|settingsError)\);/g) || []).length, 2, 'the answer and the failure both end the wait');
+  assert.match(method, /try \{ if \(endCheck\) \{ endCheck\(e\); \} \} catch \(eEnd\) \{\}/, 'a check that failed before its request left too');
+  assert.match(method, /''__context'': noCode \? ''agent_nocode_settings'' : \(forceFullSettings === true \? ''studio_assistant_settings_check'' : ''byside''\)/,
+    'in the Studio the full check does not hold the saves of byside');
   assert.equal((pageYaml.match(/refreshAgentSettingsAfterHostContext\(true, false, true\)/g) || []).length, 3,
     'Refresh models, the sign-in, the Convertigo key (Retry repeats the kind that failed)');
   // the banner under the tabs, the footer status
