@@ -54,18 +54,50 @@ means that the corresponding connection must also be enabled for the conversatio
 a skill with no external tools needs no connection. Supporting files remain in
 `references/`, `scripts/`, and `assets/`; duplicating a skill copies those files.
 
-Enable a skill for the current conversation, or before its first message.
-Tigo supplies its instructions on the next turn, once per content revision and
-provider session. The supplied text identifies the skill directory so the agent
-can read references when needed. Changes to support files also change its
+### Project skills apply by default
+
+The skills in the `.tigo/skills` folder of the conversation's project are on by
+default, in every Studio (8.4 Eclipse Studio, Electron and web Studio). The
+conversation's project is the project selected in Studio when the conversation
+starts, or the one the conversation works on. Tigo reads these folders from disk
+at each message: a skill added or changed through Git, MCP or by hand applies on
+the next message, with no activation and no library reload. The composer's
+**Skills** panel and the library mark them "on by default for this project"; the
+list is read again when another project is selected in Studio, when the
+**Skills** or **MCP** panel opens, and every 30 seconds.
+
+To provide a project skill, add `<project>/.tigo/skills/<name>/SKILL.md` with a
+`name` and `description` frontmatter (or create it in **Settings > Library >
+Skills** with **Shared project**, or ask Tigo), add `/.tigo/**` to the project's
+`.httpignore`, and commit the folder with the project. Everyone who opens the
+project gets it.
+
+Turning a project skill off in a conversation keeps it off for that
+conversation only. Other skills (personal workspace, built-ins, another
+project's) are enabled for the current conversation, or before its first
+message. Choices made before the first message stay with that conversation; the
+next new conversation starts again from its own project's skills.
+
+Tigo supplies a skill's instructions on the next turn, once per content revision
+and provider session. The supplied text identifies the skill directory so the
+agent can read references when needed. Changes to support files also change its
 revision. Reloading the same provider session keeps the injection state;
-switching to a new provider session supplies the selected skills again.
+switching to a new provider session supplies the selected skills again. Project
+skills on by default share a budget of 48,000 characters per turn; past it, the
+agent receives the skill's description and the path of its `SKILL.md` instead
+of its full text. When the conversation's project changes, the new project's
+skills replace the previous project's ones from the next message.
 
 Disabling a skill stops future injection and does not erase earlier instructions
-from the model's history. Start a new conversation for a fresh context. Missing
-resources or missing required MCP connections block the next send with guidance;
-the library can remove unavailable selections. Changes wait until the current
-turn is finished.
+from the model's history. Start a new conversation for a fresh context. A skill
+that is no longer available (its project was closed, its folder removed or made
+invalid) is skipped: the message is sent and its progress steps say which skills
+were not applied. The progress steps also name the project skills supplied by
+default. A skill enabled by hand whose required MCP connection is not enabled,
+and missing or changed MCP connections, block the next send with guidance; a
+project skill on by default in that case is skipped and reported instead. The
+library can remove unavailable selections. Changes wait until the current turn
+is finished.
 
 The managed Convertigo skill pack remains mandatory and is not replaced by the
 custom skill library.

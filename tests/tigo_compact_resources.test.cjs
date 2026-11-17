@@ -10,10 +10,12 @@ function methods(source,names){
 const footer=blockWith('_c8oProject/mobileSharedComponents/LightRagFooterComponent.yaml','/*Begin_c8o_CompImport*/');
 test('quick resource panels are exclusive, collapse on second click and preserve the prompt draft',()=>{
  const f=methods('class Footer {'+footer.slice(footer.indexOf('/*Begin_c8o_CompFunction*/'))+'}', ['toggleResourceTab','quickResources','resourceCaption']);
- Object.assign(f,{resourceTab:'prompts',Question:'Keep my draft',tick(){},translate:{currentLang:'fr'},ResourceSkills:[{key:'skill'}],ResourceMcp:[{key:'mcp'}]});
+ const opened=[];
+ Object.assign(f,{resourceTab:'prompts',Question:'Keep my draft',tick(){},translate:{currentLang:'fr'},ResourceSkills:[{key:'skill'}],ResourceMcp:[{key:'mcp'}],ResourcesOpen:{emit:v=>opened.push(v)}});
  f.toggleResourceTab('skills');assert.equal(f.resourceTab,'skills');assert.equal(f.quickResources()[0].key,'skill');
  f.toggleResourceTab('mcp');assert.equal(f.resourceTab,'mcp');assert.equal(f.quickResources()[0].key,'mcp');
  f.toggleResourceTab('mcp');assert.equal(f.resourceTab,'');assert.equal(f.Question,'Keep my draft');
+ assert.deepEqual(opened,['refresh','refresh'],'opening skills or connections reads the library again, closing does not');
  assert.equal(f.resourceCaption('manage'),'Configurer la bibliothèque');f.translate.currentLang='en';assert.equal(f.resourceCaption('manage'),'Manage library');
  f.owner={global:{currentLanguage:()=> 'fr'}};assert.equal(f.resourceCaption('manage'),'Configurer la bibliothèque','the shared component follows the owning page language');
 });

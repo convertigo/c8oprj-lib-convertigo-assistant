@@ -1339,7 +1339,12 @@ scriptContent:
                 const language = this.ResourceLanguage || (typeof ownerLanguage === ''function'' ? ownerLanguage() : (ownerLanguage || this.translate?.currentLang || ''en''));
                 return (String(language).startsWith(''fr'') ? fr : en)[key] || key;
             }
-            public toggleResourceTab(tab: string) { this.resourceTab = this.resourceTab === tab ? '''' : tab; this.tick(); }
+            public toggleResourceTab(tab: string) {
+                this.resourceTab = this.resourceTab === tab ? '''' : tab;
+                // Opening skills or connections reads the library again: what changed on disk shows up without a reload.
+                if (this.resourceTab === ''skills'' || this.resourceTab === ''mcp'') { this.ResourcesOpen?.emit(''refresh''); }
+                this.tick();
+            }
             public syncPromptsWithConversation() {
                 // The suggested prompts fold once the conversation starts (first message sent, or a conversation reopened with its messages)
                 // and come back for a new or empty one. In between, the "Prompts" toggle of the composer opens them again.

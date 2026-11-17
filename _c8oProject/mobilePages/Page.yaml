@@ -23733,7 +23733,7 @@ title: Tigo
             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
             - com.twinsoft.convertigo.beans.common.FormatedContent: 
               →: |
-                page.openTigoLibrary(event || 'prompts');
+                if (event === 'refresh') { page.requestTigoResources(true); } else { page.openTigoLibrary(event || 'prompts'); }
                 resolve();
     ↓EnableResources [ngx.components.UIUseVariable-1792084771193]: 
       varValue: 
@@ -23847,6 +23847,8 @@ title: Tigo
                     }
                     page.local.ProjectSelectionChanged = selectedChanged;
                     page.setEnableChat();
+                    // The project in context decides the skills on by default: list them for the newly selected project.
+                    if (page.requestTigoResources) { page.requestTigoResources(); }
                     page.tick();
                     resolve();'
     ↓SwitchProjectIf [ngx.components.UIDynamicAction-1782139100462]: 

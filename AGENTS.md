@@ -612,6 +612,18 @@ rediscovering the same context.
   submission only, and bind a newly returned session ID without reinjection.
   Disabling cannot erase model history. Missing selections must remain visible
   with a recovery action; changed active MCP declarations require reapproval.
+- Project skills (`<project>/.tigo/skills`) of the conversation's project
+  (`state.projectId`, the panel's `getEffectiveProjectName`) apply by default in
+  every Studio (8.4 Eclipse, Electron, web); `prepare()` reads them from disk at
+  each turn. A conversation's selection file keeps the skills turned on by hand
+  and `off`, the project skills turned off for it. The draft selection belongs to
+  the next new conversation only: its first message takes it and clears it. A
+  skill that is gone is skipped and reported in the turn (narrative event), never
+  failing the send; MCP problems still fail with guidance. Default project skills
+  share a 48,000-character budget, past it the agent gets the SKILL.md path. The
+  panel lists the library per project in context, refreshes it on a Studio
+  project selection, when the composer opens Skills/MCP, and after 30 s. Cover
+  with `node --test tests/tigo_resources*.test.cjs tests/tigo_compact_resources.test.cjs`.
 - MCP activation uses an opaque private-memory handle and conversation homes;
   raw secrets never enter browser state, prompts, records or generated configs.
   Keep the managed Convertigo skill/MCP intact.
