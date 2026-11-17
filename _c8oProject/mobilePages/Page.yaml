@@ -8220,7 +8220,7 @@ scriptContent:
                     search:''Rechercher dans la bibliothèque'', allSources:''Toutes les provenances'', builtin:''Livré par Convertigo'', workspace:''Workspace personnel'', project:''Projet partagé'',
                     refresh:''Recharger la bibliothèque'', create:''Nouveau'', edit:''Éditer'', view:''Consulter'', duplicate:''Dupliquer'', use:''Insérer dans le brouillon'', favorite:''Ajouter aux favoris'', unfavorite:''Retirer des favoris'', up:''Monter le favori'', down:''Descendre le favori'', refreshModels:''Actualiser les modèles'',
                     enable:''Activer pour cette conversation'', disable:''Désactiver pour cette conversation'', enabled:''Activé'', empty:''Aucune ressource dans cette catégorie.'', loading:''Chargement de la bibliothèque…'',
-                    skillHint:''Les skills du projet de la conversation (dossier .tigo/skills du projet) sont actifs par défaut ; les autres s’activent ici. Ils sont fournis à l’agent au prochain envoi. Les désactiver n’efface pas les instructions déjà présentes dans l’historique.'', autoSkill:''actif par défaut pour ce projet'',
+                    skillHint:''Vos skills personnels et ceux du projet de la conversation (dossier .tigo/skills) sont actifs par défaut ; l’éclair règle ce défaut pour vos conversations, la coche les active ou désactive dans la conversation. Ils sont fournis à l’agent au prochain envoi. Les désactiver n’efface pas les instructions déjà présentes dans l’historique.'', autoSkill:''actif par défaut'', makeDefault:''Activer par défaut dans mes conversations'', removeDefault:''Ne plus activer par défaut'',
                     mcpHint:''Une connexion s’active explicitement pour cette conversation, au prochain envoi. Tigo peut redémarrer le harnais pour l’appliquer. Les secrets restent personnels.'',
                     promptHint:''Insérez un favori dans le brouillon, sans l’envoyer.'',
                     title:''Titre'', description:''Description'', body:''Prompt / contenu Markdown'', language:''Langue de cette traduction'', location:''Enregistrer dans'', target:''Projet cible'', save:''Enregistrer'', cancel:''Annuler'', remove:''Retirer'', removeConfirm:''Confirmer le retrait'',
@@ -8237,7 +8237,7 @@ scriptContent:
                 const en = {
                     proposalTitle:''MCP proposed by Tigo — review required'', proposalHint:''Review the command or URL, arguments and secret references before adding this MCP. It may run code or access the network. Adding it does not enable it for the conversation.'', proposalAdd:''Add this MCP'', proposalReject:''Reject'', proposalAdded:''Connection added. Enable it separately for the conversation.'', proposalRejected:''Proposal rejected.'', proposal_expired_or_changed:''The proposal expired or changed. Ask Tigo to prepare it again.'', human_review_required:''The user must review this proposal from the library.'',
                     prompts:''Prompts'', skills:''Skills'', mcp:''MCP connections'', agent:''Agent and model'', runtime:''Runtime and stack'', search:''Search the library'', allSources:''All sources'', builtin:''Built into Tigo'', workspace:''Personal workspace'', project:''Shared project'', refresh:''Reload library'', create:''New'', edit:''Edit'', view:''View'', duplicate:''Duplicate'', use:''Insert into draft'', favorite:''Add to favorites'', unfavorite:''Remove from favorites'', up:''Move favorite up'', down:''Move favorite down'', refreshModels:''Refresh models'', enable:''Enable for this conversation'', disable:''Disable for this conversation'', enabled:''Enabled'', empty:''No resources in this category.'', loading:''Loading the library…'',
-                    skillHint:''Skills of the conversation’s project (the project’s .tigo/skills folder) are on by default; enable others here. Enabled skills are supplied on the next message. Disabling them does not erase instructions already present in the conversation history.'', autoSkill:''on by default for this project'', mcpHint:''Explicitly enable a connection for this conversation. Changes apply on the next message and may restart the harness. Secrets remain personal.'', promptHint:''Insert a favorite into your draft without sending it.'',
+                    skillHint:''Your personal skills and those of the conversation’s project (its .tigo/skills folder) are on by default; the lightning sets this default for your conversations, the check turns a skill on or off in this conversation. Enabled skills are supplied on the next message. Disabling them does not erase instructions already present in the conversation history.'', autoSkill:''on by default'', makeDefault:''Turn on by default in my conversations'', removeDefault:''Stop turning on by default'', mcpHint:''Explicitly enable a connection for this conversation. Changes apply on the next message and may restart the harness. Secrets remain personal.'', promptHint:''Insert a favorite into your draft without sending it.'',
                     title:''Title'', description:''Description'', body:''Prompt / Markdown content'', language:''Language of this translation'', location:''Save in'', target:''Target project'', save:''Save'', cancel:''Cancel'', remove:''Remove'', removeConfirm:''Confirm removal'', readonly:''This resource ships with Tigo. Duplicate it to customize.'', draft:''The prompt was added to your draft.'', connection:''MCP connection (JSON, secret references only)'', dependencies:''Required MCP connections (optional)'', dependenciesHint:''Select the external tools this skill needs. Leave everything unchecked if none are required.'', editorHint:''Save this resource here before leaving the editor.'', skillBody:''Skill instructions (Markdown)'', promptBody:''Prompt text'', skillTemplate:''Describe this skill'', skillMetadataHint:''The SKILL.md technical name and description are generated automatically. Enter only the instructions below.'', saving:''Saving…'', secretName:''Secret name (e.g. COMPANY_API_KEY)'', secretValue:''Private value'', secretSave:''Save personal secret'', secrets:''Available secrets: '', none:''none'', allPrompts:''All prompts…'',
                     failed:''Unable to load the library. You can retry.'', revision_conflict:''The resource changed since you opened it. Refresh and reopen it before saving.'', invalid_id:''Use lowercase letters, numbers and hyphens for the identifier.'', authentication_required:''Reconnect your Studio session to access the library.'', conversation_busy:''Wait until the current turn finishes before changing active resources.'', skill_frontmatter_required:''A skill must start with SKILL.md frontmatter containing name and description.'', default_translation_required:''The default language translation must retain a title.'', mcp_secret_missing:''A connection requires a missing personal secret.'', skill_mcp_dependency_missing:''Enable the MCP connections required by the selected skills.'', mcp_activation_admin_required:''An administrator must enable MCP connections.'', invalid_connection:''Check the MCP connection declaration.'', invalid_object:''The declaration must be a valid JSON object.'', title_required:''A title is required.'', invalid_language:''Use a language code such as fr or en.'', selected:''Resources will apply on the next message.'', saved:''Resource saved.'', invalid_support_path:''Support files must stay under references, scripts or assets.'', editor:''Resource editor'', missingSelections:''Some active resources are unavailable. Remove them from this conversation to continue.'', clearMissing:''Remove unavailable selections'', resource_missing:''The resource was removed. Refresh the library.'', catalogWarning:''Some resources could not be read. Correct their format, then refresh.'', csrf_invalid:''The session was renewed. Refresh the library, then retry.'', origin_forbidden:''This request origin is not allowed.'', review:''Re-enable changed connection'', mcp_changed_requires_review:''An MCP connection changed. Review its declaration and re-enable it before continuing.'', secret_admin_required:''An administrator must manage MCP secrets.'', mcp_https_or_loopback_required:''Use HTTPS or a local HTTP address.'', mcp_url_credentials_forbidden:''Store credentials as personal secrets, never in the URL.'', invalid_header_prefix:''Header prefixes must be empty, Bearer or Basic.'', mcp_arguments_credentials_forbidden:''Pass credentials through environment variables, never command arguments.''
                 };
@@ -8255,7 +8255,7 @@ scriptContent:
                 const fresh = Date.now() - Number(this.local.ResourceLoadedAt || 0) < 30000;
                 if (this.local.ResourceLoading || (!operation && !force && this.local.ResourceLoadedKey === key && fresh)) { return; }
                 this.local.ResourceLoading = true; this.local.ResourceError = ''''; this.local.ResourceNotice = '''';
-                const request = Object.assign({action:''list''}, operation || {}, {language, threadid:conversation, project, csrf:this.local.ResourceCatalog?.csrf});
+                const request = Object.assign({action:''list''}, operation || {}, {language, threadid:conversation, contextProject:project, csrf:this.local.ResourceCatalog?.csrf});
                 const requestId = Date.now() + ''-'' + Math.random().toString(36).slice(2);
                 this.local.ResourceRequestId = requestId;
                 this.events.publish(''TigoResources'', {request, requestId, key, conversation, identity, project});
@@ -8336,6 +8336,11 @@ scriptContent:
                 else if (item.kind === ''skill'' && item.auto) { if (off >= 0) { selection.off.splice(off,1); } }
                 else if(index >= 0) { list.splice(index,1); } else { list.push(item.key); }
                 this.requestTigoResources(true,{action:''select'',input:selection});
+            }
+            public toggleTigoSkillDefault(item: any) {
+                // Personal and project skills are on by default in the user's conversations: this sets one off by default, or back.
+                if (!item?.defaultable) { return; }
+                this.requestTigoResources(true,{action:''skillDefault'',key:item.key,input:{enabled:!item.auto}});
             }
             public useTigoPrompt(item: any) {
                 this.events.publish(''TigoPromptInsert'', {text:item.body});
@@ -13780,6 +13785,55 @@ title: Tigo
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: plain:tigo-resource-actions
+                            ↓DefaultToggle [ngx.components.UIControlDirective-1793400000001]: 
+                              directiveName: If
+                              directiveSource: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:!!skillItem.defaultable
+                              ↓Default [ngx.components.UIDynamicElement-1793400000002]: 
+                                beanData: |
+                                  '{
+                                   "ionBean": "Button",
+                                   "Disabled": "script:local.ResourceLoading",
+                                   "IonFill": "plain:clear"
+                                  }'
+                                tagName: ion-button
+                                ↓Click [ngx.components.UIControlEvent-1793400000003]: 
+                                  ↓Apply [ngx.components.UICustomAction-1793400000004]: 
+                                    actionValue: 
+                                      - xmlizable: 
+                                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                          →: |
+                                            page.toggleTigoSkillDefault(props.stack.root.scope.skillItem);
+                                            resolve();
+                                ↓Icon [ngx.components.UIDynamicElement-1793400000005]: 
+                                  beanData: |
+                                    '{
+                                     "ionBean": "Icon",
+                                     "IconName": "script:skillItem.auto ? ''flash'' : ''flash-outline''",
+                                     "IconSlot": "plain:icon-only"
+                                    }'
+                                  tagName: ion-icon
+                                ↓AccessibleLabel [ngx.components.UIAttribute-1793400000006]: 
+                                  attrName: '[attr.aria-label]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: 'script:skillItem.auto ? this.tigoText(''removeDefault'') : this.tigoText(''makeDefault'')'
+                                ↓Tooltip [ngx.components.UIAttribute-1793400000007]: 
+                                  attrName: '[attr.title]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: 'script:skillItem.auto ? this.tigoText(''removeDefault'') : this.tigoText(''makeDefault'')'
+                                ↓Pressed [ngx.components.UIAttribute-1793400000008]: 
+                                  attrName: '[attr.aria-pressed]'
+                                  attrValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                      - MobileSmartSourceType: script:!!skillItem.auto
                             ↓Enable [ngx.components.UIDynamicElement-1792084640461]: 
                               beanData: |
                                 '{

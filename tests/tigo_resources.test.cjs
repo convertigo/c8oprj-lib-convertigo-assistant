@@ -173,7 +173,7 @@ test("skill contents are injected once per revision and session, disabled skills
   f.api.execute({
     action: "select",
     threadid: "conversation",
-    input: { skills: [], mcp: [] },
+    input: { skills: [], mcp: [], off: [s.key] },
   });
   assert.equal(f.api.prepare(state).text, "");
   assert.ok(state.resourceSkillVersions);
@@ -524,7 +524,7 @@ test("the skills of the conversation's project apply by default, read from disk 
   const turn = f.api.prepare(state);
   assert.match(turn.text, /Duplicate the template page/);
   assert.deepEqual(plain(turn.applied.map((x) => [x.key, x.auto, x.sent])), [[key, true, true]]);
-  const catalog = f.api.execute({ action: "list", threadid: "c1", project: "Demo" });
+  const catalog = f.api.execute({ action: "list", threadid: "c1", contextProject: "Demo" });
   const item = catalog.items.find((x) => x.key === key);
   assert.equal(item.enabled, true);
   assert.equal(item.auto, true);
@@ -539,14 +539,14 @@ test("a project skill turned off stays off for that conversation only", () => {
   const state = { threadid: "c1", provider: "codex", externalSessionId: "s1", projectId: "Demo" };
   assert.equal(f.api.prepare(state).text, "");
   assert.equal(
-    f.api.execute({ action: "list", threadid: "c1", project: "Demo" }).items.find((x) => x.key === key).enabled,
+    f.api.execute({ action: "list", threadid: "c1", contextProject: "Demo" }).items.find((x) => x.key === key).enabled,
     false,
   );
   assert.match(f.api.prepare({ threadid: "c2", provider: "codex", projectId: "Demo" }).text, /Follow page-rules/);
   f.api.execute({ action: "select", threadid: "c1", input: { skills: [], mcp: [], off: [] } });
   assert.match(f.api.prepare(state).text, /Follow page-rules/);
   assert.throws(
-    () => f.api.execute({ action: "select", threadid: "c1", input: { skills: [], mcp: [], off: ["workspace::skill:x"] } }),
+    () => f.api.execute({ action: "select", threadid: "c1", input: { skills: [], mcp: [], off: ["builtin::skill:x"] } }),
     /invalid_selection/,
   );
 });
@@ -564,7 +564,7 @@ test("changing the conversation's project swaps its default skills instead of bl
   assert.doesNotMatch(turn.text, /page-rules/);
   assert.deepEqual(Object.keys(turn.versions), [other]);
   assert.deepEqual(plain(turn.skipped), []);
-  const catalog = f.api.execute({ action: "list", threadid: "c1", project: "Other" });
+  const catalog = f.api.execute({ action: "list", threadid: "c1", contextProject: "Other" });
   assert.equal(catalog.items.find((x) => x.key === demo).enabled, false);
   assert.equal(catalog.items.find((x) => x.key === other).enabled, true);
 });
@@ -577,24 +577,64 @@ test("a missing skill is skipped and reported, never blocking the message", () =
   assert.equal(turn.text, "");
   assert.deepEqual(plain(turn.skipped.map((x) => [x.key, x.title])), [[key, "page-rules"]]);
   assert.equal(turn.skipped[0].reason, "unknown_project");
-  assert.deepEqual(plain(f.api.execute({ action: "list", threadid: "c1", project: "Other" }).missingSelections), [key]);
+  assert.deepEqual(plain(f.api.execute({ action: "list", threadid: "c1", contextProject: "Other" }).missingSelections), [key]);
   const w = save(f, "skill", data("method", "skill"));
   f.api.execute({ action: "select", threadid: "c1", input: { skills: [key, w.key], mcp: [] } });
   assert.match(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Other" }).text, /Read references/);
 });
-test("a new conversation takes the draft choices once; the next one starts from its project's skills", () => {
+test("a new conversation takes the draft choices once; the next one starts from the skills on by default", () => {
   const f = withProjects(fixture());
-  const w = save(f, "skill", data("method", "skill")),
-    auto = projectSkill(f, "Demo", "page-rules");
-  f.api.execute({ action: "select", input: { skills: [w.key], mcp: [], off: [auto] } });
+  const auto = projectSkill(f, "Demo", "page-rules"),
+    other = projectSkill(f, "Other", "naming");
+  f.api.execute({ action: "select", input: { skills: [other], mcp: [], off: [auto] } });
   const first = f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo", language: "en" });
-  assert.match(first.text, /Read references/);
+  assert.match(first.text, /Follow naming/);
   assert.doesNotMatch(first.text, /page-rules/);
   assert.deepEqual(plain(f.api.execute({ action: "list" }).selection), { skills: [], mcp: [], mcpRevisions: {}, off: [] });
   const second = f.api.prepare({ threadid: "c2", provider: "codex", projectId: "Demo", language: "en" });
   assert.match(second.text, /Follow page-rules/);
-  assert.doesNotMatch(second.text, /Read references/);
-  assert.match(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo", language: "en" }).text, /Read references/);
+  assert.doesNotMatch(second.text, /Follow naming/);
+  assert.match(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo", language: "en" }).text, /Follow naming/);
+});
+test("personal skills made in the panel are on by default in every conversation of their owner, until set otherwise", () => {
+  const f = withProjects(fixture());
+  const d = data("custom-mw0fsptm", "skill");
+  d.translations.en.body = "---\nname: \"custom-mw0fsptm\"\ndescription: \"Page templates\"\n---\nDuplicate the template page.";
+  delete d.translations.fr;
+  const s = save(f, "skill", d);
+  for (const projectId of ["Demo", "Other", ""]) {
+    const turn = f.api.prepare({ threadid: "t-" + projectId, provider: "convertigo", projectId, language: "fr" });
+    assert.match(turn.text, /Duplicate the template page/, "on by default with project " + JSON.stringify(projectId));
+    assert.deepEqual(plain(turn.applied.map((x) => [x.key, x.auto])), [[s.key, true]]);
+  }
+  let row = f.api.execute({ action: "list", threadid: "t-new", contextProject: "Demo" }).items.find((x) => x.key === s.key);
+  assert.equal(row.enabled, true);
+  assert.equal(row.defaultable, true);
+  assert.equal(row.auto, true);
+  f.api.execute({ action: "favorites", input: { favorites: [] } });
+  f.api.execute({ action: "skillDefault", key: s.key, input: { enabled: false } });
+  assert.deepEqual(plain(JSON.parse(f.files.get("users/studio/preferences.json"))), { schemaVersion: 1, favorites: [], notDefault: [s.key] });
+  assert.equal(f.api.prepare({ threadid: "t-after", provider: "convertigo", projectId: "Demo" }).text, "");
+  row = f.api.execute({ action: "list", threadid: "t-new", contextProject: "Demo" }).items.find((x) => x.key === s.key);
+  assert.deepEqual([row.enabled, row.defaultable, row.auto], [false, true, false]);
+  f.api.execute({ action: "select", threadid: "t-hand", input: { skills: [s.key], mcp: [] } });
+  assert.match(f.api.prepare({ threadid: "t-hand", provider: "convertigo" }).text, /Duplicate the template page/, "still on by hand");
+  f.api.execute({ action: "favorites", input: { favorites: [] } });
+  assert.deepEqual(plain(JSON.parse(f.files.get("users/studio/preferences.json")).notDefault), [s.key], "favorites keep the setting");
+  f.api.execute({ action: "skillDefault", key: s.key, input: { enabled: true } });
+  assert.match(f.api.prepare({ threadid: "t-back", provider: "convertigo" }).text, /Duplicate the template page/);
+  f.api.execute({ action: "select", threadid: "t-off", input: { skills: [], mcp: [], off: [s.key] } });
+  assert.equal(f.api.prepare({ threadid: "t-off", provider: "convertigo" }).text, "", "off for one conversation");
+  assert.throws(() => f.api.execute({ action: "skillDefault", key: "workspace::prompt:x", input: { enabled: false } }), /resource_missing|not_a_skill/);
+});
+test("a No Code user's personal skills are on by default; project skills are not visible", () => {
+  const f = withProjects(fixture(false, "alice"));
+  projectSkill(f, "Demo", "page-rules");
+  const s = save(f, "skill", data("method", "skill"));
+  const turn = f.api.prepare({ threadid: "c1", provider: "convertigo", projectId: "Demo", userId: lib.conversationOwner("alice"), language: "en" });
+  assert.match(turn.text, /Read references/);
+  assert.doesNotMatch(turn.text, /page-rules/);
+  assert.deepEqual(plain(turn.applied.map((x) => x.key)), [s.key]);
 });
 test("a default project skill needing an MCP connection that is off is skipped, not blocking", () => {
   const f = withProjects(fixture());
@@ -613,7 +653,7 @@ test("default project skills past the budget reach the agent as a pointer to the
   const turn = f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo" });
   assert.match(turn.text, /A{40000}/);
   assert.doesNotMatch(turn.text, /B{20000}/);
-  assert.match(turn.text, /Project skill, not included here: b-large[\s\S]*Read project\/Demo\/skills\/b-large\/SKILL\.md/);
+  assert.match(turn.text, /Skill, not included here: b-large[\s\S]*Read project\/Demo\/skills\/b-large\/SKILL\.md/);
   assert.match(turn.text, /Keep it short/);
   assert.deepEqual(plain(turn.applied.map((x) => [x.title, x.full])), [["a-large", true], ["b-large", false], ["c-small", true]]);
 });
@@ -621,7 +661,26 @@ test("No Code users get no project skills", () => {
   const f = withProjects(fixture(false, "alice"));
   projectSkill(f, "Demo", "page-rules");
   assert.equal(f.api.prepare({ threadid: "c1", provider: "convertigo", projectId: "Demo", userId: lib.conversationOwner("alice") }).text, "");
-  const catalog = f.api.execute({ action: "list", threadid: "c1", project: "Demo" });
+  const catalog = f.api.execute({ action: "list", threadid: "c1", contextProject: "Demo" });
   assert.deepEqual(plain(catalog.autoSkills), []);
   assert.equal(catalog.contextProject, "");
+});
+
+test("an unreadable skills folder never fails a message or the library", () => {
+  const f = withProjects(fixture());
+  projectSkill(f, "Demo", "page-rules");
+  const list = f.host.list;
+  f.host.list = (base, rel) => {
+    if (base === "project/Demo" && rel === "skills") { const e = new Error("symlink_forbidden"); e.code = "symlink_forbidden"; throw e; }
+    return list(base, rel);
+  };
+  assert.equal(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo" }).text, "");
+  const catalog = f.api.execute({ action: "list", threadid: "c1", contextProject: "Demo" });
+  assert.equal(catalog.ok, true);
+  assert.ok(catalog.errors.some((x) => x.project === "Demo"));
+});
+test("a project save keeps its target whatever the project in context", () => {
+  const f = withProjects(fixture());
+  const item = f.api.execute({ action: "save", kind: "skill", scope: "project", project: "Other", contextProject: "Demo", revision: "", input: data("naming", "skill") }).item;
+  assert.equal(item.key, "project:Other:skill:naming");
 });

@@ -4590,6 +4590,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       editProfile: normalizeEditProfile(state.editProfile),
       nocodeContext: savedNoCodeContext(state),
       resourceSkillVersions: state.resourceSkillVersions || {},
+      resourceCompactions: Number(state.resourceCompactions || 0),
       resourceContextEpoch: state.resourceContextEpoch || "",
       resourceMcpFingerprint: state.resourceMcpFingerprint || "",
       resourceConversationHome: state.resourceConversationHome === true,
@@ -8627,6 +8628,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title: record ? conversationTitleFromText(record.title) : "",
       externalSessionId: externalSessionId,
       resourceSkillVersions: record && record.resourceSkillVersions || {},
+      resourceCompactions: Number(record && record.resourceCompactions || 0),
       resourceContextEpoch: record && record.resourceContextEpoch || "",
       resourceMcpFingerprint: record && record.resourceMcpFingerprint || "",
       resourceConversationHome: record && record.resourceConversationHome === true,
@@ -10253,6 +10255,12 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
   function submitTigoPrompt(state, sequence, payload) {
     if (!C8O.tigoResources || agentSlashCommandName(state, payload.prompt).length) { return bridgeCall(state, sequence, payload, 70000); }
+    // A compaction replaces the history with a summary that can drop the skills supplied earlier: supply them again on
+    // the next message. Vibe counts the compactions of its session (a new session supplies them anyway).
+    var compactions = Number(state.usage && state.usage.metrics && state.usage.metrics.compactions) || 0;
+    if (compactions !== Number(state.resourceCompactions || 0)) {
+      state.resourceSkillVersions = {};
+    }
     var resources = C8O.tigoResources.prepare(state);
     sendMark("resources");
     reportTigoSkills(state, resources);
@@ -10263,6 +10271,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (result.ok !== false) {
       rememberCodexSessionFromResult(state, result);
       state.resourceSkillVersions = resources.versions;
+      state.resourceCompactions = compactions;
       state.resourceContextEpoch = state.provider + ":" + String(state.externalSessionId || "");
       state.resourceMcpFingerprint = resources.fingerprint;
     }
@@ -10283,7 +10292,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var result = C8O.tigoResources.manage(args);
     if (result.ok && args.action && args.action !== "list" && args.action !== "get") {
-      var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid, project:args.project});
+      var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid, contextProject:args.contextProject});
       catalog.saved = result.item || null;
       catalog.csrf = csrf;
       return catalog;
@@ -10503,6 +10512,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     sendMark("prompt");
     state.slashCommand = agentSlashCommandName(state, rawUserQuestion);
     state.compactError = "";
+    if (state.slashCommand === "compact") {
+      // "/compact" summarizes the history: the next message supplies the conversation's skills again.
+      state.resourceSkillVersions = {};
+    }
     if (state.slashCommand.length) {
       // The harness runs "/compact <instructions>" only when the prompt starts with it: no Studio preamble.
       question = rawUserQuestion;

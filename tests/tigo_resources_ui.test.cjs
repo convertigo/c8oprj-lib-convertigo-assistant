@@ -20,6 +20,7 @@ const names = [
   "toggleTigoFavorite",
   "moveTigoFavorite",
   "toggleTigoResource",
+  "toggleTigoSkillDefault",
   "useTigoPrompt",
   "editTigoResource",
   "revealTigoResourceEditor",
@@ -251,7 +252,7 @@ test("MCP review sends only the displayed proposal identity and never enables it
   assert.equal(events.length,0,"displaying a proposal never executes or adds it");
   page.answerTigoMcpProposal("p1","digest",true);
   assert.equal(events.length,1);
-  assert.deepEqual(plain(events[0].payload.request),{action:"confirmProposal",input:{id:"p1",digest:"digest"},language:"fr",threadid:"",project:"Demo",csrf:"session-csrf"});
+  assert.deepEqual(plain(events[0].payload.request),{action:"confirmProposal",input:{id:"p1",digest:"digest"},language:"fr",threadid:"",contextProject:"Demo",csrf:"session-csrf"});
   page.answerTigoMcpProposal("p1","digest",true);
   assert.equal(events.length,1,"duplicate click is suppressed while loading");
   page.local.ResourceLoading=false;
@@ -298,14 +299,14 @@ test("the library is read again for another project in context and after half a 
   let project = "Demo";
   f.page.getEffectiveProjectName = () => project;
   f.page.requestTigoResources();
-  assert.equal(f.events[0].payload.request.project, "Demo");
+  assert.equal(f.events[0].payload.request.contextProject, "Demo");
   f.page.applyTigoResources({ response: { ok: true, items: [], selection: { skills: [], mcp: [] } } }, f.events[0].payload);
   f.page.requestTigoResources();
   assert.equal(f.events.length, 1, "same key, still fresh");
   project = "Other";
   f.page.requestTigoResources();
   assert.equal(f.events.length, 2);
-  assert.equal(f.events[1].payload.request.project, "Other");
+  assert.equal(f.events[1].payload.request.contextProject, "Other");
   f.page.applyTigoResources({ response: { ok: true, items: [], selection: { skills: [], mcp: [] } } }, f.events[1].payload);
   f.page.local.ResourceLoadedAt = Date.now() - 31000;
   f.page.requestTigoResources();
@@ -313,4 +314,33 @@ test("the library is read again for another project in context and after half a 
   project = "Third";
   f.page.applyTigoResources({ response: { ok: true, items: [], selection: { skills: [], mcp: [] } } }, f.events[2].payload);
   assert.equal(f.events.length, 4, "a project change during the read asks again");
+});
+
+test("the lightning of a skill sets it on or off by default for the user's conversations", () => {
+  const f = fixture();
+  f.page.local.ResourceCatalog = { csrf: "t", selection: { skills: [], mcp: [], off: [] } };
+  f.page.toggleTigoSkillDefault({ key: "workspace::skill:custom-mw0fsptm", kind: "skill", defaultable: true, auto: true });
+  assert.deepEqual(plain(f.events[0].payload.request), { action: "skillDefault", key: "workspace::skill:custom-mw0fsptm", input: { enabled: false }, language: "fr", threadid: "", contextProject: "Demo", csrf: "t" });
+  f.page.local.ResourceLoading = false;
+  f.page.toggleTigoSkillDefault({ key: "workspace::skill:custom-mw0fsptm", kind: "skill", defaultable: true, auto: false });
+  assert.equal(f.events[1].payload.request.input.enabled, true);
+  f.page.local.ResourceLoading = false;
+  f.page.toggleTigoSkillDefault({ key: "builtin::skill:x", kind: "skill", defaultable: false });
+  assert.equal(f.events.length, 2, "a skill that is never on by default has no such setting");
+  assert.match(f.page.tigoText("skillHint"), /personnels/);
+});
+
+test("a save keeps its own target project; the project in context travels apart", () => {
+  const f = fixture();
+  f.page.local.ResourceCatalog = { csrf: "t", items: [], selection: { skills: [], mcp: [] } };
+  f.page.local.ResourceEditor = { schemaVersion: 1, id: "rules", defaultLanguage: "fr", translations: { fr: { title: "R", description: "", body: "x" } } };
+  f.page.local.ResourceEditorKind = "prompt";
+  f.page.local.ResourceEditScope = "project";
+  f.page.local.ResourceEditProject = "Other";
+  f.page.local.ResourceEditLanguage = "fr";
+  f.page.saveTigoResource();
+  const request = f.events[0].payload.request;
+  assert.equal(request.action, "save");
+  assert.equal(request.project, "Other");
+  assert.equal(request.contextProject, "Demo");
 });

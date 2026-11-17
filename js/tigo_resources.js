@@ -371,12 +371,25 @@ C8O.tigoResources = (function () {
       }
       return found;
     }
+    // The user's preferences: favorite prompts, and the skills the user does not want on by default ("notDefault").
     function prefs() {
       var v = object(host.read(personal, "preferences.json"));
       return {
         schemaVersion: 1,
-        favorites: Array.isArray(v.favorites) ? unique(v.favorites) : null
+        favorites: Array.isArray(v.favorites) ? unique(v.favorites) : null,
+        notDefault: unique(v.notDefault)
       };
+    }
+    function savePrefs(p) {
+      host.write(
+        personal,
+        "preferences.json",
+        JSON.stringify(
+          { schemaVersion: 1, favorites: p.favorites, notDefault: p.notDefault },
+          null,
+          2
+        )
+      );
     }
     function selection(thread) {
       thread = text(thread || "draft");
@@ -385,8 +398,8 @@ C8O.tigoResources = (function () {
       }
       return "conversations/" + thread + ".json";
     }
-    // A conversation's choices: the skills and connections the user turned on, and the project skills the user turned
-    // off ("off"). The skills of the conversation's project apply by default, without being listed here.
+    // A conversation's choices: the skills and connections the user turned on, and the skills on by default that the
+    // user turned off for it ("off"). Skills on by default (defaultSkills) apply without being listed here.
     function selected(thread) {
       var p = selection(thread),
         v = object(host.read(personal, p));
@@ -403,22 +416,16 @@ C8O.tigoResources = (function () {
         x.data.surfaces.indexOf(who.surface || (who.admin ? "studio" : "nocode")) >= 0
       );
     }
-    // The skills in <project>/.tigo/skills, read from disk on every call: a skill added by Git, MCP or by hand applies
-    // without a library reload. Only where projects are visible (Studio). Invalid folders are left out; the library
-    // lists their errors.
-    function projectSkills(project) {
-      project = text(project).trim();
-      if (!who.admin || !project.length || project === "lib_ConvertigoAssistant") {
-        return [];
-      }
-      var s;
-      try {
-        s = source("project", project);
-      } catch (e) {
-        return [];
-      }
-      var slugs = host.list(s.base, "skills") || [],
+    // The skills of a library folder, read from disk on every call: a skill added by Git, MCP, by hand or in the
+    // panel applies without a library reload. Invalid folders are left out; the library lists their errors.
+    function skillsOf(s) {
+      var slugs = [],
         out = [];
+      try {
+        slugs = host.list(s.base, "skills") || [];
+      } catch (unreadableSkillsFolder) {
+        return [];
+      }
       slugs.slice(0, 200).forEach(function (slug) {
         try {
           var x = load(s, "skill", slug);
@@ -431,10 +438,26 @@ C8O.tigoResources = (function () {
         return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
       });
     }
-    // Skills that apply to a conversation: the ones turned on, then the project's ones that were not turned off.
+    // The skills on by default in a conversation: those of its project (<project>/.tigo/skills, where projects are
+    // visible: Studio), then the user's personal ones, less those the user set "not on by default".
+    function defaultSkills(project) {
+      var out = [];
+      project = text(project).trim();
+      if (who.admin && project.length && project !== "lib_ConvertigoAssistant") {
+        try {
+          out = skillsOf(source("project", project));
+        } catch (projectNotLoaded) {}
+      }
+      return out.concat(skillsOf(source("workspace")));
+    }
+    // Skills that apply to a conversation: the ones turned on, then the ones on by default that were not turned off.
     function activeSkills(s, project) {
-      var auto = projectSkills(project).map(function (x) {
+      var notDefault = prefs().notDefault,
+        candidates = defaultSkills(project).map(function (x) {
           return x.key;
+        }),
+        auto = candidates.filter(function (k) {
+          return notDefault.indexOf(k) < 0;
         }),
         keys = s.skills.slice();
       auto.forEach(function (k) {
@@ -442,7 +465,7 @@ C8O.tigoResources = (function () {
           keys.push(k);
         }
       });
-      return { auto: auto, keys: keys };
+      return { candidates: candidates, auto: auto, keys: keys };
     }
     function proposals() {
       var rows = object(host.read(personal, "mcp-proposals.json")).items || [];
@@ -569,6 +592,7 @@ C8O.tigoResources = (function () {
         });
       items.forEach(function (x) {
         x.favorite = favorites.indexOf(x.key) >= 0;
+        x.defaultable = x.kind === "skill" && active.candidates.indexOf(x.key) >= 0;
         x.auto = x.kind === "skill" && active.auto.indexOf(x.key) >= 0;
         x.enabled = (x.kind === "skill" ? active.keys : s.mcp).indexOf(x.key) >= 0;
         x.requiresReview =
@@ -655,7 +679,9 @@ C8O.tigoResources = (function () {
       if (action === "confirmProposal" || action === "rejectProposal") { return answerProposal(args); }
       if (host.agentInitiated === true && args.kind === "mcp" && action === "save") { return propose(args); }
       if (action === "list") {
-        return list(args.language, args.threadid, args.project);
+        // contextProject: the project the conversation works on (its skills are on by default). "project" stays the
+        // target of saves and copies.
+        return list(args.language, args.threadid, args.contextProject);
       }
       if (action === "get") {
         return { ok: true, item: entry(args.key) };
@@ -822,12 +848,27 @@ C8O.tigoResources = (function () {
             fail("not_a_prompt");
           }
         });
-        host.write(
-          personal,
-          "preferences.json",
-          JSON.stringify({ schemaVersion: 1, favorites: favorites }, null, 2)
-        );
+        var kept = prefs();
+        kept.favorites = favorites;
+        savePrefs(kept);
         return { ok: true, favorites: favorites };
+      }
+      if (action === "skillDefault") {
+        // Personal and project skills are on by default; the user can set one "not on by default" (for all of the
+        // user's conversations) and back. Not offered to the agent's tool.
+        var target = text(args.key),
+          p = prefs();
+        if (entry(target).kind !== "skill") {
+          fail("not_a_skill");
+        }
+        p.notDefault = p.notDefault.filter(function (k) {
+          return k !== target;
+        });
+        if (input.enabled === false) {
+          p.notDefault.push(target);
+        }
+        savePrefs(p);
+        return { ok: true, notDefault: p.notDefault };
       }
       if (action === "select") {
         var skills = unique(input.skills),
@@ -843,7 +884,7 @@ C8O.tigoResources = (function () {
           }
         });
         off.forEach(function (k) {
-          if (!/^project:[^:]+:skill:[a-z][a-z0-9-]{0,63}$/.test(k)) {
+          if (!/^(?:project:[^:]+|workspace:):skill:[a-z][a-z0-9-]{0,63}$/.test(k)) {
             fail("invalid_selection");
           }
         });
@@ -934,7 +975,7 @@ C8O.tigoResources = (function () {
           skipped.push({ key: k, title: t.title, reason: "skill_mcp_dependency_missing" });
           return;
         }
-        // Project skills applied by default share a budget: past it, the agent gets where to read the others.
+        // Skills applied by default share a budget: past it, the agent gets where to read the others.
         var full = manual || t.body.length <= budget;
         if (!manual && full) {
           budget -= t.body.length;
@@ -964,7 +1005,7 @@ C8O.tigoResources = (function () {
                   item.revision +
                   "\n\n" +
                   t.body
-              : "Project skill, not included here: " +
+              : "Skill, not included here: " +
                   t.title +
                   "\nSource: " +
                   item.key +

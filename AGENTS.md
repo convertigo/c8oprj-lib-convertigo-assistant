@@ -612,11 +612,17 @@ rediscovering the same context.
   submission only, and bind a newly returned session ID without reinjection.
   Disabling cannot erase model history. Missing selections must remain visible
   with a recovery action; changed active MCP declarations require reapproval.
-- Project skills (`<project>/.tigo/skills`) of the conversation's project
-  (`state.projectId`, the panel's `getEffectiveProjectName`) apply by default in
-  every Studio (8.4 Eclipse, Electron, web); `prepare()` reads them from disk at
-  each turn. A conversation's selection file keeps the skills turned on by hand
-  and `off`, the project skills turned off for it. The draft selection belongs to
+- Skills on by default: the user's personal skills (workspace) and the skills
+  of the conversation's project (`<project>/.tigo/skills`, project =
+  `state.projectId`, the panel's `getEffectiveProjectName`, sent as
+  `contextProject`, never `project`, which stays the save target), in every
+  Studio (8.4 Eclipse, Electron, web) and for No Code personal skills;
+  `prepare()` reads them from disk at each turn. `preferences.json`
+  `notDefault` (action `skillDefault`, panel lightning button, not offered to
+  the MCP tool) sets one off by default for the user. A conversation's selection
+  file keeps the skills turned on by hand and `off`, the default skills turned
+  off for it. A compaction (Vibe session count `usage.metrics.compactions`, or
+  `/compact`) clears `resourceSkillVersions` so skills are supplied again. The draft selection belongs to
   the next new conversation only: its first message takes it and clears it. A
   skill that is gone is skipped and reported in the turn (narrative event), never
   failing the send; MCP problems still fail with guidance. Default project skills
