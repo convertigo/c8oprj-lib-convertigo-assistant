@@ -4275,6 +4275,8 @@ scriptContent:
         		}
         		var value = this.cleanProjectName(project);
         		this.local.ConversationProject = value.length ? value : "";
+        		// The project decides the skills on by default: list the library again once the caller set the conversation.
+        		setTimeout(() => { if (this.requestTigoResources) { this.requestTigoResources(); } }, 0);
         		return value;
         	}
         	public setConversationProjectFromData(data, state) {
