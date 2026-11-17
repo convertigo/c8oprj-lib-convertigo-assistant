@@ -619,7 +619,9 @@ rediscovering the same context.
   Studio (8.4 Eclipse, Electron, web) and for No Code personal skills;
   `prepare()` reads them from disk at each turn. `preferences.json`
   `notDefault` (action `skillDefault`, panel lightning button, not offered to
-  the MCP tool) sets one off by default for the user. A conversation's selection
+  the MCP tool; at most 100, removed skills dropped first) sets one off by default
+  for the user; a personal skill the agent creates (`host.agentInitiated`) starts
+  in it. A conversation's selection
   file keeps the skills turned on by hand and `off`, the default skills turned
   off for it. A compaction (Vibe session count `usage.metrics.compactions`, or
   `/compact`) clears `resourceSkillVersions` so skills are supplied again. The draft selection belongs to

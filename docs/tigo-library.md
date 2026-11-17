@@ -89,8 +89,9 @@ To provide a project skill, add `<project>/.tigo/skills/<name>/SKILL.md` with a
 `name` and `description` frontmatter (or create it in **Settings > Library >
 Skills** with **Shared project**, or ask Tigo), add `/.tigo/**` to the project's
 `.httpignore`, and commit the folder with the project. Everyone who opens the
-project gets it. The agent can create skills through `tigo-resources`, but only
-the user can change what is on by default.
+project gets it. The agent can create skills through `tigo-resources`; a
+personal skill it creates starts "not on by default" until the user turns it on,
+and only the user can change what is on by default.
 
 Tigo supplies a skill's instructions on the next turn, once per content revision
 and provider session. The supplied text identifies the skill directory so the

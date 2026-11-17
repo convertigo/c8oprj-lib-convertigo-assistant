@@ -684,3 +684,34 @@ test("a project save keeps its target whatever the project in context", () => {
   const item = f.api.execute({ action: "save", kind: "skill", scope: "project", project: "Other", contextProject: "Demo", revision: "", input: data("naming", "skill") }).item;
   assert.equal(item.key, "project:Other:skill:naming");
 });
+
+test("the not-on-by-default list stays bounded and never stops the library or a message", () => {
+  const f = withProjects(fixture());
+  f.files.set("users/studio/preferences.json", JSON.stringify({ schemaVersion: 1, notDefault: Array.from({ length: 150 }, (_, i) => "workspace::skill:gone-" + i).concat([7]) }));
+  const s = save(f, "skill", data("method", "skill"));
+  assert.equal(f.api.execute({ action: "list", contextProject: "Demo" }).ok, true);
+  assert.match(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo", language: "en" }).text, /Read references/);
+  f.api.execute({ action: "skillDefault", key: s.key, input: { enabled: false } });
+  assert.deepEqual(plain(JSON.parse(f.files.get("users/studio/preferences.json")).notDefault), [s.key], "removed skills are dropped at the limit");
+  assert.equal(f.api.prepare({ threadid: "c2", provider: "codex", projectId: "Demo" }).text, "");
+  const keep = [];
+  for (let i = 0; i < 100; i++) keep.push(save(f, "skill", data("s" + i, "skill")).key);
+  f.files.set("users/studio/preferences.json", JSON.stringify({ schemaVersion: 1, favorites: null, notDefault: keep }));
+  assert.throws(() => f.api.execute({ action: "skillDefault", key: s.key, input: { enabled: false } }), /selection_too_large/);
+  f.api.execute({ action: "skillDefault", key: keep[0], input: { enabled: true } });
+  assert.equal(JSON.parse(f.files.get("users/studio/preferences.json")).notDefault.length, 99, "turning one back on still works");
+});
+test("a personal skill created by the agent starts not on by default; the user decides", () => {
+  const f = withProjects(fixture());
+  f.host.agentInitiated = true;
+  const result = f.api.execute({ action: "save", kind: "skill", scope: "workspace", revision: "", input: data("agent-made", "skill") });
+  assert.match(result.notice, /not on by default/);
+  const copy = f.api.execute({ action: "duplicate", key: result.item.key, scope: "workspace", input: { id: "agent-copy" } });
+  assert.match(copy.notice, /not on by default/);
+  assert.equal(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo" }).text, "");
+  const project = f.api.execute({ action: "save", kind: "skill", scope: "project", project: "Demo", revision: "", input: data("team-rules", "skill") });
+  assert.equal(project.notice, undefined, "a project skill follows its project");
+  f.host.agentInitiated = false;
+  f.api.execute({ action: "skillDefault", key: result.item.key, input: { enabled: true } });
+  assert.match(f.api.prepare({ threadid: "c2", provider: "codex", projectId: "Other", language: "en" }).text, /Source: workspace::skill:agent-made/);
+});

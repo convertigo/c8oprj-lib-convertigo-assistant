@@ -377,8 +377,49 @@ C8O.tigoResources = (function () {
       return {
         schemaVersion: 1,
         favorites: Array.isArray(v.favorites) ? unique(v.favorites) : null,
-        notDefault: unique(v.notDefault)
+        notDefault: keyList(v.notDefault)
       };
+    }
+    // Tolerant read of a stored key list: a damaged or oversized file never stops the library or a message.
+    function keyList(v) {
+      var out = [];
+      (Array.isArray(v) ? v : []).forEach(function (x) {
+        if (typeof x === "string" && x.length <= 220 && out.indexOf(x) < 0 && out.length < 100) {
+          out.push(x);
+        }
+      });
+      return out;
+    }
+    // At most 100 skills "not on by default": the keys of removed skills are dropped first.
+    function addNotDefault(p, k) {
+      if (p.notDefault.indexOf(k) >= 0) {
+        return;
+      }
+      if (p.notDefault.length >= 100) {
+        p.notDefault = p.notDefault.filter(function (x) {
+          try {
+            entry(x);
+            return true;
+          } catch (removedSkill) {
+            return false;
+          }
+        });
+      }
+      if (p.notDefault.length >= 100) {
+        fail("selection_too_large");
+      }
+      p.notDefault.push(k);
+    }
+    // A personal skill the agent creates waits for the user: it starts not on by default (the user turns it on with the
+    // lightning button in the library, or in one conversation). Project skills follow their project.
+    function agentSkillNotice(item) {
+      if (host.agentInitiated !== true || !item || item.kind !== "skill" || item.scope !== "workspace") {
+        return "";
+      }
+      var p = prefs();
+      addNotDefault(p, item.key);
+      savePrefs(p);
+      return "This personal skill is not on by default. The user turns it on in Settings > Library > Skills (lightning button), or for one conversation.";
     }
     function savePrefs(p) {
       host.write(
@@ -721,7 +762,11 @@ C8O.tigoResources = (function () {
             });
           item = load(destination, args.kind, item.id);
         }
-        return { ok: true, item: item };
+        var saved = { ok: true, item: item };
+        if (!args.revision) {
+          saved.notice = agentSkillNotice(item) || undefined;
+        }
+        return saved;
       }
       if (action === "duplicate") {
         var original = entry(args.key),
@@ -751,7 +796,7 @@ C8O.tigoResources = (function () {
             });
           written = load(destination, original.kind, copy.id);
         }
-        return { ok: true, item: written };
+        return { ok: true, item: written, notice: agentSkillNotice(written) || undefined };
       }
       if (action === "readFile" || action === "writeFile") {
         var resource = entry(args.key);
@@ -865,7 +910,7 @@ C8O.tigoResources = (function () {
           return k !== target;
         });
         if (input.enabled === false) {
-          p.notDefault.push(target);
+          addNotDefault(p, target);
         }
         savePrefs(p);
         return { ok: true, notDefault: p.notDefault };
