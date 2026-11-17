@@ -5136,7 +5136,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
       setupReady: "L'environnement local est pr\u00eat.",
-      projectSkillsApplied: "Skills du projet appliqu\u00e9s : ",
+      defaultSkillsApplied: "Skills appliqu\u00e9s par d\u00e9faut : ",
       skillsSkipped: "Skills non appliqu\u00e9s : ",
       skillUnavailable: "introuvable",
       skillNeedsMcp: "connexion MCP requise",
@@ -5194,7 +5194,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
       setupReady: "The local environment is ready.",
-      projectSkillsApplied: "Project skills applied: ",
+      defaultSkillsApplied: "Skills applied by default: ",
       skillsSkipped: "Skills not applied: ",
       skillUnavailable: "not found",
       skillNeedsMcp: "MCP connection required",
@@ -10237,13 +10237,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return noCodeContextCatalogFromScope(scope);
   };
 
-  // The turn says which project skills it brings to the agent and which skills it had to leave out, so a skill never
+  // The turn says which skills on by default it brings to the agent and which skills it had to leave out, so a skill never
   // applies or goes missing unnoticed. Narrative events, never mistaken for the answer.
   function reportTigoSkills(state, resources) {
     var t = lang(state);
     var sent = (resources.applied || []).filter(function (x) { return x.auto && x.sent; }).map(function (x) { return x.title; });
     if (sent.length) {
-      appendNarrativeEvent(state, t.projectSkillsApplied + sent.join(", "), "progress");
+      appendNarrativeEvent(state, t.defaultSkillsApplied + sent.join(", "), "progress");
     }
     var skipped = (resources.skipped || []).map(function (x) {
       return x.title + " (" + (x.reason === "skill_mcp_dependency_missing" ? t.skillNeedsMcp : t.skillUnavailable) + ")";
