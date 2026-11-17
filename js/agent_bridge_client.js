@@ -5135,6 +5135,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
       setupReady: "L'environnement local est pr\u00eat.",
+      projectSkillsApplied: "Skills du projet appliqu\u00e9s : ",
+      skillsSkipped: "Skills non appliqu\u00e9s : ",
+      skillUnavailable: "introuvable",
+      skillNeedsMcp: "connexion MCP requise",
       agentPreparing: "Je pr\u00e9pare l'agent local. Si le runtime n'est pas encore install\u00e9, l'installation peut prendre plusieurs minutes."
     },
     en: {
@@ -5189,6 +5193,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
       setupReady: "The local environment is ready.",
+      projectSkillsApplied: "Project skills applied: ",
+      skillsSkipped: "Skills not applied: ",
+      skillUnavailable: "not found",
+      skillNeedsMcp: "MCP connection required",
       agentPreparing: "I am preparing the local agent. If the runtime is not installed yet, installation can take several minutes."
     }
   };
@@ -10227,10 +10235,27 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return noCodeContextCatalogFromScope(scope);
   };
 
+  // The turn says which project skills it brings to the agent and which skills it had to leave out, so a skill never
+  // applies or goes missing unnoticed. Narrative events, never mistaken for the answer.
+  function reportTigoSkills(state, resources) {
+    var t = lang(state);
+    var sent = (resources.applied || []).filter(function (x) { return x.auto && x.sent; }).map(function (x) { return x.title; });
+    if (sent.length) {
+      appendNarrativeEvent(state, t.projectSkillsApplied + sent.join(", "), "progress");
+    }
+    var skipped = (resources.skipped || []).map(function (x) {
+      return x.title + " (" + (x.reason === "skill_mcp_dependency_missing" ? t.skillNeedsMcp : t.skillUnavailable) + ")";
+    });
+    if (skipped.length) {
+      appendNarrativeEvent(state, t.skillsSkipped + skipped.join(", "), "progress");
+    }
+  }
+
   function submitTigoPrompt(state, sequence, payload) {
     if (!C8O.tigoResources || agentSlashCommandName(state, payload.prompt).length) { return bridgeCall(state, sequence, payload, 70000); }
     var resources = C8O.tigoResources.prepare(state);
     sendMark("resources");
+    reportTigoSkills(state, resources);
     var enriched = {};
     Object.keys(payload).forEach(function (k) { enriched[k] = payload[k]; });
     enriched.prompt = String(payload.prompt || "") + resources.text;
@@ -10258,7 +10283,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     var result = C8O.tigoResources.manage(args);
     if (result.ok && args.action && args.action !== "list" && args.action !== "get") {
-      var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid});
+      var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid, project:args.project});
       catalog.saved = result.item || null;
       catalog.csrf = csrf;
       return catalog;

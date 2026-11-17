@@ -251,7 +251,7 @@ test("MCP review sends only the displayed proposal identity and never enables it
   assert.equal(events.length,0,"displaying a proposal never executes or adds it");
   page.answerTigoMcpProposal("p1","digest",true);
   assert.equal(events.length,1);
-  assert.deepEqual(plain(events[0].payload.request),{action:"confirmProposal",input:{id:"p1",digest:"digest"},language:"fr",threadid:"",csrf:"session-csrf"});
+  assert.deepEqual(plain(events[0].payload.request),{action:"confirmProposal",input:{id:"p1",digest:"digest"},language:"fr",threadid:"",project:"Demo",csrf:"session-csrf"});
   page.answerTigoMcpProposal("p1","digest",true);
   assert.equal(events.length,1,"duplicate click is suppressed while loading");
   page.local.ResourceLoading=false;
@@ -273,4 +273,44 @@ test("proposal buttons use their own repeated-row event scope", () => {
     action({answerTigoMcpProposal:(...args)=>calls.push(args)}, {stack:{root:{scope:{mcpProposal:{id:'shown',digest:'revision'}}}}}, {}, null, ()=>{}, err=>{throw err;});
   }
   assert.deepEqual(calls,[['shown','revision',true],['shown','revision',false]]);
+});
+
+test("project skills on by default: turning one off is remembered, turning it on again clears it", () => {
+  const f = fixture();
+  const key = "project:Demo:skill:page-rules";
+  f.page.local.ResourceCatalog = { csrf: "t", selection: { skills: [], mcp: [], off: [] } };
+  f.page.toggleTigoResource({ key, kind: "skill", auto: true, enabled: true });
+  assert.deepEqual(plain(f.events[0].payload.request.input), { skills: [], mcp: [], off: [key] });
+  f.page.local.ResourceLoading = false;
+  f.page.local.ResourceCatalog = { csrf: "t", selection: { skills: [], mcp: [], off: [key] } };
+  f.page.toggleTigoResource({ key, kind: "skill", auto: true, enabled: false });
+  assert.deepEqual(plain(f.events[1].payload.request.input), { skills: [], mcp: [], off: [] });
+  f.page.local.ResourceLoading = false;
+  f.page.local.ResourceCatalog = { csrf: "t", selection: { skills: [key], mcp: [], off: [] } };
+  f.page.toggleTigoResource({ key, kind: "skill", auto: true, enabled: true });
+  assert.deepEqual(plain(f.events[2].payload.request.input), { skills: [], mcp: [], off: [key] }, "on by hand and by default: both are undone");
+  f.page.local.ResourceLoading = false;
+  f.page.toggleTigoResource({ key: "workspace::skill:method", kind: "skill", enabled: false });
+  assert.deepEqual(plain(f.events[3].payload.request.input.skills), ["project:Demo:skill:page-rules", "workspace::skill:method"]);
+});
+test("the library is read again for another project in context and after half a minute", () => {
+  const f = fixture();
+  let project = "Demo";
+  f.page.getEffectiveProjectName = () => project;
+  f.page.requestTigoResources();
+  assert.equal(f.events[0].payload.request.project, "Demo");
+  f.page.applyTigoResources({ response: { ok: true, items: [], selection: { skills: [], mcp: [] } } }, f.events[0].payload);
+  f.page.requestTigoResources();
+  assert.equal(f.events.length, 1, "same key, still fresh");
+  project = "Other";
+  f.page.requestTigoResources();
+  assert.equal(f.events.length, 2);
+  assert.equal(f.events[1].payload.request.project, "Other");
+  f.page.applyTigoResources({ response: { ok: true, items: [], selection: { skills: [], mcp: [] } } }, f.events[1].payload);
+  f.page.local.ResourceLoadedAt = Date.now() - 31000;
+  f.page.requestTigoResources();
+  assert.equal(f.events.length, 3, "a stale catalog is read again");
+  project = "Third";
+  f.page.applyTigoResources({ response: { ok: true, items: [], selection: { skills: [], mcp: [] } } }, f.events[2].payload);
+  assert.equal(f.events.length, 4, "a project change during the read asks again");
 });

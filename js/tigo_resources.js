@@ -23,6 +23,8 @@ if (typeof C8O === "undefined") {
   var C8O = {};
 }
 C8O.tigoResources = (function () {
+  // Characters of project skills applied by default that a turn includes in full (a skill body is at most 64 KiB).
+  var AUTO_SKILL_BUDGET = 48000;
   function fail(code) {
     var e = new Error(code);
     e.code = code;
@@ -383,14 +385,64 @@ C8O.tigoResources = (function () {
       }
       return "conversations/" + thread + ".json";
     }
+    // A conversation's choices: the skills and connections the user turned on, and the project skills the user turned
+    // off ("off"). The skills of the conversation's project apply by default, without being listed here.
     function selected(thread) {
       var p = selection(thread),
         v = object(host.read(personal, p));
       return {
         skills: unique(v.skills),
         mcp: unique(v.mcp),
-        mcpRevisions: v.mcpRevisions || {}
+        mcpRevisions: v.mcpRevisions || {},
+        off: unique(v.off)
       };
+    }
+    function visible(x) {
+      return (
+        who.surface === "all" ||
+        x.data.surfaces.indexOf(who.surface || (who.admin ? "studio" : "nocode")) >= 0
+      );
+    }
+    // The skills in <project>/.tigo/skills, read from disk on every call: a skill added by Git, MCP or by hand applies
+    // without a library reload. Only where projects are visible (Studio). Invalid folders are left out; the library
+    // lists their errors.
+    function projectSkills(project) {
+      project = text(project).trim();
+      if (!who.admin || !project.length || project === "lib_ConvertigoAssistant") {
+        return [];
+      }
+      var s;
+      try {
+        s = source("project", project);
+      } catch (e) {
+        return [];
+      }
+      var slugs = host.list(s.base, "skills") || [],
+        out = [];
+      slugs.slice(0, 200).forEach(function (slug) {
+        try {
+          var x = load(s, "skill", slug);
+          if (x && visible(x)) {
+            out.push(x);
+          }
+        } catch (ignoreInvalidSkill) {}
+      });
+      return out.sort(function (a, b) {
+        return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      });
+    }
+    // Skills that apply to a conversation: the ones turned on, then the project's ones that were not turned off.
+    function activeSkills(s, project) {
+      var auto = projectSkills(project).map(function (x) {
+          return x.key;
+        }),
+        keys = s.skills.slice();
+      auto.forEach(function (k) {
+        if (s.off.indexOf(k) < 0 && keys.indexOf(k) < 0) {
+          keys.push(k);
+        }
+      });
+      return { auto: auto, keys: keys };
     }
     function proposals() {
       var rows = object(host.read(personal, "mcp-proposals.json")).items || [];
@@ -434,7 +486,7 @@ C8O.tigoResources = (function () {
       host.write(personal, "mcp-proposals.json", JSON.stringify({items:rows.filter(function (p) {return p.id !== proposal.id;})}));
       return result;
     }
-    function list(language, thread) {
+    function list(language, thread, project) {
       var sources = [source("builtin"), source("workspace")],
         items = [],
         errors = [],
@@ -465,13 +517,7 @@ C8O.tigoResources = (function () {
             slugs.forEach(function (slug) {
               try {
                 var x = load(s, kind, slug);
-                if (
-                  x &&
-                  (who.surface === "all" ||
-                    x.data.surfaces.indexOf(
-                      who.surface || (who.admin ? "studio" : "nocode")
-                    ) >= 0)
-                ) {
+                if (x && visible(x)) {
                   var t =
                     x.data.translations[l] ||
                     x.data.translations[x.data.defaultLanguage];
@@ -515,6 +561,7 @@ C8O.tigoResources = (function () {
         });
       });
       var s = selected(thread),
+        active = activeSkills(s, project),
         missing = s.skills.concat(s.mcp).filter(function (k) {
           return !items.some(function (x) {
             return x.key === k;
@@ -522,7 +569,8 @@ C8O.tigoResources = (function () {
         });
       items.forEach(function (x) {
         x.favorite = favorites.indexOf(x.key) >= 0;
-        x.enabled = (x.kind === "skill" ? s.skills : s.mcp).indexOf(x.key) >= 0;
+        x.auto = x.kind === "skill" && active.auto.indexOf(x.key) >= 0;
+        x.enabled = (x.kind === "skill" ? active.keys : s.mcp).indexOf(x.key) >= 0;
         x.requiresReview =
           x.kind === "mcp" && x.enabled && s.mcpRevisions[x.key] !== x.revision;
       });
@@ -532,6 +580,8 @@ C8O.tigoResources = (function () {
         items: items,
         favorites: favorites,
         selection: s,
+        contextProject: who.admin ? text(project).trim() : "",
+        autoSkills: active.auto,
         missingSelections: missing,
         proposals: who.studio && who.admin ? proposals() : [],
         canManageMcp: who.admin,
@@ -605,7 +655,7 @@ C8O.tigoResources = (function () {
       if (action === "confirmProposal" || action === "rejectProposal") { return answerProposal(args); }
       if (host.agentInitiated === true && args.kind === "mcp" && action === "save") { return propose(args); }
       if (action === "list") {
-        return list(args.language, args.threadid);
+        return list(args.language, args.threadid, args.project);
       }
       if (action === "get") {
         return { ok: true, item: entry(args.key) };
@@ -782,11 +832,19 @@ C8O.tigoResources = (function () {
       if (action === "select") {
         var skills = unique(input.skills),
           mcp = unique(input.mcp),
+          off = unique(input.off),
           previous = selected(args.threadid),
           approved = {};
+        // A skill turned on now must exist; one turned on earlier and since removed stays listed (the library shows it
+        // as unavailable, a turn skips it) so that changing another choice never fails on it.
         skills.forEach(function (k) {
-          if (entry(k).kind !== "skill") {
+          if (previous.skills.indexOf(k) < 0 && entry(k).kind !== "skill") {
             fail("not_a_skill");
+          }
+        });
+        off.forEach(function (k) {
+          if (!/^project:[^:]+:skill:[a-z][a-z0-9-]{0,63}$/.test(k)) {
+            fail("invalid_selection");
           }
         });
         mcp.forEach(function (k) {
@@ -802,7 +860,7 @@ C8O.tigoResources = (function () {
         if (mcp.length && !who.admin) {
           fail("mcp_activation_admin_required");
         }
-        var value = { skills: skills, mcp: mcp, mcpRevisions: approved };
+        var value = { skills: skills, mcp: mcp, mcpRevisions: approved, off: off };
         host.write(personal, selection(args.threadid), JSON.stringify(value));
         return { ok: true, selection: value };
       }
@@ -825,10 +883,24 @@ C8O.tigoResources = (function () {
       }
       var s = selected(state.threadid);
       if (!host.read(personal, selection(state.threadid))) {
+        // A new conversation takes the choices made before its first message. They are then cleared, so the next new
+        // conversation starts again from its own project's skills instead of this conversation's choices.
         s = selected("");
         host.write(personal, selection(state.threadid), JSON.stringify(s));
+        if (selection(state.threadid) !== selection("")) {
+          host.write(
+            personal,
+            selection(""),
+            JSON.stringify({ skills: [], mcp: [], mcpRevisions: {}, off: [] })
+          );
+        }
       }
-      var loaded = state.resourceSkillVersions || {},
+      var project = text(state.projectId || state.primaryProject).trim(),
+        active = activeSkills(s, project),
+        budget = AUTO_SKILL_BUDGET,
+        applied = [],
+        skipped = [],
+        loaded = state.resourceSkillVersions || {},
         epoch = text(state.provider) + ":" + text(state.externalSessionId),
         sections = [],
         versions = {},
@@ -836,33 +908,72 @@ C8O.tigoResources = (function () {
       if (state.resourceContextEpoch !== epoch) {
         loaded = {};
       }
-      s.skills.forEach(function (k) {
-        var item = entry(k),
-          l = lang(state.language),
+      active.keys.forEach(function (k) {
+        var manual = s.skills.indexOf(k) >= 0,
+          item;
+        // A skill that is gone (project closed, folder removed or invalid) is skipped and reported with the turn:
+        // it never stops the message.
+        try {
+          item = entry(k);
+        } catch (e) {
+          skipped.push({ key: k, title: k.split(":").pop(), reason: text(e.code || "resource_missing") });
+          return;
+        }
+        var l = lang(state.language),
           t =
             item.data.translations[l] ||
-            item.data.translations[item.data.defaultLanguage];
-        (item.data.requiresMcp || []).forEach(function (required) {
-          if (s.mcp.indexOf(required) < 0) {
+            item.data.translations[item.data.defaultLanguage],
+          needs = (item.data.requiresMcp || []).filter(function (required) {
+            return s.mcp.indexOf(required) < 0;
+          });
+        if (needs.length) {
+          // Turned on by the user: the library explains what to enable. Applied by default: skipped and reported.
+          if (manual) {
             fail("skill_mcp_dependency_missing");
           }
+          skipped.push({ key: k, title: t.title, reason: "skill_mcp_dependency_missing" });
+          return;
+        }
+        // Project skills applied by default share a budget: past it, the agent gets where to read the others.
+        var full = manual || t.body.length <= budget;
+        if (!manual && full) {
+          budget -= t.body.length;
+        }
+        var revision = (full ? "" : "index:") + item.revision,
+          origin = source(item.scope, item.project),
+          directory = origin.base + "/skills/" + item.id;
+        versions[k] = revision;
+        applied.push({
+          key: k,
+          title: t.title,
+          project: item.project,
+          auto: !manual,
+          full: full,
+          sent: loaded[k] !== revision
         });
-        versions[k] = item.revision;
-        if (loaded[k] !== item.revision) {
-          var origin = source(item.scope, item.project);
+        if (loaded[k] !== revision) {
           sections.push(
-            "Custom skill: " +
-              t.title +
-              "\nSource: " +
-              item.key +
-              "\nDirectory: " +
-              origin.base +
-              "/skills/" +
-              item.id +
-              "\nRevision: " +
-              item.revision +
-              "\n\n" +
-              t.body
+            full
+              ? "Custom skill: " +
+                  t.title +
+                  "\nSource: " +
+                  item.key +
+                  "\nDirectory: " +
+                  directory +
+                  "\nRevision: " +
+                  item.revision +
+                  "\n\n" +
+                  t.body
+              : "Project skill, not included here: " +
+                  t.title +
+                  "\nSource: " +
+                  item.key +
+                  "\nWhen it applies: " +
+                  (t.description || t.title) +
+                  "\nRead " +
+                  directory +
+                  "/SKILL.md and follow it before working on this subject.\nRevision: " +
+                  item.revision
           );
         }
       });
@@ -900,6 +1011,8 @@ C8O.tigoResources = (function () {
             "\n</activated-tigo-skills>"
           : "",
         versions: versions,
+        applied: applied,
+        skipped: skipped,
         connections: connections,
         fingerprint: host.hash(JSON.stringify(connections))
       };
