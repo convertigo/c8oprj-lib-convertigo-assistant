@@ -8711,6 +8711,16 @@ title: Tigo
                             page.local.AgentProgressHistoryRunId = "";
                             page.local.Question = "";
                             page.local.AgentConversationsLoading = true;
+                            // A list that never answers (an engine busy after a stack update, a lost request) must not leave
+                            // the home screen on "Loading previous conversations": after 15 s the start choices show again.
+                            var homeLoad = "" + (new Date()).getTime() + "-" + Math.random();
+                            page.local.AgentHomeListToken = homeLoad;
+                            setTimeout(function() {
+                                if (page.local && page.local.AgentHomeListToken === homeLoad && page.local.AgentConversationsLoading === true) {
+                                    page.local.AgentConversationsLoading = false;
+                                    page.tick();
+                                }
+                            }, 15000);
                             if (page.chatfooter && page.chatfooter.setQuestionText) {
                                 page.chatfooter.setQuestionText("", false);
                             }
@@ -8725,6 +8735,22 @@ title: Tigo
                "requestable": "plain:lib_ConvertigoAssistant.AgentListConversations",
                "noLoading": "plain:true"
               }'
+            ↓Failure [ngx.components.UIActionFailureEvent-1793400000011]: 
+              ↓EndHomeListLoading [ngx.components.UICustomAction-1793400000012]: 
+                comment: A failed list leaves the start choices usable instead of "Loading previous conversations".
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                        if (!page.local) {
+                            page.local = {};
+                        }
+                        page.local.AgentHomeListToken = "";
+                        page.local.AgentConversationsLoading = false;
+                        try { page.c8o.log.warn("[Assistant] Unable to list the conversations from the home button: " + (props.stack && props.stack.root ? JSON.stringify(props.stack.root.out || "") : "")); } catch (e) {}
+                        page.tick();
+                        resolve();
             ↓provider [ngx.components.UIControlVariable-1782831332239]: 
               varValue: 
                 - xmlizable: 
