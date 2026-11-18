@@ -31,6 +31,7 @@ scriptContent:
         		this.c8o.log.debug("[Assistant] loading with threadid: "+ this.threadid);
         		this.log("[Assistant] loading with threadid: "+ this.threadid);
         		this.installAgentSessionRecovery();
+        		this.installTigoCallContexts();
         		/*End_c8o_PageConstructor*/
         /*Begin_c8o_PageInitialization*/
                 this.tigoResourceLanguageSubscription = this.translate.onLangChange.subscribe(() => { if (this.local?.ResourceCatalog) { this.filterTigoResources(); } });
@@ -54,6 +55,106 @@ scriptContent:
         		this.unbindFormsConversationMemory();
         		/*End_c8o_PageFinalization*/
         /*Begin_c8o_PageFunction*/
+            // In a desktop Studio the engine gives every request without a "studio_" context name ONE context per sequence,
+            // shared by every browser and session, locks it for the whole request and waits up to 24 h for it
+            // (ContextManager.get, GenericRequester.processRequest, RequestableObject): one request that never ended froze the
+            // sends, the library or the lists of every panel until the Studio restarted (17-18/11). Each tab names its own
+            // contexts. The name is kept across reloads (sessionStorage): the engine never expires Studio contexts, so a new
+            // name per load would pile them up. A call that does not answer gives the tab a new name.
+            public tigoTabContextId(rotate = false) {
+                var key = "lib_ConvertigoAssistant.tabContextId";
+                var w: any = typeof window !== "undefined" ? window : {};
+                var id = rotate ? "" : String(w.__tigoTabContextId || "");
+                if (!id && !rotate) {
+                    try { id = String(w.sessionStorage.getItem(key) || ""); } catch (e) {}
+                }
+                if (!/^[a-z0-9]{6,32}$/.test(id)) {
+                    id = Date.now().toString(36) + Math.floor(Math.random() * 1000000000).toString(36);
+                    try { w.sessionStorage.setItem(key, id); } catch (e2) {}
+                }
+                w.__tigoTabContextId = id;
+                return id;
+            }
+            public rotateTigoCallContext() {
+                return this.tigoTabContextId(true);
+            }
+            public tigoReadContext() {
+                return "studio_tigo_read_" + this.tigoTabContextId();
+            }
+            public isTigoStudioContextSurface() {
+                try {
+                    return !(this.isEmbeddedNoCodeAgent && this.isEmbeddedNoCodeAgent()) && !(this.isServerAgentSurface && this.isServerAgentSurface());
+                } catch (e) {
+                    return false;
+                }
+            }
+            // The context of one call of the panel: its own per tab and per sequence. A caller's own Studio context (the
+            // full settings check) stays apart from the light calls of the same sequence.
+            public tigoCallContext(requestable, current = "") {
+                var name = String(requestable || "").split("#")[0];
+                var sequence = name.substring(name.indexOf(".") + 1).replace(/[^A-Za-z0-9_.]/g, "_");
+                var kind = String(current || "");
+                var suffix = /^studio_/.test(kind) && !/^studio_tigo_/.test(kind) ? "_" + kind.substring(7).replace(/[^A-Za-z0-9_]/g, "_") : "";
+                return "studio_tigo_" + this.tigoTabContextId() + "_" + sequence + suffix;
+            }
+            public installTigoCallContexts() {
+                var page: any = this;
+                var c8o: any = page.c8o;
+                if (!c8o || typeof c8o.callJsonObject !== "function" || c8o.__tigoCallContexts === true) { return; }
+                c8o.__tigoCallContexts = true;
+                var original = c8o.callJsonObject;
+                c8o.callJsonObject = function(requestable, parameters) {
+                    try {
+                        var name = String(requestable || "").split("#")[0];
+                        if (/^lib_Convertigo(Assistant|AgentBridge)\./.test(name) && page.isTigoStudioContextSurface()) {
+                            var current = parameters && parameters.__context != null ? String(parameters.__context) : "";
+                            if (!/^studio_tigo_/.test(current)) {
+                                parameters = Object.assign({}, parameters || {}, { __context: page.tigoCallContext(name, current) });
+                            }
+                        }
+                    } catch (e) {}
+                    return original.call(this, requestable, parameters);
+                };
+            }
+            // A send that fails or does not answer leaves the panel ready: the "thinking" bubble says what happened, the
+            // draft comes back, and the next send is no longer ignored (it was while IsProcessing stayed true).
+            public recoverFailedTigoSend() {
+                if (!this.local) { this.local = {}; }
+                var local: any = this.local;
+                var messages = local.Messages || [];
+                var index = local.StreamingIndex;
+                var target = index != null && index >= 0 ? messages[index] : null;
+                if (target && target.writing === true) {
+                    target.writing = false;
+                    target.status = "";
+                    target.msg = local.AgentOperationError || this.t("Agent_Send_Failed", "Le message n’a pas pu être envoyé. Réessayez.");
+                }
+                local.IsProcessing = false;
+                local.SendPending = false;
+                local.spinner = false;
+                local.StreamingIndex = null;
+                local.AgentProgressFinishedAt = Date.now();
+                var draft = String(local.LastSentQuestion || "");
+                if (draft.length && this.chatfooter && this.chatfooter.setQuestionText) {
+                    var current = this.chatfooter.getQuestionText ? String(this.chatfooter.getQuestionText() || "") : "";
+                    // local.Question is bound two ways to the composer: set it too, or the next tick puts the empty value back.
+                    if (!current.trim().length) { local.Question = draft; this.chatfooter.setQuestionText(draft, false); }
+                }
+                this.tick();
+            }
+            // The send of a message answers within seconds (the turn goes on through the reads): past 5 minutes the engine is
+            // stuck on it, so the panel stops waiting and changes its contexts.
+            public withTigoSendTimeout(task, timeoutMs = 300000) {
+                var page: any = this;
+                var timer: any = null;
+                var timeout = new Promise(function(resolve, reject) {
+                    timer = setTimeout(function() {
+                        page.rotateTigoCallContext();
+                        reject(new Error("agent_send_timeout"));
+                    }, timeoutMs);
+                });
+                return Promise.race([task, timeout]).finally(function() { clearTimeout(timer); });
+            }
             public installAgentSessionRecovery() {
                 var page: any = this;
                 if (page.agentSessionCallInstalled) { return; }
@@ -82,10 +183,14 @@ scriptContent:
                     };
                     var recovery = page.global && page.global.callWithStudioSessionRecovery;
                     var task = recovery ? recovery(attempt) : attempt();
+                    if (requestable === ''lib_ConvertigoAssistant.AgentSendMessageRouter'' && page.withTigoSendTimeout) { task = page.withTigoSendTimeout(task); }
                     return task.catch(function(error) {
                         var authentication = page.global && page.global.isStudioSessionAuthFailure
                             && page.global.isStudioSessionAuthFailure(error);
-                        page.local.AgentOperationError = authentication
+                        var sendTimeout = !!error && String(error.message || error) === ''agent_send_timeout'';
+                        page.local.AgentOperationError = sendTimeout
+                            ? page.t(''Agent_Send_Timeout'', ''Le serveur n’a pas répondu à l’envoi en 5 minutes. Réessayez ; si cela se reproduit, rechargez le panneau, et redémarrez le Studio en dernier recours.'')
+                            : authentication
                             ? page.t(''Agent_Studio_Session_Failed'', ''La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.'')
                             : ((page.isServerAgentSurface && page.isServerAgentSurface()) || (page.isEmbeddedNoCodeAgent && page.isEmbeddedNoCodeAgent()))
                                     ? page.t(''Agent_Operation_Failed_Server'', ''L’opération a échoué. Réessayez ; si le problème persiste, contactez l’administrateur pour consulter les logs du serveur.'')
@@ -140,6 +245,8 @@ scriptContent:
         
                         Agent_Studio_Session_Failed: "The Studio session could not be restored. Close and reopen the Assistant view, then try again.",
                         Agent_Operation_Failed: "The operation failed. Try again; if the problem persists, check the Studio logs.",
+                        Agent_Send_Timeout: "The server did not answer the send within 5 minutes. Try again; if it happens again, reload the panel, and restart the Studio as a last resort.",
+                        Agent_Send_Failed: "The message could not be sent. Try again.",
                         Agent_Operation_Failed_Server: "The operation failed. Try again; if the problem persists, contact the administrator to check the server logs.",
         				Agent_Title: "Tigo the agent",
         				Agent_Provider_Vibe_Copy: "Explore and create quickly",
@@ -251,6 +358,8 @@ scriptContent:
         
                         Agent_Studio_Session_Failed: "La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.",
                         Agent_Operation_Failed: "L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.",
+                        Agent_Send_Timeout: "Le serveur n’a pas répondu à l’envoi en 5 minutes. Réessayez ; si cela se reproduit, rechargez le panneau, et redémarrez le Studio en dernier recours.",
+                        Agent_Send_Failed: "Le message n’a pas pu être envoyé. Réessayez.",
                         Agent_Operation_Failed_Server: "L’opération a échoué. Réessayez ; si le problème persiste, contactez l’administrateur pour consulter les logs du serveur.",
         				Agent_Title: "Tigo l’agent",
         				Agent_Provider_Vibe_Copy: "Explorer et créer rapidement",
@@ -371,6 +480,8 @@ scriptContent:
         
                         Agent_Studio_Session_Failed: "Impossibile ripristinare la sessione di Studio. Chiudi e riapri la vista Assistente, poi riprova.",
                         Agent_Operation_Failed: "Operazione non riuscita. Riprova; se il problema persiste, consulta i log di Studio.",
+                        Agent_Send_Timeout: "Il server non ha risposto all’invio entro 5 minuti. Riprova; se si ripete, ricarica il pannello e, come ultima risorsa, riavvia Studio.",
+                        Agent_Send_Failed: "Il messaggio non è stato inviato. Riprova.",
                         Agent_Operation_Failed_Server: "Operazione non riuscita. Riprova; se il problema persiste, contatta l’amministratore per consultare i log del server.",
         				Agent_Title: "Tigo l’agente",
         				Agent_Provider_Vibe_Copy: "Esplora e crea rapidamente",
@@ -491,6 +602,8 @@ scriptContent:
         
                         Agent_Studio_Session_Failed: "No se pudo restablecer la sesión de Studio. Cierre y vuelva a abrir la vista del Asistente e inténtelo de nuevo.",
                         Agent_Operation_Failed: "La operación falló. Inténtelo de nuevo; si el problema persiste, consulte los registros de Studio.",
+                        Agent_Send_Timeout: "El servidor no respondió al envío en 5 minutos. Inténtelo de nuevo; si se repite, recargue el panel y, como último recurso, reinicie Studio.",
+                        Agent_Send_Failed: "No se pudo enviar el mensaje. Inténtelo de nuevo.",
                         Agent_Operation_Failed_Server: "La operación falló. Inténtelo de nuevo; si el problema persiste, contacte al administrador para consultar los registros del servidor.",
         				Agent_Title: "Tigo el agente",
         				Agent_Provider_Vibe_Copy: "Explora y crea rápidamente",
@@ -20272,7 +20385,7 @@ title: Tigo
                   varValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
+                      - MobileSmartSourceType: script:this.tigoReadContext()
         ↓targetProject [ngx.components.UIControlVariable-1781590187587]: 
           varValue: 
             - xmlizable: 
@@ -22057,7 +22170,7 @@ title: Tigo
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
+              - MobileSmartSourceType: script:this.tigoReadContext()
       ↓Else_Handler [ngx.components.UIActionElseEvent-1744618173305]: 
         ↓SetLocal [ngx.components.UIDynamicAction-1744618189222]: 
           beanData: |
@@ -23122,6 +23235,7 @@ title: Tigo
                         		});
                         		this.local.StreamingIndex = this.local.Messages.length - 1;
                         		this.local.Question = "";
+                        		this.local.LastSentQuestion = message;
                         		if (page.chatfooter && page.chatfooter.setQuestionText) {
                         			page.chatfooter.setQuestionText("", false);
                         		}
@@ -23151,6 +23265,16 @@ title: Tigo
                      "requestable": "plain:lib_ConvertigoAssistant.AgentSendMessageRouter",
                      "noLoading": "plain:true"
                     }'
+                  ↓Failure [ngx.components.UIActionFailureEvent-1793400000021]: 
+                    ↓RecoverFailedSend [ngx.components.UICustomAction-1793400000022]: 
+                      comment: A send that fails or does not answer in 5 minutes leaves the panel ready, the draft back in the composer. It rejects so the actions that follow a sent message (ChatReset empties the composer) do not run.
+                      actionValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                          - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                            →: |
+                              page.recoverFailedTigoSend();
+                              reject(new Error("agent_send_failed"));
                   ↓Question [ngx.components.UIControlVariable-1751354620899]: 
                     varValue: 
                       - xmlizable: 
@@ -23282,7 +23406,7 @@ title: Tigo
                           varValue: 
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
+                              - MobileSmartSourceType: script:this.tigoReadContext()
                   ↓SetNewConversationMode [ngx.components.UIDynamicAction-1782134957158]: 
                     beanData: |
                       '{
@@ -24117,7 +24241,7 @@ title: Tigo
                 varValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
+                    - MobileSmartSourceType: script:this.tigoReadContext()
         ↓NormalizeAgentModelsAfterProjectConversation [ngx.components.UICustomAction-1783431350222]: 
           actionValue: 
             - xmlizable: 
@@ -26199,7 +26323,7 @@ title: Tigo
           varValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:(window['__tigoReadContext'] = window['__tigoReadContext'] || 'studio_tigo_read_' + Date.now() + '_' + Math.floor(Math.random() * 1000000000))
+              - MobileSmartSourceType: script:this.tigoReadContext()
     ↓SetConversationProject [ngx.components.UIDynamicAction-1781676328041]: 
       beanData: |
         '{
@@ -27225,7 +27349,7 @@ title: Tigo
             - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
             - com.twinsoft.convertigo.beans.common.FormatedContent: 
               →: |
-                if (props.stack.root.out.requestId === page.local.ResourceRequestId) { page.local.ResourceLoading=false; page.local.ResourceError=page.tigoText('failed'); page.tick(); }
+                if (props.stack.root.out.requestId === page.local.ResourceRequestId) { page.local.ResourceLoading=false; page.local.ResourceError=page.tigoText('failed'); page.rotateTigoCallContext(); page.tick(); }
                 resolve();
     ↓request [ngx.components.UIControlVariable-1792084572851]: 
       varValue: 

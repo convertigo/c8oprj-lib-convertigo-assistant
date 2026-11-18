@@ -1396,8 +1396,10 @@ C8O.tigoResources = (function () {
         });
         return out.sort();
       },
+      // A monitor of its own: Engine.theApp is taken by every requestable at its start and its end
+      // (RequestableObject), so a library write held under it delayed every request of the engine.
       lock: function (base, fn) {
-        var locks = E.theApp;
+        var locks = new java.lang.String("lib_ConvertigoAssistant.tigoResources.lock").intern();
         return new Packages.org.mozilla.javascript.Synchronizer(function () {
           return fn();
         }, locks)();

@@ -390,6 +390,28 @@ rediscovering the same context.
   generated success actions run. A failed resume preserves conversation state
   and shows an inline error. Clear old messages/polling only when applying a
   successful history response. Test with `node tests/assistant_session_recovery.test.js`.
+- In a desktop Studio the engine runs every request without a `studio_` context
+  name in one context per sequence, shared by every browser and tab and locked
+  for the whole request, with `responseTimeout` ignored (up to 24 h). The panel
+  therefore names its own contexts: `installTigoCallContexts` wraps
+  `c8o.callJsonObject` so each `lib_ConvertigoAssistant`/`lib_ConvertigoAgentBridge`
+  call of a Studio tab runs in `studio_tigo_<tab>_<sequence>` (reads in
+  `studio_tigo_read_<tab>`). The tab id lives in `sessionStorage`, so reloads
+  reuse the same contexts instead of adding new ones; it rotates when a send
+  times out or a resources call fails. No Code and server surfaces keep their
+  contexts. No panel or agent state may live in a context: conversations,
+  settings and tokens stay in files, the HTTP session or shared storage, so a
+  conversation continues from any tab or the Eclipse view.
+- Only the send call (`AgentSendMessageRouter`) is bounded, to 5 minutes; the
+  turn itself is read through the response polling and has no such limit. A send
+  that fails or times out runs `RecoverFailedSend`: the panel leaves the thinking
+  state, the bubble says why, the draft goes back to the composer (set
+  `local.Question` too, it is bound two ways), and the action rejects so the
+  actions that follow a sent message (`ChatReset`) do not run. In generated NGX
+  code a Failure handler that resolves continues with the success actions.
+  Library writes in `js/tigo_resources.js` hold a monitor of their own, never
+  `Engine.theApp`, which every requestable takes at start and end. Test with
+  `node --test tests/assistant_tab_contexts.test.cjs`.
 - New embedded NoCode conversations use an explicit resource context picker:
   users can choose any accessible C8Oforms form, optionally an exact element of
   that form, or a Baserow base/table. When the iframe is opened from a form
