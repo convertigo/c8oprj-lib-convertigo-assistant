@@ -3153,6 +3153,38 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var url = new URL(urlText);
     var host = String(url.getHost()).toLowerCase();
     var loopback = host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+    var engineClient = null;
+    try { if (typeof Engine !== "undefined" && Engine.theApp) { engineClient = Engine.theApp.httpClient4; } } catch (_olderEngineHttpClient) {}
+    if (!loopback && engineClient && typeof engineClient.execute === "function") {
+      var post = new Packages.org.apache.http.client.methods.HttpPost(urlText);
+      post.setConfig(Packages.org.apache.http.client.config.RequestConfig.custom()
+        .setConnectTimeout(timeoutMs).setSocketTimeout(timeoutMs).setConnectionRequestTimeout(timeoutMs)
+        .setCookieSpec(Packages.org.apache.http.client.config.CookieSpecs.IGNORE_COOKIES)
+        .setRedirectsEnabled(false).build());
+      post.setHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+      post.setHeader("Accept", "application/json");
+      for (var engineHeader in headers || {}) {
+        if (Object.prototype.hasOwnProperty.call(headers, engineHeader)) { post.setHeader(engineHeader, headers[engineHeader]); }
+      }
+      var engineSlot = bridgeSessionSlot(params);
+      var engineCookie = bridgeSessionCookie(params, engineSlot);
+      if (engineCookie.length) { post.setHeader("Cookie", engineCookie); }
+      post.setEntity(new Packages.org.apache.http.entity.StringEntity(encodeForm(params), StandardCharsets.UTF_8));
+      var response = null;
+      try {
+        // The engine owns PAC routing/authentication; the caller owns this Bridge session's cookies.
+        response = engineClient.execute(post);
+        var status = Number(response.getStatusLine().getStatusCode());
+        var setCookie = response.getFirstHeader("Set-Cookie");
+        rememberBridgeSessionCookie(params, engineSlot, setCookie === null ? "" : String(setCookie.getValue()));
+        var entity = response.getEntity();
+        var engineText = entity === null ? "" : readStream(entity.getContent());
+        if (status >= 300) { throw new Error("HTTP " + status + " from agent bridge: " + engineText); }
+        return trim(engineText).length ? JSON.parse(engineText) : {};
+      } finally {
+        try { if (response !== null) { response.close(); } } catch (_ignoreEngineResponseClose) {}
+      }
+    }
     var conn = loopback ? url.openConnection(Packages.java.net.Proxy.NO_PROXY) : url.openConnection();
     conn.setRequestMethod("POST");
     conn.setConnectTimeout(timeoutMs);

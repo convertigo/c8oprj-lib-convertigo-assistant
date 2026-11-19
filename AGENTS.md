@@ -15,7 +15,13 @@ rediscovering the same context.
 - After editing JavaScript helpers, run `node --check` on the touched files.
 - Local Bridge `postForm` calls bypass the proxy only for the literal loopback
   hosts `localhost`, `127.0.0.1` and `::1`. Remote Bridge URLs keep the engine's
-  proxy selection. Cover this with `tests/assistant_proxy_loopback.test.cjs`.
+  proxy selection through `Engine.theApp.httpClient4`, with bounded requests and
+  explicit per-session cookies (no shared client cookie handling). The legacy
+  URL connection path remains for engines without that client. Cover this with
+  `tests/assistant_proxy_loopback.test.cjs`.
+- Stack archives are imported through the engine's referenced-project manager;
+  this library does not start a separate npm/pip installer. Runtime processes
+  belong to the Bridge and use the engine's single subprocess proxy relay.
 - Do not patch generated frontend output under `DisplayObjects`, `_private`,
   `dist`, or similar generated directories.
 
