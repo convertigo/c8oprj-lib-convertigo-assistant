@@ -74,7 +74,7 @@ responseTimeout: 120
       projectArray[0] = "lib_ConvertigoAssistant";
       params.put("__project", projectArray);
       params.put("__sequence", "UploadFiles");
-      params.put("__context", "upload_router_" + String(System.currentTimeMillis()));
+      params.put("__context", "upload_router_" + String(java.util.UUID.randomUUID()));
       var toArray = function (values) {
         var array = java.lang.reflect.Array.newInstance(java.lang.String, values.length);
         for (var i = 0; i < values.length; i++) {

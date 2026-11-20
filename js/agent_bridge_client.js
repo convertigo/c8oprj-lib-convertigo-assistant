@@ -567,7 +567,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     projectArray[0] = project;
     params.put("__project", projectArray);
     params.put("__sequence", sequence);
-    params.put("__context", "agentToken_" + String(now()));
+    // a context of its own for each call: two calls in the same millisecond must not share (and wait on) one context
+    params.put("__context", "agentToken_" + String(UUID.randomUUID()));
     variables = variables || {};
     for (var key in variables) {
       if (Object.prototype.hasOwnProperty.call(variables, key) && variables[key] !== null && typeof variables[key] !== "undefined") {

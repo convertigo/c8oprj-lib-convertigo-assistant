@@ -56,7 +56,7 @@ responseTimeout: 300
       projectArray[0] = ''lib_ConvertigoAssistant'';
       params.put(''__project'', projectArray);
       params.put(''__sequence'', sequenceName);
-      params.put(''__context'', ''agent_router_'' + sequenceName + ''_'' + String(System.currentTimeMillis()));
+      params.put(''__context'', ''agent_router_'' + sequenceName + ''_'' + String(java.util.UUID.randomUUID()));
       for (var key in variables) {
         if (Object.prototype.hasOwnProperty.call(variables, key) && variables[key] !== null && typeof variables[key] !== ''undefined'') {
           params.put(key, String(variables[key]));
