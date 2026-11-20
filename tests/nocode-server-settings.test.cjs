@@ -107,6 +107,23 @@ test('a No Code user gets the server agent, model and effort, whatever the page 
   assert.equal(again.savePreferences, 'false');
 });
 
+test('an administrator of the No Code Studio updates the runtime of the server from the panel; a user\'s request is ignored', () => {
+  const symbols = { 'assistant.nocode.provider': 'mistral-vibe', 'assistant.nocode.model': 'mistral-large-4' };
+  const request = () => ({ userId: 'alice@example.com', provider: 'claude', install: 'true', updateRuntime: 'true', forceVibeInstall: 'true', forceRuntimeUpdate: 'true' });
+  // test-nocode, 20/11: the Update button of the runtime tab (administrators only) did nothing, the flags were cleared
+  for (const who of [{ admin: true }, { webAdmin: true }]) {
+    const options = fixture({ symbols, ...who }).sandbox.withNoCodeServerSettings(request());
+    assert.equal(options.provider, 'vibe', 'the agent stays the server\'s');
+    for (const flag of ['updateRuntime', 'forceVibeInstall', 'forceRuntimeUpdate']) {
+      assert.equal(options[flag], 'true', JSON.stringify(who) + ' ' + flag);
+    }
+  }
+  const user = fixture({ symbols }).sandbox.withNoCodeServerSettings(request());
+  for (const flag of ['updateRuntime', 'forceVibeInstall', 'forceRuntimeUpdate', 'forceCodexInstall', 'forceClaudeInstall']) {
+    assert.equal(user[flag], 'false', flag);
+  }
+});
+
 test('a conversation of another agent than the server\'s is not continued', () => {
   const { sandbox } = fixture({ symbols: { 'assistant.nocode.provider': 'convertigo' } });
   const options = sandbox.withNoCodeServerSettings({ userId: 'alice@example.com' });

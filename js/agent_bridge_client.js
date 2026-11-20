@@ -2967,10 +2967,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     delete options.modelReasoningEffort;
     options.serviceTier = "";
     delete options.speedTier;
-    // the runtime of the server is its administrators' to update
-    var runtimeFlags = ["updateRuntime", "forceRuntimeUpdate", "forceUpdate", "forceCodexInstall", "forceVibeInstall", "forceClaudeInstall"];
-    for (var i = 0; i < runtimeFlags.length; i++) {
-      options[runtimeFlags[i]] = "false";
+    // the runtime of the server is its administrators' to update: an administrator of the No Code Studio updates it from
+    // the runtime tab of the Tigo panel (the only one shown that tab), anyone else's request leaves it as it is
+    if (!isNoCodeAdministrator()) {
+      var runtimeFlags = ["updateRuntime", "forceRuntimeUpdate", "forceUpdate", "forceCodexInstall", "forceVibeInstall", "forceClaudeInstall"];
+      for (var i = 0; i < runtimeFlags.length; i++) {
+        options[runtimeFlags[i]] = "false";
+      }
     }
     // the effort is the user's own for the server's model (noCodeUserReasoning), else the server's default
     var reasoning = noCodeUserReasoning(options, server) || server.reasoning;
