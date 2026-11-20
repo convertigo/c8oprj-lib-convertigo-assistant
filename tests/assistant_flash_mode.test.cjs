@@ -14,7 +14,7 @@ const flush = async () => { for (let i = 0; i < 6; i++) await new Promise(resolv
 
 // ---- server: AgentFlashForm ----------------------------------------------------------------------------------------
 
-const SERVER = backendParts(['flashNumber', 'flashBaseTables', 'flashAnswer', 'flashFill', 'flashSummaryText', 'flashAgentNote',
+const SERVER = backendParts(['flashNumber', 'flashBaseTables', 'flashTableList', 'flashAnswer', 'flashFill', 'flashSummaryText', 'flashDataNote', 'flashAgentNote',
   'recordFlashConversation', 'flashFormFromScope'], ['FLASH_GENERATOR_PROJECT', 'FLASH_GENERATOR_SEQUENCE', 'FLASH_TEXTS']);
 
 function server({ scope = {}, answers = [], userKeys = false, keyAnswer = { ok: true, handle: 'lib_ConvertigoAssistant.gatewayKey.abcdef0123456789' }, tokens = ['tok-1', 'tok-2'] } = {}) {
@@ -83,11 +83,13 @@ test('a created form: the generator with the user\'s token, then a conversation 
 });
 
 test('a data application is summed up with its tables and its base', () => {
-  const s = server({ answers: [{ status: 'created', id: 'app-7', route: 'app', durationMs: 16000, summary: { name: 'Prêts', pages: 5, tables: 1, base: 'Prêts de matériel' }, usage: {} }] });
+  const s = server({ answers: [{ status: 'created', id: 'app-7', route: 'app', durationMs: 16000, summary: { name: 'Prêts', pages: 5, tables: 1, base: 'Prêts de matériel' },
+    base: { id: 2180, name: 'Prêts de matériel' }, tables: [{ id: 5721, name: 'Prêts', created: true }], usage: {} }] });
   const out = s.run();
   assert.equal(out.route, 'app');
   assert.equal(s.transcript[1].content, '⚡ Flash a créé l’application « Prêts » en 16 s : 5 pages, 1 table dans la base no-code « Prêts de matériel ». Il est ouvert dans l’éditeur.');
   assert.match(s.saved[0].flashNote, /data application "Prêts" \(id app-7, 5 pages, 1 tables in the no-code database "Prêts de matériel"\)/);
+  assert.match(s.saved[0].flashNote, /Its data is in the no-code database "Prêts de matériel" \(id 2180\), in new and empty tables: Prêts \(table id 5721\); use these ids for its data, with no catalog search and no read of the empty tables before adding rows\./);
 });
 
 test('the summary follows the language of the conversation', () => {

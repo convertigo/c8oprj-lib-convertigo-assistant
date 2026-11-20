@@ -428,14 +428,20 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     lines.push("- Selected Baserow workspace id/name: " + (baserowWorkspaceId.length ? baserowWorkspaceId : "none") + " / " + (baserowWorkspaceName.length ? baserowWorkspaceName : "none"));
     lines.push("- Selected Baserow database id/name: " + (baserowDatabaseId.length ? baserowDatabaseId : "none") + " / " + (baserowDatabaseName.length ? baserowDatabaseName : "none"));
     lines.push("- Selected Baserow table id/name: " + (baserowTableId.length ? baserowTableId : "none") + " / " + (baserowTableName.length ? baserowTableName : "none"));
+    var boundTables = Array.isArray(options.nocodeBoundTables) ? options.nocodeBoundTables : [];
+    if (boundTables.length) {
+      lines.push("- No Code database tables of the current application (its Baserow bindings): " + boundTables.map(function (t) {
+        return (t.name || "table") + " (table id " + t.id + (t.base ? ", database " + t.base : "") + ")";
+      }).join("; ") + ".");
+    }
     if (language.length) {
       lines.push("- Reply to the user and write progress/details in " + language + ".");
     }
     lines.push(writeConfirmModule().promptLine(typeof options.writeConfirmOn === "boolean" ? options.writeConfirmOn : noCodeWriteConfirmOn(options)));
     lines.push("- If a current form/application id or URL is provided, use it as the default target for edits unless the user explicitly names another target.");
-    lines.push("- Read the latest saved form with `nocode-form-get` using its document id before auditing, proposing improvements, or editing. The contract tool describes supported components, not this form's content.");
+    lines.push("- Read the latest saved form with `nocode-form-get` using its document id before auditing, proposing improvements, or editing it. Reading or writing its data (rows) needs no form read. The contract tool describes supported components, not this form's content.");
     lines.push("- If a selected element id is provided, locate it in the form returned by `nocode-form-get`. Apply the smallest `nocode-form-edit` operation only when the user requests a change; suggestions and audits are read-only.");
-    lines.push("- If a Baserow database or table is selected, treat it as the exact default data target. Use `nocode-baserow-catalog-list` to re-read its current schema before applying a minimal `nocode-baserow-schema-apply` change.");
+    lines.push("- If a Baserow database or table is selected, or the tables of the current application are listed above, treat them as the exact default data target and use their ids: no catalog search. Read the columns with `nocode-baserow-catalog-list` filtered by that tableId (includeColumns) only when you need them, then apply a minimal `nocode-baserow-schema-apply` change; its answer lists the rows it wrote, which is the proof: no read afterwards.");
     lines.push("- The form revision and selected element context are a snapshot taken when this message was sent. Re-read with `nocode-form-get` and refuse or re-plan on a revision/identity mismatch instead of silently editing another element. Saved content may differ from unsaved editor changes.");
     lines.push("- Use only the managed no-code tools. If discovery fails, search for `nocode-form-get nocode_form_get` and the exact required no-code tool before reporting a blocker. Never fall back to requestable-execute, databaseobject/project tools, raw HTTP or shell, and never use an empty edit/update as a read.");
     return lines.join("\n");
@@ -1386,6 +1392,78 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return elements;
   }
 
+  // The No Code database tables a form is bound to, from the forms_config of its Baserow sources and saves ("table_id",
+  // the path workspace~>base~>table, and "table_id_int"): [{id, name, base}], each table once, at most 12.
+  function noCodeFormBaserowTables(doc) {
+    var tables = [];
+    var seen = {};
+    function add(config) {
+      if (typeof config === "string") {
+        try { config = JSON.parse(config); } catch (_ignoreBadConfig) { return; }
+      }
+      if (!config || typeof config !== "object") {
+        return;
+      }
+      var id = trim(config.table_id_int);
+      var path = trim(config.table_id);
+      if (!/^\d+$/.test(id) && /^\d+$/.test(path)) {
+        id = path;
+        path = "";
+      }
+      if (!/^\d+$/.test(id) || seen[id] || tables.length >= 12) {
+        return;
+      }
+      seen[id] = true;
+      var parts = path.split("~>");
+      tables.push({ id: id, name: parts.length >= 3 ? parts[2] : "", base: parts.length >= 3 ? parts[1] : "" });
+    }
+    function walk(value, depth) {
+      if (!value || typeof value !== "object" || depth > 40) {
+        return;
+      }
+      if (Array.isArray(value)) {
+        for (var i = 0; i < value.length; i++) {
+          walk(value[i], depth + 1);
+        }
+        return;
+      }
+      for (var key in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) {
+          continue;
+        }
+        if (key === "forms_config") {
+          add(value[key] && typeof value[key] === "object" && typeof value[key].str === "string" ? value[key].str : value[key]);
+        } else {
+          walk(value[key], depth + 1);
+        }
+      }
+    }
+    walk(doc, 0);
+    return tables;
+  }
+
+  // The tables of the application the panel has open, for the turn context: read once per form revision (kept in the
+  // conversation state), [] without an open application or when it cannot be read.
+  function noCodeBoundTables(state, options) {
+    var formId = firstOptionValue(options, ["currentFormId", "nocodeCurrentFormId", "formId", "applicationId", "currentApplicationId"]);
+    if (!formId.length) {
+      return [];
+    }
+    var revision = firstOptionValue(options, ["currentFormRevision", "formRevision"]);
+    var kept = state.nocodeBoundTables;
+    if (kept && kept.formId === formId && revision.length && kept.revision === revision && Array.isArray(kept.tables)) {
+      return kept.tables;
+    }
+    try {
+      var doc = findNoCodeFormDocument(sequencePayload(callLocalSequence("C8Oforms", "APIV2_getDocument", { id: formId })), formId, 0);
+      var tables = doc ? noCodeFormBaserowTables(doc) : [];
+      state.nocodeBoundTables = { formId: formId, revision: revision.length ? revision : trim(doc && doc._rev), tables: tables };
+      return tables;
+    } catch (_ignoreBoundTables) {
+      return [];
+    }
+  }
+
   function loadNoCodeFormDetails(formId) {
     formId = trim(formId);
     if (!formId.length) {
@@ -1584,6 +1662,19 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // What the panel shows of the generator's answer (never the reduced form, the spec or a key).
+  // The tables of a data application Flash created: [{id, name}] (ids as text), at most 12.
+  function flashTableList(value) {
+    var list = Array.isArray(value) ? value : [];
+    var out = [];
+    for (var i = 0; i < list.length && out.length < 12; i++) {
+      var t = list[i] || {};
+      if (trim(t.id).length) {
+        out.push({ id: trim(t.id), name: trim(t.name) });
+      }
+    }
+    return out;
+  }
+
   function flashAnswer(payload) {
     var status = trim(payload.status) || "error";
     var summary = payload.summary || {};
@@ -1605,6 +1696,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       sections: flashNumber(summary.sections),
       tables: flashNumber(summary.tables),
       base: trim(summary.base),
+      baseId: trim(payload.base && payload.base.id),
+      tableList: flashTableList(payload.tables),
       language: trim(summary.language),
       kind: trim(payload.kind),
       reason: trim(payload.reason),
@@ -1648,6 +1741,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       seconds: Math.max(1, Math.round(answer.durationMs / 1000)), detail: detail });
   }
 
+  // Where the data of an application Flash created lives: its database and its new tables, empty, with their ids.
+  function flashDataNote(answer) {
+    if (answer.route !== "app" || !answer.tableList || !answer.tableList.length) {
+      return "";
+    }
+    return "Its data is in the no-code database \"" + answer.base + "\"" + (answer.baseId.length ? " (id " + answer.baseId + ")" : "") + ", in new and empty tables: " +
+      answer.tableList.map(function (t) { return t.name + " (table id " + t.id + ")"; }).join(", ") +
+      "; use these ids for its data, with no catalog search and no read of the empty tables before adding rows. ";
+  }
+
   // What the agent learns at the first turn of the conversation (once, see sendMessage).
   function flashAgentNote(answer, request) {
     var isApp = answer.route === "app";
@@ -1655,6 +1758,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       (isApp ? "data application" : "form") + " \"" + (answer.formName || answer.formId) + "\" (id " + answer.formId + ", " + answer.pages + " pages, " +
       (isApp ? answer.tables + " tables in the no-code database" + (answer.base.length ? " \"" + answer.base + "\"" : "") : answer.fields + " fields") +
       ") from the user's request \"" + request.replace(/\s+/g, " ").substring(0, 600) + "\". It is valid, saved and open in the editor. " +
+      flashDataNote(answer) +
       "Work on this " + (isApp ? "application" : "form") + ": read it with nocode-form-get when needed and change it with nocode-form-edit; never create it again.]";
   }
 
@@ -10864,6 +10968,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         options.writeConfirmOn = writeConfirmModule().newTurn(state.threadid, options.userId, writeConfirmHost(options));
         options.writeConfirmMode = writeConfirmModule().lastMode;
       } catch (_ignoreWriteConfirm) {}
+    }
+    // the tables of the application open in the panel, named in the turn context (No Code, an application open)
+    if (normalizeSkillProfile(state) === "nocode" && trim(options.currentFormId || options.nocodeCurrentFormId || options.formId || options.applicationId || options.currentApplicationId).length) {
+      options.nocodeBoundTables = noCodeBoundTables(state, options);
     }
     // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
     options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
