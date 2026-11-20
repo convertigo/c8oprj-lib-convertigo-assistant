@@ -163,9 +163,14 @@ test('the desktop Studio (not in Studio mode) has the same budget gate and balan
   const event = { code: 'budget_exceeded', scope: 'key', retryable: false, message: 'budget_exceeded' };
   assert.equal(desktop.sandbox.budgetErrorAnswer(Object.assign({ runid: 'd1' }, STUDIO), event), 'Le crédit Tigo de cette clé est épuisé.');
   assert.ok(desktop.calls.some(call => call.sequence === 'TigoAccessStatus'), 'the balance is read again after the gateway stopped the turn');
+  assert.equal(desktop.calls.filter(call => call.sequence === 'TigoAccessBootstrap').length, 1);
+  assert.equal(desktop.calls.filter(call => call.sequence === 'TigoAccessStatus').length, 1);
+  const funded = load({ desktop: true, tigoAccess: { status: 'ok', quota: { activeScope: 'personal', balanceUsd: 2 } } });
+  assert.equal(funded.sandbox.convertigoTurnRefusal(Object.assign({}, STUDIO), {}), null);
   // a server is neither: no TigoAccess call for a low-code profile there
   const server = load({ tigoAccess: exhausted });
   assert.equal(server.sandbox.convertigoTurnRefusal(Object.assign({}, STUDIO), {}), null);
+  assert.equal(server.sandbox.readConvertigoBalance(STUDIO).ok, false);
   assert.equal(server.calls.length, 0);
 });
 
