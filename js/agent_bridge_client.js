@@ -1538,6 +1538,231 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     };
   }
 
+  // ---- Flash mode of the No Code panel: the first request of a conversation in one call of the form generator ----
+  // With the Flash switch of the Tigo panel on, the first message of a new No Code conversation goes to AgentFlashForm
+  // instead of an agent turn. It runs the generator of lib_ConvertigoMCP (nocode_form_generate) with the No Code token
+  // of the user of the session, as the context catalog does, and the user's own gateway key where the server gives one
+  // per user (the handle an agent turn gets; never the server key then). The generator answers running with a jobId past
+  // the budget of one call: the panel calls again with the jobId. A created form or application starts a conversation:
+  // its transcript keeps the request and what Flash did, and the first agent turn of the conversation gets a note of it.
+  var FLASH_GENERATOR_PROJECT = "lib_ConvertigoMCP";
+  var FLASH_GENERATOR_SEQUENCE = "nocode_form_generate";
+
+  function flashNumber(value) {
+    var n = Number(value);
+    return isFinite(n) ? n : 0;
+  }
+
+  // The tables of the No Code database the user designated in the context selector, as the generator reads them.
+  function flashBaseTables(token, baseId) {
+    var payload = sequencePayload(callLocalSequence("lib_ConvertigoMCP", "tools_nocode_baserow_catalog_list", {
+      token: token,
+      includeColumns: "true",
+      databaseId: trim(baseId),
+      __nolog: "true"
+    }));
+    var tables = catalogArray(findCatalogValue(payload, ["tables"], 0));
+    var out = [];
+    for (var i = 0; i < tables.length && out.length < 12; i++) {
+      var t = tables[i] || {};
+      var columns = catalogArray(t.columns || t.fields);
+      var cols = [];
+      for (var j = 0; j < columns.length && cols.length < 40; j++) {
+        var c = columns[j] || {};
+        var choices = catalogArray(c.options || c.select_options || c.choices);
+        var values = [];
+        for (var k = 0; k < choices.length && values.length < 20; k++) {
+          var o = choices[k];
+          values.push(trim(o && typeof o === "object" ? (o.value || o.name || o.label) : o));
+        }
+        cols.push({ name: trim(c.name), type: trim(c.type), options: values });
+      }
+      out.push({ id: t.id, path: trim(t.path || t.name), columns: cols });
+    }
+    return out;
+  }
+
+  // What the panel shows of the generator's answer (never the reduced form, the spec or a key).
+  function flashAnswer(payload) {
+    var status = trim(payload.status) || "error";
+    var summary = payload.summary || {};
+    var usage = payload.usage || {};
+    var error = payload.error || null;
+    return {
+      ok: status === "created" || status === "running" || status === "declined",
+      status: status,
+      jobId: trim(payload.jobId),
+      stage: trim(payload.stage),
+      attempts: flashNumber(payload.attempts),
+      elapsedMs: flashNumber(payload.elapsedMs),
+      durationMs: flashNumber(payload.durationMs),
+      route: trim(payload.route) || "form",
+      formId: trim(payload.id),
+      formName: trim(summary.name),
+      pages: flashNumber(summary.pages),
+      fields: flashNumber(summary.fields),
+      sections: flashNumber(summary.sections),
+      tables: flashNumber(summary.tables),
+      base: trim(summary.base),
+      language: trim(summary.language),
+      kind: trim(payload.kind),
+      reason: trim(payload.reason),
+      reasoning: trim(payload.reasoning),
+      costUsd: flashNumber(usage.cost),
+      keySource: trim(usage.keySource),
+      error: error ? { code: trim(error.code), message: trim(error.message || error) } : null
+    };
+  }
+
+  var FLASH_TEXTS = {
+    fr: { form: "le formulaire", app: "l’application", created: "⚡ Flash a créé {what} « {name} » en {seconds} s : {detail}. Il est ouvert dans l’éditeur.",
+      page1: "1 page", pages: "{n} pages", field1: "1 champ", fields: "{n} champs", table1: "1 table", tables: "{n} tables", base: " dans la base no-code « {base} »" },
+    en: { form: "the form", app: "the application", created: "⚡ Flash created {what} \"{name}\" in {seconds} s: {detail}. It is open in the editor.",
+      page1: "1 page", pages: "{n} pages", field1: "1 field", fields: "{n} fields", table1: "1 table", tables: "{n} tables", base: " in the no-code database \"{base}\"" },
+    es: { form: "el formulario", app: "la aplicación", created: "⚡ Flash creó {what} «{name}» en {seconds} s: {detail}. Está abierto en el editor.",
+      page1: "1 página", pages: "{n} páginas", field1: "1 campo", fields: "{n} campos", table1: "1 tabla", tables: "{n} tablas", base: " en la base de datos no-code «{base}»" },
+    it: { form: "il modulo", app: "l’applicazione", created: "⚡ Flash ha creato {what} «{name}» in {seconds} s: {detail}. È aperto nell’editor.",
+      page1: "1 pagina", pages: "{n} pagine", field1: "1 campo", fields: "{n} campi", table1: "1 tabella", tables: "{n} tabelle", base: " nel database no-code «{base}»" }
+  };
+
+  function flashFill(text, values) {
+    var out = String(text);
+    for (var key in values) {
+      if (Object.prototype.hasOwnProperty.call(values, key)) {
+        out = out.split("{" + key + "}").join(String(values[key]));
+      }
+    }
+    return out;
+  }
+
+  // The answer of the conversation's first turn, in the user's language: what Flash created.
+  function flashSummaryText(answer, language) {
+    var texts = FLASH_TEXTS[language] || FLASH_TEXTS.fr;
+    var count = function (n, one, many) { return n === 1 ? texts[one] : flashFill(texts[many], { n: n }); };
+    var isApp = answer.route === "app";
+    var detail = count(answer.pages, "page1", "pages") + ", " + (isApp
+      ? count(answer.tables, "table1", "tables") + (answer.base.length ? flashFill(texts.base, { base: answer.base }) : "")
+      : count(answer.fields, "field1", "fields"));
+    return flashFill(texts.created, { what: texts[isApp ? "app" : "form"], name: answer.formName || answer.formId,
+      seconds: Math.max(1, Math.round(answer.durationMs / 1000)), detail: detail });
+  }
+
+  // What the agent learns at the first turn of the conversation (once, see sendMessage).
+  function flashAgentNote(answer, request) {
+    var isApp = answer.route === "app";
+    return "[Context from the Tigo panel, not typed by the user: before this turn, the Flash mode of the panel created the No Code " +
+      (isApp ? "data application" : "form") + " \"" + (answer.formName || answer.formId) + "\" (id " + answer.formId + ", " + answer.pages + " pages, " +
+      (isApp ? answer.tables + " tables in the no-code database" + (answer.base.length ? " \"" + answer.base + "\"" : "") : answer.fields + " fields") +
+      ") from the user's request \"" + request.replace(/\s+/g, " ").substring(0, 600) + "\". It is valid, saved and open in the editor. " +
+      "Work on this " + (isApp ? "application" : "form") + ": read it with nocode-form-get when needed and change it with nocode-form-edit; never create it again.]";
+  }
+
+  // A created form or application starts a conversation of the user: its transcript keeps the request and Flash's
+  // answer, the panel sends the next messages to it. "" when it could not be written (the panel then starts one as usual).
+  function recordFlashConversation(options, request, answer) {
+    try {
+      var state = ensureState(createState({
+        userId: options.userId,
+        workspaceRoot: options.workspaceRoot,
+        provider: options.provider,
+        model: options.model,
+        reasoningEffort: options.reasoning,
+        agentProfile: "nocode",
+        skillProfile: "nocode",
+        language: options.language,
+        userQuestion: request
+      }));
+      var language = normalizeAssistantLanguage(state.language) || "fr";
+      var summary = flashSummaryText(answer, language);
+      state.userQuestion = request;
+      state.lastUserMessage = request;
+      state.answer = summary;
+      state.answerIsFinal = true;
+      state.status = "completed";
+      state.flashNote = flashAgentNote(answer, request);
+      state.updatedAt = now();
+      appendTranscript(state, "user", request);
+      appendTranscript(state, "assistant", summary);
+      saveState(state);
+      return state.threadid;
+    } catch (flashRecordError) {
+      try { log.warn("(lib_ConvertigoAssistant) Flash conversation not recorded: " + String(flashRecordError)); } catch (_ignoreNoLog) {}
+      return "";
+    }
+  }
+
+  function flashFormFromScope(scope) {
+    var refused = bridgeCallerRefusal() || noCodeAgentRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    var names = ["userId", "workspaceRoot", "request", "jobId", "language", "baseId", "reasoning", "provider", "model"];
+    var options = {};
+    for (var i = 0; i < names.length; i++) {
+      options[names[i]] = sequenceScopeValue(scope, names[i]);
+    }
+    // the user of the session, never a user the page names
+    options = withCallerUserId(options);
+    options.agentProfile = "nocode";
+    options.skillProfile = "nocode";
+    var request = trim(options.request);
+    var jobId = trim(options.jobId);
+    if (!request.length) {
+      return { ok: false, status: "error", error: { code: "missing_request", message: "Describe the form to create." } };
+    }
+    // The gateway key: the user's own where the server gives one per user, as for an agent turn on the Convertigo gateway.
+    var keyHandle = "";
+    if (userGatewayKeysOn(options)) {
+      var key = userGatewayKeyHandle({ userId: options.userId }, true, GATEWAY_KEY_TURN_MARGIN_MS);
+      if (!key.ok) {
+        return { ok: false, status: "error", error: { code: key.code, message: "Your Tigo key could not be obtained." } };
+      }
+      keyHandle = key.handle;
+    }
+    var payload = {};
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var handle = noCodeMcpTokenHandle(options);
+      var token = handle.length ? sharedSecretGet(handle) : "";
+      if (!token.length) {
+        return { ok: false, status: "auth_required", error: { code: "auth_required", message: "No No Code token for this account." } };
+      }
+      var vars = { token: token, userId: trim(options.userId), mode: "create", __nolog: "true" };
+      if (keyHandle.length) {
+        vars.gatewayKeyHandle = keyHandle;
+      }
+      if (jobId.length) {
+        vars.jobId = jobId;
+      } else {
+        vars.request = request;
+        if (trim(options.language).length) {
+          vars.language = trim(options.language);
+        }
+        if (trim(options.reasoning).length) {
+          vars.reasoning = trim(options.reasoning);
+        }
+        if (trim(options.baseId).length) {
+          try {
+            var tables = flashBaseTables(token, options.baseId);
+            if (tables.length) {
+              vars.tables = JSON.stringify(tables);
+            }
+          } catch (_ignoreFlashTables) {}
+        }
+      }
+      payload = sequencePayload(callLocalSequence(FLASH_GENERATOR_PROJECT, FLASH_GENERATOR_SEQUENCE, vars)) || {};
+      // a token C8Oforms refused before anything was generated: forget it and start again with a new one
+      if (jobId.length || trim(payload.error && payload.error.code) !== "auth_required" || trim(payload.attempts).length) {
+        break;
+      }
+      forgetNoCodeMcpToken(options, token);
+    }
+    var answer = flashAnswer(payload);
+    if (answer.status === "created" && answer.formId.length) {
+      answer.threadid = recordFlashConversation(options, request, answer);
+    }
+    return answer;
+  }
+
   function normalizeWorkspaceRootPath(value) {
     var text = trim(value);
     if (!text.length) {
@@ -4631,6 +4856,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       status: state.status || "created",
       title: title,
       lastUserMessage: lastUserMessage,
+      flashNote: String(state.flashNote || ""),
       model: state.model || "",
       reasoningEffort: state.reasoningEffort || "",
       serviceTier: state.serviceTier || "",
@@ -8668,6 +8894,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       userQuestion: trim(options.userQuestion || extractUserMessage(options.Question || "")),
       // The user's message of the turn a recreated state ended: whether its answer keeps the credentials it gives.
       lastUserMessage: record ? String(record.lastUserMessage || "") : "",
+      // what the Flash mode of the panel created, for the first agent turn of the conversation (sendMessage)
+      flashNote: record ? String(record.flashNote || "") : "",
       status: record && trim(record.status).length ? trim(record.status) : "created",
       cursor: record && record.lastCursor ? Number(record.lastCursor) : 0,
       runid: record && record.lastRunId ? String(record.lastRunId) : "",
@@ -10269,6 +10497,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return noCodeContextCatalogFromScope(scope);
   };
 
+  // The Flash mode of the No Code panel (AgentFlashForm).
+  C8O.assistantAgentBridge.flashFormFromSequenceScope = function (scope) {
+    return flashFormFromScope(scope);
+  };
+
   // The turn says which skills on by default it brings to the agent and which skills it had to leave out, so a skill never
   // applies or goes missing unnoticed. Narrative events, never mistaken for the answer.
   function reportTigoSkills(state, resources) {
@@ -10552,6 +10785,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       // The harness runs "/compact <instructions>" only when the prompt starts with it: no Studio preamble.
       question = rawUserQuestion;
       options.Question = question;
+    }
+    // The first turn of a conversation the Flash mode started: the agent learns what Flash created (once). The transcript
+    // keeps the user's message as typed.
+    if (!state.slashCommand.length && trim(state.flashNote).length) {
+      question = String(question) + "\n\n" + state.flashNote;
+      options.Question = question;
+      state.flashNote = "";
     }
     var runProvider = normalizeProvider(state.provider);
     var runInstallRequested = shouldInstallForRun(options, runProvider);

@@ -458,7 +458,8 @@ test('every text exists in the four languages', () => {
 test('the template: the switch above the input bar and the setting, No Code only', () => {
   const page = read('_c8oProject/mobilePages/Page.yaml');
   const footer = page.slice(page.indexOf('↓Footer [ngx.components.UIDynamicElement-1750415662453]'), page.indexOf('↓UseSharedComponent2 [ngx.components.UIUseShared-1751354586662]'));
-  assert.match(footer, /↓ConfirmSwitchIf \[ngx\.components\.UIControlDirective-\d+\]: \n    directiveName: If[\s\S]*MobileSmartSourceType: script:this\.writeConfirmAvailable\(\)/);
+  // in the row of the switches above the input bar, with the Flash switch
+  assert.match(footer, /↓SwitchesRow \[ngx\.components\.UIDynamicElement-\d+\]: \n[\s\S]*\n    ↓ConfirmSwitchIf \[ngx\.components\.UIControlDirective-\d+\]: \n      directiveName: If[\s\S]*MobileSmartSourceType: script:this\.writeConfirmAvailable\(\)/);
   assert.match(footer, /attrName: role[\s\S]*plain:switch/);
   assert.match(footer, /attrName: '\[attr\.aria-checked\]'/);
   assert.match(footer, /page\.toggleWriteConfirm\(\);/);

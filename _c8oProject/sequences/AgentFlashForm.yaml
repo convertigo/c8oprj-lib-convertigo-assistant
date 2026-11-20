@@ -1,0 +1,48 @@
+accessibility: Hidden
+authenticatedContextRequired: true
+comment: Flash mode of the No Code panel - creates a form or a data application from the first request of a conversation in one call of the lib_ConvertigoMCP generator (nocode_form_generate), without an agent turn, with the No Code token and the gateway key of the user of the session. While it answers running, call again with the same request and the jobId. A created result is recorded as a conversation (threadid) whose transcript keeps the request and what Flash did.
+responseTimeout: 300
+↓Run [steps.SimpleStep-1795200000001]: 
+  expression: |
+    include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.flashFormFromSequenceScope(this);
+↓result [steps.JsonToXmlStep-1795200000002]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓request [variables.RequestableVariable-1795200000003]: 
+  comment: The user's request, as typed in the Tigo panel.
+  description: The user's request, as typed in the Tigo panel.
+↓jobId [variables.RequestableVariable-1795200000004]: 
+  comment: The jobId of a generation that answered running, sent with the same request.
+  description: The jobId of a generation that answered running, sent with the same request.
+↓language [variables.RequestableVariable-1795200000005]: 
+  comment: Optional fr or en.
+  description: Optional fr or en.
+↓baseId [variables.RequestableVariable-1795200000006]: 
+  comment: Optional No Code database (Baserow) id whose existing tables the form may use.
+  description: Optional No Code database (Baserow) id whose existing tables the form may use.
+↓userId [variables.RequestableVariable-1795200000007]: 
+  comment: Ignored on a server (the user of the session wins); the Studio keeps it.
+  description: Ignored on a server (the user of the session wins); the Studio keeps it.
+↓workspaceRoot [variables.RequestableVariable-1795200000008]: 
+  comment: Optional Convertigo user workspace root.
+  description: Optional Convertigo user workspace root.
+↓reasoning [variables.RequestableVariable-1795200000009]: 
+  comment: Reasoning effort chosen in the Tigo panel (low, medium, high); empty keeps the gateway default.
+  description: Reasoning effort chosen in the Tigo panel (low, medium, high); empty keeps the gateway default.
+↓provider [variables.RequestableVariable-1795200000010]: 
+  comment: The agent of the panel, for the conversation Flash records.
+  description: The agent of the panel, for the conversation Flash records.
+↓model [variables.RequestableVariable-1795200000011]: 
+  comment: The model of the panel's agent, for the conversation Flash records.
+  description: The model of the panel's agent, for the conversation Flash records.
