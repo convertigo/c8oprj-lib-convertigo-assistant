@@ -59,7 +59,8 @@ test('remote bridge calls use the engine client with their own cookies and bound
       assert.equal(post.headers['X-Test'], 'present');
       assert.equal(post.headers['Proxy-Authorization'], undefined);
       assert.equal(post.entity.text, 'value=a%26b');
-      return {getStatusLine:()=>({getStatusCode:()=>status}),getFirstHeader:()=>({getValue:()=> 'session=renewed'}),
+      return {getStatusLine:()=>({getStatusCode:()=>status}),getFirstHeader:()=>({getValue:()=> 'route=r1; Path=/'}),
+        getHeaders:()=>[{getValue:()=> 'route=r1; Path=/'},{getValue:()=> 'JSESSIONID=renewed; Path=/'}],
         getEntity:()=>({getContent:()=>text}),close:()=>{closed++;}};
     }}}},
     Packages: {org:{apache:{http:{client:{methods:{HttpPost:function(){this.headers={};this.setHeader=(k,v)=>{this.headers[k]=v;};this.setEntity=v=>{this.entity=v;};this.setConfig=()=>{};}},
@@ -70,7 +71,7 @@ test('remote bridge calls use the engine client with their own cookies and bound
   });
   vm.runInContext(source.slice(start,end),scope);
   assert.equal(scope.postForm('https://bridge.example/convertigo/',{},1200,{'X-Test':'present'}).ok,true);
-  assert.equal(closed,1);assert.deepEqual(remembered,{slot:'slot',cookie:'session=renewed'});
+  assert.equal(closed,1);assert.equal(JSON.stringify(remembered),JSON.stringify({slot:'slot',cookie:['route=r1; Path=/','JSESSIONID=renewed; Path=/']}), 'every Set-Cookie, not the first one only');
   for(const method of ['setConnectTimeout','setSocketTimeout','setConnectionRequestTimeout']) assert.equal(configValues[method],1200);
   assert.equal(configValues.setCookieSpec,'ignore');assert.equal(configValues.setRedirectsEnabled,false);
   for(status of [302,407,500]) assert.throws(()=>scope.postForm('https://bridge.example/convertigo/',{},1200,{'X-Test':'present'}),new RegExp('HTTP '+status));

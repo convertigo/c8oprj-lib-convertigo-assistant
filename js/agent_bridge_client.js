@@ -2055,21 +2055,80 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     }
     try {
       var file = bridgeSessionCacheFile(params, slot);
-      var stored = file === null || !file.exists() ? "" : responseSessionCookie(readTextFile(file));
+      var stored = file === null || !file.exists() ? "" : storedSessionCookie(readTextFile(file));
       return stored;
     } catch (_ignoreBridgeSessionCache) {
       return "";
     }
   }
 
+  var COOKIE_ATTRIBUTE_NAMES = { "path": true, "domain": true, "expires": true, "max-age": true, "secure": true,
+    "httponly": true, "samesite": true, "partitioned": true, "priority": true };
+
+  // The name=value pairs of cookies. setCookie: Set-Cookie values (one string, a comma-folded string or a list), the first
+  // pair of each cookie, the rest being its attributes; else a stored Cookie line ("route=1; JSESSIONID=2").
+  function cookiePairs(values, setCookie) {
+    var list = [];
+    if (values !== null && typeof values !== "undefined") {
+      if (typeof values === "string" || (typeof java !== "undefined" && values instanceof java.lang.String)) {
+        list = [String(values)];
+      } else {
+        for (var i = 0; i < values.length; i++) {
+          list.push(values[i] === null || typeof values[i] === "undefined" ? "" : String(values[i]));
+        }
+      }
+    }
+    var pairs = [];
+    list.forEach(function (value) {
+      // a comma ends a folded cookie only before the next name=, not inside "expires=Sat, 21-Nov-26 ..."
+      var cookies = setCookie ? value.split(/,\s*(?=[^;,=\s]+=)/) : [value];
+      cookies.forEach(function (cookie) {
+        var parts = cookie.split(";");
+        for (var j = 0; j < (setCookie ? Math.min(parts.length, 1) : parts.length); j++) {
+          var part = trim(parts[j]);
+          var eq = part.indexOf("=");
+          var name = eq > 0 ? trim(part.substring(0, eq)) : "";
+          if (name.length && (setCookie || !COOKIE_ATTRIBUTE_NAMES[name.toLowerCase()])) {
+            pairs.push({ name: name, value: trim(part.substring(eq + 1)) });
+          }
+        }
+      });
+    });
+    return pairs;
+  }
+
+  // The Cookie line of a Bridge session: the given pairs over the base ones, by name, or "" without a JSESSIONID.
+  function sessionCookieLine(base, pairs) {
+    var order = [];
+    var byName = {};
+    base.concat(pairs).forEach(function (pair) {
+      var key = pair.name.toLowerCase();
+      if (!Object.prototype.hasOwnProperty.call(byName, key)) {
+        order.push(key);
+      }
+      byName[key] = pair.name + "=" + pair.value;
+    });
+    if (!Object.prototype.hasOwnProperty.call(byName, "jsessionid")) {
+      return "";
+    }
+    return order.map(function (key) { return byName[key]; }).join("; ");
+  }
+
+  // What a Bridge answer sets: JSESSIONID and the cookies of a gateway in front of the engine (route, affinity), all sent
+  // back with the next call. test-nocode answers route, c8o_affinity, then JSESSIONID: reading the first Set-Cookie only
+  // kept nothing, and every call of the Bridge, the events read every 20 s, opened a session of its own (110 at once).
   function responseSessionCookie(header) {
-    var value = trim(header);
-    var match = /(?:^|[,;]\s*)(JSESSIONID=[^;,\s]+)/i.exec(value);
-    return match ? match[1] : "";
+    return sessionCookieLine([], cookiePairs(header, true));
+  }
+
+  function storedSessionCookie(text) {
+    return sessionCookieLine([], cookiePairs(text, false));
   }
 
   function rememberBridgeSessionCookie(params, slot, header) {
-    var cookie = responseSessionCookie(header);
+    var answered = cookiePairs(header, true);
+    // an answer that sets only some of them (a new JSESSIONID) keeps the others (the gateway's route)
+    var cookie = answered.length ? sessionCookieLine(cookiePairs(bridgeSessionCookie(params, slot), false), answered) : "";
     if (!cookie.length) {
       return "";
     }
@@ -3404,8 +3463,13 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         // The engine owns PAC routing/authentication; the caller owns this Bridge session's cookies.
         response = engineClient.execute(post);
         var status = Number(response.getStatusLine().getStatusCode());
-        var setCookie = response.getFirstHeader("Set-Cookie");
-        rememberBridgeSessionCookie(params, engineSlot, setCookie === null ? "" : String(setCookie.getValue()));
+        // every Set-Cookie: a gateway in front of the engine sets its own before JSESSIONID
+        var setCookies = [];
+        var engineHeaders = typeof response.getHeaders === "function" ? response.getHeaders("Set-Cookie") : [response.getFirstHeader("Set-Cookie")];
+        for (var h = 0; engineHeaders !== null && h < engineHeaders.length; h++) {
+          if (engineHeaders[h] !== null) { setCookies.push(String(engineHeaders[h].getValue())); }
+        }
+        rememberBridgeSessionCookie(params, engineSlot, setCookies);
         var entity = response.getEntity();
         var engineText = entity === null ? "" : readStream(entity.getContent());
         if (status >= 300) { throw new Error("HTTP " + status + " from agent bridge: " + engineText); }
@@ -3439,7 +3503,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     out.close();
 
     var code = conn.getResponseCode();
-    rememberBridgeSessionCookie(params, sessionSlot, conn.getHeaderField("Set-Cookie"));
+    rememberBridgeSessionCookie(params, sessionSlot, connectionSetCookies(conn));
     var text = readStream(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
     if (code >= 400) {
       throw new Error("HTTP " + code + " from agent bridge: " + text);
@@ -3448,6 +3512,25 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       return {};
     }
     return JSON.parse(text);
+  }
+
+  // every Set-Cookie value of a URLConnection answer (getHeaderField gives one of them only)
+  function connectionSetCookies(conn) {
+    var values = [];
+    var fields = typeof conn.getHeaderFields === "function" ? conn.getHeaderFields() : null;
+    if (fields !== null && fields && typeof fields.entrySet === "function") {
+      var entries = fields.entrySet().iterator();
+      while (entries.hasNext()) {
+        var entry = entries.next();
+        if (entry.getKey() !== null && String(entry.getKey()).toLowerCase() === "set-cookie") {
+          var list = entry.getValue();
+          for (var i = 0; i < list.size(); i++) { values.push(String(list.get(i))); }
+        }
+      }
+      return values;
+    }
+    var single = conn.getHeaderField("Set-Cookie");
+    return single === null || typeof single === "undefined" ? values : [String(single)];
   }
 
   // background: the request does not wait for the call (the prewarm of a conversation); its answer is dropped

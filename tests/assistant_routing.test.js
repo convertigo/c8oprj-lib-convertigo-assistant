@@ -237,6 +237,21 @@ assert.equal(testApi.rememberBridgeSessionCookie({}, "commands", "JSESSIONID=bri
 assert.equal(testApi.bridgeSessionCookie({}, "commands"), "JSESSIONID=bridge-1");
 assert.equal(testApi.bridgeSessionCookie({}, "events"), "");
 assert.equal(testApi.rememberBridgeSessionCookie({}, "events", "ignored=value; Path=/"), "");
+// test-nocode, 20/11: a gateway sets route and c8o_affinity before JSESSIONID. Reading the first Set-Cookie only kept
+// nothing, and every events read opened a session of its own on the engine (110 sessions at once).
+const gatewaySetCookies = [
+  "route=r1; Path=/; Secure; HttpOnly; SameSite=None",
+  "c8o_affinity=a1; expires=Sat, 21-Nov-26 16:00:17 GMT; max-age=86400; path=/; Secure; HttpOnly; SameSite=None",
+  "JSESSIONID=s1; Path=/; Secure; HttpOnly; SameSite=None"
+];
+assert.equal(testApi.responseSessionCookie(gatewaySetCookies), "route=r1; c8o_affinity=a1; JSESSIONID=s1");
+assert.equal(testApi.responseSessionCookie(gatewaySetCookies.join(", ")), "route=r1; c8o_affinity=a1; JSESSIONID=s1", "a comma-folded header too");
+assert.equal(testApi.responseSessionCookie(gatewaySetCookies.slice(0, 2)), "", "no JSESSIONID: nothing to keep");
+assert.equal(testApi.rememberBridgeSessionCookie({}, "events", gatewaySetCookies), "route=r1; c8o_affinity=a1; JSESSIONID=s1");
+assert.equal(testApi.bridgeSessionCookie({}, "events"), "route=r1; c8o_affinity=a1; JSESSIONID=s1", "sent back with the next read");
+assert.equal(testApi.rememberBridgeSessionCookie({}, "events", ["JSESSIONID=s2; Path=/"]), "route=r1; c8o_affinity=a1; JSESSIONID=s2", "a new session keeps the route");
+assert.equal(testApi.rememberBridgeSessionCookie({}, "events", []), "", "an answer without cookies changes nothing");
+assert.equal(testApi.bridgeSessionCookie({}, "events"), "route=r1; c8o_affinity=a1; JSESSIONID=s2");
 global.context = {};
 assert.equal(testApi.bridgeSessionCookie({}, "commands"), "");
 
