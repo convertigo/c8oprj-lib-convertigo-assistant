@@ -1682,8 +1682,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.status = "completed";
       state.flashNote = flashAgentNote(answer, request);
       state.updatedAt = now();
-      appendTranscript(state, "user", request);
-      appendTranscript(state, "assistant", summary);
+      appendTranscript(state, "user", request, "flash");
+      appendTranscript(state, "assistant", summary, "flash");
       saveState(state);
       return state.threadid;
     } catch (flashRecordError) {
@@ -4891,7 +4891,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     writeJsonFile(new File(state.conversationFile), record);
   }
 
-  function appendTranscript(state, role, content) {
+  // source: "flash" for what the Flash mode of the panel answered (the history marks that answer ⚡ Flash)
+  function appendTranscript(state, role, content, source) {
     var text = trim(content);
     if (!text.length || !state || !state.transcriptFile) {
       return;
@@ -4900,12 +4901,16 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (role === "assistant" && !userAsksForCredentials(state.userQuestion || state.lastUserMessage)) {
       text = maskSecretText(state, text);
     }
-    appendTextFile(new File(state.transcriptFile), JSON.stringify({
+    var entry = {
       time: now(),
       role: role,
       runid: state.runid || "",
       content: text
-    }) + "\n");
+    };
+    if (source === "flash") {
+      entry.source = "flash";
+    }
+    appendTextFile(new File(state.transcriptFile), JSON.stringify(entry) + "\n");
     if (role === "assistant" && state.plan && state.plan.entries && state.plan.entries.length) {
       appendRunDetail(state, { kind: "plan", plan: panelPlan(state, state.plan) });
     }
@@ -5060,6 +5065,11 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           message.tag1 = "History";
           message.tag2 = providerLabel(state.provider);
           message.tag3 = "Resume";
+          // which path answered: the Flash mode of the panel (a record of beta.39 has no source: its summary without a run
+          // starts with the bolt), else the agent
+          if (item.source === "flash" || (!item.runid && content.indexOf("⚡ Flash ") === 0)) {
+            message.answerSource = "flash";
+          }
           message.writing = false;
           message.status = "";
         }

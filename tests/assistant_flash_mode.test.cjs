@@ -176,7 +176,8 @@ test('AgentFlashForm is a sequence of an authenticated session', () => {
 
 // ---- panel ---------------------------------------------------------------------------------------------------------
 
-const METHODS = ['t', 'flashText', 'flashCount', 'flashAvailable', 'flashOn', 'toggleFlash', 'flashTime', 'flashShouldHandle', 'flashReasoning',
+const METHODS = ['t', 'flashText', 'flashCount', 'flashAvailable', 'flashOn', 'toggleFlash', 'flashTime', 'flashNotApplicable', 'flashSwitchClass',
+  'flashSwitchTitle', 'flashShouldHandle', 'flashInConversation', 'answerSourceShown', 'answerSourceText', 'answerSourceTitle', 'flashReasoning',
   'flashResult', 'runFlash', 'flashErrorText', 'flashDone', 'onFlashCta', 'flashConsumeNote'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter(m => m.name && METHODS.includes(m.name.getText(pageAst)));
@@ -200,7 +201,7 @@ function page(language = 'fr', answers = []) {
   p.scrollChatBottom = () => {};
   p.feedbackCard = (variant, title, message, actions) => ({ variant, title, message, actions, type: 'feedback' });
   p.notifyC8OformsFormUpdated = (detail, id) => p.updates.push(plain(detail));
-  p.chatfooter = { getImageFiles: () => [], getAttachFiles: () => [], setQuestionText: text => p.submitted.push(text), submitQuestionFromUI: () => {} };
+  p.chatfooter = { getImageFiles: () => [], getAttachFiles: () => [], getQuestionText: () => p.typing || '', setQuestionText: text => p.submitted.push(text), submitQuestionFromUI: () => {} };
   p.c8o = { callJsonObject: (name, params) => {
     p.calls.push({ name, params: plain(params) });
     const answer = answers.shift();
@@ -240,7 +241,8 @@ test('a created form: the card sums it up, the form opens, the recorded conversa
   p.runFlash('Un questionnaire de satisfaction');
   const card = p.local.Messages[1];
   assert.equal(p.local.Messages[0].msg, 'Un questionnaire de satisfaction');
-  assert.equal(card.title, '⚡ Flash · 0 s');
+  assert.equal(card.title, 'En cours · 0 s');
+  assert.equal(p.flashNotApplicable(), 'Used', 'while Flash runs');
   assert.equal(card.message, 'Écriture du formulaire (Mistral Large 4, effort medium)…');
   await flush();
   assert.equal(p.calls.length, 2);
@@ -248,13 +250,17 @@ test('a created form: the card sums it up, the form opens, the recorded conversa
   assert.deepEqual(p.calls[0].params, { request: 'Un questionnaire de satisfaction', userId: 'alice@example.com', reasoning: 'medium', provider: 'convertigo', model: 'mistral-large-4' });
   assert.deepEqual(p.calls[1].params, { request: 'Un questionnaire de satisfaction', jobId: 'gen-1', userId: 'alice@example.com', provider: 'convertigo', model: 'mistral-large-4', reasoning: 'medium' });
   assert.equal(card.state, 'ready');
-  assert.equal(card.title, '⚡ Formulaire créé en 1 s');
+  assert.equal(card.title, 'Formulaire créé en 1 s', 'the badge of the card carries the bolt');
   assert.equal(card.message, '« Satisfaction » : 1 page, 4 champs. Il est ouvert dans l’éditeur ; vos prochains messages vont à Tigo pour le modifier.');
   assert.equal(p.local.Conversation, 'conv-flash-1');
   assert.equal(p.flashConsumeNote(), '', 'the server keeps the note of a recorded conversation');
   assert.equal(p.updates[0].formId, 'form-42');
   assert.equal(p.updates[0].toolName, 'nocode-form-generate');
   assert.equal(p.flashShouldHandle('Ajoute un champ téléphone'), false, 'the next message goes to the agent');
+  assert.equal(p.flashNotApplicable(), 'Used');
+  assert.equal(p.flashSwitchClass(), 'agent-confirm-switch agent-flash-switch is-on is-inapplicable', 'greyed, the preference kept on');
+  assert.equal(p.flashSwitchTitle(), 'Flash utilisé : la suite passe par Tigo');
+  assert.equal(p.flashOn(), true);
 });
 
 test('without a recorded conversation, the first agent message carries the note once', async () => {
@@ -262,7 +268,7 @@ test('without a recorded conversation, the first agent message carries the note 
   p.runFlash('Equipment loans with their list');
   await flush();
   const card = p.local.Messages[1];
-  assert.equal(card.title, '⚡ Application created in 1 s');
+  assert.equal(card.title, 'Application created in 1 s');
   assert.equal(card.message, '"Loans": 5 pages, 1 table in the no-code database « Loans ». It is open in the editor; your next messages go to Tigo to change it.');
   assert.equal(p.local.Conversation, undefined);
   const note = p.flashConsumeNote();
@@ -275,11 +281,14 @@ test('a declined request offers the agent, which gets the same request', async (
   p.runFlash('Un circuit de validation des congés');
   await flush();
   const card = p.local.Messages[1];
-  assert.equal(card.title, '⚡ Flash ne peut pas le faire seul');
+  assert.equal(card.title, 'Flash ne peut pas le faire seul');
   assert.equal(card.message, 'Un circuit de validation entre plusieurs personnes dépasse Flash. Tigo en mode agent peut s’en charger.');
   assert.deepEqual(plain(card.actions), [{ id: 'agent', label: 'Passer en mode agent', primary: true }, { id: 'dismiss', label: 'Reformuler' }]);
+  assert.equal(p.flashNotApplicable(), '', 'a declined request leaves Flash on for a rephrased one');
   p.onFlashCta(card, { id: 'agent' });
   assert.equal(p.local.Messages.length, 0, 'the declined bubble and card leave the thread');
+  p.local.Messages.push({ type: 'user', msg: 'Un circuit de validation des congés' });
+  assert.equal(p.flashNotApplicable(), 'First_Only', 'greyed once the request went to the agent');
   assert.deepEqual(p.submitted, ['Un circuit de validation des congés']);
   assert.equal(p.local.FlashBypassOnce, true);
 });
@@ -291,18 +300,20 @@ test('a refusal of the key, of the budget or of the session is said in the user\
     p.runFlash('Un formulaire de contact');
     await flush();
     assert.equal(p.local.Messages[1].message, text + ' Tigo en mode agent peut s’en charger.');
-    assert.equal(p.local.Messages[1].title, '⚡ Flash n’a pas abouti');
+    assert.equal(p.local.Messages[1].title, 'Flash n’a pas abouti');
   }
 });
 
 test('every text of Flash exists in the four languages of the panel', () => {
   const keys = ['Label', 'Title', 'Running', 'Writing', 'Effort', 'Repairing', 'Created', 'Created_Body', 'Created_App', 'App_Body', 'Declined', 'Declined_Body',
-    'Failed', 'To_Agent', 'Rephrase', 'Page1', 'Pages', 'Field1', 'Fields', 'Table1', 'Tables', 'Error_Budget', 'Error_Key', 'Error_Auth'];
+    'Failed', 'To_Agent', 'Rephrase', 'Page1', 'Pages', 'Field1', 'Fields', 'Table1', 'Tables', 'Error_Budget', 'Error_Key', 'Error_Auth',
+    'Switch_Used', 'Switch_First_Only', 'Badge', 'Badge_Agent', 'Badge_Title', 'Badge_Agent_Title'];
   // every key is used by the Flash methods, and they use no other one
-  const flashSource = members.filter(m => /^flash|^runFlash|^onFlashCta/.test(m.name.getText(pageAst))).map(m => m.getText(pageAst)).join('\n');
-  const switchSource = read('_c8oProject/mobilePages/Page.yaml').match(/this\.flashText\(''[A-Za-z]+''\)/g).join('\n').replace(/''/g, '"');
+  const flashSource = members.filter(m => /^flash|^runFlash|^onFlashCta|^answerSource/.test(m.name.getText(pageAst))).map(m => m.getText(pageAst)).join('\n');
+  const switchSource = read('_c8oProject/mobilePages/Page.yaml').match(/this\.flashText\(''[A-Za-z_]+''\)/g).join('\n').replace(/''/g, '"') + '"Switch_Used" "Switch_First_Only"';
   for (const key of keys) assert.ok((flashSource + switchSource).includes('"' + key + '"'), 'used: ' + key);
-  for (const m of flashSource.matchAll(/flashText\("([A-Za-z0-9_]+)"/g)) assert.ok(keys.includes(m[1]), 'known: ' + m[1]);
+  for (const m of flashSource.matchAll(/flashText\("([A-Za-z0-9_]+)"[,)]/g)) assert.ok(keys.includes(m[1]), 'known: ' + m[1]);
+  assert.match(flashSource, /this\.flashText\("Switch_" \+ why\)/, 'the two reasons of flashNotApplicable are Switch_ keys');
   for (const language of ['fr', 'en', 'es', 'it']) {
     const p = page(language);
     for (const key of keys) {
@@ -317,7 +328,75 @@ test('the switch sits with Confirmer avant de modifier, and the send hook takes 
   assert.match(yaml, /↓SwitchesRow \[ngx\.components\.UIDynamicElement-\d+\]: \n[\s\S]{0,800}plain:agent-switches-row/);
   assert.match(yaml, /↓FlashSwitchIf \[ngx\.components\.UIControlDirective-\d+\]: \n[\s\S]{0,600}script:this\.flashAvailable\(\)/);
   assert.match(yaml, /page\.toggleFlash\(\);/);
+  assert.match(yaml, /↓FlashSwitch \[ngx\.components\.UIDynamicElement-\d+\]: \n[\s\S]{0,400}MobileSmartSourceType: script:this\.flashSwitchClass\(\)\n/);
+  assert.match(yaml, /MobileSmartSourceType: script:this\.flashSwitchTitle\(\)\n/);
   assert.match(pageClass(), /public runLocalCommand\(text\) \{\n\s*\/\/ Flash mode: the first message of a new No Code conversation, while the Flash switch is on\n\s*if \(this\.flashShouldHandle && this\.flashShouldHandle\(text\)\) \{\n\s*this\.runFlash\(text\);\n\s*return true;/);
   assert.match(yaml, /var flashNote = page\.flashConsumeNote \? page\.flashConsumeNote\(\) : "";/);
   assert.doesNotMatch(yaml + read('js/agent_bridge_client.js') + read('_c8oProject/sequences/AgentFlashForm.yaml'), /PROTOTYPE/);
+});
+
+test('the switch greys out once Flash no longer applies to the conversation, with its reason in the four languages', () => {
+  const fresh = page();
+  assert.equal(fresh.flashNotApplicable(), '');
+  assert.equal(fresh.flashSwitchClass(), 'agent-confirm-switch agent-flash-switch is-on');
+  assert.equal(fresh.flashSwitchTitle(), fresh.flashText('Title'));
+  fresh.typing = '/mesures';
+  assert.equal(fresh.flashNotApplicable(), 'First_Only', 'a slash command in the composer');
+  fresh.typing = '';
+  fresh.chatfooter.getAttachFiles = () => ['liste.xlsx'];
+  assert.equal(fresh.flashNotApplicable(), 'First_Only', 'an attachment in the composer');
+  const resumed = page();
+  resumed.local.AgentConversationResumed = true;
+  assert.equal(resumed.flashNotApplicable(), 'First_Only');
+  const reopenedFlash = page();
+  reopenedFlash.local.AgentConversationResumed = true;
+  reopenedFlash.local.Messages.push({ type: 'user', msg: 'Un questionnaire' }, { type: 'assistant', msg: '⚡ Flash a créé…', answerSource: 'flash' });
+  assert.equal(reopenedFlash.flashNotApplicable(), 'Used', 'a reopened Flash conversation says Flash was used');
+  const off = page();
+  off.flashModeValue = false;
+  off.local.Messages.push({ type: 'user', msg: 'x' });
+  assert.equal(off.flashSwitchClass(), 'agent-confirm-switch agent-flash-switch is-inapplicable');
+  for (const [language, used, first] of [['fr', 'Flash utilisé : la suite passe par Tigo', 'Flash ne s’applique qu’au premier message'],
+    ['en', 'Flash used: the rest goes through Tigo', 'Flash only applies to the first message'],
+    ['es', 'Flash utilizado: lo siguiente pasa por Tigo', 'Flash solo se aplica al primer mensaje'],
+    ['it', 'Flash usato: il seguito passa da Tigo', 'Flash si applica solo al primo messaggio']]) {
+    const p = page(language);
+    p.local.Messages.push({ type: 'user', msg: 'x', flash: true });
+    assert.equal(p.flashSwitchTitle(), used, language);
+    p.local.Messages[0].flash = false;
+    assert.equal(p.flashSwitchTitle(), first, language);
+  }
+});
+
+test('each answer says which path answered, where Flash is on or was used', () => {
+  const p = page();
+  const agent = { type: 'assistant', msg: 'C’est fait.' };
+  const flash = { type: 'assistant', msg: '⚡ Flash a créé…', answerSource: 'flash' };
+  assert.equal(p.answerSourceShown(agent), true);
+  assert.equal(p.answerSourceText(agent), 'Tigo');
+  assert.equal(p.answerSourceTitle(agent), 'Réponse de l’agent Tigo');
+  assert.equal(p.answerSourceText(flash), '⚡ Flash');
+  assert.equal(p.answerSourceTitle(flash), 'Réponse de Flash, sans tour d’agent');
+  assert.equal(p.answerSourceShown({ type: 'assistant', msg: '' }), false, 'nothing under an empty answer');
+  p.flashModeValue = false;
+  assert.equal(p.answerSourceShown(agent), false, 'no marker where Flash is off and unused');
+  p.local.Messages.push(flash);
+  assert.equal(p.answerSourceShown(agent), true, 'a conversation Flash answered keeps its markers');
+  p.isEmbeddedNoCodeAgent = () => false;
+  assert.equal(p.answerSourceShown(agent), false, 'never in the Studio panel');
+  const yaml = read('_c8oProject/mobilePages/Page.yaml');
+  const foot = yaml.slice(yaml.indexOf('↓AnswerFoot ['), yaml.indexOf('↓IsMetrics [ngx.components.UIControlDirective-1792267235603]'));
+  assert.ok(yaml.indexOf('↓AnswerFoot [') > yaml.indexOf('↓AssistantMessage [ngx.components.UIUseShared-1773100000008]'));
+  assert.match(foot, /plain:agent-answer-foot/);
+  assert.match(foot, /↓AnswerSourceIf [\s\S]*script:this\.answerSourceShown\(item\)[\s\S]*script:this\.answerSourceTitle\(item\)[\s\S]*script:this\.answerSourceText\(item\)[\s\S]*↓CopyAssistantMessage \[/);
+  const head = yaml.slice(yaml.indexOf('↓CardHead [ngx.components.UIDynamicElement-1792600000007]'), yaml.indexOf('↓CardTime [ngx.components.UIDynamicElement-1792600000017]'));
+  assert.match(head, /↓FlashBadgeIf [\s\S]*script:item\.variant === 'flash'[\s\S]*plain:agent-answer-source is-flash/);
+  assert.match(yaml, /\.agent-flash-switch\.is-inapplicable \{ opacity: 0\.5; \}/);
+});
+
+test('the history marks what Flash answered', () => {
+  const source = read('js/agent_bridge_client.js');
+  assert.match(source, /appendTranscript\(state, "user", request, "flash"\);\n\s*appendTranscript\(state, "assistant", summary, "flash"\);/);
+  assert.match(source, /if \(source === "flash"\) \{\n\s*entry\.source = "flash";\n\s*\}/);
+  assert.match(source, /if \(item\.source === "flash" \|\| \(!item\.runid && content\.indexOf\("⚡ Flash "\) === 0\)\) \{\n\s*message\.answerSource = "flash";/);
 });

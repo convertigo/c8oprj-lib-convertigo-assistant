@@ -352,7 +352,13 @@ scriptContent:
         				Agent_Runtime_Updating_Codex: "Updating Codex...",
         				Agent_Flash_Label: "⚡ Flash",
         				Agent_Flash_Title: "Flash: the first message creates the form in one call, without an agent turn. The next messages go to Tigo.",
-        				Agent_Flash_Running: "⚡ Flash · {seconds} s",
+        				Agent_Flash_Running: "Running · {seconds} s",
+        				Agent_Flash_Switch_Used: "Flash used: the rest goes through Tigo",
+        				Agent_Flash_Switch_First_Only: "Flash only applies to the first message",
+        				Agent_Flash_Badge: "⚡ Flash",
+        				Agent_Flash_Badge_Agent: "Tigo",
+        				Agent_Flash_Badge_Title: "Answered by Flash, without an agent turn",
+        				Agent_Flash_Badge_Agent_Title: "Answered by the Tigo agent",
         				Agent_Flash_Writing: "Writing the form (Mistral Large 4{effort})…",
         				Agent_Flash_Effort: ", {effort} effort",
         				Agent_Flash_Repairing: "Checking and repairing ({attempt}/2)…",
@@ -489,7 +495,13 @@ scriptContent:
         				Agent_Runtime_Updating_Codex: "Mise à jour de Codex en cours...",
         				Agent_Flash_Label: "⚡ Flash",
         				Agent_Flash_Title: "Flash : le premier message crée le formulaire en un seul appel, sans tour d’agent. Les messages suivants vont à Tigo.",
-        				Agent_Flash_Running: "⚡ Flash · {seconds} s",
+        				Agent_Flash_Running: "En cours · {seconds} s",
+        				Agent_Flash_Switch_Used: "Flash utilisé : la suite passe par Tigo",
+        				Agent_Flash_Switch_First_Only: "Flash ne s’applique qu’au premier message",
+        				Agent_Flash_Badge: "⚡ Flash",
+        				Agent_Flash_Badge_Agent: "Tigo",
+        				Agent_Flash_Badge_Title: "Réponse de Flash, sans tour d’agent",
+        				Agent_Flash_Badge_Agent_Title: "Réponse de l’agent Tigo",
         				Agent_Flash_Writing: "Écriture du formulaire (Mistral Large 4{effort})…",
         				Agent_Flash_Effort: ", effort {effort}",
         				Agent_Flash_Repairing: "Vérification et réparation automatique ({attempt}/2)…",
@@ -635,7 +647,13 @@ scriptContent:
         				Agent_Runtime_Updating_Codex: "Aggiornamento di Codex...",
         				Agent_Flash_Label: "⚡ Flash",
         				Agent_Flash_Title: "Flash: il primo messaggio crea il modulo in una sola chiamata, senza turno dell’agente. I messaggi successivi vanno a Tigo.",
-        				Agent_Flash_Running: "⚡ Flash · {seconds} s",
+        				Agent_Flash_Running: "In corso · {seconds} s",
+        				Agent_Flash_Switch_Used: "Flash usato: il seguito passa da Tigo",
+        				Agent_Flash_Switch_First_Only: "Flash si applica solo al primo messaggio",
+        				Agent_Flash_Badge: "⚡ Flash",
+        				Agent_Flash_Badge_Agent: "Tigo",
+        				Agent_Flash_Badge_Title: "Risposta di Flash, senza turno dell’agente",
+        				Agent_Flash_Badge_Agent_Title: "Risposta dell’agente Tigo",
         				Agent_Flash_Writing: "Scrittura del modulo (Mistral Large 4{effort})…",
         				Agent_Flash_Effort: ", impegno {effort}",
         				Agent_Flash_Repairing: "Verifica e riparazione automatica ({attempt}/2)…",
@@ -781,7 +799,13 @@ scriptContent:
         				Agent_Runtime_Updating_Codex: "Actualizando Codex...",
         				Agent_Flash_Label: "⚡ Flash",
         				Agent_Flash_Title: "Flash: el primer mensaje crea el formulario en una sola llamada, sin turno de agente. Los mensajes siguientes van a Tigo.",
-        				Agent_Flash_Running: "⚡ Flash · {seconds} s",
+        				Agent_Flash_Running: "En curso · {seconds} s",
+        				Agent_Flash_Switch_Used: "Flash utilizado: lo siguiente pasa por Tigo",
+        				Agent_Flash_Switch_First_Only: "Flash solo se aplica al primer mensaje",
+        				Agent_Flash_Badge: "⚡ Flash",
+        				Agent_Flash_Badge_Agent: "Tigo",
+        				Agent_Flash_Badge_Title: "Respuesta de Flash, sin turno de agente",
+        				Agent_Flash_Badge_Agent_Title: "Respuesta del agente Tigo",
         				Agent_Flash_Writing: "Escribiendo el formulario (Mistral Large 4{effort})…",
         				Agent_Flash_Effort: ", esfuerzo {effort}",
         				Agent_Flash_Repairing: "Comprobación y reparación automática ({attempt}/2)…",
@@ -8799,37 +8823,82 @@ scriptContent:
         	}
         	// Flash takes the first message of a conversation only: a message of the user already in the thread (but a request
         	// Flash declined), a reopened conversation, an attachment or a slash command leave everything to the agent.
-        	public flashShouldHandle(text) {
+        	// Why Flash does not take the next message of this conversation ("" when it does): "Used" once Flash answered its
+        	// first message (or runs it), "First_Only" once the conversation has a message of the user, is reopened or running, or
+        	// when the composer holds an attachment or a slash command. A request Flash declined does not count. The switch shows it
+        	// greyed; the preference (flashOn) stays for the next new conversation.
+        	public flashNotApplicable() {
         		var self: any = this;
         		var local: any = this.local || {};
-        		if (local.FlashBypassOnce === true) {
-        			local.FlashBypassOnce = false;
-        			return false;
-        		}
-        		if (!this.flashAvailable() || !this.flashOn() || self.flashJob) {
-        			return false;
-        		}
-        		if (local.IsProcessing === true || local.SendPending === true || local.AgentConversationResumed === true) {
-        			return false;
-        		}
-        		var typed = ("" + (text == null ? "" : text)).trim();
-        		if (!typed.length || typed.charAt(0) === "/") {
-        			return false;
-        		}
         		var messages = local.Messages || [];
+        		if (self.flashJob) {
+        			return "Used";
+        		}
         		for (var i = 0; i < messages.length; i++) {
         			var m = messages[i] || {};
-        			if ((m.type === "user" || m.type === "image") && m.flashDeclined !== true) {
-        				return false;
+        			if ((m.flash === true && m.flashDeclined !== true) || m.answerSource === "flash") {
+        				return "Used";
+        			}
+        		}
+        		if (local.IsProcessing === true || local.SendPending === true || local.AgentConversationResumed === true) {
+        			return "First_Only";
+        		}
+        		for (var j = 0; j < messages.length; j++) {
+        			var u = messages[j] || {};
+        			if ((u.type === "user" || u.type === "image") && u.flashDeclined !== true) {
+        				return "First_Only";
         			}
         		}
         		var footer: any = self.chatfooter;
         		try {
         			if (footer && ((footer.getImageFiles && footer.getImageFiles().length) || (footer.getAttachFiles && footer.getAttachFiles().length))) {
-        				return false;
+        				return "First_Only";
         			}
-        		} catch (eFiles) {}
-        		return true;
+        			if (footer && footer.getQuestionText && ("" + (footer.getQuestionText() || "")).trim().charAt(0) === "/") {
+        				return "First_Only";
+        			}
+        		} catch (eComposer) {}
+        		return "";
+        	}
+        	public flashSwitchClass() {
+        		return "agent-confirm-switch agent-flash-switch" + (this.flashOn() ? " is-on" : "") + (this.flashNotApplicable().length ? " is-inapplicable" : "");
+        	}
+        	public flashSwitchTitle() {
+        		var why = this.flashNotApplicable();
+        		return why.length ? this.flashText("Switch_" + why) : this.flashText("Title");
+        	}
+        	// Flash takes the first message of a conversation only (flashNotApplicable), never a slash command.
+        	public flashShouldHandle(text) {
+        		var local: any = this.local || {};
+        		if (local.FlashBypassOnce === true) {
+        			local.FlashBypassOnce = false;
+        			return false;
+        		}
+        		if (!this.flashAvailable() || !this.flashOn() || this.flashNotApplicable().length) {
+        			return false;
+        		}
+        		var typed = ("" + (text == null ? "" : text)).trim();
+        		return typed.length > 0 && typed.charAt(0) !== "/";
+        	}
+        	// The marker under each answer of a No Code conversation where Flash is on or was used: which path answered.
+        	public flashInConversation() {
+        		var messages = (this.local && this.local.Messages) || [];
+        		for (var i = 0; i < messages.length; i++) {
+        			var m = messages[i] || {};
+        			if (m.flash === true || m.answerSource === "flash" || (m.type === "feedback" && m.variant === "flash")) {
+        				return true;
+        			}
+        		}
+        		return false;
+        	}
+        	public answerSourceShown(item) {
+        		return !!(item && item.msg) && this.flashAvailable() && (this.flashOn() || this.flashInConversation());
+        	}
+        	public answerSourceText(item) {
+        		return this.flashText(item && item.answerSource === "flash" ? "Badge" : "Badge_Agent");
+        	}
+        	public answerSourceTitle(item) {
+        		return this.flashText(item && item.answerSource === "flash" ? "Badge_Title" : "Badge_Agent_Title");
         	}
         	// The reasoning effort of the composer: the choice being saved, else the effective one of the agent. The generator
         	// passes it to the gateway for the generation and its repairs.
@@ -8908,7 +8977,7 @@ scriptContent:
         			var isApp = r.route === "app";
         			var pages = this.flashCount(r.pages, "Page1", "Pages");
         			card.state = "ready";
-        			card.title = "⚡ " + this.flashText(isApp ? "Created_App" : "Created", { seconds: seconds });
+        			card.title = this.flashText(isApp ? "Created_App" : "Created", { seconds: seconds });
         			card.message = isApp
         				? this.flashText("App_Body", { name: r.formName || r.formId, pages: pages, tables: this.flashCount(r.tables, "Table1", "Tables"), base: r.base ? " « " + r.base + " »" : "" })
         				: this.flashText("Created_Body", { name: r.formName || r.formId, pages: pages, fields: this.flashCount(r.fields, "Field1", "Fields") });
@@ -8926,7 +8995,7 @@ scriptContent:
         		} else {
         			var declined = status === "declined";
         			card.state = declined ? "ready" : "error";
-        			card.title = "⚡ " + this.flashText(declined ? "Declined" : "Failed");
+        			card.title = this.flashText(declined ? "Declined" : "Failed");
         			var why = declined ? "" + (r.reason || "") : this.flashErrorText(r);
         			card.message = (why.length ? why + " " : "") + this.flashText("Declined_Body");
         			card.actions = [{ id: "agent", label: this.flashText("To_Agent"), primary: true }, { id: "dismiss", label: this.flashText("Rephrase") }];
@@ -18650,44 +18719,80 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:true
-            ↓CopyAssistantMessage [ngx.components.UIDynamicElement-1793020000201]: 
+            ↓AnswerFoot [ngx.components.UIDynamicElement-1795400000101]: 
               beanData: '{"ionBean":"DivTag"}'
-              tagName: button
-              ↓Class [ngx.components.UIAttribute-1793020000203]: 
+              comment: Under an answer - which path answered (No Code with Flash on or used), then Copier.
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1795400000103]: 
                 attrName: class
                 attrValue: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:''agent-copy-message is-assistant'' + (item && item.msg ? '''' : '' agent-hidden'')'
-              ↓Type [ngx.components.UIAttribute-1793020000205]: 
-                attrName: type
-                attrValue: 
+                    - MobileSmartSourceType: plain:agent-answer-foot
+              ↓AnswerSourceIf [ngx.components.UIControlDirective-1795400000105]: 
+                directiveName: If
+                directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:button
-              ↓Icon [ngx.components.UIDynamicElement-1793020000207]: 
-                beanData: '{"ionBean":"Icon","IconName":"script:this.agentCopyIcon(item)"}'
-                tagName: ion-icon
-                ↓Hidden [ngx.components.UIAttribute-1793020000208]: 
-                  attrName: aria-hidden
+                    - MobileSmartSourceType: script:this.answerSourceShown(item)
+                ↓AnswerSource [ngx.components.UIDynamicElement-1795400000107]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: span
+                  ↓Class [ngx.components.UIAttribute-1795400000109]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: 'script:''agent-answer-source'' + (item.answerSource === ''flash'' ? '' is-flash'' : '' is-agent'')'
+                  ↓Title [ngx.components.UIAttribute-1795400000111]: 
+                    attrName: '[attr.title]'
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.answerSourceTitle(item)
+                  ↓Text [ngx.components.UIText-1795400000113]: 
+                    textValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.answerSourceText(item)
+              ↓CopyAssistantMessage [ngx.components.UIDynamicElement-1793020000201]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: button
+                ↓Class [ngx.components.UIAttribute-1793020000203]: 
+                  attrName: class
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: plain:true
-              ↓Text [ngx.components.UIText-1793020000209]: 
-                textValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:item && item.copied ? this.agentUiText(''copiedMessage'') : this.agentUiText(''copyMessage'')'
-              ↓Event [ngx.components.UIControlEvent-1793020000211]: 
-                ↓Copy [ngx.components.UICustomAction-1793020000213]: 
-                  actionValue: 
+                      - MobileSmartSourceType: 'script:''agent-copy-message is-assistant'' + (item && item.msg ? '''' : '' agent-hidden'')'
+                ↓Type [ngx.components.UIAttribute-1793020000205]: 
+                  attrName: type
+                  attrValue: 
                     - xmlizable: 
-                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                        →: |
-                          		page.copyAgentMessage(props.stack.root.scope.item);
-                          		resolve();
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:button
+                ↓Icon [ngx.components.UIDynamicElement-1793020000207]: 
+                  beanData: '{"ionBean":"Icon","IconName":"script:this.agentCopyIcon(item)"}'
+                  tagName: ion-icon
+                  ↓Hidden [ngx.components.UIAttribute-1793020000208]: 
+                    attrName: aria-hidden
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:true
+                ↓Text [ngx.components.UIText-1793020000209]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: 'script:item && item.copied ? this.agentUiText(''copiedMessage'') : this.agentUiText(''copyMessage'')'
+                ↓Event [ngx.components.UIControlEvent-1793020000211]: 
+                  ↓Copy [ngx.components.UICustomAction-1793020000213]: 
+                    actionValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                        - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                          →: |
+                            		page.copyAgentMessage(props.stack.root.scope.item);
+                            		resolve();
           ↓IsMetrics [ngx.components.UIControlDirective-1792267235603]: 
             directiveName: If
             directiveSource: 
@@ -19089,6 +19194,32 @@ title: Tigo
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                         - MobileSmartSourceType: script:item.title
+                ↓FlashBadgeIf [ngx.components.UIControlDirective-1795400000121]: 
+                  directiveName: If
+                  directiveSource: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:item.variant === 'flash'
+                  ↓FlashBadge [ngx.components.UIDynamicElement-1795400000123]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: span
+                    ↓Class [ngx.components.UIAttribute-1795400000125]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-answer-source is-flash
+                    ↓Title [ngx.components.UIAttribute-1795400000127]: 
+                      attrName: '[attr.title]'
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.flashText(''Badge_Title'')'
+                    ↓Text [ngx.components.UIText-1795400000129]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: 'script:this.flashText(''Badge'')'
                 ↓CardTime [ngx.components.UIDynamicElement-1792600000017]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: span
@@ -23199,7 +23330,7 @@ title: Tigo
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:''agent-confirm-switch agent-flash-switch'' + (this.flashOn() ? '' is-on'' : '''')'
+                - MobileSmartSourceType: script:this.flashSwitchClass()
           ↓Type [ngx.components.UIAttribute-1795300000211]: 
             attrName: type
             attrValue: 
@@ -23223,7 +23354,7 @@ title: Tigo
             attrValue: 
               - xmlizable: 
                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:this.flashText(''Title'')'
+                - MobileSmartSourceType: script:this.flashSwitchTitle()
           ↓Track [ngx.components.UIDynamicElement-1795300000219]: 
             beanData: '{"ionBean":"DivTag"}'
             tagName: span
@@ -28201,6 +28332,11 @@ title: Tigo
           .agent-switches-row > .agent-confirm-row:only-child { margin-left: auto; }
           .agent-switches-row > .agent-flash-row { justify-content: flex-start; }
           .agent-feedback-card.is-flash .agent-metrics-card-title { font-variant-numeric: tabular-nums; }
+          /* Flash mode: the switch greyed once it no longer applies to the conversation, and which path answered. */
+          .agent-flash-switch.is-inapplicable { opacity: 0.5; }
+          .agent-answer-foot { align-items: center; display: flex; gap: 2px; }
+          .agent-answer-source { border: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 40%, transparent 60%); border-radius: 999px; color: var(--modern-muted, #94a3b8); font-size: 11px; line-height: 16px; margin: -4px 0 8px; padding: 0 7px; white-space: nowrap; }
+          .agent-metrics-card-head .agent-answer-source { margin: 0 8px 0 auto; }
           .agent-confirm-switch { align-items: center; background: transparent; border: 0; color: var(--modern-muted, #64748b); cursor: pointer; display: inline-flex; font: inherit; font-size: 12px; gap: 6px; line-height: 18px; padding: 2px 4px; }
           .agent-confirm-switch:hover, .agent-confirm-switch:focus-visible { color: var(--modern-text, #0f172a); }
           .agent-confirm-track { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 45%, transparent 55%); border-radius: 999px; display: inline-block; flex: 0 0 26px; height: 14px; position: relative; transition: background 160ms ease; width: 26px; }
