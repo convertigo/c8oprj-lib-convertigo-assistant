@@ -1839,6 +1839,7 @@ scriptContent:
                 this.requestTigoResources(true);
         		if (!this.local) { this.local = {}; }
         		if (this.local.ShowAgentConfigPanel !== true) {
+        			if (this.rememberPanelScroll) { this.rememberPanelScroll(); }
         			this.local.AgentConfigReturnState = {
         				newConversationMode: this.local.NewConversationMode,
         				showConversationPanel: this.local.ShowConversationPanel,
@@ -1855,7 +1856,7 @@ scriptContent:
         		this.local.ShowAgentConfigPanel = true;
         		// a save that failed on a previous opening is not this one's
         		this.local.AgentServerSettingsError = "";
-        		// The settings show above the conversation: bring them into view, with their way back to the conversation.
+        		// The settings are a screen of their own: they open at their top, with their way back to the screen they were opened from.
         		setTimeout(() => { try { var content: any = (this as any).content; if (content && content.scrollToTop) { content.scrollToTop(250); } } catch (e) {} }, 60);
         		this.local.AgentRuntimeLoading = true;
         		this.local.AgentRuntimeOperation = '''';
@@ -1895,6 +1896,7 @@ scriptContent:
         		this.setAgentSettingsUrlState(false);
         		if (this.setEnableChat) { this.setEnableChat(); }
         		this.tick();
+        		if (this.restorePanelScroll) { this.restorePanelScroll(); }
         	}
         
         	public toggleAgentSettingsPage() {
@@ -3772,6 +3774,75 @@ scriptContent:
             // Settings that show are the settings page, also while the chosen agent is not ready once the page was closed;
             // shown bare in the start card, their agent cards overlapped and the way back to a ready agent was lost.
             return !!(this.local && this.local.ShowAgentConfigPanel === true) || !!(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel());
+        }
+        // The screen the panel shows. The settings and the list of conversations are screens of their own: never stacked
+        // over a conversation (the conversation, its side column and its input bar are hidden while they show), with a way
+        // back to where they were opened. "conversation" once one is open or its first message is sent, "home" otherwise.
+        public getPanelScreen() {
+            var local: any = this.local || {};
+            if (this.isAgentBridgeMode && !this.isAgentBridgeMode()) { return "home"; }
+            if (this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) { return "settings"; }
+            if (local.ShowConversationPanel === true && local.NewConversationMode !== true) { return "history"; }
+            return this.isPanelConversationOpen() ? "conversation" : "home";
+        }
+        public isPanelScreen(name) {
+            return this.getPanelScreen() === name;
+        }
+        public isPanelConversationOpen() {
+            var local: any = this.local || {};
+            return !!((local.Conversation && local.NewConversationMode !== true) || (this.hasConversationStarted && this.hasConversationStarted()));
+        }
+        // The way back of the settings the user opened and of the list: to the list the settings were opened from, else to
+        // the open conversation, else to a new conversation. Settings shown because no agent is ready yet have none: their
+        // "continue" button stays the way out.
+        public getPanelBackTarget() {
+            var local: any = this.local || {};
+            var screen = this.getPanelScreen();
+            if (screen === "settings") {
+                if (local.ShowAgentConfigPanel !== true || local.AgentConfigExplicitOpen !== true) { return ""; }
+                var back: any = local.AgentConfigReturnState || {};
+                if (back.showConversationPanel === true && back.newConversationMode !== true) { return "history"; }
+            } else if (screen !== "history") {
+                return "";
+            }
+            return this.isPanelConversationOpen() ? "conversation" : "home";
+        }
+        public getPanelBackLabel() {
+            var target = this.getPanelBackTarget();
+            if (target === "history") {
+                return (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? this.getFormsHistoryText("history") : this.t("Previous_Conversations", "Conversations précédentes");
+            }
+            return target === "conversation" ? this.t("Current_Conversation", "Conversation en cours") : this.t("New_Conversation", "Nouvelle conversation");
+        }
+        public goBackFromPanelScreen() {
+            var screen = this.getPanelScreen();
+            if (screen === "settings") {
+                this.closeAgentSettingsPage();
+            } else if (screen === "history") {
+                this.closeConversationsPanel();
+            }
+        }
+        // Where the conversation was read when the settings opened: the way back returns there (to its end when unknown).
+        public rememberPanelScroll() {
+            if (!this.local) { this.local = {}; }
+            this.local.PanelReturnScrollTop = this.isPanelConversationOpen() ? Number(this.local.LastScrollTop || 0) : null;
+        }
+        public restorePanelScroll() {
+            if (!this.local) { this.local = {}; }
+            var top = this.local.PanelReturnScrollTop;
+            this.local.PanelReturnScrollTop = null;
+            if (this.getPanelScreen() !== "conversation") { return; }
+            setTimeout(() => {
+                try {
+                    var content: any = (this as any).content;
+                    if (!content) { return; }
+                    if (top != null && top > 0 && content.scrollToPoint) {
+                        content.scrollToPoint(0, top, 0);
+                    } else if (content.scrollToBottom) {
+                        content.scrollToBottom(0);
+                    }
+                } catch (e) {}
+            }, 80);
         }
         public getAgentProviderTitle(provider) {
             var p = this.normalizeAgentProviderValue(provider);
@@ -8255,6 +8326,7 @@ scriptContent:
         		}
         		this.local.ShowConversationPanel = false;
         		this.tick();
+        		if (this.restorePanelScroll) { this.restorePanelScroll(); }
         	}
         	
             public requestAgentQuota(force = false) {
@@ -10300,6 +10372,71 @@ title: Tigo
     ↓Center [ngx.components.UIDynamicElement-1772100000034]: 
       beanData: '{"ionBean":"DivTag"}'
       tagName: div
+      ↓ScreenBarIf [ngx.components.UIControlDirective-1795528182481]: 
+        comment: 'Way back of the settings and of the list of conversations, which are screens of their own: to the screen they were opened from (getPanelBackTarget).'
+        directiveName: If
+        directiveSource: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+            - MobileSmartSourceType: script:this.getPanelBackTarget && this.getPanelBackTarget()
+        ↓ScreenBar [ngx.components.UIDynamicElement-1795528183019]: 
+          beanData: '{"ionBean":"DivTag"}'
+          tagName: div
+          ↓Class [ngx.components.UIAttribute-1795528183021]: 
+            attrName: class
+            attrValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                - MobileSmartSourceType: plain:tigo-screen-bar
+          ↓Back [ngx.components.UIDynamicElement-1795528183023]: 
+            beanData: |
+              '{
+               "ionBean": "Button",
+               "IonFill": "plain:clear",
+               "IonSize": "plain:small"
+              }'
+            tagName: ion-button
+            ↓Class [ngx.components.UIAttribute-1795528183025]: 
+              attrName: class
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: plain:tigo-screen-back
+            ↓Aria [ngx.components.UIAttribute-1795528183027]: 
+              attrName: '[attr.aria-label]'
+              attrValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getPanelBackLabel()
+            ↓Icon [ngx.components.UIDynamicElement-1795528183029]: 
+              beanData: |
+                '{
+                 "ionBean": "Icon",
+                 "IonColor": "plain",
+                 "IconName": "plain:arrow-back-outline",
+                 "IconMdName": "source",
+                 "IconIosName": "source",
+                 "IonSize": "plain",
+                 "IconSlot": "plain:start",
+                 "IconSource": "plain"
+                }'
+              tagName: ion-icon
+            ↓Text [ngx.components.UIText-1795528183031]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.getPanelBackLabel()
+            ↓Event [ngx.components.UIControlEvent-1795528183033]: 
+              ↓GoBack [ngx.components.UICustomAction-1795528183255]: 
+                actionValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                      →: |
+                                if (page.goBackFromPanelScreen) {
+                                    page.goBackFromPanelScreen();
+                                }
+                                resolve();
       ↓Class [ngx.components.UIAttribute-1772100000035]: 
         attrName: class
         attrValue: 
@@ -10356,7 +10493,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:agent-desktop-hero
+              - MobileSmartSourceType: 'script:(this.isPanelScreen && (this.isPanelScreen(''history'') || this.isPanelScreen(''conversation''))) ? ''agent-desktop-hero agent-hidden'' : ''agent-desktop-hero'''
       ↓HowCard [ngx.components.UIDynamicElement-1772100000045]: 
         beanData: '{"ionBean":"Card"}'
         tagName: ion-card
@@ -10521,7 +10658,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'''
+              - MobileSmartSourceType: 'script:(this.isPanelScreen && this.isPanelScreen(''conversation'')) ? ''modern-card modern-cta-card agent-start-card agent-hidden'' : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'')'
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -10970,7 +11107,7 @@ title: Tigo
                   attrValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:(this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''agent-conversations-close agent-hidden'' : ((this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'') : ((this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'')))'
+                      - MobileSmartSourceType: 'script:(this.getPanelBackTarget && this.getPanelBackTarget()) ? ''agent-conversations-close agent-hidden'' : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''agent-conversations-close agent-hidden'' : ((this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden'') : ((this.local && this.local.ShowConversationPanel === true && this.local.NewConversationMode !== true) ? ''agent-conversations-close agent-hidden'' : ((this.local && this.local.ShowConversationPanel === true) ? ''agent-conversations-close'' : ''agent-conversations-close agent-hidden''))))'
                 ↓Event [ngx.components.UIControlEvent-1785253485786]: 
                   ↓CloseConversations [ngx.components.UICustomAction-1785253487292]: 
                     actionValue: 
@@ -17042,7 +17179,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:modern-chat-preview
+              - MobileSmartSourceType: 'script:(this.isPanelScreen && (this.isPanelScreen(''settings'') || this.isPanelScreen(''history''))) ? ''modern-chat-preview agent-hidden'' : ''modern-chat-preview'''
         ↓Messages [ngx.components.UIControlDirective-1773100000001]: 
           directiveItemName: item
           directiveSource: 
@@ -19340,7 +19477,7 @@ title: Tigo
     directiveSource: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:this.local && this.local.ShowScrollBottomButton === true
+        - MobileSmartSourceType: script:(this.local && this.local.ShowScrollBottomButton === true) && !(this.isPanelScreen && (this.isPanelScreen('settings') || this.isPanelScreen('history')))
     ↓ScrollBottomButton [ngx.components.UIDynamicElement-1773900000011]: 
       beanData: |
         '{
@@ -19397,7 +19534,7 @@ title: Tigo
     directiveSource: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:this.getAgentRunView()
+        - MobileSmartSourceType: script:(this.getAgentRunView()) && !(this.isPanelScreen && (this.isPanelScreen('settings') || this.isPanelScreen('history')))
     ↓Side [ngx.components.UIDynamicElement-1792254386489]: 
       beanData: '{"ionBean":"DivTag"}'
       tagName: aside
@@ -22752,7 +22889,7 @@ title: Tigo
     directiveSource: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: script:this.getAgentRunView()
+        - MobileSmartSourceType: script:(this.getAgentRunView()) && !(this.isPanelScreen && (this.isPanelScreen('settings') || this.isPanelScreen('history')))
     ↓Dock [ngx.components.UIDynamicElement-1792254390465]: 
       beanData: '{"ionBean":"DivTag"}'
       tagName: div
@@ -24553,7 +24690,7 @@ title: Tigo
     attrValue: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-        - MobileSmartSourceType: 'script:(local && local.EnableChat !== false) ? ((this.isAgentBridgeMode && this.isAgentBridgeMode()) ? (((!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (local.AgentProvider || '''')))) ? ''modern-footer agent-footer-codex agent-controls-enabled'' : ''modern-footer agent-footer-hidden'') : ''modern-footer agent-footer-codex legacy-prompt-footer'') : ''modern-footer agent-footer-hidden'''
+        - MobileSmartSourceType: 'script:(this.isPanelScreen && this.isPanelScreen(''history'')) ? ''modern-footer agent-footer-hidden'' : ((local && local.EnableChat !== false) ? ((this.isAgentBridgeMode && this.isAgentBridgeMode()) ? (((!this.shouldShowAgentSettingsPanel || !this.shouldShowAgentSettingsPanel()) && (!this.hasReadyAgentProvider || this.hasReadyAgentProvider(this.getAgentProvider ? this.getAgentProvider() : (local.AgentProvider || '''')))) ? ''modern-footer agent-footer-codex agent-controls-enabled'' : ''modern-footer agent-footer-hidden'') : ''modern-footer agent-footer-codex legacy-prompt-footer'') : ''modern-footer agent-footer-hidden'')'
   ↓FormsIntegrated [ngx.components.UIAttribute-1789119368528]: 
     attrName: '[class.forms-integrated]'
     attrValue: 
@@ -28860,5 +28997,39 @@ title: Tigo
               flex: 1;
               justify-content: space-between;
             }
+          }
+          '
+↓TigoPanelScreensStyle [ngx.components.UIStyle-1795528183797]: 
+  comment: Way back bar of the settings and of the list of conversations (lot 1).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '.tigo-screen-bar {
+            position: sticky;
+            top: 0;
+            z-index: 6;
+            display: flex;
+            align-items: center;
+            margin: 0 0 12px;
+            padding: 4px 0;
+            background: var(--modern-bg, var(--ion-background-color, #ffffff));
+            border-bottom: 1px solid var(--modern-border, rgba(127, 127, 127, 0.24));
+          }
+          .tigo-screen-back {
+            --color: var(--modern-cyan, var(--ion-color-primary));
+            --padding-start: 4px;
+            --padding-end: 10px;
+            margin: 0;
+            min-height: 32px;
+            max-width: 100%;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
+          }
+          .tigo-screen-back ion-icon {
+            margin-right: 6px;
+            font-size: 18px;
           }
           '

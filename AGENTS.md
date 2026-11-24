@@ -320,6 +320,17 @@ rediscovering the same context.
   `subagentThought`); the block of the run keeps its steps and report. The main
   agent's bubble is six lines high. Cover with
   `node --test tests/assistant_subagent_live.test.cjs`.
+- The panel shows one screen at a time (`getPanelScreen`: settings, history,
+  conversation, home), in every frame. The settings and the list of conversations
+  are screens of their own: the conversation (`ChatPreview`), its side column, its
+  dock, its scroll button and the input bar are hidden while they show, and the
+  start card never shows over an open conversation or its first message. Their
+  way back (`ScreenBarIf`, first child of `Center`) names the screen it returns to
+  with the existing labels (`getPanelBackLabel`); `closeAgentSettingsPage` and
+  `closeConversationsPanel` find the conversation again where it was read
+  (`rememberPanelScroll` / `restorePanelScroll`). Settings shown because no agent
+  is ready yet keep their continue button as their only way out. Cover with
+  `node --test tests/assistant_panel_screens.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.
