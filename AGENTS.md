@@ -346,6 +346,16 @@ rediscovering the same context.
   directory figures, and otherwise shows one line
   (`getAgentWindowsDiagnosticSummary`) with its figures and steps under Details.
   Cover with `node --test tests/assistant_panel_navigation.test.cjs`.
+- Home: the Studio lists its three latest conversations with View all, as the No
+  Code home does (`isFormsRecentHistory` → `isStudioHomeRecent`), without the
+  "resume" strip; its two start choices are a compact pair, "With <project>" and
+  "No project" (`agent-start-compact`). The model and the effort picked in the
+  input bar are for their conversation: + starts again from those of the settings
+  (`AgentSettingsChoice`, read at load and when the settings close;
+  `restoreDefaultAgentChoice`), the No Code Studio keeps its server model and
+  stored user effort. The budget shows its percent next to its ring
+  (`percentText`); the composer controls wrap instead of leaving the bar. Cover
+  with `node --test tests/assistant_panel_home.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.

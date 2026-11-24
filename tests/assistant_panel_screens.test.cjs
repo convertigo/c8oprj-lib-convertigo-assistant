@@ -127,7 +127,7 @@ test('opening the settings remembers the conversation, every closing finds it ag
 
 test('the start card and the heading of a new conversation never show over a conversation', () => {
   const card = node('↓StartCard [', '↓CardContent [');
-  assert.match(card, /script:\(this\.isPanelScreen && this\.isPanelScreen\('conversation'\)\) \? 'modern-card modern-cta-card agent-start-card agent-hidden' : \(/);
+  assert.match(card, /script:\(\(this\.isPanelScreen && this\.isPanelScreen\('conversation'\)\) \? 'modern-card modern-cta-card agent-start-card agent-hidden' : \(/);
   const hero = node('↓Div [ngx.components.UIDynamicElement-1772014207161]', '↓IntroTitle [');
   assert.ok(!/MobileSmartSourceType: plain:agent-desktop-hero/.test(hero));
   const heroClass = node('↓Class [ngx.components.UIAttribute-1782121734063]', '↓HowCard [');

@@ -249,6 +249,7 @@ scriptContent:
                         Agent_Hide_Details: "Hide details",
                         Agent_Interface_Title: "Interface",
                         Agent_Language_Title: "Language",
+                        Agent_View_All_Conversations: "View all conversations",
         
                         Agent_Studio_Session_Failed: "The Studio session could not be restored. Close and reopen the Assistant view, then try again.",
                         Agent_Operation_Failed: "The operation failed. Try again; if the problem persists, check the Studio logs.",
@@ -399,6 +400,7 @@ scriptContent:
                         Agent_Hide_Details: "Masquer les détails",
                         Agent_Interface_Title: "Interface",
                         Agent_Language_Title: "Langue",
+                        Agent_View_All_Conversations: "Voir toutes les conversations",
         
                         Agent_Studio_Session_Failed: "La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.",
                         Agent_Operation_Failed: "L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.",
@@ -558,6 +560,7 @@ scriptContent:
                         Agent_Hide_Details: "Nascondi dettagli",
                         Agent_Interface_Title: "Interfaccia",
                         Agent_Language_Title: "Lingua",
+                        Agent_View_All_Conversations: "Vedi tutte le conversazioni",
         
                         Agent_Studio_Session_Failed: "Impossibile ripristinare la sessione di Studio. Chiudi e riapri la vista Assistente, poi riprova.",
                         Agent_Operation_Failed: "Operazione non riuscita. Riprova; se il problema persiste, consulta i log di Studio.",
@@ -717,6 +720,7 @@ scriptContent:
                         Agent_Hide_Details: "Ocultar detalles",
                         Agent_Interface_Title: "Interfaz",
                         Agent_Language_Title: "Idioma",
+                        Agent_View_All_Conversations: "Ver todas las conversaciones",
         
                         Agent_Studio_Session_Failed: "No se pudo restablecer la sesión de Studio. Cierre y vuelva a abrir la vista del Asistente e inténtelo de nuevo.",
                         Agent_Operation_Failed: "La operación falló. Inténtelo de nuevo; si el problema persiste, consulte los registros de Studio.",
@@ -979,7 +983,35 @@ scriptContent:
             }
             public isFormsRecentHistory() {
                 var local = this.local || {};
+                if (!this.isEmbeddedInC8Oforms()) { return this.isStudioHomeRecent(); }
                 return this.isEmbeddedInC8Oforms() && !local.Conversation && !local.ShowConversationPanel && !local.ShowAgentConfigPanel && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel());
+            }
+            public isStudioHomeRecent() {
+                // The Studio home lists the latest conversations (three, with View all), once the list is read.
+                var local: any = this.local || {};
+                if (!(this.isAgentBridgeMode && this.isAgentBridgeMode()) || (this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent())) { return false; }
+                if (!(this.isPanelScreen && this.isPanelScreen("home")) || local.AgentConversationsLoading === true) { return false; }
+                if (this.isAgentEnvironmentCheckPending && this.isAgentEnvironmentCheckPending()) { return false; }
+                return Array.isArray(local.AgentConversations) && local.AgentConversations.length > 0;
+            }
+            // The model and the effort picked in the input bar are for their conversation: a new conversation starts again from
+            // those of the settings. The No Code Studio keeps its server model and the user effort it stores.
+            public restoreDefaultAgentChoice() {
+                var local: any = this.local;
+                if (!local || (this.getNoCodeServerAgent && this.getNoCodeServerAgent())) { return; }
+                var choice: any = local.AgentSettingsChoice;
+                var clean = (value) => ("" + (value == null ? "" : value)).trim();
+                if (!choice || !clean(choice.model).length || clean(choice.provider) !== clean(local.AgentProvider)) { return; }
+                var models = local.AgentModels || [];
+                var model: any = null;
+                for (var i = 0; i < models.length; i++) {
+                    if (clean(models[i] && models[i].id) === clean(choice.model)) { model = models[i]; break; }
+                }
+                if (!model) { return; }
+                local.AgentModel = clean(model.id);
+                local.AgentReasoningLevels = local.AgentProviderSupportsReasoning && model.reasoningLevels ? model.reasoningLevels : [];
+                var reasoning = local.AgentProviderSupportsReasoning === true ? clean(choice.reasoning) || clean(model.defaultReasoning) : "";
+                local.AgentReasoningEffort = this.resolveAgentReasoning ? this.resolveAgentReasoning([reasoning, model.defaultReasoning], false) : reasoning;
             }
             public getFormsHistoryItems() {
                 var local = this.local || {};
@@ -1764,6 +1796,7 @@ scriptContent:
                                                         var model = clean(preserveSelection && clean(this.local.AgentModel).length ? this.local.AgentModel : (preferencesConfirmed ? preferences.model : (this.local.AgentModel || storedModel || result.model || (settings.defaults && normalize(settings.defaults.provider) === provider ? settings.defaults.model : '''') || selectedProvider && selectedProvider.defaultModel)));
         						if (!model.length && this.local.AgentModels.length) { model = clean(this.local.AgentModels[0] && this.local.AgentModels[0].id); }
         						this.local.AgentModel = model;
+        						if (!preserveSelection) { this.local.AgentSettingsChoice = { provider: provider, model: model, reasoning: clean(preferencesConfirmed ? preferences.reasoning : storedReasoning) }; }
         						var selectedModel = null;
         						for (var j = 0; j < this.local.AgentModels.length; j++) {
         							if (clean(this.local.AgentModels[j] && this.local.AgentModels[j].id) === model) { selectedModel = this.local.AgentModels[j]; break; }
@@ -1915,6 +1948,7 @@ scriptContent:
         		this.local.AgentConfigExplicitOpen = false;
         		this.local.AgentSettingsPageSeq = Number(this.local.AgentSettingsPageSeq || 0) + 1;
         		this.local.ShowAgentConfigPanel = false;
+        		this.local.AgentSettingsChoice = { provider: this.local.AgentProvider, model: this.local.AgentModel, reasoning: this.local.AgentReasoningEffort };
         		this.local.AgentRuntimeLoading = false;
         		if (this.local.AgentConfigReturnState) {
         			this.local.NewConversationMode = this.local.AgentConfigReturnState.newConversationMode;
@@ -8600,7 +8634,7 @@ scriptContent:
                 var label=this.quotaLabel(''usage'')+'' · ''+this.getAgentProviderLabel(provider)+'' · ''+(q?.activeScope ? this.quotaLabel(q.activeScope === ''team'' ? ''team'' : ''personal'')+'' · '' : '''')+(percent == null ? this.quotaLabel(''unknown'') : Math.round(percent)+'' % ''+this.quotaLabel(''used''));
                 return {title:this.quotaLabel(''usage''),provider:this.getAgentProviderLabel(provider),percent:percent,color:color,
                     background:''conic-gradient(from 225deg, ''+color+'' 0deg ''+(percent == null ? 0 : percent*2.7)+''deg, var(--ion-color-step-300, #64748b) ''+(percent == null ? 0 : percent*2.7)+''deg 270deg, transparent 270deg 360deg)'',
-                    label:label,summary:summary,rows:rows,expiry:expiry,cost:cost,costNote:costNote,context:q && this.local && this.local.AgentQuotaContext || '''',
+                    label:label,percentText:percent == null ? "" : Math.round(percent) + " %",summary:summary,rows:rows,expiry:expiry,cost:cost,costNote:costNote,context:q && this.local && this.local.AgentQuotaContext || '''',
                     portalUrl:provider === ''convertigo'' && this.local && this.local.AgentQuotaPortalUrl || '''',
                     refreshLabel:this.quotaLabel(''refresh''),extendLabel:this.quotaLabel(''extend''),closeLabel:this.quotaLabel(''close'')};
             }
@@ -9399,6 +9433,9 @@ title: Tigo
                             }, 15000);
                             if (page.chatfooter && page.chatfooter.setQuestionText) {
                                 page.chatfooter.setQuestionText("", false);
+                            }
+                            if (page.restoreDefaultAgentChoice) {
+                                page.restoreDefaultAgentChoice();
                             }
                             page.setEnableChat();
                             page.tick();
@@ -10716,7 +10753,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(this.isPanelScreen && this.isPanelScreen(''conversation'')) ? ''modern-card modern-cta-card agent-start-card agent-hidden'' : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'')'
+              - MobileSmartSourceType: 'script:((this.isPanelScreen && this.isPanelScreen(''conversation'')) ? ''modern-card modern-cta-card agent-start-card agent-hidden'' : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? ''modern-card modern-cta-card agent-start-card agent-config-page'' : ''modern-card modern-cta-card agent-start-card'')) + ((this.isPanelScreen && this.isPanelScreen(''home'') && !(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms())) ? '' agent-start-compact'' : '''')'
         ↓CardContent [ngx.components.UIDynamicElement-1772100000095]: 
           beanData: '{"ionBean":"CardContent"}'
           tagName: ion-card-content
@@ -11004,7 +11041,7 @@ title: Tigo
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.local.AgentConversationsLoading === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0)))) ? (''agent-session-strip agent-history-choice'' + ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? '' agent-menu-choice'' : (this.local.AgentConversationsLoading === true ? '' agent-choice-disabled agent-history-loading'' : ''''))) : ''agent-session-strip agent-history-choice agent-hidden'''
+                  - MobileSmartSourceType: 'script:(this.isFormsRecentHistory && this.isFormsRecentHistory() && !this.isEmbeddedInC8Oforms()) ? ''agent-session-strip agent-history-choice agent-hidden'' : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.local && !this.local.Conversation && this.local.ShowConversationPanel !== true && !(this.shouldShowAgentSettingsPanel && this.shouldShowAgentSettingsPanel()) && ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) || (this.local.AgentConversationsLoading === true || (this.local.AgentConversations && this.local.AgentConversations.length > 0)))) ? (''agent-session-strip agent-history-choice'' + ((this.shouldBlockRemoteStudioAgent && this.shouldBlockRemoteStudioAgent()) ? '' agent-menu-choice'' : (this.local.AgentConversationsLoading === true ? '' agent-choice-disabled agent-history-loading'' : ''''))) : ''agent-session-strip agent-history-choice agent-hidden'')'
             ↓SessionIcon [ngx.components.UIDynamicElement-1782746946887]: 
               beanData: '{"ionBean":"Icon","IconName":"plain:time-outline"}'
               tagName: ion-icon
@@ -11137,7 +11174,7 @@ title: Tigo
                   textValue: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(this.isFormsRecentHistory() ? ''recent'' : ''history'') : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? this.t(''Agent_Settings_Title'', ''Configuration de l’agent'') : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? this.t(''New_Conversation'', ''Nouvelle conversation'') : this.t(''Previous_Conversations'', ''Conversations précédentes'')))'
+                      - MobileSmartSourceType: 'script:(this.isFormsRecentHistory() && !this.isEmbeddedInC8Oforms()) ? this.t(''Agent_Resume_Conversation'', ''Reprendre une conversation'') : (this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(this.isFormsRecentHistory() ? ''recent'' : ''history'') : ((this.isAgentSettingsPageShown && this.isAgentSettingsPageShown()) ? this.t(''Agent_Settings_Title'', ''Configuration de l’agent'') : ((this.local && (this.local.NewConversationMode === true || (!this.local.Conversation && this.local.ShowConversationPanel !== true))) ? this.t(''New_Conversation'', ''Nouvelle conversation'') : this.t(''Previous_Conversations'', ''Conversations précédentes''))))'
               ↓CloseButton [ngx.components.UIDynamicElement-1781676493781]: 
                 beanData: |
                   '{
@@ -17256,7 +17293,7 @@ title: Tigo
                     textValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: script:this.getFormsHistoryText('all')
+                        - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryText(''all'') : this.t(''Agent_View_All_Conversations'', ''Voir toutes les conversations'')'
                   ↓Event [ngx.components.UIControlEvent-1789464181815]: 
                     ↓ShowHistory [ngx.components.UIDynamicAction-1789464183353]: 
                       beanData: |
@@ -29320,5 +29357,41 @@ title: Tigo
             --background: transparent;
             letter-spacing: 0;
             text-transform: none;
+          }
+          '
+↓TigoLot3Style [ngx.components.UIStyle-1795542948511]: 
+  comment: Compact start choices and the latest conversations on the Studio home (lot 3).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Studio home: the two start choices as a compact pair (with the project, without one) under the title. */
+          .agent-start-compact .agent-start-choice {
+            display: inline-flex !important;
+            width: auto !important;
+            max-width: 100%;
+            margin: 10px 8px 0 0 !important;
+            padding: 6px 12px !important;
+            min-height: 0 !important;
+            border-radius: 999px !important;
+            vertical-align: top;
+          }
+          .agent-start-compact .agent-start-choice .agent-session-meta {
+            display: none !important;
+          }
+          .agent-start-compact .agent-start-choice ion-icon {
+            font-size: 16px !important;
+            width: 16px;
+            height: 16px;
+          }
+          .agent-start-compact .agent-start-choice .agent-session-title {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .agent-start-compact .forms-recent-conversations {
+            margin-top: 14px;
           }
           '

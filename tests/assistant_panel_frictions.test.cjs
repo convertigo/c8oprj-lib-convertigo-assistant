@@ -135,7 +135,9 @@ test('in C8Oforms the composer fits the panel: no side margin past its edge, its
   assert.match(footerYaml, /\.agent-prompt-controls-right \.codex-prompt-send-btn, [^{]*\{ flex: 0 0 auto; \}/);
   assert.match(footerYaml, /:host-context\(ion-footer\.agent-footer-codex\) \.agent-prompt-controls \{ flex-wrap: wrap; row-gap: 4px; \}/);
   assert.match(footerYaml, /:host-context\(ion-footer\.forms-integrated\.agent-footer-codex\) \.tigo-prompts-row > \.modern-suggestion-btn \{ flex: 1 1 140px !important; min-height: 36px !important; \}/);
-  const compact = footerYaml.slice(footerYaml.indexOf('↓TigoComposerCompactStyle'));
+  const from = footerYaml.slice(footerYaml.indexOf('↓TigoComposerCompactStyle'));
+  const next = from.indexOf('\n↓', 1);
+  const compact = next > 0 ? from.slice(0, next) : from;
   const body = compact.slice(compact.indexOf("'") + 1, compact.lastIndexOf("'"));
   assert.doesNotMatch(body.replace(/''/g, ''), /'/, 'no lone quote in the single-quoted style');
 });

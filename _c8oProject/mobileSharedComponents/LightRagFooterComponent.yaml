@@ -3036,6 +3036,11 @@ scriptContent:
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: plain:true
+            ↓Text [ngx.components.UIText-1795542947379]: 
+              textValue: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:AgentQuotaView?.percentText || ''
           ↓QuotaPopover [ngx.components.UIDynamicElement-1792000355689]: 
             beanData: |
               '{
@@ -4839,4 +4844,33 @@ scriptContent:
           /* Wrapped suggestions in C8Oforms: compact, at least two per row in a narrow panel (one card per row took five lines). */
           :host-context(ion-footer.forms-integrated.agent-footer-codex) .tigo-prompts-row > .modern-suggestion-btn { flex: 1 1 140px !important; min-height: 36px !important; }
           :host-context(ion-footer.forms-integrated.agent-footer-codex) .tigo-prompts-row > .modern-suggestion-btn::part(native) { min-height: 36px; }
+          '
+↓TigoBudgetPercentStyle [ngx.components.UIStyle-1795542947969]: 
+  comment: The budget in words next to its ring (lot 3).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* The budget in words next to its ring: the ring alone read as a loading spinner. */
+          .agent-quota-trigger {
+            flex: 0 0 auto !important;
+            width: auto !important;
+            min-width: 34px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0;
+            color: var(--ion-color-step-600, #64748b);
+          }
+          .agent-quota-trigger::part(native) {
+            gap: 4px;
+            padding: 5px 6px;
+          }
+          
+          /* The controls wrap instead of pushing the agent and the model out of the bar on its left. */
+          :host-context(ion-footer.agent-footer-codex) .agent-prompt-controls-right {
+            flex: 1 1 auto;
+            flex-wrap: wrap;
+            row-gap: 4px;
+          }
           '
