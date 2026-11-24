@@ -331,6 +331,21 @@ rediscovering the same context.
   (`rememberPanelScroll` / `restorePanelScroll`). Settings shown because no agent
   is ready yet keep their continue button as their only way out. Cover with
   `node --test tests/assistant_panel_screens.test.cjs`.
+- One toolbar in every frame: + (a new conversation), the list of conversations
+  (`agent-list-button`, which reads the list again with `reloadAgentConversationList`)
+  and the settings. Reveal, the language and the theme live in Preferences (the
+  Interface section is hidden in No Code, where C8Oforms sets them); toolbar
+  buttons have no background of their own, the settings button shows one while
+  open. Escape leaves the settings and the list (`bindPanelEscapeKey`, never from a
+  field or a popover). The menu keeps the former assistants and no settings entry.
+- One list of conversations for the Studio and the No Code Studio: `HistoryTools`,
+  days, states and pages in both; there `historyText` takes the C8Oforms labels and
+  `historyCurrentProject` is the open application (`NoCodeSelectedFormId`). The
+  No Code home keeps its three recent conversations (`getFormsHistoryItems`).
+- The Windows diagnostic is hidden while the checks pass, even with the agents
+  directory figures, and otherwise shows one line
+  (`getAgentWindowsDiagnosticSummary`) with its figures and steps under Details.
+  Cover with `node --test tests/assistant_panel_navigation.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.

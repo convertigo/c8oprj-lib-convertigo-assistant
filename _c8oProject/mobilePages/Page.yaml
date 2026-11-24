@@ -242,6 +242,13 @@ scriptContent:
                         Agent_Windows_Path_Unusable: "inaccessible or unresolved path",
                         Agent_Windows_Path_Characters: "characters",
                         Agent_Windows_Paths_Documentation: "Windows long paths — Microsoft documentation",
+                        Agent_Windows_Diagnostic_Summary: "Windows long paths may block the installation of runtimes.",
+                        Agent_Windows_Diagnostic_Unknown_Summary: "The Windows long path test did not complete.",
+                        Agent_Windows_Path_Issues_Summary: "Unusable PATH entries were ignored.",
+                        Agent_Show_Details: "Details",
+                        Agent_Hide_Details: "Hide details",
+                        Agent_Interface_Title: "Interface",
+                        Agent_Language_Title: "Language",
         
                         Agent_Studio_Session_Failed: "The Studio session could not be restored. Close and reopen the Assistant view, then try again.",
                         Agent_Operation_Failed: "The operation failed. Try again; if the problem persists, check the Studio logs.",
@@ -385,6 +392,13 @@ scriptContent:
         			fr: {
                         Agent_Windows_Diagnostic: "Diagnostic Windows",
                         Agent_Windows_Paths_Documentation: "Chemins longs Windows — documentation Microsoft",
+                        Agent_Windows_Diagnostic_Summary: "Les chemins longs Windows peuvent bloquer l’installation des runtimes.",
+                        Agent_Windows_Diagnostic_Unknown_Summary: "Le test des chemins longs Windows n’a pas abouti.",
+                        Agent_Windows_Path_Issues_Summary: "Des chemins inutilisables du PATH ont été ignorés.",
+                        Agent_Show_Details: "Détails",
+                        Agent_Hide_Details: "Masquer les détails",
+                        Agent_Interface_Title: "Interface",
+                        Agent_Language_Title: "Langue",
         
                         Agent_Studio_Session_Failed: "La session Studio n’a pas pu être rétablie. Fermez puis rouvrez la vue Assistant et réessayez.",
                         Agent_Operation_Failed: "L’opération a échoué. Réessayez ; si le problème persiste, consultez les logs du Studio.",
@@ -537,6 +551,13 @@ scriptContent:
                         Agent_Windows_Path_Unusable: "percorso non accessibile o non risolto",
                         Agent_Windows_Path_Characters: "caratteri",
                         Agent_Windows_Paths_Documentation: "Percorsi lunghi Windows — documentazione Microsoft",
+                        Agent_Windows_Diagnostic_Summary: "I percorsi lunghi di Windows possono bloccare l’installazione dei runtime.",
+                        Agent_Windows_Diagnostic_Unknown_Summary: "Il test dei percorsi lunghi di Windows non è terminato.",
+                        Agent_Windows_Path_Issues_Summary: "Sono state ignorate voci del PATH inutilizzabili.",
+                        Agent_Show_Details: "Dettagli",
+                        Agent_Hide_Details: "Nascondi dettagli",
+                        Agent_Interface_Title: "Interfaccia",
+                        Agent_Language_Title: "Lingua",
         
                         Agent_Studio_Session_Failed: "Impossibile ripristinare la sessione di Studio. Chiudi e riapri la vista Assistente, poi riprova.",
                         Agent_Operation_Failed: "Operazione non riuscita. Riprova; se il problema persiste, consulta i log di Studio.",
@@ -689,6 +710,13 @@ scriptContent:
                         Agent_Windows_Path_Unusable: "ruta inaccesible o no resuelta",
                         Agent_Windows_Path_Characters: "caracteres",
                         Agent_Windows_Paths_Documentation: "Rutas largas de Windows — documentación Microsoft",
+                        Agent_Windows_Diagnostic_Summary: "Las rutas largas de Windows pueden bloquear la instalación de los runtimes.",
+                        Agent_Windows_Diagnostic_Unknown_Summary: "La prueba de rutas largas de Windows no terminó.",
+                        Agent_Windows_Path_Issues_Summary: "Se ignoraron entradas del PATH no utilizables.",
+                        Agent_Show_Details: "Detalles",
+                        Agent_Hide_Details: "Ocultar detalles",
+                        Agent_Interface_Title: "Interfaz",
+                        Agent_Language_Title: "Idioma",
         
                         Agent_Studio_Session_Failed: "No se pudo restablecer la sesión de Studio. Cierre y vuelva a abrir la vista del Asistente e inténtelo de nuevo.",
                         Agent_Operation_Failed: "La operación falló. Inténtelo de nuevo; si el problema persiste, consulte los registros de Studio.",
@@ -3129,7 +3157,7 @@ scriptContent:
             var lines = [], paths = diagnostics.longPaths || {}, issues = diagnostics.pathIssues || [];
                     var storage = diagnostics.agentsDirectory;
                     var fr = this.agentUiLanguage && this.agentUiLanguage() === "fr";
-                    if (storage) {
+                    if (storage && (storage.status !== "within_budget" || paths.registryEnabled === false || paths.fileSystemProbe === "failed")) {
                         lines.push("assistant.agents.directory (" + (storage.configured ? (fr ? "défini" : "configured") : (fr ? "défaut du workspace" : "workspace default")) + "): " + storage.directory);
                         lines.push((fr ? "Longueur de la racine : " : "Root length: ") + storage.rootLength + (fr ? " caractères." : " characters."));
                         lines.push((fr ? "Chemin de journal estimé : " : "Estimated journal path: ") + storage.estimatedLongestPathLength + " / " + storage.pathLimit + (fr ? " (limite classique Windows)." : " (legacy Windows limit)."));
@@ -3166,7 +3194,24 @@ scriptContent:
             return lines.join(''\n'');
         }
         
-        	public openAgentExternalUrl(url) {
+        	public getAgentWindowsDiagnosticSummary() {
+            // The line in view; the figures and the steps stay under Details.
+            var text = this.getAgentWindowsDiagnosticText();
+            if (!text) { return ""; }
+            var settings: any = this.getAgentSettingsRoot();
+            var diagnostics: any = (settings && settings.diagnostics) || {};
+            var paths: any = diagnostics.longPaths || {};
+            var storage: any = diagnostics.agentsDirectory;
+            if (paths.registryEnabled === false || paths.fileSystemProbe === "failed" || (storage && storage.status !== "within_budget")) {
+                return this.t("Agent_Windows_Diagnostic_Summary", "Les chemins longs Windows peuvent bloquer l’installation des runtimes.");
+            }
+            if (paths.fileSystemProbe === "unknown") {
+                return this.t("Agent_Windows_Diagnostic_Unknown_Summary", "Le test des chemins longs Windows n’a pas abouti.");
+            }
+            return this.t("Agent_Windows_Path_Issues_Summary", "Des chemins inutilisables du PATH ont été ignorés.");
+        }
+        
+        public openAgentExternalUrl(url) {
         		try {
         			var clean = this.normalizeAgentHostContextValue ? this.normalizeAgentHostContextValue(url) : ('''' + (url == null ? '''' : url)).replace(/^s+|s+$/g, '''');
         			if (!clean.length) { return; }
@@ -3796,6 +3841,7 @@ scriptContent:
         // the open conversation, else to a new conversation. Settings shown because no agent is ready yet have none: their
         // "continue" button stays the way out.
         public getPanelBackTarget() {
+            if (this.bindPanelEscapeKey) { this.bindPanelEscapeKey(); }
             var local: any = this.local || {};
             var screen = this.getPanelScreen();
             if (screen === "settings") {
@@ -3806,6 +3852,51 @@ scriptContent:
                 return "";
             }
             return this.isPanelConversationOpen() ? "conversation" : "home";
+        }
+        // The list of conversations read again when the toolbar opens it, in every frame.
+        public reloadAgentConversationList() {
+            if (!this.local) { this.local = {}; }
+            if (!(this.isAgentBridgeMode && this.isAgentBridgeMode())) { return; }
+            var clean = (value) => ("" + (value == null ? "" : value)).trim();
+            var provider = "", userId = "studio", profile = "";
+            try { provider = clean(this.getConfiguredAgentProvider ? this.getConfiguredAgentProvider() : ""); } catch (e1) {}
+            try { userId = clean(this.getAgentContextUserId ? this.getAgentContextUserId() : "studio") || "studio"; } catch (e2) {}
+            try { profile = clean(this.getAgentSkillProfile ? this.getAgentSkillProfile() : ""); } catch (e3) {}
+            if (profile === "nocode" && (!userId.length || userId === "studio" || userId === "nocode-anonymous")) { return; }
+            var token = "" + Date.now() + "-" + Math.random();
+            this.local.AgentConversationListLoadToken = token;
+            if (!(this.local.AgentConversations && this.local.AgentConversations.length)) { this.local.AgentConversationsLoading = true; }
+            this.local.HistoryLimit = 30;
+            this.tick();
+            this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentListConversations", {
+                provider: provider, userId: userId, agentProfile: profile, skillProfile: profile,
+                targetProject: "", projectName: "", includeDeleted: "", __context: "agent_conversations_" + token
+            }).async().then((response) => {
+                if (!this.local || this.local.AgentConversationListLoadToken !== token) { return; }
+                var result: any = response && response.result ? response.result : (response || {});
+                var conversations = result.conversations || [];
+                this.local.AgentConversations = conversations && conversations.length != null ? conversations : [];
+                this.local.AgentConversationsLoading = false;
+                this.tick();
+            }).catch(() => {
+                if (!this.local || this.local.AgentConversationListLoadToken !== token) { return; }
+                this.local.AgentConversationsLoading = false;
+                this.tick();
+            });
+        }
+        // Escape leaves the settings and the list as their way back does (never while typing in a field or in a popover).
+        public bindPanelEscapeKey() {
+            var self: any = this;
+            if (self.panelEscapeHandler || typeof document === "undefined") { return; }
+            self.panelEscapeHandler = (event) => {
+                try {
+                    if (!event || event.key !== "Escape" || !(this.getPanelBackTarget && this.getPanelBackTarget())) { return; }
+                    var target: any = event.target;
+                    if (target && target.closest && target.closest("input, textarea, [contenteditable], ion-popover, ion-alert, ion-modal, ion-select, ion-input, ion-textarea, ion-searchbar")) { return; }
+                    this.goBackFromPanelScreen();
+                } catch (e) {}
+            };
+            document.addEventListener("keydown", self.panelEscapeHandler);
         }
         public getPanelBackLabel() {
             var target = this.getPanelBackTarget();
@@ -6441,6 +6532,7 @@ scriptContent:
         		self.zoomedMedia = media;
         	}
         	public historyText(key) {
+        		if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && ["search", "all", "project"].indexOf(key) >= 0) { return this.getFormsHistoryText(key === "all" ? "any" : (key === "project" ? "current" : "search")); }
         		// Texts of the conversation list of the Studio, in the four Assistant languages.
         		var texts: any = {
         			fr: { search: "Rechercher par titre, projet ou modèle", all: "Toutes", project: "Projet {name}", count: "{total} conversations", countSome: "{shown} sur {total}", more: "Afficher {n} de plus", none: "Aucune conversation ne correspond à « {query} ».", today: "Aujourd''hui", yesterday: "Hier", running: "en cours", failed: "échec", cancelled: "annulée", rename: "Renommer", remove: "Supprimer" },
@@ -6452,6 +6544,7 @@ scriptContent:
         		return table[key] || texts.en[key] || "";
         	}
         	public historyCurrentProject() {
+        		if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) { return "" + ((this.local && this.local.NoCodeSelectedFormId) || ""); }
         		return "" + ((this.local && this.local.CurrentStudioProject) || (this.global && this.global.projectName) || "");
         	}
         	public getHistoryItems() {
@@ -6471,14 +6564,14 @@ scriptContent:
         			if (!c) {
         				return false;
         			}
-        			var projects = [c.primaryProject || ""].concat(c.projectNames || []);
+        			var projects = [c.primaryProject || "", (c.nocodeContext && c.nocodeContext.formId) || ""].concat(c.projectNames || []);
         			if (project.length && projects.indexOf(project) === -1) {
         				return false;
         			}
         			if (!query.length) {
         				return true;
         			}
-        			var text = [c.title, c.lastAnswerPreview, projects.join(" "), this.getAgentProviderLabel ? this.getAgentProviderLabel(c.provider || "") : c.provider, c.model].join(" ").toLowerCase();
+        			var text = [c.title, c.lastAnswerPreview, projects.join(" "), this.getAgentProviderLabel ? this.getAgentProviderLabel(c.provider || "") : c.provider, c.model, c.nocodeContext ? [c.nocodeContext.formName, c.nocodeContext.pageName, c.nocodeContext.elementName].join(" ") : ""].join(" ").toLowerCase();
         			return text.indexOf(query) !== -1;
         		}).sort((a: any, b: any) => when(b) - when(a));
         		var shown = matches.slice(0, limit);
@@ -9226,7 +9319,7 @@ title: Tigo
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
               - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-header-btn'' : ''modern-header-btn agent-hidden'''
         ↓Icon [ngx.components.UIDynamicElement-1588170831166]: 
-          beanData: '{"ionBean":"Icon","IconName":"script:this.isEmbeddedNoCodeAgent() ? ''add-outline'' : ''home-outline''"}'
+          beanData: '{"ionBean":"Icon","IconName":"plain:add-outline"}'
           tagName: ion-icon
         ↓Event [ngx.components.UIControlEvent-1744701589852]: 
           ↓OpenConversationPanel [ngx.components.UICustomAction-1781700500001]: 
@@ -9383,22 +9476,22 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:this.isEmbeddedNoCodeAgent() ? this.getFormsUxText(''newChat'') : ''Home'''
-      ↓FormsHistory [ngx.components.UIDynamicElement-1789119446246]: 
-        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
-        tagName: ion-button
-        ↓Embedded [ngx.components.UIAttribute-1789119446248]: 
-          attrName: '*ngIf'
+              - MobileSmartSourceType: 'script:this.isEmbeddedNoCodeAgent() ? this.getFormsUxText(''newChat'') : this.t(''New_Conversation'', ''Nouvelle conversation'')'
+        ↓Title [ngx.components.UIAttribute-1795542456535]: 
+          attrName: title
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:this.isEmbeddedNoCodeAgent()
+              - MobileSmartSourceType: 'script:this.isEmbeddedNoCodeAgent() ? this.getFormsUxText(''newChat'') : this.t(''New_Conversation'', ''Nouvelle conversation'')'
+      ↓FormsHistory [ngx.components.UIDynamicElement-1789119446246]: 
+        beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+        tagName: ion-button
         ↓Aria [ngx.components.UIAttribute-1789119446250]: 
           attrName: '[attr.aria-label]'
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: script:this.getFormsUxText('history')
+              - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? this.getFormsUxText(''history'') : this.t(''Previous_Conversations'', ''Conversations précédentes'')'
         ↓Icon [ngx.components.UIDynamicElement-1789119446252]: 
           beanData: |
             '{
@@ -9408,6 +9501,20 @@ title: Tigo
             }'
           tagName: ion-icon
         ↓OpenHistory [ngx.components.UIControlEvent-1789119446254]: 
+          ↓PrepareList [ngx.components.UICustomAction-1795542457927]: 
+            actionValue: 
+              - xmlizable: 
+                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                  →: |
+                            // The list opened from a conversation finds it again on the way back, read again with what started since.
+                            if (page.rememberPanelScroll && !(page.local && page.local.ShowConversationPanel === true)) {
+                                page.rememberPanelScroll();
+                            }
+                            if (page.reloadAgentConversationList) {
+                                page.reloadAgentConversationList();
+                            }
+                            resolve();
           ↓History [ngx.components.UIDynamicAction-1789119447792]: 
             beanData: |
               '{
@@ -9429,6 +9536,18 @@ title: Tigo
                    "Property": "plain:ShowAgentConfigPanel",
                    "Value": "script:false"
                   }'
+        ↓Class [ngx.components.UIAttribute-1795542457127]: 
+          attrName: class
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''modern-header-btn agent-list-button'' : ''modern-header-btn agent-list-button agent-hidden'''
+        ↓Title [ngx.components.UIAttribute-1795542457685]: 
+          attrName: title
+          attrValue: 
+            - xmlizable: 
+              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+              - MobileSmartSourceType: 'script:(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms()) ? this.getFormsUxText(''history'') : this.t(''Previous_Conversations'', ''Conversations précédentes'')'
       ↓AgentSettingsButton [ngx.components.UIDynamicElement-1785253151151]: 
         beanData: |
           '{
@@ -9529,69 +9648,8 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'plain: !this.global.themeLockedFromUrl'
+              - MobileSmartSourceType: 'plain: !this.global.themeLockedFromUrl && !(this.isAgentBridgeMode && this.isAgentBridgeMode())'
           comment: Hides the switch when theme is forced from URL
-      ↓RevealModeButton [ngx.components.UIDynamicElement-1782917885589]: 
-        beanData: |
-          '{
-           "ionBean": "Button",
-           "IonFill": "plain:clear",
-           "IonSize": "plain:small"
-          }'
-        tagName: ion-button
-        ↓Class [ngx.components.UIAttribute-1782917885591]: 
-          attrName: class
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ((this.getAgentRevealMode && this.getAgentRevealMode()) ? ''toolbar-reveal-button active'' : ''toolbar-reveal-button'') : ''toolbar-reveal-button agent-hidden'''
-        ↓Aria [ngx.components.UIAttribute-1782917885593]: 
-          attrName: aria-label
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Reveal
-        ↓Title [ngx.components.UIAttribute-1782917885595]: 
-          attrName: title
-          attrValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Reveal
-        ↓Event [ngx.components.UIControlEvent-1782917885597]: 
-          ↓ToggleRevealMode [ngx.components.UICustomAction-1782917887103]: 
-            actionValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                  →: |
-                    '        var enabled = page.getAgentRevealMode ? page.getAgentRevealMode() : false;
-                            if (page.setAgentRevealMode) {
-                                page.setAgentRevealMode(!enabled);
-                            } else {
-                                if (!page.local) { page.local = {}; }
-                                page.local.AgentRevealMode = !enabled;
-                                try {
-                                    if (typeof window !== ''undefined'' && window.localStorage) {
-                                        window.localStorage.setItem(''lib_ConvertigoAssistant.AgentRevealMode'', page.local.AgentRevealMode ? ''true'' : ''false'');
-                                    }
-                                } catch (e) {}
-                                page.tick();
-                            }
-                            resolve();'
-        ↓Icon [ngx.components.UIDynamicElement-1782917887105]: 
-          beanData: '{"ionBean":"Icon","IconName":"plain:eye-outline"}'
-          tagName: ion-icon
-          ↓IconName [ngx.components.UIAttribute-1782917887107]: 
-            attrName: '[name]'
-            attrValue: 
-              - xmlizable: 
-                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? ''eye-outline'' : ''eye-off-outline'''
-        ↓Text [ngx.components.UIText-1782917887109]: 
-          textValue: 
-            - xmlizable: 
-              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:Reveal
       ↓LanguageSelector [ngx.components.UIDynamicElement-1774703000010]: 
         beanData: |
           '{
@@ -9605,7 +9663,7 @@ title: Tigo
           attrValue: 
             - xmlizable: 
               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-              - MobileSmartSourceType: plain:toolbar-lang-select
+              - MobileSmartSourceType: 'script:(this.isAgentBridgeMode && this.isAgentBridgeMode()) ? ''toolbar-lang-select agent-hidden'' : ''toolbar-lang-select'''
         ↓Aria [ngx.components.UIAttribute-1774703000012]: 
           attrName: '[attr.aria-label]'
           attrValue: 
@@ -12818,6 +12876,201 @@ title: Tigo
                                         →: |
                                           		page.setWriteConfirmMode(props.stack.root.scope.choice, null);
                                           		resolve();
+                      ↓InterfaceSettings [ngx.components.UIDynamicElement-1795542458539]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1795542458541]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-interface-setting
+                        ↓Hidden [ngx.components.UIAttribute-1795542458543]: 
+                          attrName: '*ngIf'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:!(this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms())
+                        ↓InterfaceLabel [ngx.components.UIDynamicElement-1795542458545]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1795542458547]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-create-label
+                          ↓Text [ngx.components.UIText-1795542458549]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.t('Agent_Interface_Title', 'Interface')
+                        ↓InterfaceRow [ngx.components.UIDynamicElement-1795542458551]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1795542458553]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-interface-row
+                          ↓LanguageChoice [ngx.components.UIDynamicElement-1795542458574]: 
+                            beanData: |
+                              '{
+                               "ionBean": "Select",
+                               "ControlName": "plain:name1795542458574",
+                               "Justify": "plain:start"
+                              }'
+                            tagName: ion-select
+                            ↓Class [ngx.components.UIAttribute-1795542458575]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-pref-language
+                            ↓Aria [ngx.components.UIAttribute-1795542458576]: 
+                              attrName: '[attr.aria-label]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:'Language' | translate
+                            ↓Interface [ngx.components.UIAttribute-1795542458577]: 
+                              attrName: '[interface]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:'popover'
+                            ↓Value [ngx.components.UIAttribute-1795542458578]: 
+                              attrName: '[value]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.global?.currentLanguage?.() ?? 'en'
+                            ↓SelectedText [ngx.components.UIAttribute-1795542458579]: 
+                              attrName: '[selectedText]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:(this.global?.getLanguageLabelKey?.() ??  'Lang_English') | translate
+                            ↓ChangeEvent [ngx.components.UIControlEvent-1795542458580]: 
+                              attrName: (ionChange)
+                              eventName: ionChange
+                              ↓SetLanguage [ngx.components.UICustomAction-1795542458581]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        '		var selected = event && event.detail ? event.detail.value : null;
+                                        		selected = "" + (selected || "en");
+                                        		selected = selected.trim().toLowerCase();
+                                        		if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
+                                        		page.global.currentLanguage = function() { return selected; };
+                                        		page.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
+                                        		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e1) {}
+                                        		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-lang", selected); } } catch (e2) {}
+                                        		if (page.refreshFooterLocale) { page.refreshFooterLocale(); }
+                                        		try { page.tick(); } catch (e3) {}
+                                        		resolve();
+                                        '
+                            ↓LangEN [ngx.components.UIDynamicElement-1795542458582]: 
+                              beanData: '{"ionBean":"SelectOption","Value":"plain:en"}'
+                              tagName: ion-select-option
+                              ↓Text [ngx.components.UIText-1795542458583]: 
+                                i18n: true
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:Lang_English
+                            ↓LangFR [ngx.components.UIDynamicElement-1795542458584]: 
+                              beanData: '{"ionBean":"SelectOption","Value":"plain:fr"}'
+                              tagName: ion-select-option
+                              ↓Text [ngx.components.UIText-1795542458585]: 
+                                i18n: true
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:Lang_French
+                            ↓LangIT [ngx.components.UIDynamicElement-1795542458586]: 
+                              beanData: '{"ionBean":"SelectOption","Value":"plain:it"}'
+                              tagName: ion-select-option
+                              ↓Text [ngx.components.UIText-1795542458587]: 
+                                i18n: true
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:Lang_Italian
+                            ↓LangES [ngx.components.UIDynamicElement-1795542458588]: 
+                              beanData: '{"ionBean":"SelectOption","Value":"plain:es"}'
+                              tagName: ion-select-option
+                              ↓Text [ngx.components.UIText-1795542458589]: 
+                                i18n: true
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:Lang_Spanish
+                          ↓ThemeChoice [ngx.components.UIDynamicElement-1795542458670]: 
+                            beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
+                            tagName: ion-button
+                            ↓Class [ngx.components.UIAttribute-1795542458671]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-pref-theme
+                            ↓Aria [ngx.components.UIAttribute-1795542458672]: 
+                              attrName: '[attr.aria-label]'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? this.translate.instant(''Theme_Switch_To_Light'') : this.translate.instant(''Theme_Switch_To_Dark'')'
+                            ↓Event [ngx.components.UIControlEvent-1795542458673]: 
+                              ↓SetTheme [ngx.components.UICustomAction-1795542458674]: 
+                                actionValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                    - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                      →: |
+                                        '		var isDark = !(page.global && page.global.themeDark);
+                                        		if (!page.global) { page.global = {}; }
+                                        		page.global.themeDark = isDark;
+                                        		try {
+                                        			var root = document.documentElement;
+                                        			var body = document.body;
+                                        			if (root && root.classList) {
+                                        				root.classList.remove("force-dark", "force-light");
+                                        				root.classList.add(isDark ? "force-dark" : "force-light");
+                                        			}
+                                        			if (body && body.classList) {
+                                        				body.classList.remove("force-dark", "force-light");
+                                        				body.classList.add(isDark ? "force-dark" : "force-light");
+                                        			}
+                                        		} catch (e1) {}
+                                        		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-theme-dark", isDark ? "true" : "false"); } } catch (e2) {}
+                                        		try { page.tick(); } catch (e3) {}
+                                        		resolve();
+                                        '
+                            ↓ThemeIcon [ngx.components.UIDynamicElement-1795542458675]: 
+                              beanData: '{"ionBean":"Icon","IconName":"plain:moon-outline"}'
+                              tagName: ion-icon
+                              ↓IconName [ngx.components.UIAttribute-1795542458676]: 
+                                attrName: '[name]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? ''sunny-outline'' : ''moon-outline'''
+                            ↓Hidden [ngx.components.UIAttribute-1795542458677]: 
+                              attrName: '*ngIf'
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'plain: !this.global.themeLockedFromUrl'
+                              comment: Hides the switch when theme is forced from URL
+                            ↓Text [ngx.components.UIText-1795542459293]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:(this.global && this.global.themeDark) ? this.translate.instant(''Theme_Switch_To_Light'') : this.translate.instant(''Theme_Switch_To_Dark'')'
                       ↓ServerPrefsSettings [ngx.components.UIDynamicElement-1793876639658]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -13863,7 +14116,7 @@ title: Tigo
                                 textValue: 
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: script:this.t('Agent_Windows_Diagnostic', 'Diagnostic Windows')
+                                    - MobileSmartSourceType: script:this.getAgentWindowsDiagnosticSummary()
                             ↓Message [ngx.components.UIDynamicElement-1792058011764]: 
                               beanData: '{"ionBean":"Paragraph"}'
                               tagName: p
@@ -13878,6 +14131,42 @@ title: Tigo
                                   - xmlizable: 
                                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                     - MobileSmartSourceType: script:this.getAgentWindowsDiagnosticText()
+                              ↓Open [ngx.components.UIAttribute-1795542460720]: 
+                                attrName: '*ngIf'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:this.local?.WindowsDiagnosticOpen === true
+                            ↓DetailsToggle [ngx.components.UIDynamicElement-1795542461278]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "Button",
+                                 "IonFill": "plain:clear",
+                                 "IonSize": "plain:small"
+                                }'
+                              tagName: ion-button
+                              ↓Class [ngx.components.UIAttribute-1795542461280]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: plain:agent-windows-details-toggle
+                              ↓Text [ngx.components.UIText-1795542461282]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:this.local?.WindowsDiagnosticOpen === true ? this.t(''Agent_Hide_Details'', ''Masquer les détails'') : this.t(''Agent_Show_Details'', ''Détails'')'
+                              ↓Event [ngx.components.UIControlEvent-1795542461284]: 
+                                ↓ToggleDetails [ngx.components.UICustomAction-1795542461506]: 
+                                  actionValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                        →: |
+                                                  if (!page.local) { page.local = {}; }
+                                                  page.local.WindowsDiagnosticOpen = page.local.WindowsDiagnosticOpen !== true;
+                                                  page.tick();
+                                                  resolve();
                             ↓Documentation [ngx.components.UIDynamicElement-1792058011770]: 
                               beanData: |
                                 '{
@@ -16251,99 +16540,13 @@ title: Tigo
                                         finish();
                                     });
                             '
-              ↓FormsHistoryControls [ngx.components.UIControlDirective-1789464157641]: 
-                directiveName: If
-                directiveSource: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel
-                ↓Controls [ngx.components.UIDynamicElement-1789464162161]: 
-                  beanData: '{"ionBean":"DivTag"}'
-                  tagName: div
-                  ↓Class [ngx.components.UIAttribute-1789464162163]: 
-                    attrName: class
-                    attrValue: 
-                      - xmlizable: 
-                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: plain:forms-history-controls
-                  ↓Search [ngx.components.UIDynamicElement-1789464162165]: 
-                    beanData: |
-                      '{
-                       "ionBean": "Input",
-                       "ControlName": "plain:formsHistorySearch",
-                       "DoubleBinding": "script:this.local.FormsHistoryQuery",
-                       "Debounce": "plain:150",
-                       "Placeholder": "script:this.getFormsHistoryText(''search'')"
-                      }'
-                    tagName: ion-input
-                    ↓Aria [ngx.components.UIAttribute-1789464162167]: 
-                      attrName: '[attr.aria-label]'
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:this.getFormsHistoryText('search')
-                  ↓AllApplications [ngx.components.UIDynamicElement-1789464162169]: 
-                    beanData: |
-                      '{
-                       "ionBean": "Button",
-                       "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
-                      }'
-                    tagName: ion-button
-                    ↓Pressed [ngx.components.UIAttribute-1789464162171]: 
-                      attrName: aria-pressed
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:this.local?.FormsHistoryCurrentOnly !== true
-                    ↓Text [ngx.components.UIText-1789464162173]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:this.getFormsHistoryText('any')
-                    ↓Event [ngx.components.UIControlEvent-1789464162175]: 
-                      ↓FilterAll [ngx.components.UIDynamicAction-1789464163713]: 
-                        beanData: |
-                          '{
-                           "ionBean": "SetLocalAction",
-                           "Property": "plain:FormsHistoryCurrentOnly",
-                           "Value": "script:false"
-                          }'
-                  ↓CurrentApplication [ngx.components.UIDynamicElement-1789464163715]: 
-                    beanData: |
-                      '{
-                       "ionBean": "Button",
-                       "Disabled": "script:!this.local?.NoCodeSelectedFormId",
-                       "IonFill": "plain:clear",
-                       "IonSize": "plain:small"
-                      }'
-                    tagName: ion-button
-                    ↓Pressed [ngx.components.UIAttribute-1789464163717]: 
-                      attrName: aria-pressed
-                      attrValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:this.local?.FormsHistoryCurrentOnly === true
-                    ↓Text [ngx.components.UIText-1789464163719]: 
-                      textValue: 
-                        - xmlizable: 
-                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                          - MobileSmartSourceType: script:this.getFormsHistoryText('current')
-                    ↓Event [ngx.components.UIControlEvent-1789464163721]: 
-                      ↓FilterCurrent [ngx.components.UIDynamicAction-1789464163723]: 
-                        beanData: |
-                          '{
-                           "ionBean": "SetLocalAction",
-                           "Property": "plain:FormsHistoryCurrentOnly",
-                           "Value": "script:true"
-                          }'
               ↓HistoryTools [ngx.components.UIControlDirective-1792416217571]: 
                 comment: 'Header of the conversation list of the Studio: search, project filter and count (C8Oforms keeps FormsHistoryControls).'
                 directiveName: If
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true
+                    - MobileSmartSourceType: script:this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true
                 ↓Tools [ngx.components.UIDynamicElement-1792416218141]: 
                   beanData: '{"ionBean":"DivTag"}'
                   tagName: div
@@ -16501,13 +16704,13 @@ title: Tigo
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() ? this.getFormsHistoryItems() : this.getHistoryItems()'
+                    - MobileSmartSourceType: 'script:this.isFormsRecentHistory() ? this.getFormsHistoryItems() : this.getHistoryItems()'
                 ↓HistoryDay [ngx.components.UIControlDirective-1792416218979]: 
                   directiveName: If
                   directiveSource: 
                     - xmlizable: 
                       - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                      - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.historyDay(conversation)
+                      - MobileSmartSourceType: script:this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.historyDay(conversation)
                   ↓Day [ngx.components.UIDynamicElement-1792416218981]: 
                     beanData: '{"ionBean":"DivTag"}'
                     tagName: p
@@ -16580,7 +16783,7 @@ title: Tigo
                         directiveSource: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.historyStatus(conversation)
+                            - MobileSmartSourceType: script:this.historyStatus(conversation)
                         ↓Status [ngx.components.UIDynamicElement-1792416221267]: 
                           beanData: '{"ionBean":"DivTag"}'
                           tagName: span
@@ -16949,7 +17152,7 @@ title: Tigo
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() && this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.historyRemaining() > 0
+                    - MobileSmartSourceType: script:this.local?.ShowConversationPanel === true && !this.local?.ShowAgentConfigPanel && this.local?.NewConversationMode !== true && this.historyRemaining() > 0
                 ↓More [ngx.components.UIDynamicElement-1792416224699]: 
                   beanData: |
                     '{
@@ -17008,7 +17211,7 @@ title: Tigo
                 directiveSource: 
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:this.isEmbeddedInC8Oforms() && !this.local?.ShowAgentConfigPanel && (this.local?.AgentConversationsLoading || this.getFormsHistoryItems().length === 0)
+                    - MobileSmartSourceType: 'script:this.isEmbeddedInC8Oforms() && !this.local?.ShowAgentConfigPanel && (this.local?.AgentConversationsLoading || (this.isFormsRecentHistory() ? this.getFormsHistoryItems() : this.getHistoryItems()).length === 0)'
                 ↓Message [ngx.components.UIDynamicElement-1789464172763]: 
                   beanData: '{"ionBean":"Paragraph"}'
                   tagName: p
@@ -17017,7 +17220,7 @@ title: Tigo
                     attrValue: 
                       - xmlizable: 
                         - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                        - MobileSmartSourceType: plain:forms-history-empty
+                        - MobileSmartSourceType: 'script:this.local?.AgentConversationsLoading ? ''forms-history-empty agent-list-skeleton'' : ''forms-history-empty'''
                   ↓Status [ngx.components.UIAttribute-1789464172767]: 
                     attrName: role
                     attrValue: 
@@ -29031,5 +29234,91 @@ title: Tigo
           .tigo-screen-back ion-icon {
             margin-right: 6px;
             font-size: 18px;
+          }
+          '
+↓TigoLot2Style [ngx.components.UIStyle-1795542462048]: 
+  comment: Header buttons without a background of their own, discreet Windows diagnostic, list skeleton, interface preferences (lot 2).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Header buttons have no background of their own: it read as a selected state. The settings button shows one while the
+             settings are open; hover and press keep theirs. */
+          ion-header.modern-header .modern-header-btn,
+          ion-header.modern-header ion-button.modern-header-btn,
+          ion-header.modern-header ion-menu-button.modern-header-btn,
+          ion-header.modern-header ion-back-button.modern-header-btn {
+            --background: transparent !important;
+            --box-shadow: none !important;
+          }
+          ion-header.modern-header ion-button.agent-settings-button.active {
+            --background: rgba(14, 165, 233, 0.16) !important;
+          }
+          
+          /* Windows diagnostic: a discreet note, its figures and steps under Details. */
+          .agent-windows-diagnostics {
+            border: 0 !important;
+            border-left: 3px solid rgba(217, 119, 6, 0.6) !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            padding: 2px 0 2px 10px !important;
+            margin-top: 8px !important;
+          }
+          .agent-windows-diagnostics > p.agent-create-label {
+            margin: 0 0 4px !important;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0;
+            text-transform: none;
+          }
+          .agent-windows-diagnostics .agent-windows-diagnostic-text {
+            font-size: 12px !important;
+            color: var(--modern-muted, inherit);
+          }
+          .agent-windows-diagnostics ion-button {
+            display: inline-flex;
+            min-height: 24px;
+            margin: 0 12px 0 0 !important;
+            font-size: 12px;
+          }
+          
+          /* A list that loads shows the rows to come instead of a sentence. */
+          .forms-history-empty.agent-list-skeleton {
+            min-height: 132px;
+            color: transparent !important;
+            background:
+              linear-gradient(var(--modern-border, rgba(127, 127, 127, 0.22)) 0 0) 0 8px / 100% 36px no-repeat,
+              linear-gradient(var(--modern-border, rgba(127, 127, 127, 0.22)) 0 0) 0 52px / 100% 36px no-repeat,
+              linear-gradient(var(--modern-border, rgba(127, 127, 127, 0.22)) 0 0) 0 96px / 100% 36px no-repeat;
+            border-radius: 10px;
+            opacity: 0.55;
+            animation: agent-skeleton-pulse 1.4s ease-in-out infinite;
+          }
+          @keyframes agent-skeleton-pulse {
+            50% { opacity: 0.3; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .forms-history-empty.agent-list-skeleton { animation: none; }
+          }
+          
+          /* Interface preferences: language and theme on one row. */
+          .agent-interface-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+          }
+          .agent-interface-row .agent-pref-language {
+            min-width: 160px;
+            max-width: 100%;
+            padding: 0 10px;
+            border: 1px solid var(--modern-border, rgba(127, 127, 127, 0.3));
+            border-radius: 8px;
+          }
+          .agent-interface-row .agent-pref-theme {
+            --background: transparent;
+            letter-spacing: 0;
+            text-transform: none;
           }
           '
