@@ -356,6 +356,13 @@ rediscovering the same context.
   stored user effort. The budget shows its percent next to its ring
   (`percentText`); the composer controls wrap instead of leaving the bar. Cover
   with `node --test tests/assistant_panel_home.test.cjs`.
+- Glossary, one word per thing in the four languages: Settings / Réglages /
+  Impostazioni / Ajustes (`Agent_Settings_Title`), Compétences for skills in French,
+  prompts are pinned under the input bar (never "favorites"), the runtime and
+  stack tab is Advanced / Avancé. "1 conversation" in the singular. An agent card
+  reads "Checking…" while the settings check runs (`is-checking`), never "Needs
+  setup" before the check answers; choices read as chosen on light backgrounds.
+  Cover with `node --test tests/assistant_panel_glossary.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.
