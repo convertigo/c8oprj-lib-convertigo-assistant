@@ -808,6 +808,10 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
             			return "";
             		};
             		var selected = normalize(readQuery("language") || readQuery("locale") || readQuery("assistantLanguage"));
+            		// a language chosen in the panel stays chosen after a reload (the Studio language comes after it)
+            		if (!selected.length) {
+            			try { selected = normalize(readStorage(window, "lib_ConvertigoAssistant.PanelLanguage")); } catch (e4b) {}
+            		}
             		if (!selected.length) {
             			selected = readParentLanguage();
             		}

@@ -19,7 +19,7 @@ test('the tabs come first in the settings and open sections through the accordio
   const settings = block('↓CreateSettings [', '↓SettingsCategories [');
   const tabs = settings.slice(settings.indexOf('↓SettingsTabs ['));
   assert.ok(settings.indexOf('↓SettingsTabs [') < settings.indexOf('↓ResourceSearch ['), 'tabs before the library toolbar');
-  for (const section of ['agent', 'prefs', 'runtime', 'prompts', 'skills', 'mcp']) {
+  for (const section of ['agent', 'prefs', 'account', 'runtime', 'prompts', 'skills', 'mcp']) {
     assert.match(tabs, new RegExp("onTigoResourcesAccordionChange\\(\\{target: \\{tagName: 'ION-ACCORDION-GROUP'\\}, detail: \\{value: '" + section + "'\\}\\}\\)"), section);
   }
   assert.match(tabs, /role="tablist"/);
@@ -33,7 +33,8 @@ test('each tab shows the state of its section', () => {
   assert.match(tabs, /getAgentModelLabel\(\)/);
   assert.match(tabs, /getAgentReasoningLabel\(\)/);
   assert.match(tabs, /getAgentRevealMode\(\)/);
-  assert.match(tabs, /agentFeedbackText\(feedbackSettingMode\(\)\)/);
+  // the feedback mode is the state of the Account tab, with the share of the budget used (getAccountTabStatus)
+  assert.match(tabs, /getAccountTabStatus\(\)/);
   assert.match(tabs, /isAgentStackUpdateAvailable\(\)/);
   assert.match(tabs, /getAgentStackChannel\(\) === 'preview'/);
   assert.match(tabs, /local\?\.ResourcePromptItems\?\.length/);
@@ -42,11 +43,16 @@ test('each tab shows the state of its section', () => {
   }
 });
 
-test('Reveal, feedback and confirm-before-modifying live in the Preferences category', () => {
+test('Reveal and confirm-before-modifying live in the Preferences category, the feedback in the Account category', () => {
   const agent = block('↓AgentCategory [', '↓PrefsCategory [');
-  const prefs = block('↓PrefsCategory [', '↓RuntimeCategory [');
+  const prefs = block('↓PrefsCategory [', '↓AccountCategory [');
+  const account = block('↓AccountCategory [', '↓RuntimeCategory [');
   assert.match(prefs, /Value: plain:prefs|"Value":"plain:prefs"/);
-  for (const name of ['RevealSettings1', 'FeedbackSettings', 'ConfirmSettings']) {
+  assert.match(account, /Value: plain:account|"Value":"plain:account"/);
+  assert.ok(account.includes('↓FeedbackSettings ['), 'FeedbackSettings in Account');
+  assert.ok(!prefs.includes('↓FeedbackSettings ['), 'FeedbackSettings no longer in Preferences');
+  assert.ok(!agent.includes('↓FeedbackSettings ['), 'FeedbackSettings not in Agent');
+  for (const name of ['RevealSettings1', 'ConfirmSettings']) {
     assert.ok(prefs.includes('↓' + name + ' ['), name + ' in Preferences');
     assert.ok(!agent.includes('↓' + name + ' ['), name + ' no longer in Agent');
   }

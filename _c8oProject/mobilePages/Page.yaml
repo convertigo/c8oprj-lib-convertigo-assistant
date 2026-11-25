@@ -1838,9 +1838,11 @@ scriptContent:
         						    setTimeout(() => { try { var runtimeButton: any = document.querySelector(''.agent-runtime-settings:not(.agent-stack-settings) ion-button.agent-runtime-action''); if (runtimeButton) { runtimeButton.click(); } } catch (eAuto) {} }, 400);
         						}
         						var providerReady = this.isAgentProviderReady && this.isAgentProviderReady(selectedProvider);
-        						if (providerReady && this.local.AgentProviderChoiceConfirmed === true && this.local.AgentConfigExplicitOpen !== true) {
+        						// a ready agent opens on the conversation, chosen or not: the settings show by themselves only while the
+        						// chosen agent cannot work yet (the first open of a Studio whose Convertigo agent is ready showed them)
+        						if (providerReady && this.local.AgentConfigExplicitOpen !== true) {
         							this.local.ShowAgentConfigPanel = false;
-        						} else if (this.local.AgentProviderChoiceConfirmed !== true) {
+        						} else if (!providerReady && this.local.AgentProviderChoiceConfirmed !== true) {
         							this.local.ShowAgentConfigPanel = true;
         						}
         					}
@@ -3876,6 +3878,7 @@ scriptContent:
         // "continue" button stays the way out.
         public getPanelBackTarget() {
             if (this.bindPanelEscapeKey) { this.bindPanelEscapeKey(); }
+            if (this.bindPanelLanguageRefresh) { this.bindPanelLanguageRefresh(); }
             var local: any = this.local || {};
             var screen = this.getPanelScreen();
             if (screen === "settings") {
@@ -3919,6 +3922,15 @@ scriptContent:
             });
         }
         // Escape leaves the settings and the list as their way back does (never while typing in a field or in a popover).
+        public bindPanelLanguageRefresh() {
+            // The app reads the language file while the page computes its quick suggestions and placeholder: they follow the
+            // language once its file is there (a reload in Italian left them in English), and after each change of language.
+            var self: any = this;
+            if (self.panelLanguageSubscription || !self.translate || !self.translate.onLangChange) { return; }
+            var refresh = () => { setTimeout(() => { try { if (self.refreshFooterLocale) { self.refreshFooterLocale(); } } catch (e) {} }, 0); };
+            try { self.panelLanguageSubscription = self.translate.onLangChange.subscribe(refresh); } catch (eSubscribe) { self.panelLanguageSubscription = true; }
+            refresh();
+        }
         public bindPanelEscapeKey() {
             var self: any = this;
             if (self.panelEscapeHandler || typeof document === "undefined") { return; }
@@ -8478,33 +8490,37 @@ scriptContent:
                 this.tick();
             }
             public quotaLabel(id) {
-                var language = String(this.global && this.global.language || '''').toLowerCase();
-                try { language = String(this.translate.currentLang || language).toLowerCase(); } catch (ignore) {}
-                var fr = language.indexOf(''fr'') === 0;
+                // the budget words in the four languages of the panel (Italian and Spanish showed English ones)
+                var language = this.agentUiLanguage ? this.agentUiLanguage() : ''en'';
+                var pick = (fr, en, it, es) => language === ''fr'' ? fr : (language === ''it'' ? it : (language === ''es'' ? es : en));
                 var labels = {
-                    personal:fr ? ''Personnel'' : ''Personal'', team:fr ? ''Équipe'' : ''Team'',
-                    activeAccess:fr ? ''Accès actif'' : ''Active access'', preserved:fr ? ''Conservé'' : ''Preserved'',
-                    ownTeamSpend:fr ? ''Votre consommation dans l’équipe'' : ''Your team usage'',
-                    noLimit:fr ? ''Sans plafond propre'' : ''No individual limit'',
-                    unavailableSpend:fr ? ''Consommation non disponible'' : ''Usage unavailable'',
-                    teamBudget:fr ? ''Budget partagé'' : ''Shared budget'',
-                    usage:fr ? ''Utilisation'' : ''Usage'', close:fr ? ''Fermer'' : ''Close'', used:fr ? ''d’utilisation'' : ''used'', credit:fr ? ''Crédit Tigo'' : ''Tigo credit'', resetIn:fr ? ''Réinitialisation dans'' : ''Resets in'', session:fr ? ''Limite de session'' : ''Session limit'', weekly:fr ? ''Hebdomadaire'' : ''Weekly'', expires:fr ? ''Expiration'' : ''Expires'', loading:fr ? ''Chargement du quota…'' : ''Loading quota…'',
-                    window:fr ? ''Fenêtre de quota'' : ''Quota window'',
-                    overage:fr ? ''Crédits supplémentaires'' : ''Extra usage'',
-                    days:fr ? ''j'' : ''d'',
-                    reset:fr ? ''Réinitialisation'' : ''Resets'',
-                    unknown:fr ? ''Quota du compte non communiqué'' : ''Account quota not reported'',
-                    error:fr ? ''Quota indisponible'' : ''Quota unavailable'',
-                    refresh:fr ? ''Actualiser le quota'' : ''Refresh quota'',
-                    extend:fr ? ''Demander une extension'' : ''Request an extension'',
-                    remaining:fr ? ''restants'' : ''remaining'', context:fr ? ''Contexte'' : ''Context'',
-                    compaction:fr ? ''Contexte avant compaction'' : ''Context before compaction'',
-                    sessionCost:fr ? ''Coût estimé des tokens de la session'' : ''Estimated session token cost'',
-                    costNote:fr ? ''Valeur indicative : les frais réels dépendent du forfait et de la facturation du fournisseur.'' : ''Indicative value: actual charges depend on your plan and provider billing.'',
-                    active:fr ? ''Actif'' : ''Active'', expired:fr ? ''Clé expirée'' : ''Expired key'',
-                    exhausted:fr ? ''Crédit épuisé'' : ''Credit exhausted'', blocked:fr ? ''Accès bloqué'' : ''Access blocked'',
-                    revoked:fr ? ''Clé révoquée'' : ''Revoked key'', rejected:fr ? ''Limite atteinte'' : ''Limit reached'',
-                    allowed_warning:fr ? ''Limite proche'' : ''Approaching limit'', allowed:fr ? ''Disponible'' : ''Available''
+                    personal:pick(''Personnel'', ''Personal'', ''Personale'', ''Personal''), team:pick(''Équipe'', ''Team'', ''Team'', ''Equipo''),
+                    activeAccess:pick(''Accès actif'', ''Active access'', ''Accesso attivo'', ''Acceso activo''), preserved:pick(''Conservé'', ''Preserved'', ''Conservato'', ''Conservado''),
+                    ownTeamSpend:pick(''Votre consommation dans l’équipe'', ''Your team usage'', ''Il tuo consumo nel team'', ''Tu consumo en el equipo''),
+                    noLimit:pick(''Sans plafond propre'', ''No individual limit'', ''Nessun limite proprio'', ''Sin límite propio''),
+                    unavailableSpend:pick(''Consommation non disponible'', ''Usage unavailable'', ''Consumo non disponibile'', ''Consumo no disponible''),
+                    teamBudget:pick(''Budget partagé'', ''Shared budget'', ''Budget condiviso'', ''Presupuesto compartido''),
+                    usage:pick(''Utilisation'', ''Usage'', ''Utilizzo'', ''Uso''), close:pick(''Fermer'', ''Close'', ''Chiudi'', ''Cerrar''), used:pick(''d’utilisation'', ''used'', ''utilizzato'', ''usado''), credit:pick(''Crédit Tigo'', ''Tigo credit'', ''Credito Tigo'', ''Crédito Tigo''), resetIn:pick(''Réinitialisation dans'', ''Resets in'', ''Azzeramento tra'', ''Se restablece en''), session:pick(''Limite de session'', ''Session limit'', ''Limite di sessione'', ''Límite de sesión''), weekly:pick(''Hebdomadaire'', ''Weekly'', ''Settimanale'', ''Semanal''), expires:pick(''Expiration'', ''Expires'', ''Scadenza'', ''Caducidad''), loading:pick(''Chargement du quota…'', ''Loading quota…'', ''Caricamento della quota…'', ''Cargando la cuota…''),
+                    window:pick(''Fenêtre de quota'', ''Quota window'', ''Finestra di quota'', ''Ventana de cuota''),
+                    overage:pick(''Crédits supplémentaires'', ''Extra usage'', ''Crediti aggiuntivi'', ''Créditos adicionales''),
+                    days:pick(''j'', ''d'', ''g'', ''d''),
+                    reset:pick(''Réinitialisation'', ''Resets'', ''Azzeramento'', ''Restablecimiento''),
+                    unknown:pick(''Quota du compte non communiqué'', ''Account quota not reported'', ''Quota dell’account non comunicata'', ''Cuota de la cuenta no comunicada''),
+                    error:pick(''Quota indisponible'', ''Quota unavailable'', ''Quota non disponibile'', ''Cuota no disponible''),
+                    refresh:pick(''Actualiser le quota'', ''Refresh quota'', ''Aggiorna la quota'', ''Actualizar la cuota''),
+                    extend:pick(''Demander une extension'', ''Request an extension'', ''Chiedi un’estensione'', ''Solicitar una ampliación''),
+                    remaining:pick(''restants'', ''remaining'', ''rimanenti'', ''restantes''), context:pick(''Contexte'', ''Context'', ''Contesto'', ''Contexto''),
+                    compaction:pick(''Contexte avant compaction'', ''Context before compaction'', ''Contesto prima della compattazione'', ''Contexto antes de la compactación''),
+                    sessionCost:pick(''Coût estimé des tokens de la session'', ''Estimated session token cost'', ''Costo stimato dei token della sessione'', ''Coste estimado de los tokens de la sesión''),
+                    costNote:pick(''Valeur indicative : les frais réels dépendent du forfait et de la facturation du fournisseur.'', ''Indicative value: actual charges depend on your plan and provider billing.'', ''Valore indicativo: le spese reali dipendono dal piano e dalla fatturazione del fornitore.'', ''Valor indicativo: los cargos reales dependen del plan y de la facturación del proveedor.''),
+                    active:pick(''Actif'', ''Active'', ''Attivo'', ''Activo''), expired:pick(''Clé expirée'', ''Expired key'', ''Chiave scaduta'', ''Clave caducada''),
+                    exhausted:pick(''Crédit épuisé'', ''Credit exhausted'', ''Credito esaurito'', ''Crédito agotado''), blocked:pick(''Accès bloqué'', ''Access blocked'', ''Accesso bloccato'', ''Acceso bloqueado''),
+                    revoked:pick(''Clé révoquée'', ''Revoked key'', ''Chiave revocata'', ''Clave revocada''), rejected:pick(''Limite atteinte'', ''Limit reached'', ''Limite raggiunto'', ''Límite alcanzado''),
+                    allowed_warning:pick(''Limite proche'', ''Approaching limit'', ''Limite vicino'', ''Límite cercano''), allowed:pick(''Disponible'', ''Available'', ''Disponibile'', ''Disponible''),
+                    account:pick(''Compte'', ''Account'', ''Account'', ''Cuenta''),
+                    budget:pick(''Budget'', ''Budget'', ''Budget'', ''Presupuesto''),
+                    feedback:pick(''Retours'', ''Feedback'', ''Segnalazioni'', ''Comentarios''),
+                    accountHint:pick(''La consommation de l’agent choisi, et ce que Tigo partage avec Convertigo.'', ''Usage of the chosen agent, and what Tigo shares with Convertigo.'', ''Il consumo dell’agente scelto e ciò che Tigo condivide con Convertigo.'', ''El consumo del agente elegido y lo que Tigo comparte con Convertigo.'')
                 };
                 return labels[id] || id;
             }
@@ -8654,12 +8670,59 @@ scriptContent:
                 this.agentHostReceiveFromJavaWrapped = true;
             }
         
+            public setPanelLanguage(value) {
+                // The language chosen in the panel: its texts, its language file and, after a reload, the same choice. The
+                // page''s translation service comes from TranslateModule.forChild() and has no loader of its own (use() never
+                // fetched fr.json, only the texts of the page script changed): the file is read here and handed to it.
+                var selected = ("" + (value || "en")).trim().toLowerCase().substring(0, 2);
+                if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
+                if (!this.global) { this.global = {}; }
+                this.global.currentLanguage = function() { return selected; };
+                this.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
+                this.global.language = selected;
+                try { document.documentElement.setAttribute("lang", selected); } catch (eDom) {}
+                try {
+                    window.localStorage.setItem("c8o-lang", selected);
+                    window.localStorage.setItem("lang", selected);
+                    window.localStorage.setItem("lib_ConvertigoAssistant.PanelLanguage", selected);
+                } catch (eStore) {}
+                var done = () => {
+                    try { if (this.translate && this.translate.use) { this.translate.use(selected); } } catch (eUse) {}
+                    try { if (this.refreshFooterLocale) { this.refreshFooterLocale(); } } catch (eFooter) {}
+                    try { window.dispatchEvent(new CustomEvent("lib_ConvertigoAssistant.languageChanged", { detail: { language: selected } })); } catch (eEvent) {}
+                    try { this.tick(); } catch (eTick) {}
+                };
+                var known: any = null;
+                try { known = this.translate && this.translate.translations ? this.translate.translations[selected] : null; } catch (eKnown) {}
+                if (known && Object.keys(known).length > 0) { done(); return; }
+                try {
+                    fetch(new URL("assets/i18n/" + selected + ".json", document.baseURI).toString(), { credentials: "same-origin" })
+                        .then(response => response.ok ? response.json() : null)
+                        .then(json => {
+                            try { if (json && this.translate && this.translate.setTranslation) { this.translate.setTranslation(selected, json, true); } } catch (eSet) {}
+                            done();
+                        })
+                        .catch(() => done());
+                } catch (eFetch) { done(); }
+            }
+            public getAccountTabStatus() {
+                // The account tab says the share of the budget used and the feedback mode, as the other tabs say their state.
+                var parts = [];
+                try {
+                    var view = this.getAgentQuotaView();
+                    if (view && view.percentText) { parts.push(this.quotaLabel("budget") + " " + view.percentText); }
+                } catch (eView) {}
+                try {
+                    if (this.feedbackSettingVisible && this.feedbackSettingVisible()) { parts.push(this.quotaLabel("feedback") + " " + this.agentFeedbackText(this.feedbackSettingMode())); }
+                } catch (eFeedback) {}
+                return parts.join(" · ");
+            }
             public tigoText(key: string) {
                 const fr = {
                     proposalTitle:''MCP proposé par Tigo — à vérifier'', proposalHint:''Vérifiez la commande ou l’adresse, les arguments et les références aux secrets avant d’ajouter ce MCP. Il peut lancer du code ou accéder au réseau. L’ajout ne l’active pas pour la conversation.'', proposalAdd:''Ajouter ce MCP'', proposalReject:''Refuser'', proposalAdded:''Connexion ajoutée. Activez-la séparément pour la conversation.'', proposalRejected:''Proposition refusée.'', proposal_expired_or_changed:''La proposition a expiré ou changé. Demandez à Tigo de la préparer à nouveau.'', human_review_required:''Cette proposition doit être validée depuis la bibliothèque par l’utilisateur.'',
                     prompts:''Prompts'', skills:''Compétences'', mcp:''Connexions MCP'', agent:''Agent et modèle'', runtime:''Avancé'',
                     search:''Rechercher dans la bibliothèque'', allSources:''Toutes les provenances'', builtin:''Livré par Convertigo'', workspace:''Workspace personnel'', project:''Projet partagé'',
-                    refresh:''Recharger la bibliothèque'', create:''Nouveau'', edit:''Éditer'', view:''Consulter'', duplicate:''Dupliquer'', use:''Insérer dans le brouillon'', favorite:''Épingler sous la saisie'', unfavorite:''Retirer de la saisie'', up:''Monter le favori'', down:''Descendre le favori'', refreshModels:''Actualiser les modèles'',
+                    refresh:''Recharger la bibliothèque'', create:''Nouveau'', edit:''Éditer'', view:''Consulter'', duplicate:''Dupliquer'', use:''Insérer dans le brouillon'', favorite:''Épingler sous la saisie'', unfavorite:''Retirer de la saisie'', up:''Monter'', down:''Descendre'', refreshModels:''Actualiser les modèles'',
                     enable:''Activer pour cette conversation'', disable:''Désactiver pour cette conversation'', enabled:''Activé'', empty:''Aucune ressource dans cette catégorie.'', loading:''Chargement de la bibliothèque…'',
                     skillHint:''Vos skills personnels et ceux du projet de la conversation (dossier .tigo/skills) sont actifs par défaut ; l’éclair règle ce défaut pour vos conversations, la coche les active ou désactive dans la conversation. Ils sont fournis à l’agent au prochain envoi. Les désactiver n’efface pas les instructions déjà présentes dans l’historique.'', autoSkill:''actif par défaut'', makeDefault:''Activer par défaut dans mes conversations'', removeDefault:''Ne plus activer par défaut'',
                     mcpHint:''Une connexion s’active explicitement pour cette conversation, au prochain envoi. Tigo peut redémarrer le harnais pour l’appliquer. Les secrets restent personnels.'',
@@ -8677,12 +8740,28 @@ scriptContent:
                 };
                 const en = {
                     proposalTitle:''MCP proposed by Tigo — review required'', proposalHint:''Review the command or URL, arguments and secret references before adding this MCP. It may run code or access the network. Adding it does not enable it for the conversation.'', proposalAdd:''Add this MCP'', proposalReject:''Reject'', proposalAdded:''Connection added. Enable it separately for the conversation.'', proposalRejected:''Proposal rejected.'', proposal_expired_or_changed:''The proposal expired or changed. Ask Tigo to prepare it again.'', human_review_required:''The user must review this proposal from the library.'',
-                    prompts:''Prompts'', skills:''Skills'', mcp:''MCP connections'', agent:''Agent and model'', runtime:''Advanced'', search:''Search the library'', allSources:''All sources'', builtin:''Built into Tigo'', workspace:''Personal workspace'', project:''Shared project'', refresh:''Reload library'', create:''New'', edit:''Edit'', view:''View'', duplicate:''Duplicate'', use:''Insert into draft'', favorite:''Pin under the input bar'', unfavorite:''Unpin'', up:''Move favorite up'', down:''Move favorite down'', refreshModels:''Refresh models'', enable:''Enable for this conversation'', disable:''Disable for this conversation'', enabled:''Enabled'', empty:''No resources in this category.'', loading:''Loading the library…'',
+                    prompts:''Prompts'', skills:''Skills'', mcp:''MCP connections'', agent:''Agent and model'', runtime:''Advanced'', search:''Search the library'', allSources:''All sources'', builtin:''Built into Tigo'', workspace:''Personal workspace'', project:''Shared project'', refresh:''Reload library'', create:''New'', edit:''Edit'', view:''View'', duplicate:''Duplicate'', use:''Insert into draft'', favorite:''Pin under the input bar'', unfavorite:''Unpin'', up:''Move up'', down:''Move down'', refreshModels:''Refresh models'', enable:''Enable for this conversation'', disable:''Disable for this conversation'', enabled:''Enabled'', empty:''No resources in this category.'', loading:''Loading the library…'',
                     skillHint:''Your personal skills and those of the conversation’s project (its .tigo/skills folder) are on by default; the lightning sets this default for your conversations, the check turns a skill on or off in this conversation. Enabled skills are supplied on the next message. Disabling them does not erase instructions already present in the conversation history.'', autoSkill:''on by default'', makeDefault:''Turn on by default in my conversations'', removeDefault:''Stop turning on by default'', mcpHint:''Explicitly enable a connection for this conversation. Changes apply on the next message and may restart the harness. Secrets remain personal.'', promptHint:''Insert a prompt into your draft without sending it; the star pins it under the input bar.'',
                     title:''Title'', description:''Description'', body:''Prompt / Markdown content'', language:''Language of this translation'', location:''Save in'', target:''Target project'', save:''Save'', cancel:''Cancel'', remove:''Remove'', removeConfirm:''Confirm removal'', readonly:''This resource ships with Tigo. Duplicate it to customize.'', draft:''The prompt was added to your draft.'', connection:''MCP connection (JSON, secret references only)'', dependencies:''Required MCP connections (optional)'', dependenciesHint:''Select the external tools this skill needs. Leave everything unchecked if none are required.'', editorHint:''Save this resource here before leaving the editor.'', skillBody:''Skill instructions (Markdown)'', promptBody:''Prompt text'', skillTemplate:''Describe this skill'', skillMetadataHint:''The SKILL.md technical name and description are generated automatically. Enter only the instructions below.'', saving:''Saving…'', secretName:''Secret name (e.g. COMPANY_API_KEY)'', secretValue:''Private value'', secretSave:''Save personal secret'', secrets:''Available secrets: '', none:''none'', allPrompts:''All prompts…'',
                     failed:''Unable to load the library. You can retry.'', revision_conflict:''The resource changed since you opened it. Refresh and reopen it before saving.'', invalid_id:''Use lowercase letters, numbers and hyphens for the identifier.'', authentication_required:''Reconnect your Studio session to access the library.'', conversation_busy:''Wait until the current turn finishes before changing active resources.'', skill_frontmatter_required:''A skill must start with SKILL.md frontmatter containing name and description.'', default_translation_required:''The default language translation must retain a title.'', mcp_secret_missing:''A connection requires a missing personal secret.'', skill_mcp_dependency_missing:''Enable the MCP connections required by the selected skills.'', mcp_activation_admin_required:''An administrator must enable MCP connections.'', invalid_connection:''Check the MCP connection declaration.'', invalid_object:''The declaration must be a valid JSON object.'', title_required:''A title is required.'', invalid_language:''Use a language code such as fr or en.'', selected:''Resources will apply on the next message.'', saved:''Resource saved.'', invalid_support_path:''Support files must stay under references, scripts or assets.'', editor:''Resource editor'', missingSelections:''Some active resources are unavailable. Remove them from this conversation to continue.'', clearMissing:''Remove unavailable selections'', resource_missing:''The resource was removed. Refresh the library.'', catalogWarning:''Some resources could not be read. Correct their format, then refresh.'', csrf_invalid:''The session was renewed. Refresh the library, then retry.'', origin_forbidden:''This request origin is not allowed.'', review:''Re-enable changed connection'', mcp_changed_requires_review:''An MCP connection changed. Review its declaration and re-enable it before continuing.'', secret_admin_required:''An administrator must manage MCP secrets.'', mcp_https_or_loopback_required:''Use HTTPS or a local HTTP address.'', mcp_url_credentials_forbidden:''Store credentials as personal secrets, never in the URL.'', invalid_header_prefix:''Header prefixes must be empty, Bearer or Basic.'', mcp_arguments_credentials_forbidden:''Pass credentials through environment variables, never command arguments.''
                 };
-                return ((String(this.translate?.currentLang || ''en'').toLowerCase().startsWith(''fr'') ? fr : en) as any)[key] || en[key] || this.tigoText(''failed'');
+                const it = {
+                    proposalTitle:''MCP proposto da Tigo — da verificare'', proposalHint:''Verifica il comando o l’indirizzo, gli argomenti e i riferimenti ai segreti prima di aggiungere questo MCP. Può eseguire codice o accedere alla rete. Aggiungerlo non lo attiva per la conversazione.'', proposalAdd:''Aggiungi questo MCP'', proposalReject:''Rifiuta'', proposalAdded:''Connessione aggiunta. Attivala separatamente per la conversazione.'', proposalRejected:''Proposta rifiutata.'', proposal_expired_or_changed:''La proposta è scaduta o è cambiata. Chiedi a Tigo di prepararla di nuovo.'', human_review_required:''L’utente deve convalidare questa proposta dalla libreria.'',
+                    prompts:''Prompt'', skills:''Competenze'', mcp:''Connessioni MCP'', agent:''Agente e modello'', runtime:''Avanzate'', search:''Cerca nella libreria'', allSources:''Tutte le provenienze'', builtin:''Fornito da Convertigo'', workspace:''Workspace personale'', project:''Progetto condiviso'', refresh:''Ricarica la libreria'', create:''Nuovo'', edit:''Modifica'', view:''Consulta'', duplicate:''Duplica'', use:''Inserisci nella bozza'', favorite:''Fissa sotto il campo di input'', unfavorite:''Rimuovi dal campo di input'', up:''Sposta su'', down:''Sposta giù'', refreshModels:''Aggiorna i modelli'', enable:''Attiva per questa conversazione'', disable:''Disattiva per questa conversazione'', enabled:''Attivo'', empty:''Nessuna risorsa in questa categoria.'', loading:''Caricamento della libreria…'',
+                    skillHint:''Le tue competenze personali e quelle del progetto della conversazione (cartella .tigo/skills) sono attive per impostazione predefinita; il fulmine regola questa impostazione per le tue conversazioni, la spunta le attiva o disattiva nella conversazione. Vengono fornite all’agente al prossimo invio. Disattivarle non cancella le istruzioni già presenti nella cronologia.'', autoSkill:''attiva per impostazione predefinita'', makeDefault:''Attiva per impostazione predefinita nelle mie conversazioni'', removeDefault:''Non attivare più per impostazione predefinita'', mcpHint:''Una connessione si attiva esplicitamente per questa conversazione, al prossimo invio. Tigo può riavviare l’harness per applicarla. I segreti restano personali.'', promptHint:''Inserisci un prompt nella bozza senza inviarlo; la stella lo fissa sotto il campo di input.'',
+                    title:''Titolo'', description:''Descrizione'', body:''Prompt / contenuto Markdown'', language:''Lingua di questa traduzione'', location:''Salva in'', target:''Progetto di destinazione'', save:''Salva'', cancel:''Annulla'', remove:''Rimuovi'', removeConfirm:''Conferma la rimozione'', readonly:''Questa risorsa è fornita con Tigo. Duplicala per personalizzarla.'', draft:''Il prompt è stato aggiunto alla bozza.'', connection:''Connessione MCP (JSON, solo riferimenti ai segreti)'', dependencies:''Connessioni MCP necessarie (facoltativo)'', dependenciesHint:''Seleziona gli strumenti esterni di cui questa competenza ha bisogno. Lascia tutto deselezionato se non ne servono.'', editorHint:''Salva qui questa risorsa prima di lasciare l’editor.'', skillBody:''Istruzioni della competenza (Markdown)'', promptBody:''Testo del prompt'', skillTemplate:''Descrivi questa competenza'', skillMetadataHint:''Il nome tecnico e la descrizione di SKILL.md sono generati automaticamente. Inserisci solo le istruzioni qui sotto.'', saving:''Salvataggio…'', secretName:''Nome del segreto (es. COMPANY_API_KEY)'', secretValue:''Valore privato'', secretSave:''Salva il segreto personale'', secrets:''Segreti disponibili: '', none:''nessuno'', allPrompts:''Tutti i prompt…'',
+                    failed:''Impossibile caricare la libreria. Puoi riprovare.'', revision_conflict:''La risorsa è cambiata da quando l’hai aperta. Aggiorna e riaprila prima di salvare.'', invalid_id:''Usa lettere minuscole, numeri e trattini per l’identificativo.'', authentication_required:''Riconnetti la sessione dello Studio per accedere alla libreria.'', conversation_busy:''Attendi la fine del turno in corso prima di cambiare le risorse attive.'', skill_frontmatter_required:''Una competenza deve iniziare con un frontmatter SKILL.md con name e description.'', default_translation_required:''La traduzione nella lingua predefinita deve mantenere un titolo.'', mcp_secret_missing:''Una connessione richiede un segreto personale mancante.'', skill_mcp_dependency_missing:''Attiva le connessioni MCP richieste dalle competenze selezionate.'', mcp_activation_admin_required:''Un amministratore deve attivare le connessioni MCP.'', invalid_connection:''Controlla la dichiarazione della connessione MCP.'', invalid_object:''La dichiarazione deve essere un oggetto JSON valido.'', title_required:''Il titolo è obbligatorio.'', invalid_language:''Usa un codice lingua come fr o en.'', selected:''Le risorse si applicheranno al prossimo invio.'', saved:''Risorsa salvata.'', invalid_support_path:''I file di supporto devono restare in references, scripts o assets.'', editor:''Editor della risorsa'', missingSelections:''Alcune risorse attive non sono disponibili. Rimuovile da questa conversazione per continuare.'', clearMissing:''Rimuovi le selezioni non disponibili'', resource_missing:''La risorsa è stata rimossa. Aggiorna la libreria.'', catalogWarning:''Alcune risorse non sono leggibili. Correggine il formato, poi aggiorna.'', csrf_invalid:''La sessione è stata rinnovata. Aggiorna la libreria, poi riprova.'', origin_forbidden:''L’origine di questa richiesta non è consentita.'', review:''Riattiva la connessione modificata'', mcp_changed_requires_review:''Una connessione MCP è cambiata. Controllane la dichiarazione e riattivala prima di continuare.'', secret_admin_required:''Un amministratore deve gestire i segreti MCP.'', mcp_https_or_loopback_required:''Usa HTTPS o un indirizzo HTTP locale.'', mcp_url_credentials_forbidden:''Salva le credenziali come segreti personali, mai nell’URL.'', invalid_header_prefix:''I prefissi di intestazione devono essere vuoti, Bearer o Basic.'', mcp_arguments_credentials_forbidden:''Passa le credenziali tramite variabili d’ambiente, mai negli argomenti del comando.''
+                };
+                const es = {
+                    proposalTitle:''MCP propuesto por Tigo — por revisar'', proposalHint:''Revisa el comando o la dirección, los argumentos y las referencias a secretos antes de añadir este MCP. Puede ejecutar código o acceder a la red. Añadirlo no lo activa para la conversación.'', proposalAdd:''Añadir este MCP'', proposalReject:''Rechazar'', proposalAdded:''Conexión añadida. Actívala por separado para la conversación.'', proposalRejected:''Propuesta rechazada.'', proposal_expired_or_changed:''La propuesta caducó o cambió. Pide a Tigo que la prepare de nuevo.'', human_review_required:''El usuario debe validar esta propuesta desde la biblioteca.'',
+                    prompts:''Prompts'', skills:''Habilidades'', mcp:''Conexiones MCP'', agent:''Agente y modelo'', runtime:''Avanzado'', search:''Buscar en la biblioteca'', allSources:''Todos los orígenes'', builtin:''Incluido por Convertigo'', workspace:''Espacio de trabajo personal'', project:''Proyecto compartido'', refresh:''Recargar la biblioteca'', create:''Nuevo'', edit:''Editar'', view:''Consultar'', duplicate:''Duplicar'', use:''Insertar en el borrador'', favorite:''Fijar bajo el campo de entrada'', unfavorite:''Quitar del campo de entrada'', up:''Subir'', down:''Bajar'', refreshModels:''Actualizar los modelos'', enable:''Activar para esta conversación'', disable:''Desactivar para esta conversación'', enabled:''Activado'', empty:''Ningún recurso en esta categoría.'', loading:''Cargando la biblioteca…'',
+                    skillHint:''Tus habilidades personales y las del proyecto de la conversación (carpeta .tigo/skills) están activas por defecto; el rayo ajusta este valor para tus conversaciones, la casilla las activa o desactiva en la conversación. Se envían al agente en el próximo mensaje. Desactivarlas no borra las instrucciones ya presentes en el historial.'', autoSkill:''activa por defecto'', makeDefault:''Activar por defecto en mis conversaciones'', removeDefault:''Dejar de activar por defecto'', mcpHint:''Una conexión se activa explícitamente para esta conversación, en el próximo mensaje. Tigo puede reiniciar el arnés para aplicarla. Los secretos siguen siendo personales.'', promptHint:''Inserta un prompt en el borrador sin enviarlo; la estrella lo fija bajo el campo de entrada.'',
+                    title:''Título'', description:''Descripción'', body:''Prompt / contenido Markdown'', language:''Idioma de esta traducción'', location:''Guardar en'', target:''Proyecto de destino'', save:''Guardar'', cancel:''Cancelar'', remove:''Quitar'', removeConfirm:''Confirmar la eliminación'', readonly:''Este recurso viene con Tigo. Duplícalo para personalizarlo.'', draft:''El prompt se añadió al borrador.'', connection:''Conexión MCP (JSON, solo referencias a secretos)'', dependencies:''Conexiones MCP necesarias (opcional)'', dependenciesHint:''Selecciona las herramientas externas que necesita esta habilidad. Deja todo sin marcar si no necesita ninguna.'', editorHint:''Guarda aquí este recurso antes de salir del editor.'', skillBody:''Instrucciones de la habilidad (Markdown)'', promptBody:''Texto del prompt'', skillTemplate:''Describe esta habilidad'', skillMetadataHint:''El nombre técnico y la descripción de SKILL.md se generan automáticamente. Escribe solo las instrucciones de abajo.'', saving:''Guardando…'', secretName:''Nombre del secreto (p. ej. COMPANY_API_KEY)'', secretValue:''Valor privado'', secretSave:''Guardar el secreto personal'', secrets:''Secretos disponibles: '', none:''ninguno'', allPrompts:''Todos los prompts…'',
+                    failed:''No se puede cargar la biblioteca. Puedes reintentarlo.'', revision_conflict:''El recurso cambió desde que lo abriste. Actualiza y vuelve a abrirlo antes de guardar.'', invalid_id:''Usa minúsculas, números y guiones para el identificador.'', authentication_required:''Vuelve a conectar tu sesión del Studio para acceder a la biblioteca.'', conversation_busy:''Espera a que termine el turno en curso antes de cambiar los recursos activos.'', skill_frontmatter_required:''Una habilidad debe empezar con un frontmatter SKILL.md con name y description.'', default_translation_required:''La traducción del idioma por defecto debe conservar un título.'', mcp_secret_missing:''Una conexión requiere un secreto personal que falta.'', skill_mcp_dependency_missing:''Activa las conexiones MCP que requieren las habilidades seleccionadas.'', mcp_activation_admin_required:''Un administrador debe activar las conexiones MCP.'', invalid_connection:''Revisa la declaración de la conexión MCP.'', invalid_object:''La declaración debe ser un objeto JSON válido.'', title_required:''El título es obligatorio.'', invalid_language:''Usa un código de idioma como fr o en.'', selected:''Los recursos se aplicarán en el próximo mensaje.'', saved:''Recurso guardado.'', invalid_support_path:''Los archivos de apoyo deben quedarse en references, scripts o assets.'', editor:''Editor del recurso'', missingSelections:''Algunos recursos activos no están disponibles. Quítalos de esta conversación para continuar.'', clearMissing:''Quitar las selecciones no disponibles'', resource_missing:''El recurso se eliminó. Actualiza la biblioteca.'', catalogWarning:''Algunos recursos no se pudieron leer. Corrige su formato y actualiza.'', csrf_invalid:''La sesión se renovó. Actualiza la biblioteca y vuelve a intentarlo.'', origin_forbidden:''El origen de esta solicitud no está permitido.'', review:''Reactivar la conexión modificada'', mcp_changed_requires_review:''Una conexión MCP cambió. Revisa su declaración y reactívala antes de continuar.'', secret_admin_required:''Un administrador debe gestionar los secretos MCP.'', mcp_https_or_loopback_required:''Usa HTTPS o una dirección HTTP local.'', mcp_url_credentials_forbidden:''Guarda las credenciales como secretos personales, nunca en la URL.'', invalid_header_prefix:''Los prefijos de cabecera deben estar vacíos, ser Bearer o Basic.'', mcp_arguments_credentials_forbidden:''Pasa las credenciales mediante variables de entorno, nunca en los argumentos del comando.''
+                };
+                // the panel language, as its other texts (Italian and Spanish showed the English library)
+                const language = this.agentUiLanguage ? this.agentUiLanguage() : String(this.translate?.currentLang || ''en'').substring(0, 2).toLowerCase();
+                return ((language === ''fr'' ? fr : (language === ''it'' ? it : (language === ''es'' ? es : en))) as any)[key] || en[key] || this.tigoText(''failed'');
             }
             public requestTigoResources(force = false, operation: any = null) {
                 if (!this.isAgentBridgeMode?.()) { return; }
@@ -9734,16 +9813,7 @@ title: Tigo
                 - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                 - com.twinsoft.convertigo.beans.common.FormatedContent: 
                   →: |
-                    '		var selected = event && event.detail ? event.detail.value : null;
-                    		selected = "" + (selected || "en");
-                    		selected = selected.trim().toLowerCase();
-                    		if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
-                    		page.global.currentLanguage = function() { return selected; };
-                    		page.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
-                    		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e1) {}
-                    		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-lang", selected); } } catch (e2) {}
-                    		if (page.refreshFooterLocale) { page.refreshFooterLocale(); }
-                    		try { page.tick(); } catch (e3) {}
+                    '		page.setPanelLanguage(event && event.detail ? event.detail.value : null);
                     		resolve();
                     '
         ↓LangEN [ngx.components.UIDynamicElement-1774703000018]: 
@@ -11225,7 +11295,7 @@ title: Tigo
                 tagName: div
                 ↓SettingsTabs [ngx.components.UICustom-1793872628019]: 
                   comment: 'Settings sections as tabs (narrow) or a side list (wide). The active tab is the open accordion (local.ResourceAccordion); its headers are hidden by TigoSettingsTabsStyle. When the server sets Tigo for the No Code Studio (serverSettings.managed) the agent, runtime and MCP tabs are its administrators'': a user sees the server''s agent instead (managed), an administrator is told the settings apply to every user (admin).'
-                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{feedbackSettingVisible() ? '' · '' + (tab.lang === ''fr'' ? ''Retours'' : (tab.lang === ''it'' ? ''Segnalazioni'' : (tab.lang === ''es'' ? ''Comentarios'' : ''Feedback''))) + '' '' + agentFeedbackText(feedbackSettingMode()) : ''''}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{getNoCodeAgentNote()}}</p></ng-container>'
+                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{'' · '' + (tab.lang === ''fr'' ? ''Français'' : (tab.lang === ''it'' ? ''Italiano'' : (tab.lang === ''es'' ? ''Español'' : ''English'')))}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-account" [class.active]="tab.section === ''account''" [attr.aria-selected]="tab.section === ''account''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''account''}})"><ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{quotaLabel(''account'')}}</span><span class="tigo-settings-tab-status">{{getAccountTabStatus()}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{getNoCodeAgentNote()}}</p></ng-container>'
                 ↓SettingsWait [ngx.components.UICustom-1794870000001]: 
                   comment: 'What the settings page waits for (getSettingsWaitState): the check of the agent, a refresh of the model catalog, a save; a check that did not finish says so with Retry. Under the tabs, in every tab.'
                   htmlTemplate: '<div *ngIf="getSettingsWaitState() as wait" class="tigo-settings-wait" [class.is-error]="wait.error" [attr.role]="wait.error ? ''alert'' : ''status''" aria-live="polite" style="display: flex; align-items: center; gap: 8px; margin: 10px 18px 0; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; color: var(--ion-text-color, inherit)" [style.background]="wait.error ? ''color-mix(in srgb, var(--ion-color-danger, #c5000f) 10%, transparent)'' : ''color-mix(in srgb, var(--ion-color-primary, #2f6fed) 9%, transparent)''"><ion-spinner *ngIf="!wait.error" name="crescent" aria-hidden="true" style="width: 16px; height: 16px; flex: 0 0 auto; color: var(--ion-color-primary, #2f6fed)"></ion-spinner><span style="flex: 1 1 auto">{{wait.text}}</span><ion-button *ngIf="wait.retry" fill="clear" size="small" class="tigo-settings-wait-retry" (click)="retrySettingsCheck()">{{settingsWaitText(''retry'')}}</ion-button></div>'
@@ -12713,119 +12783,6 @@ title: Tigo
                                 - xmlizable: 
                                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                   - MobileSmartSourceType: 'script:(this.getAgentRevealMode && this.getAgentRevealMode()) ? this.t(''Agent_Enabled'', ''Activé'') : this.t(''Agent_Disabled'', ''Désactivé'')'
-                      ↓FeedbackSettings [ngx.components.UIDynamicElement-1792600000067]: 
-                        beanData: '{"ionBean":"DivTag"}'
-                        tagName: div
-                        ↓Class [ngx.components.UIAttribute-1792600000069]: 
-                          attrName: class
-                          attrValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-feedback-setting
-                        ↓Hidden [ngx.components.UIAttribute-1792600000071]: 
-                          attrName: '[hidden]'
-                          attrValue: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: script:!this.feedbackSettingVisible() || (this.local?.AgentSettings?.serverSettings?.managed === true && (this.local?.AgentSettings?.serverSettings?.feedbackPolicy || 'user') !== 'user')
-                        ↓FeedbackLabel [ngx.components.UIDynamicElement-1792600000073]: 
-                          beanData: '{"ionBean":"Paragraph"}'
-                          tagName: p
-                          ↓Class [ngx.components.UIAttribute-1792600000075]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-create-label
-                          ↓Text [ngx.components.UIText-1792600000077]: 
-                            textValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.agentFeedbackText('settingLabel')
-                        ↓FeedbackDescription [ngx.components.UIDynamicElement-1792600000079]: 
-                          beanData: '{"ionBean":"Paragraph"}'
-                          tagName: p
-                          ↓Class [ngx.components.UIAttribute-1792600000081]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-setting-description
-                          ↓Text [ngx.components.UIText-1792600000083]: 
-                            textValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.agentFeedbackText('settingText')
-                        ↓FeedbackChoices [ngx.components.UIDynamicElement-1792600000085]: 
-                          beanData: '{"ionBean":"DivTag"}'
-                          tagName: div
-                          ↓Class [ngx.components.UIAttribute-1792600000087]: 
-                            attrName: class
-                            attrValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: plain:agent-choice-row agent-feedback-control
-                          ↓FeedbackChoicesLoop [ngx.components.UIControlDirective-1792600000089]: 
-                            directiveIndexName: choiceIndex
-                            directiveItemName: choice
-                            directiveSource: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.feedbackSettingChoices()
-                            ↓FeedbackChoice [ngx.components.UIDynamicElement-1792600000091]: 
-                              beanData: |
-                                '{
-                                 "ionBean": "Button",
-                                 "IonFill": "plain:clear",
-                                 "IonSize": "plain:small"
-                                }'
-                              tagName: ion-button
-                              ↓Class [ngx.components.UIAttribute-1792600000093]: 
-                                attrName: class
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: 'script:''agent-choice-button'' + (this.feedbackSettingMode() === choice ? '' active'' : '''')'
-                              ↓Disabled [ngx.components.UIAttribute-1792600000095]: 
-                                attrName: '[disabled]'
-                                attrValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: script:this.feedbackSettingLocked()
-                              ↓Text [ngx.components.UIText-1792600000097]: 
-                                textValue: 
-                                  - xmlizable: 
-                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                    - MobileSmartSourceType: script:this.agentFeedbackText(choice)
-                              ↓Event [ngx.components.UIControlEvent-1792600000099]: 
-                                ↓ChooseMode [ngx.components.UICustomAction-1792600000101]: 
-                                  actionValue: 
-                                    - xmlizable: 
-                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
-                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
-                                        →: |
-                                          		page.setFeedbackSettingMode(props.stack.root.scope.choice);
-                                          		resolve();
-                        ↓FeedbackNoteIf [ngx.components.UIControlDirective-1792600000103]: 
-                          directiveName: If
-                          directiveSource: 
-                            - xmlizable: 
-                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: script:!!this.feedbackSettingNote()
-                          ↓FeedbackNote [ngx.components.UIDynamicElement-1792600000105]: 
-                            beanData: '{"ionBean":"Paragraph"}'
-                            tagName: p
-                            ↓Class [ngx.components.UIAttribute-1792600000107]: 
-                              attrName: class
-                              attrValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: plain:agent-setting-description agent-feedback-note
-                            ↓Text [ngx.components.UIText-1792600000109]: 
-                              textValue: 
-                                - xmlizable: 
-                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                  - MobileSmartSourceType: script:this.feedbackSettingNote()
                       ↓ConfirmSettings [ngx.components.UIDynamicElement-1793290000241]: 
                         beanData: '{"ionBean":"DivTag"}'
                         tagName: div
@@ -12998,16 +12955,7 @@ title: Tigo
                                     - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
                                     - com.twinsoft.convertigo.beans.common.FormatedContent: 
                                       →: |
-                                        '		var selected = event && event.detail ? event.detail.value : null;
-                                        		selected = "" + (selected || "en");
-                                        		selected = selected.trim().toLowerCase();
-                                        		if (["en", "fr", "it", "es"].indexOf(selected) < 0) { selected = "en"; }
-                                        		page.global.currentLanguage = function() { return selected; };
-                                        		page.global.getLanguageLabelKey = function() { return selected === "fr" ? "Lang_French" : (selected === "it" ? "Lang_Italian" : (selected === "es" ? "Lang_Spanish" : "Lang_English")); };
-                                        		try { if (page.translate && page.translate.use) { page.translate.use(selected); } } catch (e1) {}
-                                        		try { if (window && window.localStorage) { window.localStorage.setItem("c8o-lang", selected); } } catch (e2) {}
-                                        		if (page.refreshFooterLocale) { page.refreshFooterLocale(); }
-                                        		try { page.tick(); } catch (e3) {}
+                                        '		page.setPanelLanguage(event && event.detail ? event.detail.value : null);
                                         		resolve();
                                         '
                             ↓LangEN [ngx.components.UIDynamicElement-1795542458582]: 
@@ -13337,6 +13285,155 @@ title: Tigo
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:this.local?.AgentServerSettingsError ? ((this.global && this.global.currentLanguage ? (this.global.currentLanguage() + '''').substring(0, 2) : ''en'') === ''fr'' ? ''Non enregistré : '' : ((this.global && this.global.currentLanguage ? (this.global.currentLanguage() + '''').substring(0, 2) : ''en'') === ''it'' ? ''Non salvato: '' : ((this.global && this.global.currentLanguage ? (this.global.currentLanguage() + '''').substring(0, 2) : ''en'') === ''es'' ? ''No guardado: '' : ''Not saved: ''))) + this.local.AgentServerSettingsError : '''''
+                  ↓AccountCategory [ngx.components.UIDynamicElement-1795591343983]: 
+                    beanData: '{"ionBean":"Accordion","Value":"plain:account"}'
+                    comment: 'Account tab: the usage of the chosen agent (the Usage window of the input bar, getAgentQuotaView) and the feedback to Convertigo.'
+                    tagName: ion-accordion
+                    ↓Header [ngx.components.UIDynamicElement-1795591343985]: 
+                      beanData: '{"ionBean":"GenericItem"}'
+                      tagName: ion-item
+                      ↓Attr [ngx.components.UIAttribute-1795591343987]: 
+                        attrName: slot
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:header
+                      ↓Text [ngx.components.UIText-1795591343989]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.quotaLabel('account')
+                    ↓Body [ngx.components.UIDynamicElement-1795591343991]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: div
+                      ↓Attr [ngx.components.UIAttribute-1795591343993]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:tigo-accordion-body
+                      ↓Attr1 [ngx.components.UIAttribute-1795591343995]: 
+                        attrName: slot
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:content
+                      ↓AccountUsage [ngx.components.UICustom-1795591343997]: 
+                        comment: The usage of the chosen agent, as the Usage window of the input bar shows it, with Refresh and the extension request.
+                        htmlTemplate: <ng-container *ngIf="getAgentQuotaView() as q"><div class="agent-create-settings-block agent-setting-section tigo-account-usage"><p class="agent-create-label">{{q.title}} · {{q.provider}}</p><p class="tigo-account-note">{{quotaLabel('accountHint')}}</p><p *ngIf="q.summary" class="tigo-account-note">{{q.summary}}</p><div *ngFor="let row of q.rows" class="tigo-account-row"><div class="tigo-account-row-labels"><span>{{row.title}}</span><span>{{row.usage}}</span></div><div *ngIf="row.usedPercent != null" class="tigo-account-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="row.usedPercent" [attr.aria-label]="row.title"><span [style.width.%]="row.usedPercent" [style.background]="row.color"></span></div><p *ngIf="row.reset" class="tigo-account-note">{{row.reset}}</p></div><p *ngIf="q.expiry" class="tigo-account-note">{{q.expiry}}</p><p *ngIf="q.context" class="tigo-account-note">{{q.context}}</p><p *ngIf="q.cost" class="tigo-account-note">{{q.cost}} — {{q.costNote}}</p><div class="tigo-account-actions"><ion-button size="small" fill="outline" (click)="requestAgentQuota(true)">{{q.refreshLabel}}</ion-button><ion-button *ngIf="q.portalUrl" size="small" fill="clear" [href]="q.portalUrl" target="_blank" rel="noopener">{{q.extendLabel}}</ion-button></div></div></ng-container>
+                      ↓FeedbackSettings [ngx.components.UIDynamicElement-1792600000067]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: div
+                        ↓Class [ngx.components.UIAttribute-1792600000069]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-feedback-setting
+                        ↓Hidden [ngx.components.UIAttribute-1792600000071]: 
+                          attrName: '[hidden]'
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:!this.feedbackSettingVisible() || (this.local?.AgentSettings?.serverSettings?.managed === true && (this.local?.AgentSettings?.serverSettings?.feedbackPolicy || 'user') !== 'user')
+                        ↓FeedbackLabel [ngx.components.UIDynamicElement-1792600000073]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792600000075]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-create-label
+                          ↓Text [ngx.components.UIText-1792600000077]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.agentFeedbackText('settingLabel')
+                        ↓FeedbackDescription [ngx.components.UIDynamicElement-1792600000079]: 
+                          beanData: '{"ionBean":"Paragraph"}'
+                          tagName: p
+                          ↓Class [ngx.components.UIAttribute-1792600000081]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-setting-description
+                          ↓Text [ngx.components.UIText-1792600000083]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.agentFeedbackText('settingText')
+                        ↓FeedbackChoices [ngx.components.UIDynamicElement-1792600000085]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: div
+                          ↓Class [ngx.components.UIAttribute-1792600000087]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-choice-row agent-feedback-control
+                          ↓FeedbackChoicesLoop [ngx.components.UIControlDirective-1792600000089]: 
+                            directiveIndexName: choiceIndex
+                            directiveItemName: choice
+                            directiveSource: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:this.feedbackSettingChoices()
+                            ↓FeedbackChoice [ngx.components.UIDynamicElement-1792600000091]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "Button",
+                                 "IonFill": "plain:clear",
+                                 "IonSize": "plain:small"
+                                }'
+                              tagName: ion-button
+                              ↓Class [ngx.components.UIAttribute-1792600000093]: 
+                                attrName: class
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: 'script:''agent-choice-button'' + (this.feedbackSettingMode() === choice ? '' active'' : '''')'
+                              ↓Disabled [ngx.components.UIAttribute-1792600000095]: 
+                                attrName: '[disabled]'
+                                attrValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.feedbackSettingLocked()
+                              ↓Text [ngx.components.UIText-1792600000097]: 
+                                textValue: 
+                                  - xmlizable: 
+                                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                    - MobileSmartSourceType: script:this.agentFeedbackText(choice)
+                              ↓Event [ngx.components.UIControlEvent-1792600000099]: 
+                                ↓ChooseMode [ngx.components.UICustomAction-1792600000101]: 
+                                  actionValue: 
+                                    - xmlizable: 
+                                      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+                                      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+                                        →: |
+                                          		page.setFeedbackSettingMode(props.stack.root.scope.choice);
+                                          		resolve();
+                        ↓FeedbackNoteIf [ngx.components.UIControlDirective-1792600000103]: 
+                          directiveName: If
+                          directiveSource: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:!!this.feedbackSettingNote()
+                          ↓FeedbackNote [ngx.components.UIDynamicElement-1792600000105]: 
+                            beanData: '{"ionBean":"Paragraph"}'
+                            tagName: p
+                            ↓Class [ngx.components.UIAttribute-1792600000107]: 
+                              attrName: class
+                              attrValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: plain:agent-setting-description agent-feedback-note
+                            ↓Text [ngx.components.UIText-1792600000109]: 
+                              textValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:this.feedbackSettingNote()
                   ↓RuntimeCategory [ngx.components.UIDynamicElement-1792084635803]: 
                     beanData: '{"ionBean":"Accordion","Value":"plain:runtime"}'
                     tagName: ion-accordion
@@ -21388,7 +21485,8 @@ title: Tigo
                   try {
                       providerReady = selectedProvider && page.isAgentProviderReady ? page.isAgentProviderReady(selectedProvider) : false;
                   } catch (eReady) {}
-                  if (providerReady && confirmed) {
+                  // a ready agent opens on the conversation, chosen or not
+                  if (providerReady) {
                       if (page.local.AgentConfigExplicitOpen !== true) {
                           page.local.ShowAgentConfigPanel = false;
                           page.local.AgentConfigExplicitOpen = false;
@@ -21451,13 +21549,13 @@ title: Tigo
                           readyProvider = !!(page.hasReadyAgentProvider && page.hasReadyAgentProvider(currentProvider));
                       } catch (e2) {}
                       var hasConversation = clean(page.local.Conversation).length > 0 || page.local.ConversationStarted === true || page.local.AgentConversationResumed === true || page.local.IsProcessing === true;
-                      if (page.isAgentBridgeMode && page.isAgentBridgeMode() && !confirmed && !hasConversation) {
+                      if (page.isAgentBridgeMode && page.isAgentBridgeMode() && !confirmed && !readyProvider && !hasConversation) {
                           page.local.ShowConversationPanel = false;
                           page.local.AgentConfigExplicitOpen = false;
                           page.local.ShowAgentConfigPanel = true;
                           page.setEnableChat && page.setEnableChat();
                           page.tick();
-                      } else if (readyProvider && confirmed && page.local.ShowAgentConfigPanel === true && page.local.AgentConfigExplicitOpen !== true && !hasConversation) {
+                      } else if (readyProvider && page.local.ShowAgentConfigPanel === true && page.local.AgentConfigExplicitOpen !== true && !hasConversation) {
                           page.local.ShowAgentConfigPanel = false;
                           if (page.setAgentSettingsUrlState) { page.setAgentSettingsUrlState(false); }
                           page.setEnableChat && page.setEnableChat();
@@ -29433,5 +29531,55 @@ title: Tigo
             --border-color: #0e7490;
             --color: #ffffff;
             font-weight: 600;
+          }
+          '
+↓TigoLot4bStyle [ngx.components.UIStyle-1795591344557]: 
+  comment: Account tab of the settings (lot 4b).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Account tab: the usage of the chosen agent as the Usage window shows it, then the feedback setting. */
+          .tigo-account-usage {
+            display: grid;
+            gap: 8px;
+          }
+          .tigo-account-row {
+            display: grid;
+            gap: 4px;
+          }
+          .tigo-account-row-labels {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12.5px;
+            line-height: 1.35;
+          }
+          .tigo-account-row-labels span:last-child {
+            opacity: 0.8;
+            text-align: right;
+          }
+          .tigo-account-track {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--ion-color-step-150, rgba(127, 127, 127, 0.25));
+            overflow: hidden;
+          }
+          .tigo-account-track > span {
+            display: block;
+            height: 100%;
+            border-radius: 3px;
+          }
+          .tigo-account-note {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.4;
+            opacity: 0.75;
+          }
+          .tigo-account-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
           }
           '

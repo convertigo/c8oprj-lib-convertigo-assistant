@@ -363,6 +363,24 @@ rediscovering the same context.
   reads "Checking…" while the settings check runs (`is-checking`), never "Needs
   setup" before the check answers; choices read as chosen on light backgrounds.
   Cover with `node --test tests/assistant_panel_glossary.test.cjs`.
+- Panel language: the header and Preferences choices call `setPanelLanguage`,
+  which reads `assets/i18n/<lang>.json` itself and hands it to the page's
+  translation service (`TranslateModule.forChild()` gives the page a service
+  without a loader: `use()` alone never fetched the file), then switches. The
+  choice is kept in `lib_ConvertigoAssistant.PanelLanguage`, read by the app at
+  load after the URL language and before the Studio language. The quick
+  suggestions and the placeholder follow the language once its file is read
+  (`bindPanelLanguageRefresh`). The library (`tigoText`) and budget
+  (`quotaLabel`) texts exist in en, fr, it, es with the same keys.
+- A ready agent opens on the conversation, its choice confirmed or not: the
+  settings show by themselves only while the chosen agent cannot work yet
+  (host-context refresh, `PrepareAgentSettingsLocal`, `RequireExplicitAgentChoice`).
+- Settings tabs: Agent and model, Preferences (Reveal, confirm, interface; its
+  state says Reveal and the language), Account, Advanced, Library. Account shows
+  the usage of the chosen agent as the Usage window of the input bar does
+  (`getAgentQuotaView`, Refresh, extension request) and holds the feedback to
+  Convertigo; its state is `getAccountTabStatus()` (budget percent, feedback
+  mode). Cover with `node --test tests/assistant_panel_account_language.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.
