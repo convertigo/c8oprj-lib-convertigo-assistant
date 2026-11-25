@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const { ts, read, backendParts } = require('./helpers/assistant-source.cjs');
 
 const ENTRY_POINTS = ['createConversation', 'settings', 'setupAgent', 'sendMessage', 'readResponse',
-  'resumeConversation', 'deleteConversation', 'closeConversation', 'listConversations', 'renameConversation',
+  'resumeConversation', 'deleteConversation', 'closeConversation', 'listConversations', 'renameConversation', 'markConversation',
   'runHistory', 'reasoningText', 'storeAttachments', 'quota', 'hostRequestResult'];
 
 class FakeUri {

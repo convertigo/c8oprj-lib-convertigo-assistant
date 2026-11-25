@@ -1,0 +1,47 @@
+comment: Pin or archive a durable local agent conversation of the list.
+↓Run [steps.SimpleStep-1795592498443]: 
+  expression: |
+    'include("js/agent_bridge_client.js");
+    result = C8O.assistantAgentBridge.markConversation({
+      threadid: typeof threadid === "undefined" ? "" : threadid,
+      conversationId: typeof conversationId === "undefined" ? "" : conversationId,
+      pinned: typeof pinned === "undefined" ? "" : pinned,
+      archived: typeof archived === "undefined" ? "" : archived,
+      provider: typeof provider === "undefined" ? "" : provider,
+      workspaceRoot: typeof workspaceRoot === "undefined" ? "" : workspaceRoot,
+      userId: typeof userId === "undefined" ? "" : userId
+    });'
+↓result [steps.JsonToXmlStep-1795592498444]: 
+  jsonObject: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: JS
+        - →→: result
+  key: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.steps.SmartType
+      - SmartType: 
+        - ↑mode: PLAIN
+        - →→: result
+↓threadid [variables.RequestableVariable-1795592498445]: 
+  comment: Agent conversation id.
+  description: Agent conversation id.
+↓conversationId [variables.RequestableVariable-1795592498446]: 
+  comment: Alias for threadid.
+  description: Alias for threadid.
+↓pinned [variables.RequestableVariable-1795592498447]: 
+  comment: true to pin the conversation, false to unpin it, empty to keep it.
+  description: true to pin the conversation, false to unpin it, empty to keep it.
+↓archived [variables.RequestableVariable-1795592499110]: 
+  comment: true to archive the conversation, false to bring it back to the list, empty to keep it.
+  description: true to archive the conversation, false to bring it back to the list, empty to keep it.
+↓provider [variables.RequestableVariable-1795592498448]: 
+  comment: Agent provider. Defaults to all.
+  description: Agent provider. Defaults to all.
+↓workspaceRoot [variables.RequestableVariable-1795592498449]: 
+  comment: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+  description: Optional Convertigo user workspace root. Defaults to Engine.USER_WORKSPACE_PATH.
+↓userId [variables.RequestableVariable-1795592498450]: 
+  comment: Optional user id. Defaults to studio.
+  description: Optional user id. Defaults to studio.

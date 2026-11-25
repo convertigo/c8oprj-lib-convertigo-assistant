@@ -1020,12 +1020,12 @@ scriptContent:
                 var formId = String(local.NoCodeSelectedFormId || "");
                 var query = recent ? "" : String(local.FormsHistoryQuery || "").trim().toLocaleLowerCase();
                 list = list.filter(function(item) {
-                    if (!item || !item.conversationId) { return false; }
+                    if (!item || !item.conversationId || item.archived === true) { return false; }
                     var context = item.nocodeContext || {};
                     if (formId && (recent || local.FormsHistoryCurrentOnly === true) && String(context.formId || "") !== formId) { return false; }
                     var text = [item.title, context.formName, context.pageName, context.elementName].join(" ").toLocaleLowerCase();
                     return !query || text.indexOf(query) !== -1;
-                }).sort(function(a, b) { return Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0); });
+                }).sort(function(a, b) { return ((b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0)) || Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0); });
                 return recent ? list.slice(0, 3) : list;
             }
             public getFormsConversationMeta(conversation) {
@@ -6581,10 +6581,10 @@ scriptContent:
         		if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && ["search", "all", "project"].indexOf(key) >= 0) { return this.getFormsHistoryText(key === "all" ? "any" : (key === "project" ? "current" : "search")); }
         		// Texts of the conversation list of the Studio, in the four Assistant languages.
         		var texts: any = {
-        			fr: { search: "Rechercher par titre, projet ou modèle", all: "Toutes", project: "Projet {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} sur {total}", more: "Afficher {n} de plus", none: "Aucune conversation ne correspond à « {query} ».", today: "Aujourd''hui", yesterday: "Hier", running: "en cours", failed: "échec", cancelled: "annulée", rename: "Renommer", remove: "Supprimer", removeConfirm: "Confirmer la suppression" },
-        			en: { search: "Search by title, project or model", all: "All", project: "Project {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} of {total}", more: "Show {n} more", none: "No conversation matches “{query}”.", today: "Today", yesterday: "Yesterday", running: "running", failed: "failed", cancelled: "cancelled", rename: "Rename", remove: "Delete", removeConfirm: "Confirm delete" },
-        			it: { search: "Cerca per titolo, progetto o modello", all: "Tutte", project: "Progetto {name}", one: "1 conversazione", count: "{total} conversazioni", countSome: "{shown} su {total}", more: "Mostra altre {n}", none: "Nessuna conversazione corrisponde a «{query}».", today: "Oggi", yesterday: "Ieri", running: "in corso", failed: "errore", cancelled: "annullata", rename: "Rinomina", remove: "Elimina", removeConfirm: "Conferma eliminazione" },
-        			es: { search: "Buscar por título, proyecto o modelo", all: "Todas", project: "Proyecto {name}", one: "1 conversación", count: "{total} conversaciones", countSome: "{shown} de {total}", more: "Mostrar {n} más", none: "Ninguna conversación coincide con «{query}».", today: "Hoy", yesterday: "Ayer", running: "en curso", failed: "error", cancelled: "cancelada", rename: "Renombrar", remove: "Eliminar", removeConfirm: "Confirmar eliminación" }
+        			fr: { search: "Rechercher par titre, projet ou modèle", all: "Toutes", project: "Projet {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} sur {total}", more: "Afficher {n} de plus", none: "Aucune conversation ne correspond à « {query} ».", today: "Aujourd''hui", yesterday: "Hier", running: "en cours", failed: "échec", cancelled: "annulée", rename: "Renommer", remove: "Supprimer", removeConfirm: "Confirmer la suppression", pinned: "Épinglées", pin: "Épingler", unpin: "Désépingler", archive: "Archiver", unarchive: "Désarchiver", archivedFilter: "Archivées ({n})", recent: "Conversations" },
+        			en: { search: "Search by title, project or model", all: "All", project: "Project {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} of {total}", more: "Show {n} more", none: "No conversation matches “{query}”.", today: "Today", yesterday: "Yesterday", running: "running", failed: "failed", cancelled: "cancelled", rename: "Rename", remove: "Delete", removeConfirm: "Confirm delete", pinned: "Pinned", pin: "Pin", unpin: "Unpin", archive: "Archive", unarchive: "Unarchive", archivedFilter: "Archived ({n})", recent: "Conversations" },
+        			it: { search: "Cerca per titolo, progetto o modello", all: "Tutte", project: "Progetto {name}", one: "1 conversazione", count: "{total} conversazioni", countSome: "{shown} su {total}", more: "Mostra altre {n}", none: "Nessuna conversazione corrisponde a «{query}».", today: "Oggi", yesterday: "Ieri", running: "in corso", failed: "errore", cancelled: "annullata", rename: "Rinomina", remove: "Elimina", removeConfirm: "Conferma eliminazione", pinned: "Fissate", pin: "Fissa in alto", unpin: "Non fissare più", archive: "Archivia", unarchive: "Ripristina", archivedFilter: "Archiviate ({n})", recent: "Conversazioni" },
+        			es: { search: "Buscar por título, proyecto o modelo", all: "Todas", project: "Proyecto {name}", one: "1 conversación", count: "{total} conversaciones", countSome: "{shown} de {total}", more: "Mostrar {n} más", none: "Ninguna conversación coincide con «{query}».", today: "Hoy", yesterday: "Ayer", running: "en curso", failed: "error", cancelled: "cancelada", rename: "Renombrar", remove: "Eliminar", removeConfirm: "Confirmar eliminación", pinned: "Fijadas", pin: "Fijar arriba", unpin: "Dejar de fijar", archive: "Archivar", unarchive: "Desarchivar", archivedFilter: "Archivadas ({n})", recent: "Conversaciones" }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] || texts.en[key] || "";
@@ -6601,13 +6601,14 @@ scriptContent:
         		var query = ("" + ((this.local && this.local.HistoryQuery) || "")).trim().toLowerCase();
         		var project = this.local && this.local.HistoryProjectOnly === true ? this.historyCurrentProject() : "";
         		var limit = Number(this.local && this.local.HistoryLimit) || 30;
-        		var key = [list.length, list.length ? list[0].conversationId + ":" + list[0].updatedAt : "", query, project, limit, this.agentUiLanguage(), this.local && this.local.Conversation].join("|");
+        		var showArchived = !!(this.local && this.local.HistoryShowArchived === true);
+        		var key = [list.length, list.length ? list[0].conversationId + ":" + list[0].updatedAt : "", query, project, limit, this.agentUiLanguage(), this.local && this.local.Conversation, showArchived, this.local && this.local.HistoryMarksVersion].join("|");
         		if (self.historyCacheList === list && self.historyCacheKey === key) {
         			return self.historyCache;
         		}
         		var when = (c: any) => Number(c && (c.updatedAt || c.createdAt)) || 0;
         		var matches = list.filter((c: any) => {
-        			if (!c) {
+        			if (!c || (c.archived === true) !== showArchived) {
         				return false;
         			}
         			var projects = [c.primaryProject || "", (c.nocodeContext && c.nocodeContext.formId) || ""].concat(c.projectNames || []);
@@ -6619,12 +6620,12 @@ scriptContent:
         			}
         			var text = [c.title, c.lastAnswerPreview, projects.join(" "), this.getAgentProviderLabel ? this.getAgentProviderLabel(c.provider || "") : c.provider, c.model, c.nocodeContext ? [c.nocodeContext.formName, c.nocodeContext.pageName, c.nocodeContext.elementName].join(" ") : ""].join(" ").toLowerCase();
         			return text.indexOf(query) !== -1;
-        		}).sort((a: any, b: any) => when(b) - when(a));
+        		}).sort((a: any, b: any) => ((b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0)) || when(b) - when(a));
         		var shown = matches.slice(0, limit);
         		var days: any = {};
         		var lastDay = "";
         		for (var i = 0; i < shown.length; i++) {
-        			var day = this.historyDayLabel(when(shown[i]));
+        			var day = shown[i].pinned === true ? this.historyText("pinned") : this.historyDayLabel(when(shown[i]));
         			if (day !== lastDay) {
         				days[shown[i].conversationId] = day;
         				lastDay = day;
@@ -6662,6 +6663,48 @@ scriptContent:
         		} catch (e) {
         			return date.toDateString();
         		}
+        	}
+        	public markConversation(conversation, mark) {
+        		// Pins or archives a conversation of the list: at once in the list, then kept by AgentMarkConversation in the
+        		// conversation record; put back when the call fails.
+        		if (!conversation || !conversation.conversationId || (mark !== "pinned" && mark !== "archived")) { return; }
+        		if (!this.local) { this.local = {}; }
+        		var before = conversation[mark] === true;
+        		var apply = (value) => {
+        			conversation[mark] = value;
+        			this.local.HistoryMarksVersion = (Number(this.local.HistoryMarksVersion) || 0) + 1;
+        			this.tick();
+        		};
+        		apply(!before);
+        		var params: any = { threadid: conversation.conversationId, provider: conversation.provider || "", userId: this.getAgentContextUserId ? this.getAgentContextUserId() : "studio", __context: "byside" };
+        		params[mark] = before ? "false" : "true";
+        		try {
+        			this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentMarkConversation", params).async().then((response: any) => {
+        				var result = response && response.result ? response.result : null;
+        				if (!result || result.ok !== true) { apply(before); }
+        			}).catch(() => apply(before));
+        		} catch (e) { apply(before); }
+        	}
+        	public historyArchivedCount() {
+        		var list = (this.local && this.local.AgentConversations) || [];
+        		var count = 0;
+        		for (var i = 0; i < list.length; i++) { if (list[i] && list[i].archived === true) { count++; } }
+        		return count;
+        	}
+        	public toggleHistoryArchived() {
+        		if (!this.local) { this.local = {}; }
+        		this.local.HistoryShowArchived = this.local.HistoryShowArchived !== true;
+        		this.tick();
+        	}
+        	public isWideListShown() {
+        		// On a wide panel (Studio view maximized, No Code page) the list stays beside the conversation and the home screen;
+        		// the style shows it from 1100 px only.
+        		return !!(this.isAgentBridgeMode && this.isAgentBridgeMode() && this.isPanelScreen && (this.isPanelScreen("conversation") || this.isPanelScreen("home"))
+        			&& ((this.local && this.local.AgentConversations) || []).length > 0);
+        	}
+        	public resumeFromWideList(conversation) {
+        		if (!conversation || !conversation.conversationId || (this.local && conversation.conversationId === this.local.Conversation)) { return; }
+        		this.events.publish("AgentResumeConversation", { scope: { conversation: conversation } });
         	}
         	public historyDay(conversation) {
         		var self: any = this;
@@ -16861,6 +16904,9 @@ title: Tigo
                                "Property": "plain:HistoryProjectOnly",
                                "Value": "script:true"
                               }'
+                    ↓ArchivedFilter [ngx.components.UICustom-1795592603418]: 
+                      comment: The archived conversations, shown instead of the others while pressed (toggleHistoryArchived).
+                      htmlTemplate: <ion-button *ngIf="historyArchivedCount() > 0 || local?.HistoryShowArchived === true" fill="clear" size="small" class="agent-history-filter tigo-history-archived" [attr.aria-pressed]="local?.HistoryShowArchived === true" (click)="toggleHistoryArchived()">{{historyText('archivedFilter').replace('{n}', '' + historyArchivedCount())}}</ion-button>
                     ↓Count [ngx.components.UIDynamicElement-1792416218403]: 
                       beanData: '{"ionBean":"DivTag"}'
                       tagName: span
@@ -17332,6 +17378,9 @@ title: Tigo
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.provider ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''codex'')'
+                    ↓MarkButtons [ngx.components.UICustom-1795592602644]: 
+                      comment: 'Pin (first in the list) and archive (out of the list until the Archived filter) a conversation: markConversation, kept by AgentMarkConversation.'
+                      htmlTemplate: '<ion-button fill="clear" size="small" class="agent-conversation-action tigo-mark-action" [class.is-on]="conversation?.pinned === true" [attr.aria-pressed]="conversation?.pinned === true" [attr.aria-label]="historyText(conversation?.pinned ? ''unpin'' : ''pin'')" [attr.title]="historyText(conversation?.pinned ? ''unpin'' : ''pin'')" (click)="markConversation(conversation, ''pinned'')"><ion-icon slot="icon-only" aria-hidden="true" [name]="conversation?.pinned ? ''pin'' : ''pin-outline''"></ion-icon></ion-button><ion-button fill="clear" size="small" class="agent-conversation-action tigo-mark-action" [class.is-on]="conversation?.archived === true" [attr.aria-pressed]="conversation?.archived === true" [attr.aria-label]="historyText(conversation?.archived ? ''unarchive'' : ''archive'')" [attr.title]="historyText(conversation?.archived ? ''unarchive'' : ''archive'')" (click)="markConversation(conversation, ''archived'')"><ion-icon slot="icon-only" aria-hidden="true" [name]="conversation?.archived ? ''archive'' : ''archive-outline''"></ion-icon></ion-button>'
               ↓HistoryMore [ngx.components.UIControlDirective-1792416224129]: 
                 directiveName: If
                 directiveSource: 
@@ -19914,6 +19963,9 @@ title: Tigo
            "IconSlot": "plain:icon-only"
           }'
         tagName: ion-icon
+  ↓WideList [ngx.components.UICustom-1795592604192]: 
+    comment: The list of conversations beside the conversation and the home screen on wide panels (isWideListShown; shown from 1100 px by TigoLot5Style).
+    htmlTemplate: '<aside *ngIf="isWideListShown()" slot="fixed" class="tigo-wide-list" [attr.aria-label]="historyText(''recent'')"><p class="agent-side-label tigo-wide-list-title">{{historyText(''recent'')}}</p><ng-container *ngFor="let c of getHistoryItems()"><p *ngIf="historyDay(c)" class="tigo-wide-list-day">{{historyDay(c)}}</p><button type="button" class="tigo-wide-list-row" [class.is-current]="c.conversationId === local?.Conversation" [attr.aria-current]="c.conversationId === local?.Conversation ? ''true'' : null" (click)="resumeFromWideList(c)"><span class="tigo-wide-list-name">{{c.title || (c.lastAnswerPreview ? c.lastAnswerPreview.substring(0, 80) : c.conversationId)}}</span><span class="tigo-wide-list-meta">{{isEmbeddedInC8Oforms() ? getFormsConversationMeta(c) : historyMeta(c)}}</span></button></ng-container></aside>'
   ↓FormsIntegrated [ngx.components.UIAttribute-1789119363778]: 
     attrName: '[class.forms-integrated]'
     attrValue: 
@@ -29689,5 +29741,89 @@ title: Tigo
           .tigo-feedback-banner-close {
             align-self: start;
             margin: -4px -6px 0 0;
+          }
+          '
+↓TigoLot5Style [ngx.components.UIStyle-1795592604950]: 
+  comment: Pin and archive in the list, the list beside the conversation on wide panels (lot 5).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Pin and archive in the conversation list. */
+          .agent-conversation-action.tigo-mark-action {
+            min-width: 34px;
+            width: 34px;
+          }
+          .agent-conversation-action.tigo-mark-action.is-on {
+            color: var(--ion-color-primary, #0891b2) !important;
+            --color: var(--ion-color-primary, #0891b2) !important;
+          }
+          
+          /* The list beside the conversation and the home screen on wide panels (Studio view maximized, No Code page). */
+          .tigo-wide-list {
+            display: none;
+          }
+          @media (min-width: 1100px) {
+            .tigo-wide-list {
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              left: 16px;
+              width: 264px;
+              padding: 16px 0;
+              overflow-y: auto;
+              scrollbar-width: thin;
+              z-index: 5;
+            }
+            .modern-content:has(.tigo-wide-list) .modern-center.agent-desktop-center {
+              padding-left: 296px;
+            }
+          }
+          .tigo-wide-list-title {
+            margin: 0 10px 6px;
+          }
+          .tigo-wide-list-day {
+            margin: 12px 10px 4px;
+            color: var(--modern-muted, #94a3b8);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+          }
+          .tigo-wide-list-row {
+            display: grid;
+            gap: 2px;
+            padding: 8px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--modern-text, inherit);
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+          }
+          .tigo-wide-list-row:hover {
+            background: color-mix(in srgb, var(--modern-muted, #94a3b8) 12%, transparent);
+          }
+          .tigo-wide-list-row.is-current {
+            background: color-mix(in srgb, var(--ion-color-primary, #0891b2) 14%, transparent);
+          }
+          .tigo-wide-list-name,
+          .tigo-wide-list-meta {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .tigo-wide-list-name {
+            font-size: 13px;
+            font-weight: 600;
+          }
+          .tigo-wide-list-meta {
+            color: var(--modern-muted, #94a3b8);
+            font-size: 11.5px;
           }
           '

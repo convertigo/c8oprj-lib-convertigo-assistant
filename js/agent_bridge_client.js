@@ -4885,7 +4885,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       agentHome: isResidentProvider(provider) ? "" : String(record.agentHome || record.vibeHome || ""),
       codexHome: provider === "codex" ? sanitizeCodexHome(record.codexHome) : "",
       claudeHome: provider === "claude" ? String(record.claudeHome || "") : "",
-      externalSessionId: String(record.externalSessionId || "")
+      externalSessionId: String(record.externalSessionId || ""),
+      pinned: record.pinned === true,
+      archived: record.archived === true
     };
   }
 
@@ -5073,7 +5075,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       plan: panelPlan(state, state.plan || null),
       usage: state.usage || null,
       commands: state.commands || [],
-      deleted: state.status === "deleted" || state.deleted === true
+      deleted: state.status === "deleted" || state.deleted === true,
+      // marks of the conversation list: pinned first, archived out of the list until shown (markConversation)
+      pinned: state.pinned === true,
+      archived: state.archived === true
     };
     writeJsonFile(new File(state.conversationFile), record);
   }
@@ -12151,6 +12156,76 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       title: title,
       conversation: publicConversation(record || readJsonFile(recordFile) || {}),
       conversations: publicConversations(listWorkspaceRoot, listUserKey, "", false, "all", listSkillProfile)
+    };
+  };
+
+  C8O.assistantAgentBridge.markConversation = function (options) {
+    // Pins or archives a conversation of the list (pinned: first; archived: out of the list until shown). A mark left
+    // empty keeps its value; the live state carries it, so the next record written from the state keeps it too.
+    var refused = bridgeCallerRefusal();
+    if (refused !== null) {
+      return refused;
+    }
+    options = withCallerUserId(options);
+    var threadid = normalizeConversationId(options.threadid || options.conversationId);
+    if (!threadid.length) {
+      return {
+        ok: false,
+        status: "not_found",
+        error: {
+          message: "conversationId is required"
+        }
+      };
+    }
+    var flag = function (value) {
+      var text = trim(value).toLowerCase();
+      return text === "true" || text === "1" || text === "yes" ? true : (text === "false" || text === "0" || text === "no" ? false : null);
+    };
+    var pinned = flag(options.pinned);
+    var archived = flag(options.archived);
+    var workspaceRoot = resolveWorkspaceRoot(options);
+    var userKey = normalizeUserKey(options.userId);
+    var provider = trim(options.provider).length ? normalizeProvider(options.provider) : "all";
+    var state = readState(threadid);
+    var recordFile = conversationRecordFileFor(workspaceRoot, userKey, threadid, provider);
+    var record = recordFile ? readJsonFile(recordFile) : null;
+    if (state !== null) {
+      state = ensureState(state);
+      if (pinned !== null) {
+        state.pinned = pinned;
+      }
+      if (archived !== null) {
+        state.archived = archived;
+      }
+      saveState(state);
+      writeConversationRecord(state);
+      recordFile = conversationRecordFileFor(state.workspaceRoot, state.userKey, threadid, state.provider);
+      record = recordFile ? readJsonFile(recordFile) : null;
+    } else if (record && record.deleted !== true) {
+      if (pinned !== null) {
+        record.pinned = pinned;
+      }
+      if (archived !== null) {
+        record.archived = archived;
+      }
+      writeJsonFile(recordFile, record);
+    } else {
+      return {
+        ok: false,
+        status: "not_found",
+        threadid: threadid,
+        error: {
+          message: "Conversation not found"
+        }
+      };
+    }
+    return {
+      ok: true,
+      status: "marked",
+      threadid: threadid,
+      pinned: !!(record && record.pinned === true),
+      archived: !!(record && record.archived === true),
+      conversation: publicConversation(record || readJsonFile(recordFile) || {})
     };
   };
 

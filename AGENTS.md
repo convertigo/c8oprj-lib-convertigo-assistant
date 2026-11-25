@@ -393,6 +393,17 @@ rediscovering the same context.
   library stays, as the way to close it. The composer library words
   (`resourceCaption`) exist in the four languages. Cover with
   `node --test tests/assistant_panel_delete_invite_menu.test.cjs`.
+- A conversation can be pinned (first in the list under "Pinned", and first in
+  the latest conversations of the home screens) or archived (out of the list and
+  of the home screens; the Archived (n) filter shows them instead of the others).
+  `markConversation` shows the mark at once and calls `AgentMarkConversation`
+  (`C8O.assistantAgentBridge.markConversation`), which keeps it in the live state
+  and the conversation record (`pinned`, `archived`, carried by the list); a
+  failed call puts it back. On a wide panel (from 1100 px: Studio view maximized,
+  No Code page) the list stays beside the home screen and the conversation
+  (`WideList`, `slot="fixed"` as the side column, `isWideListShown`,
+  `resumeFromWideList`). Cover with
+  `node --test tests/assistant_panel_wide_marks.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.
