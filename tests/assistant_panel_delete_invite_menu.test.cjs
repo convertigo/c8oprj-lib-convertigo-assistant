@@ -86,3 +86,23 @@ test('one + menu holds the files, the image and the library; next to it only the
     assert.ok(plain(captions).includes(words), words);
   }
 });
+
+test('the home screen is read from its top, the conversation from its end', () => {
+  const p = methods(['isPanelHomeShown', 'getPanelScreen', 'isPanelConversationOpen']);
+  p.isAgentBridgeMode = () => true;
+  p.isAgentSettingsPageShown = () => false;
+  p.hasConversationStarted = () => false;
+  p.local = {};
+  assert.equal(p.isPanelHomeShown(), true, 'home');
+  p.local = { Conversation: { id: 'a' } };
+  assert.equal(p.isPanelHomeShown(), false, 'conversation');
+  p.local = { ShowConversationPanel: true };
+  assert.equal(p.isPanelHomeShown(), false, 'list');
+  p.local = {};
+  p.isAgentBridgeMode = () => false;
+  assert.equal(p.isPanelHomeShown(), false, 'other assistants keep following their thread');
+  const scroll = plain(page.slice(page.indexOf('var stickToBottom = function()'), page.indexOf('scrollChatTop(delay')));
+  assert.match(scroll, /self\.local\.ShowAgentConfigPanel === true \|\| \(self\.isPanelHomeShown && self\.isPanelHomeShown\(\)\) \|\|/);
+  assert.match(scroll, /var home = !!\(self\.isPanelHomeShown && self\.isPanelHomeShown\(\)\);\n\s+if \(self\.local && home && self\.local\.PanelStickHome !== true\) \{\n\s+el\.scrollTop = 0;/, 'arriving home starts at its top');
+  assert.match(scroll, /var scrollOnce = function\(duration\) \{\n\s+try \{\n\s+if \(self\.isPanelHomeShown && self\.isPanelHomeShown\(\)\) \{\n\s+if \(self\.content && self\.content\.scrollToTop\) \{\n\s+self\.content\.scrollToTop\(0\);/);
+});

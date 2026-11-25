@@ -3869,6 +3869,10 @@ scriptContent:
         public isPanelScreen(name) {
             return this.getPanelScreen() === name;
         }
+        // The agent home screen is read from its top: its title, the recent conversations, the feedback banner.
+        public isPanelHomeShown() {
+            return !!(this.isAgentBridgeMode && this.isAgentBridgeMode()) && this.getPanelScreen() === "home";
+        }
         public isPanelConversationOpen() {
             var local: any = this.local || {};
             return !!((local.Conversation && local.NewConversationMode !== true) || (this.hasConversationStarted && this.hasConversationStarted()));
@@ -4815,9 +4819,19 @@ scriptContent:
         				self[''_chatResizeObserver''].disconnect();
         			}
         			var stickToBottom = function() {
-        				// The conversation list grows the start screen (a page of rows, a search), and the settings open above the
-        				// conversation (the gear, the "…" after the prompt chips): both are read from their top, not the thread bottom.
-        				if (!self.local || self.local.AutoScrollEnabled === false || self.local.ShowConversationPanel === true || self.local.ShowAgentConfigPanel === true || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
+        				// Arriving on the home screen (a new conversation, the last one deleted) starts at its top; scrolling it
+        				// afterwards is the user''s.
+        				var home = !!(self.isPanelHomeShown && self.isPanelHomeShown());
+        				if (self.local && home && self.local.PanelStickHome !== true) {
+        					el.scrollTop = 0;
+        				}
+        				if (self.local) {
+        					self.local.PanelStickHome = home;
+        				}
+        				// The conversation list grows the start screen (a page of rows, a search), the settings open above the
+        				// conversation (the gear, the "…" after the prompt chips), and the home screen grows with its recent
+        				// conversations and the feedback banner: all are read from their top, not the thread bottom.
+        				if (!self.local || self.local.AutoScrollEnabled === false || self.local.ShowConversationPanel === true || self.local.ShowAgentConfigPanel === true || (self.isPanelHomeShown && self.isPanelHomeShown()) || Date.now() - Number(self.local.UserScrollUpAt || 0) < 400) {
         					return;
         				}
         				if (el.scrollHeight - el.scrollTop - el.clientHeight > 1) {
@@ -4870,6 +4884,12 @@ scriptContent:
         				}
         				var scrollOnce = function(duration) {
         					try {
+        						if (self.isPanelHomeShown && self.isPanelHomeShown()) {
+        							if (self.content && self.content.scrollToTop) {
+        								self.content.scrollToTop(0);
+        							}
+        							return;
+        						}
         						if (self.content && self.content.scrollToBottom) {
         							self.content.scrollToBottom(duration);
         						}
