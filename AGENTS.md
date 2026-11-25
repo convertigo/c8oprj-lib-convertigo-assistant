@@ -404,6 +404,19 @@ rediscovering the same context.
   (`WideList`, `slot="fixed"` as the side column, `isWideListShown`,
   `resumeFromWideList`). Cover with
   `node --test tests/assistant_panel_wide_marks.test.cjs`.
+- The home screen is read from its top (`isPanelHomeShown`): opening the panel
+  or leaving a conversation for a new one shows its title, and the thread-bottom
+  follow never applies to it. Cover with
+  `node --test tests/assistant_panel_delete_invite_menu.test.cjs`.
+- The first agent settings answer of a fresh Studio describes an agent from its
+  configuration (Convertigo: one model with one effort; source `fallback`,
+  `config` or `presence`, no cached catalog) until the agent lists its models.
+  Meanwhile the panel never offers that single model: the input bar shows one
+  locked "Configuring…" choice with no effort, and the agent tab and the model
+  section of the settings say the agent is still being set up
+  (`isAgentModelCatalogPending`, `agentConfiguringText`, at most three minutes
+  per agent). Cover with
+  `node --test tests/assistant_panel_catalog_pending.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.

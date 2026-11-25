@@ -3873,6 +3873,32 @@ scriptContent:
         public isPanelHomeShown() {
             return !!(this.isAgentBridgeMode && this.isAgentBridgeMode()) && this.getPanelScreen() === "home";
         }
+        // The first agent settings answer describes an agent from its configuration (Convertigo: its default model with one
+        // effort) before the agent lists its own models (a "fallback", "config" or "presence" source, no cached catalog):
+        // until that list arrives the panel says the agent is still being set up instead of offering that one model. Three
+        // minutes at most per agent, so a listing that fails never leaves the choice waiting.
+        public isAgentModelCatalogPending(provider = null) {
+            if (!(this.isAgentBridgeMode && this.isAgentBridgeMode()) || (this.getNoCodeServerAgent && this.getNoCodeServerAgent())) { return false; }
+            var p = this.normalizeAgentProviderValue(provider || this.getAgentProvider());
+            var descriptor: any = p.length ? this.getAgentProviderDescriptor(p) : null;
+            var source: any = descriptor && descriptor.source ? descriptor.source : null;
+            var type = source ? ("" + (source.type || "")).toLowerCase() : "";
+            if (!source || source.settingsCached === true || (type !== "fallback" && type !== "config" && type !== "presence")) { return false; }
+            if (!this.local) { this.local = {}; }
+            var since: any = this.local.AgentModelCatalogWaitSince || (this.local.AgentModelCatalogWaitSince = {});
+            if (!since[p]) { since[p] = Date.now(); }
+            return Date.now() - Number(since[p]) < 180000;
+        }
+        public agentConfiguringText(kind) {
+            var texts: any = {
+                fr: { short: "Configuration en cours…", hint: "L’agent est encore en cours de configuration : ses modèles s’affichent dès qu’il est prêt." },
+                en: { short: "Configuring…", hint: "The agent is still being set up: its models appear as soon as it is ready." },
+                it: { short: "Configurazione in corso…", hint: "L’agente è ancora in configurazione: i suoi modelli appaiono appena è pronto." },
+                es: { short: "Configuración en curso…", hint: "El agente aún se está configurando: sus modelos aparecen en cuanto esté listo." }
+            };
+            var table: any = texts[this.agentUiLanguage ? this.agentUiLanguage() : "en"] || texts.en;
+            return table[kind] || table.short;
+        }
         public isPanelConversationOpen() {
             var local: any = this.local || {};
             return !!((local.Conversation && local.NewConversationMode !== true) || (this.hasConversationStarted && this.hasConversationStarted()));
@@ -4223,6 +4249,17 @@ scriptContent:
             return [];
         }
         public getAgentFooterModelOptions() {
+            if (this.isAgentModelCatalogPending && this.isAgentModelCatalogPending()) {
+                // One locked choice while the agent is being set up: the select shows it read only, with the hint as its
+                // title. The same array while nothing changes, so the select keeps its option.
+                var label = this.agentConfiguringText("short");
+                var pending: any = this.local && this.local.AgentFooterPendingModels;
+                if (!pending || !pending.length || pending[0].label !== label) {
+                    pending = [{ id: "__agent_configuring__", label: label, locked: true, title: this.agentConfiguringText("hint") }];
+                    if (this.local) { this.local.AgentFooterPendingModels = pending; }
+                }
+                return pending;
+            }
             var clean = function(value) {
                 return ("" + (value == null ? "" : value)).replace(/^\s+|\s+$/g, "");
             };
@@ -11406,7 +11443,7 @@ title: Tigo
                 tagName: div
                 ↓SettingsTabs [ngx.components.UICustom-1793872628019]: 
                   comment: 'Settings sections as tabs (narrow) or a side list (wide). The active tab is the open accordion (local.ResourceAccordion); its headers are hidden by TigoSettingsTabsStyle. When the server sets Tigo for the No Code Studio (serverSettings.managed) the agent, runtime and MCP tabs are its administrators'': a user sees the server''s agent instead (managed), an administrator is told the settings apply to every user (admin).'
-                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{local?.AgentModel ? '' · '' + getAgentModelLabel() : ''''}}{{getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{'' · '' + (tab.lang === ''fr'' ? ''Français'' : (tab.lang === ''it'' ? ''Italiano'' : (tab.lang === ''es'' ? ''Español'' : ''English'')))}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-account" [class.active]="tab.section === ''account''" [attr.aria-selected]="tab.section === ''account''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''account''}})"><ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{quotaLabel(''account'')}}</span><span class="tigo-settings-tab-status">{{getAccountTabStatus()}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{getNoCodeAgentNote()}}</p></ng-container>'
+                  htmlTemplate: '<ng-container *ngIf="{lang: ((global && global.currentLanguage ? global.currentLanguage() : ''en'') + '''').substring(0, 2), managed: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true), admin: (local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator === true), section: ((local?.AgentSettings?.serverSettings?.managed === true && local?.AgentSettings?.serverSettings?.administrator !== true && [''agent'', ''runtime'', ''mcp''].includes(local?.ResourceAccordion || ''agent'')) ? ''prefs'' : (local?.ResourceAccordion || ''agent''))} as tab"><nav class="tigo-settings-tabs" [class.library-open]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" role="tablist" [attr.aria-label]="t(''Agent_Settings_Title'', ''Configuration Agent IA'')"><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''agent''" [attr.aria-selected]="tab.section === ''agent''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''agent''}})"><ion-icon name="options-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''agent'')}}</span><span class="tigo-settings-tab-status">{{local?.AgentProvider ? getAgentProviderLabel() : ''''}}{{isAgentModelCatalogPending() ? '' · '' + agentConfiguringText(''short'') : ((local?.AgentModel ? '' · '' + getAgentModelLabel() : '''') + (getAgentReasoningLabel() ? '' · '' + getAgentReasoningLabel() : ''''))}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''prefs''" [attr.aria-selected]="tab.section === ''prefs''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prefs''}})"><ion-icon name="eye-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Préférences'' : (tab.lang === ''it'' ? ''Preferenze'' : (tab.lang === ''es'' ? ''Preferencias'' : ''Preferences''))}}</span><span class="tigo-settings-tab-status">Reveal {{getAgentRevealMode() ? t(''Agent_Enabled'', ''Activé'') : t(''Agent_Disabled'', ''Désactivé'')}}{{'' · '' + (tab.lang === ''fr'' ? ''Français'' : (tab.lang === ''it'' ? ''Italiano'' : (tab.lang === ''es'' ? ''Español'' : ''English'')))}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-account" [class.active]="tab.section === ''account''" [attr.aria-selected]="tab.section === ''account''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''account''}})"><ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{quotaLabel(''account'')}}</span><span class="tigo-settings-tab-status">{{getAccountTabStatus()}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab" [class.active]="tab.section === ''runtime''" [attr.aria-selected]="tab.section === ''runtime''" [attr.title]="getAgentStackStatusText()" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''runtime''}})"><ion-icon name="layers-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''runtime'')}}</span><span class="tigo-settings-tab-status"><span class="tigo-settings-dot" [class.is-update]="isAgentStackUpdateAvailable()" aria-hidden="true"></span>{{agentStackOfferText(getAgentStackChannel() === ''preview'' ? ''channelPreview'' : ''channelStable'')}}{{isAgentStackUpdateAvailable() ? '' · '' + (tab.lang === ''fr'' ? ''mise à jour disponible'' : (tab.lang === ''it'' ? ''aggiornamento disponibile'' : (tab.lang === ''es'' ? ''actualización disponible'' : ''update available''))) : ''''}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-tab-library" [class.active]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''prompts'' || tab.section === ''skills'' || tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="library-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tab.lang === ''fr'' ? ''Bibliothèque'' : (tab.lang === ''it'' ? ''Libreria'' : (tab.lang === ''es'' ? ''Biblioteca'' : ''Library''))}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}} {{tigoText(''prompts'')}} · {{local?.ResourceSkillItems?.length || 0}} {{tigoText(''skills'')}}{{tab.managed ? '''' : '' · '' + (local?.ResourceMcpItems?.length || 0) + '' MCP''}}</span></span></button><div class="tigo-library-tabs" role="presentation"><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''prompts''" [attr.aria-selected]="tab.section === ''prompts''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''prompts''}})"><ion-icon name="document-text-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''prompts'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourcePromptItems?.length || 0}}</span></span></button><button type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''skills''" [attr.aria-selected]="tab.section === ''skills''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''skills''}})"><ion-icon name="extension-puzzle-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''skills'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceSkillItems?.length || 0}}</span></span></button><button *ngIf="!tab.managed" type="button" role="tab" class="tigo-settings-tab tigo-settings-subtab" [class.active]="tab.section === ''mcp''" [attr.aria-selected]="tab.section === ''mcp''" (click)="onTigoResourcesAccordionChange({target: {tagName: ''ION-ACCORDION-GROUP''}, detail: {value: ''mcp''}})"><ion-icon name="server-outline" aria-hidden="true"></ion-icon><span class="tigo-settings-tab-copy"><span class="tigo-settings-tab-label">{{tigoText(''mcp'')}}</span><span class="tigo-settings-tab-status">{{local?.ResourceMcpItems?.length || 0}}</span></span></button></div></nav><p *ngIf="tab.admin" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{tab.lang === ''fr'' ? ''Ces réglages s’appliquent à tous les utilisateurs du No Code Studio.'' : (tab.lang === ''it'' ? ''Queste impostazioni valgono per tutti gli utenti del No Code Studio.'' : (tab.lang === ''es'' ? ''Estos ajustes se aplican a todos los usuarios del No Code Studio.'' : ''These settings apply to every user of the No Code Studio.''))}}</p><p *ngIf="tab.managed" class="tigo-server-scope" role="note" style="margin: 10px 18px 0; font-size: 12px; line-height: 1.45; opacity: .78">{{getNoCodeAgentNote()}}</p></ng-container>'
                 ↓SettingsWait [ngx.components.UICustom-1794870000001]: 
                   comment: 'What the settings page waits for (getSettingsWaitState): the check of the agent, a refresh of the model catalog, a save; a check that did not finish says so with Retry. Under the tabs, in every tab.'
                   htmlTemplate: '<div *ngIf="getSettingsWaitState() as wait" class="tigo-settings-wait" [class.is-error]="wait.error" [attr.role]="wait.error ? ''alert'' : ''status''" aria-live="polite" style="display: flex; align-items: center; gap: 8px; margin: 10px 18px 0; padding: 8px 10px; border-radius: 8px; font-size: 12.5px; line-height: 1.4; color: var(--ion-text-color, inherit)" [style.background]="wait.error ? ''color-mix(in srgb, var(--ion-color-danger, #c5000f) 10%, transparent)'' : ''color-mix(in srgb, var(--ion-color-primary, #2f6fed) 9%, transparent)''"><ion-spinner *ngIf="!wait.error" name="crescent" aria-hidden="true" style="width: 16px; height: 16px; flex: 0 0 auto; color: var(--ion-color-primary, #2f6fed)"></ion-spinner><span style="flex: 1 1 auto">{{wait.text}}</span><ion-button *ngIf="wait.retry" fill="clear" size="small" class="tigo-settings-wait-retry" (click)="retrySettingsCheck()">{{settingsWaitText(''retry'')}}</ion-button></div>'
@@ -12527,7 +12564,7 @@ title: Tigo
                           attrValue: 
                             - xmlizable: 
                               - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                              - MobileSmartSourceType: plain:agent-create-settings-block agent-setting-section agent-model-setting
+                              - MobileSmartSourceType: 'script:''agent-create-settings-block agent-setting-section agent-model-setting'' + (this.isAgentModelCatalogPending() ? '' is-catalog-pending'' : '''')'
                         ↓ModelLabel [ngx.components.UIDynamicElement-1785253202087]: 
                           beanData: '{"ionBean":"Paragraph"}'
                           tagName: p
@@ -12556,6 +12593,9 @@ title: Tigo
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                                 - MobileSmartSourceType: 'script:(this.global && this.global.currentLanguage && this.global.currentLanguage() === ''fr'') ? ''Le modèle détermine les performances et la vitesse.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''it'') ? ''Il modello determina prestazioni e velocità.'' : ((this.global && this.global.currentLanguage && this.global.currentLanguage() === ''es'') ? ''El modelo determina el rendimiento y la velocidad.'' : ''The model determines performance and speed.''))'
+                        ↓CatalogPending [ngx.components.UICustom-1795601180320]: 
+                          comment: While the agent lists its models, this line replaces its single provisional model (isAgentModelCatalogPending).
+                          htmlTemplate: <p *ngIf="isAgentModelCatalogPending()" class="agent-catalog-pending" role="status"><ion-spinner name="crescent" aria-hidden="true"></ion-spinner><span>{{agentConfiguringText('hint')}}</span></p>
                         ↓ModelChoices [ngx.components.UIControlDirective-1785253202305]: 
                           directiveItemName: agentModel
                           directiveSource: 
@@ -12695,7 +12735,7 @@ title: Tigo
                         directiveSource: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: script:this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
+                            - MobileSmartSourceType: script:!this.isAgentModelCatalogPending() && this.local && this.local.AgentProviderSupportsReasoning === true && this.local.AgentReasoningLevels && this.local.AgentReasoningLevels.length > 0
                         ↓ReasoningSettings [ngx.components.UIDynamicElement-1785253270230]: 
                           beanData: '{"ionBean":"DivTag"}'
                           tagName: div
@@ -24938,7 +24978,7 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().model : (local && local.AgentModel ? local.AgentModel : '''')'
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().model : ((this.isAgentModelCatalogPending && this.isAgentModelCatalogPending()) ? ''__agent_configuring__'' : (local && local.AgentModel ? local.AgentModel : ''''))'
     ↓AgentModels [ngx.components.UIUseVariable-1782124568128]: 
       varValue: 
         - xmlizable: 
@@ -24953,12 +24993,12 @@ title: Tigo
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().levels : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningLevels) ? local.AgentReasoningLevels : [])'
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().levels : ((this.isAgentModelCatalogPending && this.isAgentModelCatalogPending()) ? [] : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && local && local.AgentReasoningLevels) ? local.AgentReasoningLevels : []))'
     ↓AgentModelLabel [ngx.components.UIUseVariable-1782124580836]: 
       varValue: 
         - xmlizable: 
           - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().modelLabel : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentModelLabel) ? this.getAgentModelLabel() : '''')'
+          - MobileSmartSourceType: 'script:(this.getNoCodeServerAgent && this.getNoCodeServerAgent()) ? this.getNoCodeServerAgent().modelLabel : ((this.isAgentModelCatalogPending && this.isAgentModelCatalogPending()) ? this.agentConfiguringText(''short'') : ((this.isAgentBridgeMode && this.isAgentBridgeMode() && this.getAgentModelLabel) ? this.getAgentModelLabel() : ''''))'
     ↓AgentReasoningLabel [ngx.components.UIUseVariable-1782124585072]: 
       varValue: 
         - xmlizable: 
@@ -29845,5 +29885,36 @@ title: Tigo
           .tigo-wide-list-meta {
             color: var(--modern-muted, #94a3b8);
             font-size: 11.5px;
+          }
+          '
+↓TigoCatalogPendingStyle [ngx.components.UIStyle-1795601180902]: 
+  comment: The model section while the agent is being set up.
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* While the agent is being set up (isAgentModelCatalogPending), its single provisional model is not offered: a line says
+             the setup is running and the models come as soon as the agent is ready. */
+          .agent-model-setting.is-catalog-pending .agent-model-option {
+            display: none;
+          }
+          .agent-catalog-pending {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0 0;
+            padding: 10px 12px;
+            border: 1px dashed rgba(127, 140, 152, 0.55);
+            border-radius: 10px;
+            color: var(--ion-color-medium, #8a96a3);
+            font-size: 13px;
+            line-height: 1.4;
+          }
+          .agent-catalog-pending ion-spinner {
+            flex: 0 0 18px;
+            width: 18px;
+            height: 18px;
+            color: var(--ion-color-primary, #0e7490);
           }
           '
