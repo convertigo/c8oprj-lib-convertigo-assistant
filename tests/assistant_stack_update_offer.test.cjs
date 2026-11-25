@@ -17,7 +17,7 @@ const names = ['t', 'agentUiLanguage', 'agentStackOfferText', 'isAgentStackOffer
   'isAgentStackOfferTurnRunning', 'getAgentStackOfferView', 'installAgentStackOffer', 'postponeAgentStackOffer',
   'compareAgentStackVersions', 'isServerManagedAgentStack', 'getAgentStackServerStatus', 'refreshAgentStackServerStatus',
   'getInstalledAgentStackVersion', 'isAgentStackUpdateAllowed', 'getAgentStackRestrictedText', 'installAgentStackOnServer',
-  'triggerAgentOnboardingAction', 'postVerifiedAgentStackInstallation', 'readFreshAgentStackRelease', 'applyAgentActivationStatus', 'getAgentStackChannelChoice', 'getAgentStackServerChannel',
+  'triggerAgentOnboardingAction', 'postVerifiedAgentStackInstallation', 'readFreshAgentStackRelease', 'callAgentStackManifest', 'applyAgentActivationStatus', 'getAgentStackChannelChoice', 'getAgentStackServerChannel',
   'isAgentStackChannelFixed', 'refreshAgentStackEngineStatus'];
 const methods = ast.statements[0].members.filter(m => m.name && names.includes(m.name.getText(ast)));
 assert.deepEqual(methods.map(m => m.name.getText(ast)).sort(), [...names].sort());
@@ -428,8 +428,11 @@ test('a channel changed during a read shows the new channel only', async () => {
   f.page.setAgentStackChannel('preview');
   assert.equal(f.names().filter(n => n.endsWith('GetPreviewManifest')).length, 0, 'one read at a time');
   release({ result: manifest() });
-  await flush();
+  await flush(); await flush();
   assert.equal(f.storage.has('lib_ConvertigoAssistant.AgentStackStableCheck'), true, 'the stable read is kept for its channel');
+  // the pre-release channel reads its stable manifest, then its preview one (one connector call at a time)
+  release({ result: manifest() });
+  await flush(); await flush();
   assert.equal(f.names().filter(n => n.endsWith('GetPreviewManifest')).length, 1, 'then the pre-release channel is read');
 });
 

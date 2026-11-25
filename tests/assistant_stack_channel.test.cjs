@@ -16,7 +16,7 @@ const names = ['t', 'agentUiLanguage', 'agentStackOfferText', 'isAgentStackOffer
   'refreshAgentStackEngineStatus', 'getAgentStackOfferProjects', 'getAgentStackOfferKey', 'getAgentStackOfferRestriction',
   'isAgentStackOfferTurnRunning', 'getAgentStackOfferView', 'compareAgentStackVersions', 'isServerManagedAgentStack',
   'getAgentStackServerStatus', 'refreshAgentStackServerStatus', 'getInstalledAgentStackVersion', 'isAgentStackUpdateAllowed',
-  'getAgentStackRestrictedText', 'installAgentStackOnServer', 'triggerAgentOnboardingAction', 'postVerifiedAgentStackInstallation', 'readFreshAgentStackRelease', 'refreshAgentStackRelease',
+  'getAgentStackRestrictedText', 'installAgentStackOnServer', 'triggerAgentOnboardingAction', 'postVerifiedAgentStackInstallation', 'readFreshAgentStackRelease', 'refreshAgentStackRelease', 'callAgentStackManifest',
   'getEmbeddedAgentStackRelease', 'getAgentActivationProjects', 'isAgentStackUpdateAvailable', 'getAgentStackVersionText',
   'getAgentStackStatusText', 'getAgentStackStatusClass', 'triggerAgentStackUpdate'];
 const methods = ast.statements[0].members.filter(m => m.name && names.includes(m.name.getText(ast)));
@@ -305,11 +305,13 @@ test('settings opened again during a read wait for the new status: the server ch
   f.page.refreshAgentStackRelease(); // the host context
   queue.status[0].resolve({ result: engineStatus({ channel: 'preview' }) }); await flush();
   f.page.refreshAgentStackRelease(true); // the settings open while both manifests are read
-  queue.stable[0].resolve({ result: manifest() }); queue.preview[0].resolve({ result: manifest(betas, 'preview') }); await flush();
-  assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest', 'AgentStackRelease.GetPreviewManifest', 'AgentStackStatus'],
+  // the preview manifest is read once the stable one answered (one connector call at a time)
+  queue.stable[0].resolve({ result: manifest() }); await flush(); queue.preview[0].resolve({ result: manifest(betas, 'preview') }); await flush();
+  assert.deepEqual(f.names(), ['AgentStackStatus', 'AgentStackRelease.GetManifest', 'AgentStackStatus', 'AgentStackRelease.GetPreviewManifest'],
     'no stable read while the channel is unknown');
   queue.status[1].resolve({ result: engineStatus({ channel: 'preview' }) }); await flush();
-  queue.stable[1].resolve({ result: manifest() }); queue.preview[1].resolve({ result: manifest(betas, 'preview') }); await flush();
+  // the preview manifest is read once the stable one answered (one connector call at a time)
+  queue.stable[1].resolve({ result: manifest() }); await flush(); queue.preview[1].resolve({ result: manifest(betas, 'preview') }); await flush();
   assert.equal(f.page.local.AgentStackReleaseChannel, 'preview');
   assert.equal(f.page.getAgentStackVersionText(), 'MCP 0.2.27 → 0.2.28-beta.13 · Bridge 0.4.27 → 0.4.28-beta.16 · Assistant 1.5.5 → 1.5.6-beta.17');
   assert.equal(f.names().length, 6);
@@ -372,8 +374,10 @@ test('a late background manifest cannot replace the fresh catalog used by an ins
   const latest=manifest({mcp:'0.2.29',bridge:'0.4.31',assistant:'1.5.9'});
   const f=fixture({surface:'eclipse',stable:()=>++count===1?old:Promise.resolve({object:latest})});
   await f.settings();
-  assert.equal(await f.page.triggerAgentOnboardingAction(true),true);
+  // the fresh read waits for the background one (one connector call at a time), which then cannot replace it
+  const triggered=f.page.triggerAgentOnboardingAction(true);
   if(failOld)rejectOld(new Error('old request failed'));else resolveOld({object:manifest()});
+  assert.equal(await triggered,true);
   await flush();
   assert.deepEqual(plain(f.page.local.AgentStackRelease.projects),latest.projects);
   assert.equal(f.page.local.AgentStackReleaseVerified,true);

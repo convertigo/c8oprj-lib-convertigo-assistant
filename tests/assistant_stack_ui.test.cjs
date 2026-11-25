@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const { ts, pageClass } = require('./helpers/assistant-source.cjs');
 
 const ast = ts.createSourceFile('stack-ui.ts', pageClass(), ts.ScriptTarget.Latest, true);
-const names = ['t', 'refreshAgentSettingsAfterHostContext', 'refreshAgentStackRelease',
+const names = ['t', 'refreshAgentSettingsAfterHostContext', 'refreshAgentStackRelease', 'callAgentStackManifest',
   'normalizeAgentStackRelease', 'getEmbeddedAgentStackRelease', 'getAgentActivationProjects',
   'refreshAgentStackServerStatus', 'getAgentStackServerStatus', 'getInstalledAgentStackVersion',
   'isAgentStackUpdateAllowed', 'isAgentStackUpdateAvailable', 'compareAgentStackVersions',

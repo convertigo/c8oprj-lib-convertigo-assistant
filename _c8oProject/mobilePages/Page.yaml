@@ -2451,6 +2451,17 @@ scriptContent:
         		return null;
         	}
         
+        	// The manifests come from one HTTP connector, AgentStackRelease. In a Studio every call runs on the project opened in the
+        	// Studio, so on one instance of that connector, and its request URL is a field of that instance: two of its transactions
+        	// at once read the URL the other one set (the stable read answered the preview manifest, and the panel said it could not
+        	// check the published stack). Its calls from the panel go one after the other.
+        	public callAgentStackManifest(name, parameters = {}) {
+        		var self: any = this;
+        		var run = () => this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease." + name, parameters).async();
+        		var next: any = Promise.resolve(self.agentStackManifestQueue).catch(() => null).then(run);
+        		self.agentStackManifestQueue = next.catch(() => null);
+        		return next;
+        	}
         	public refreshAgentStackRelease(force = false) {
         		if (!this.local) { this.local = {}; }
         		// A cached manifest does not imply that server permissions were checked.
@@ -2485,9 +2496,9 @@ scriptContent:
         			// The stable manifest always; on the preview channel the preview one too, per project the higher version.
         			var generation = ((this as any).agentStackManifestGeneration || 0) + 1;
                         (this as any).agentStackManifestGeneration = generation;
-                        var stable = this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetManifest", {manifestRevision: String(Date.now())}).async();
+                        var stable = this.callAgentStackManifest("GetManifest", {manifestRevision: String(Date.now())});
         			var preview: any = channel !== "preview" ? Promise.resolve(null)
-        				: this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease.GetPreviewManifest", {manifestRevision: String(Date.now())}).async()
+        				: this.callAgentStackManifest("GetPreviewManifest", {manifestRevision: String(Date.now())})
         					.then((response: any) => this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, "preview"))
         					.catch(() => null);
         			Promise.all([stable, preview]).then((responses: any) => {
@@ -3017,7 +3028,7 @@ scriptContent:
         		if (this.local.AgentStackOfferCheckLoading === true || !this.c8o || !this.c8o.callJsonObject) { return; }
         		this.local.AgentStackOfferCheckLoading = true;
         		// The reviewed stable manifest always, the reviewed preview one too on the pre-release channel.
-        		var read = (name, expected) => this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease." + name, {}).async()
+        		var read = (name, expected) => this.callAgentStackManifest(name, {})
         			.then((response: any) => this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, expected))
         			.catch(() => null);
         		var reads: any = [read("GetManifest", "stable")];
@@ -3276,7 +3287,7 @@ scriptContent:
                 var generation = ((this as any).agentStackManifestGeneration || 0) + 1;
                 (this as any).agentStackManifestGeneration = generation;
                 var revision = String(Date.now()) + "-" + String(Math.random()).slice(2);
-                var read = (name, expected) => this.c8o.callJsonObject("lib_ConvertigoAssistant.AgentStackRelease." + name, {manifestRevision: revision}).async()
+                var read = (name, expected) => this.callAgentStackManifest(name, {manifestRevision: revision})
                     .then((response: any) => {
                         var manifest = this.normalizeAgentStackOfferRelease(response && response.result ? response.result : response, expected);
                         if (!manifest) { throw new Error("Invalid published stack manifest"); }
