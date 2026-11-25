@@ -96,6 +96,12 @@ failures reported by `tool/update` are treated as warnings while the ACP turn is
 still running; only terminal ACP errors or repeated read failures mark the run as
 `failed`. A later `turn/end` wins and returns `completed`.
 
+The Bridge's `warning` events (`{phase, reason, message, ...}`) are read by
+`rememberBridgeWarning`: those that tell the agent lost or never had the Convertigo
+MCP are counted in the feedback (docs/tigo-feedback.md), and the `turn/proof`
+warning `unverified_changes` is kept on its turn and shown under its answer (see
+AGENTS.md, UI Expectations). Other warnings change nothing in the turn.
+
 The component assistant page is currently switched to this path. The Figma and
 LightRAG parts are not changed.
 

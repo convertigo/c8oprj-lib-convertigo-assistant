@@ -432,6 +432,20 @@ rediscovering the same context.
 - Diagnostic/setup UI should be integrated in the page, not implemented with
   blocking browser popups.
 - Keep i18n keys translated before committing UI text changes.
+- Unproven changes under an answer: just before a Vibe turn ends, the Bridge may send the
+  `warning` `{phase: "turn/proof", reason: "unverified_changes", items: [{qname, kind}]
+  (15 at most), count, nudged, message}` for the objects the turn changed through the MCP
+  with no successful proof after their last change. The client keeps it on the turn
+  (`rememberBridgeWarning`: `state.unverifiedChanges` for its run, handed to the page as
+  `AIData.unverified` by `turnUnverifiedChanges`, and a `{kind: "proof"}` line of
+  `runs/<runid>.ndjson` that `readRunDetails` / `transcriptMessages` give a reopened
+  conversation as `message.unverified`). The page shows, between the answer and its foot
+  (Copier), a `details` line "Non vérifié après la dernière modification : getCategories,
+  Home (et 3 autres)" (`unverifiedView`, short names by `unverifiedShortName`, texts in
+  `unverifiedText`, fr/en/it/es); its tooltip and the list it opens give every QName. No
+  line without the warning (an older Bridge). The warning is also a feedback report,
+  without the QNames (docs/tigo-feedback.md). Cover with
+  `node --test tests/assistant_unverified_changes.test.cjs`.
 
 ## Runtime Notes
 

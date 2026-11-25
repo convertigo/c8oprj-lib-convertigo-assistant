@@ -195,7 +195,7 @@ test('the turn\'s answer is masked while it streams and at its end, unless the u
 
 test('the responses the panel reads mask progress, events, live reasoning, plan and warnings, records written before included', () => {
   const m = masking(['progressWithoutAnswer', 'compactLine', 'isTerminalStatus', 'liveReasoning', 'publicState', 'responseForState',
-    'responseMessages', 'runDetailEvent'], ['RUN_DETAIL_MAX_DETAIL', 'REASONING_LIVE_CHARS'], {
+    'responseMessages', 'runDetailEvent', 'turnUnverifiedChanges'], ['RUN_DETAIL_MAX_DETAIL', 'REASONING_LIVE_CHARS'], {
     normalizeSkillProfile: () => 'studio', isResidentProvider: () => false, normalizeProvider: v => v, sanitizeCodexHome: () => '',
     agentCommandsFor: () => [], savedNoCodeContext: () => null, publicSessionSandbox: () => null, normalizeEditProfile: () => ''
   });

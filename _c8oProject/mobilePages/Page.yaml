@@ -9344,6 +9344,97 @@ scriptContent:
         	public answerSourceTitle(item) {
         		return this.flashText(item && item.answerSource === "flash" ? "Badge_Title" : "Badge_Agent_Title");
         	}
+        	// The changes of a turn the Bridge saw no proof of after their last change (its warning unverified_changes, turn/proof):
+        	// a discreet line under the answer with their short names, their full QNames in the list it opens. No line when the
+        	// turn has none (every change proven, or a Bridge older than that warning).
+        	public unverifiedText(key, values?) {
+        		var texts: any = {
+        			fr: { lead: "Non vérifié après la dernière modification :", other1: "et 1 autre", others: "et {n} autres", notListed1: "et 1 autre, non listé", notListed: "et {n} autres, non listés", change1: "1 modification", changes: "{n} modifications", backend: "back-end", ui: "interface", file: "fichier", hint: "Modifiés pendant ce tour sans preuve après leur dernière modification (exécution, rapport du vérificateur, preuve CRUD ou contrôle dans le navigateur)." },
+        			en: { lead: "Not verified after the last change:", other1: "and 1 other", others: "and {n} others", notListed1: "and 1 more, not listed", notListed: "and {n} more, not listed", change1: "1 change", changes: "{n} changes", backend: "back end", ui: "UI", file: "file", hint: "Changed during this turn with no proof after their last change (a run, a verifier report, a CRUD proof or a check in the browser)." },
+        			it: { lead: "Non verificato dopo l’ultima modifica:", other1: "e 1 altro", others: "e altri {n}", notListed1: "e 1 altro, non elencato", notListed: "e altri {n}, non elencati", change1: "1 modifica", changes: "{n} modifiche", backend: "back-end", ui: "interfaccia", file: "file", hint: "Modificati in questo turno senza prova dopo l’ultima modifica (esecuzione, rapporto del verificatore, prova CRUD o controllo nel browser)." },
+        			es: { lead: "No verificado tras el último cambio:", other1: "y 1 más", others: "y {n} más", notListed1: "y 1 más, sin listar", notListed: "y {n} más, sin listar", change1: "1 cambio", changes: "{n} cambios", backend: "back-end", ui: "interfaz", file: "archivo", hint: "Modificados en este turno sin prueba tras su último cambio (ejecución, informe del verificador, prueba CRUD o comprobación en el navegador)." }
+        		};
+        		var table = texts[this.agentUiLanguage()] || texts.en;
+        		var text = "" + (table[key] != null ? table[key] : (texts.en[key] != null ? texts.en[key] : key));
+        		var all: any = values || {};
+        		for (var name in all) {
+        			if (Object.prototype.hasOwnProperty.call(all, name)) {
+        				text = text.split("{" + name + "}").join("" + all[name]);
+        			}
+        		}
+        		return text;
+        	}
+        	// The short name of a changed object: the last segment of its QName without its type prefix
+        	// (ReproListes.sq:getCategories gives getCategories, P.pg:Home gives Home), the name of a file.
+        	public unverifiedShortName(qname, kind?) {
+        		var text = ("" + (qname == null ? "" : qname)).trim();
+        		if (kind === "file" || /[\/\\]/.test(text)) {
+        			var parts = text.split(/[\/\\]/);
+        			return parts[parts.length - 1] || text;
+        		}
+        		var last = text.split(".").pop() || text;
+        		var at = last.indexOf(":");
+        		return (at >= 0 ? last.substring(at + 1) : last) || text;
+        	}
+        	// What the line under an answer shows: {line, title, items: [{qname, name, kind}], more}, or null. Three short names at
+        	// most, then how many others; the title (a tooltip) and the list give every QName the Bridge listed (15 at most).
+        	// Cached on the message for its proof and the language.
+        	public unverifiedView(item) {
+        		var proof: any = item && item.type !== "user" ? item.unverified : null;
+        		if (!proof || typeof proof !== "object") {
+        			return null;
+        		}
+        		var language = this.agentUiLanguage();
+        		if (item.unverifiedViewSource === proof && item.unverifiedViewLanguage === language) {
+        			return item.unverifiedViewCache;
+        		}
+        		var source = proof.items && proof.items.length != null ? proof.items : [];
+        		var items = [];
+        		var names = [];
+        		for (var i = 0; i < source.length && items.length < 15; i++) {
+        			var entry: any = source[i] || {};
+        			var qname = ("" + (entry.qname == null ? "" : entry.qname)).trim();
+        			if (!qname.length) {
+        				continue;
+        			}
+        			var kind = entry.kind === "backend" || entry.kind === "ui" || entry.kind === "file" ? entry.kind : "";
+        			var name = this.unverifiedShortName(qname, kind);
+        			items.push({ qname: qname, name: name, kind: kind.length ? this.unverifiedText(kind) : "" });
+        			if (names.indexOf(name) < 0) {
+        				names.push(name);
+        			}
+        		}
+        		var count = Math.max(items.length, Math.floor(Number(proof.count) || 0));
+        		var view: any = null;
+        		if (count > 0) {
+        			var shown = names.slice(0, 3);
+        			var covered = 0;
+        			for (var j = 0; j < items.length; j++) {
+        				if (shown.indexOf(items[j].name) >= 0) {
+        					covered++;
+        				}
+        			}
+        			var rest = count - covered;
+        			var line = this.unverifiedText("lead") + " ";
+        			if (shown.length) {
+        				line += shown.join(", ") + (rest > 0 ? " (" + (rest === 1 ? this.unverifiedText("other1") : this.unverifiedText("others", { n: rest })) + ")" : "");
+        			} else {
+        				line += count === 1 ? this.unverifiedText("change1") : this.unverifiedText("changes", { n: count });
+        			}
+        			var hidden = count - items.length;
+        			var more = hidden > 0 ? (hidden === 1 ? this.unverifiedText("notListed1") : this.unverifiedText("notListed", { n: hidden })) : "";
+        			view = {
+        				line: line,
+        				title: [this.unverifiedText("hint")].concat(items.map(function(change) { return change.qname; })).concat(more.length ? [more] : []).join("\n"),
+        				items: items,
+        				more: more
+        			};
+        		}
+        		item.unverifiedViewSource = proof;
+        		item.unverifiedViewLanguage = language;
+        		item.unverifiedViewCache = view;
+        		return view;
+        	}
         	// The reasoning effort of the composer: the choice being saved, else the effective one of the agent. The generator
         	// passes it to the gateway for the generation and its repairs.
         	public flashReasoning() {
@@ -19375,6 +19466,139 @@ title: Tigo
                   - xmlizable: 
                     - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                     - MobileSmartSourceType: script:true
+            ↓UnverifiedIf [ngx.components.UIControlDirective-1796100000101]: 
+              directiveName: If
+              directiveSource: 
+                - xmlizable: 
+                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                  - MobileSmartSourceType: script:this.unverifiedView(item)
+              ↓Unverified [ngx.components.UIDynamicElement-1796100000103]: 
+                beanData: '{"ionBean":"DivTag"}'
+                comment: Under an answer - the changes of the turn the Bridge saw no proof of after their last change (unverified_changes), every QName in the list it opens.
+                tagName: details
+                ↓Class [ngx.components.UIAttribute-1796100000105]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-unverified
+                ↓Summary [ngx.components.UIDynamicElement-1796100000107]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: summary
+                  ↓Class [ngx.components.UIAttribute-1796100000109]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-unverified-summary
+                  ↓Title [ngx.components.UIAttribute-1796100000111]: 
+                    attrName: '[attr.title]'
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.unverifiedView(item).title
+                  ↓Icon [ngx.components.UIDynamicElement-1796100000113]: 
+                    beanData: '{"ionBean":"Icon","IconName":"plain:alert-circle-outline"}'
+                    tagName: ion-icon
+                    ↓Class [ngx.components.UIAttribute-1796100000115]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-unverified-icon
+                    ↓Hidden [ngx.components.UIAttribute-1796100000117]: 
+                      attrName: aria-hidden
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:true
+                  ↓Line [ngx.components.UIDynamicElement-1796100000119]: 
+                    beanData: '{"ionBean":"DivTag"}'
+                    tagName: span
+                    ↓Class [ngx.components.UIAttribute-1796100000121]: 
+                      attrName: class
+                      attrValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: plain:agent-unverified-line
+                    ↓Text [ngx.components.UIText-1796100000123]: 
+                      textValue: 
+                        - xmlizable: 
+                          - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                          - MobileSmartSourceType: script:this.unverifiedView(item).line
+                ↓List [ngx.components.UIDynamicElement-1796100000125]: 
+                  beanData: '{"ionBean":"DivTag"}'
+                  tagName: ul
+                  ↓Class [ngx.components.UIAttribute-1796100000127]: 
+                    attrName: class
+                    attrValue: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: plain:agent-unverified-list
+                  ↓Changes [ngx.components.UIControlDirective-1796100000129]: 
+                    directiveIndexName: changeIndex
+                    directiveItemName: change
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.unverifiedView(item).items
+                    ↓Change [ngx.components.UIDynamicElement-1796100000131]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: li
+                      ↓QName [ngx.components.UIDynamicElement-1796100000133]: 
+                        beanData: '{"ionBean":"DivTag"}'
+                        tagName: code
+                        ↓Class [ngx.components.UIAttribute-1796100000135]: 
+                          attrName: class
+                          attrValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: plain:agent-unverified-qname
+                        ↓Text [ngx.components.UIText-1796100000137]: 
+                          textValue: 
+                            - xmlizable: 
+                              - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                              - MobileSmartSourceType: script:change.qname
+                      ↓KindIf [ngx.components.UIControlDirective-1796100000139]: 
+                        directiveName: If
+                        directiveSource: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:change.kind
+                        ↓Kind [ngx.components.UIDynamicElement-1796100000141]: 
+                          beanData: '{"ionBean":"DivTag"}'
+                          tagName: span
+                          ↓Class [ngx.components.UIAttribute-1796100000143]: 
+                            attrName: class
+                            attrValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: plain:agent-unverified-kind
+                          ↓Text [ngx.components.UIText-1796100000145]: 
+                            textValue: 
+                              - xmlizable: 
+                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                - MobileSmartSourceType: script:change.kind
+                  ↓MoreIf [ngx.components.UIControlDirective-1796100000147]: 
+                    directiveName: If
+                    directiveSource: 
+                      - xmlizable: 
+                        - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                        - MobileSmartSourceType: script:this.unverifiedView(item).more
+                    ↓More [ngx.components.UIDynamicElement-1796100000149]: 
+                      beanData: '{"ionBean":"DivTag"}'
+                      tagName: li
+                      ↓Class [ngx.components.UIAttribute-1796100000151]: 
+                        attrName: class
+                        attrValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: plain:agent-unverified-more
+                      ↓Text [ngx.components.UIText-1796100000153]: 
+                        textValue: 
+                          - xmlizable: 
+                            - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                            - MobileSmartSourceType: script:this.unverifiedView(item).more
             ↓AnswerFoot [ngx.components.UIDynamicElement-1795400000101]: 
               beanData: '{"ionBean":"DivTag"}'
               comment: Under an answer - which path answered (No Code with Flash on or used), then Copier.
@@ -23217,6 +23441,8 @@ title: Tigo
             		target.id = responseId != null ? responseId : (runid != null ? runid : (target.id != null ? target.id : -1));
             		target.writing = false;
             		target.status = "";
+            		// The changes the Bridge saw no proof of after their last change in this turn: the line under the answer.
+            		target.unverified = aiData && aiData.unverified ? aiData.unverified : null;
             		if (!target.author) {
             			target.author = "Assistant";
             		}
@@ -27430,7 +27656,9 @@ title: Tigo
               					progressDetails: msg.progressDetails || '''',
               					// The saved events and plan of the turn: its work log stays shown above the answer, as during the turn.
               					runEvents: msg.runEvents || null,
-              					runPlan: msg.runPlan || null
+              					runPlan: msg.runPlan || null,
+              					// The changes the turn left unproven after their last change: the line under its answer.
+              					unverified: msg.unverified || null
               				});
               			}
               		}
@@ -29004,6 +29232,23 @@ title: Tigo
           .agent-answer-foot { align-items: center; display: flex; gap: 2px; }
           .agent-answer-source { border: 1px solid color-mix(in srgb, var(--modern-muted, #94a3b8) 40%, transparent 60%); border-radius: 999px; color: var(--modern-muted, #94a3b8); font-size: 11px; line-height: 16px; margin: -4px 0 8px; padding: 0 7px; white-space: nowrap; }
           .agent-metrics-card-head .agent-answer-source { margin: 0 8px 0 auto; }
+          /* The changes of a turn left unproven after their last change: a discreet line under the answer, in the amber of a
+             warning mixed with the text color (readable in light and dark themes), its icon and words saying it, not only its color. */
+          .agent-unverified { border-left: 2px solid color-mix(in srgb, var(--modern-amber, #d97706) 70%, transparent 30%); color: color-mix(in srgb, var(--modern-amber, #d97706) 55%, var(--modern-text, #0f172a) 45%); font-size: 12px; line-height: 17px; margin: 0 0 6px; max-width: 100%; padding: 1px 0 1px 8px; }
+          .agent-unverified-summary { align-items: flex-start; border-radius: 4px; cursor: pointer; display: flex; gap: 6px; list-style: none; }
+          .agent-unverified-summary::-webkit-details-marker { display: none; }
+          .agent-unverified-summary::after { content: "\25BE"; flex: 0 0 auto; opacity: 0.7; transition: transform 160ms ease; }
+          .agent-unverified[open] > .agent-unverified-summary::after { transform: rotate(180deg); }
+          .agent-unverified-summary:hover .agent-unverified-line { text-decoration: underline; }
+          .agent-unverified-summary:focus-visible { outline: 2px solid var(--modern-cyan, #06b6d4); outline-offset: 2px; }
+          .agent-unverified-icon { flex: 0 0 auto; font-size: 14px; margin-top: 1.5px; }
+          .agent-unverified-line { min-width: 0; overflow-wrap: anywhere; }
+          .agent-unverified-list { color: var(--modern-muted, #64748b); margin: 4px 0 2px; padding-left: 20px; }
+          .agent-unverified-list li { margin: 1px 0; overflow-wrap: anywhere; }
+          .agent-unverified-qname { background: transparent; color: var(--modern-text, #0f172a); font-family: var(--modern-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 11.5px; padding: 0; }
+          .agent-unverified-kind { color: var(--modern-muted, #64748b); font-size: 11px; margin-left: 6px; white-space: nowrap; }
+          .agent-unverified-kind::before { content: "\00B7"; margin-right: 6px; }
+          .agent-unverified-more { font-style: italic; list-style: none; }
           .agent-confirm-switch { align-items: center; background: transparent; border: 0; color: var(--modern-muted, #64748b); cursor: pointer; display: inline-flex; font: inherit; font-size: 12px; gap: 6px; line-height: 18px; padding: 2px 4px; }
           .agent-confirm-switch:hover, .agent-confirm-switch:focus-visible { color: var(--modern-text, #0f172a); }
           .agent-confirm-track { background: color-mix(in srgb, var(--modern-muted, #94a3b8) 45%, transparent 55%); border-radius: 999px; display: inline-block; flex: 0 0 26px; height: 14px; position: relative; transition: background 160ms ease; width: 26px; }

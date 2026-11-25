@@ -5254,6 +5254,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             message.runEvents = details.events;
             message.runPlan = details.plan;
           }
+          // The changes the turn left unproven after their last change: the line under its answer.
+          if (details && details.proof) {
+            message.unverified = details.proof;
+          }
           message.tag1 = "History";
           message.tag2 = providerLabel(state.provider);
           message.tag3 = "Resume";
@@ -6569,6 +6573,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     var order = [];
     var byKey = {};
     var plan = null;
+    var proof = null;
     for (var i = 0; i < lines.length; i++) {
       var line = trim(lines[i]);
       if (!line.length) {
@@ -6578,6 +6583,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         var item = JSON.parse(line);
         if (item && item.kind === "plan") {
           plan = item.plan || null;
+        } else if (item && item.kind === "proof") {
+          proof = item.proof ? unverifiedChangesOf(item.proof) : null;
         } else if (item && trim(item.key).length) {
           // An event masked after it was saved (maskStateSecrets) takes the place of its lines under its former key.
           var previous = trim(item.previousKey);
@@ -6605,7 +6612,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     // the live conversation, if any, are masked too.
     var holder = { secretValues: (state && state.secretValues || []).slice(0) };
     maskRecordedEvents(events, holder);
-    return { events: events, plan: panelPlan(holder, plan), secrets: holder.secretValues };
+    return { events: events, plan: panelPlan(holder, plan), proof: proof, secrets: holder.secretValues };
   }
 
   // Secret values in what the panel shows. CRM promo run (Mistral Large 4 through Vibe, 13/11): the demo
@@ -7771,9 +7778,51 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
   }
 
   // A "warning" event of the Agent Bridge ({phase, reason, message...}, bridge-contract.md): counted in the feedback when
-  // it tells that the agent lost or never had the Convertigo MCP.
+  // it tells that the agent lost or never had the Convertigo MCP. The changes a turn did not prove (turn/proof,
+  // unverified_changes) are also kept on the turn: in the state for the answer the page shows at its end, and in the
+  // run's history (runs/<runid>.ndjson) for a reopened conversation.
   function rememberBridgeWarning(state, data) {
-    collectFeedbackBridgeWarning(state, data || {});
+    data = data || {};
+    if (trim(data.reason) === "unverified_changes") {
+      var proof = unverifiedChangesOf(data);
+      state.unverifiedChanges = proof ? { runid: String(state.runid || ""), items: proof.items, count: proof.count, nudged: proof.nudged } : null;
+      if (proof) {
+        appendRunDetail(state, { kind: "proof", proof: proof });
+      }
+    }
+    collectFeedbackBridgeWarning(state, data);
+  }
+
+  // The changes of a turn the Bridge saw no proof of after their last change (a sequence run, a verifier report, a CRUD or
+  // seed proof, a browser check): {items: [{qname, kind}] (15 at most), count, nudged}, or null when there is none.
+  var UNVERIFIED_ITEMS_MAX = 15;
+  var UNVERIFIED_KINDS = { backend: true, ui: true, file: true };
+
+  function unverifiedChangesOf(data) {
+    var list = data && data.items && typeof data.items.length === "number" ? data.items : [];
+    var items = [];
+    for (var i = 0; i < list.length && items.length < UNVERIFIED_ITEMS_MAX; i++) {
+      var qname = trim(list[i] && list[i].qname).replace(/[\u0000-\u001f\u007f]+/g, " ");
+      if (!qname.length || qname.length > 400) {
+        continue;
+      }
+      var kind = trim(list[i] && list[i].kind).toLowerCase();
+      items.push({ qname: qname, kind: UNVERIFIED_KINDS[kind] === true ? kind : "" });
+    }
+    var count = Math.max(items.length, Math.floor(Number(data && data.count) || 0));
+    if (!count) {
+      return null;
+    }
+    return { items: items, count: count, nudged: !!(data && data.nudged === true) };
+  }
+
+  // The unproven changes of the run the state holds now, for the page: null for another run or none.
+  function turnUnverifiedChanges(state) {
+    var proof = state && state.unverifiedChanges;
+    if (!proof || String(proof.runid || "") !== String(state.runid || "")) {
+      return null;
+    }
+    return { items: proof.items || [], count: Number(proof.count) || 0, nudged: proof.nudged === true };
   }
 
   // How long a failed call took: the Bridge measures it (failure.durationMs), else from when this client saw it start.
@@ -9285,6 +9334,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         setupRequired: state.setupRequired === true,
         setup: state.setupReport || null,
         warnings: panelWarnings(state, state.warnings || []),
+        // The changes of this turn left unproven after their last change (Bridge turn/proof): the line under the answer.
+        unverified: turnUnverifiedChanges(state),
         messages: responseMessages(state)
       },
       state: publicState(state)
@@ -10956,6 +11007,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     state.answerIsFinal = false;
     state.error = "";
     state.warnings = [];
+    state.unverifiedChanges = null;
     state.readErrors = 0;
     state.progressLog = "";
     state.progressEvents = [];
