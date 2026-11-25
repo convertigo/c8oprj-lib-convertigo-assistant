@@ -2998,6 +2998,63 @@ scriptContent:
           ↓QuotaTrigger [ngx.components.UIDynamicElement-1792000354041]: 
             beanData: '{"ionBean":"Button","IonFill":"plain:clear"}'
             tagName: ion-button
+            ↓Gauge [ngx.components.UIDynamicElement-1795601703225]: 
+              beanData: '{"ionBean":"DivTag"}'
+              comment: The ring and the percentage in its middle, stacked in one grid cell.
+              tagName: div
+              ↓Class [ngx.components.UIAttribute-1795601703227]: 
+                attrName: class
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:agent-quota-gauge
+              ↓Hidden [ngx.components.UIAttribute-1795601703229]: 
+                attrName: aria-hidden
+                attrValue: 
+                  - xmlizable: 
+                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                    - MobileSmartSourceType: plain:true
+              ↓Arc [ngx.components.UIDynamicElement-1792000354053]: 
+                beanData: '{"ionBean":"DivTag"}'
+                tagName: div
+                ↓Class [ngx.components.UIAttribute-1792000354055]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-quota-arc
+                ↓Background [ngx.components.UIAttribute-1792000354057]: 
+                  attrName: '[style.background]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:AgentQuotaView?.background
+                ↓Hidden [ngx.components.UIAttribute-1792000354059]: 
+                  attrName: aria-hidden
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:true
+              ↓Percent [ngx.components.UIDynamicElement-1795601704565]: 
+                beanData: '{"ionBean":"SpanTag"}'
+                tagName: span
+                ↓Class [ngx.components.UIAttribute-1795601704567]: 
+                  attrName: class
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: plain:agent-quota-percent
+                ↓Text [ngx.components.UIText-1795542947379]: 
+                  textValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:AgentQuotaView?.percentText || ''
+                ↓Long [ngx.components.UIAttribute-1795601775152]: 
+                  attrName: '[class.is-long]'
+                  attrValue: 
+                    - xmlizable: 
+                      - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                      - MobileSmartSourceType: script:(AgentQuotaView?.percentText || '').length > 4
             ↓Id [ngx.components.UIAttribute-1792000354043]: 
               attrName: '[id]'
               attrValue: 
@@ -3028,32 +3085,6 @@ scriptContent:
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
                   - MobileSmartSourceType: plain:dialog
-            ↓Arc [ngx.components.UIDynamicElement-1792000354053]: 
-              beanData: '{"ionBean":"DivTag"}'
-              tagName: div
-              ↓Class [ngx.components.UIAttribute-1792000354055]: 
-                attrName: class
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:agent-quota-arc
-              ↓Background [ngx.components.UIAttribute-1792000354057]: 
-                attrName: '[style.background]'
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: script:AgentQuotaView?.background
-              ↓Hidden [ngx.components.UIAttribute-1792000354059]: 
-                attrName: aria-hidden
-                attrValue: 
-                  - xmlizable: 
-                    - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                    - MobileSmartSourceType: plain:true
-            ↓Text [ngx.components.UIText-1795542947379]: 
-              textValue: 
-                - xmlizable: 
-                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:AgentQuotaView?.percentText || ''
           ↓QuotaPopover [ngx.components.UIDynamicElement-1792000355689]: 
             beanData: |
               '{
@@ -4859,25 +4890,50 @@ scriptContent:
           :host-context(ion-footer.forms-integrated.agent-footer-codex) .tigo-prompts-row > .modern-suggestion-btn::part(native) { min-height: 36px; }
           '
 ↓TigoBudgetPercentStyle [ngx.components.UIStyle-1795542947969]: 
-  comment: The budget in words next to its ring (lot 3).
+  comment: The budget percentage in the middle of its ring (lot 3).
   styleContent: 
     - xmlizable: 
       - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
       - com.twinsoft.convertigo.beans.common.FormatedContent: 
         →: |
-          '/* The budget in words next to its ring: the ring alone read as a loading spinner. */
+          '/* The budget percentage in the middle of its ring (alone, the ring read as a loading spinner). */
           .agent-quota-trigger {
-            flex: 0 0 auto !important;
-            width: auto !important;
-            min-width: 34px;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0;
-            color: var(--ion-color-step-600, #64748b);
+            flex: 0 0 38px !important;
+            width: 38px !important;
+            min-width: 38px;
+            height: 38px;
           }
           .agent-quota-trigger::part(native) {
-            gap: 4px;
-            padding: 5px 6px;
+            padding: 2px;
+          }
+          .agent-quota-gauge {
+            display: grid;
+            place-items: center;
+            width: 32px;
+            height: 32px;
+          }
+          .agent-quota-gauge > * {
+            grid-area: 1 / 1;
+          }
+          .agent-quota-gauge .agent-quota-arc {
+            width: 32px;
+            height: 32px;
+            -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+          }
+          .agent-quota-percent {
+            font-size: 9px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+            word-spacing: -1.5px;
+            font-variant-numeric: tabular-nums;
+            color: var(--ion-color-step-700, #94a3b8);
+          }
+          /* "100 %" fits inside the ring too. */
+          .agent-quota-percent.is-long {
+            font-size: 7.5px;
           }
           
           /* The controls wrap instead of pushing the agent and the model out of the bar on its left. */

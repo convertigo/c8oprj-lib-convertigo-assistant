@@ -353,8 +353,10 @@ rediscovering the same context.
   input bar are for their conversation: + starts again from those of the settings
   (`AgentSettingsChoice`, read at load and when the settings close;
   `restoreDefaultAgentChoice`), the No Code Studio keeps its server model and
-  stored user effort. The budget shows its percent next to its ring
-  (`percentText`); the composer controls wrap instead of leaving the bar. Cover
+  stored user effort. The budget shows its percent in the middle of its ring
+  (`Gauge`: the ring and `percentText` stacked in one grid cell, "100 %"
+  smaller through `is-long`); the composer controls wrap instead of leaving the
+  bar. Cover
   with `node --test tests/assistant_panel_home.test.cjs`.
 - Glossary, one word per thing in the four languages: Settings / Réglages /
   Impostazioni / Ajustes (`Agent_Settings_Title`), Compétences for skills in French,

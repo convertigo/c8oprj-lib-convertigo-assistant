@@ -97,10 +97,16 @@ test('a new conversation starts again from the model and the effort of the setti
   assert.ok(home.indexOf('page.restoreDefaultAgentChoice();') > 0 && home.indexOf('page.restoreDefaultAgentChoice();') < home.indexOf('page.setEnableChat();'));
 });
 
-test('the budget shows in words next to its ring', () => {
+test('the budget percentage shows in the middle of its ring', () => {
   assert.match(page, /label:label,percentText:percent == null \? "" : Math\.round\(percent\) \+ " %",summary:summary,/);
   const trigger = footer.slice(footer.indexOf('↓QuotaTrigger ['), footer.indexOf('↓QuotaPopover ['));
-  assert.ok(trigger.includes("MobileSmartSourceType: script:AgentQuotaView?.percentText || ''"), 'the percent after the ring');
+  const gauge = trigger.slice(trigger.indexOf('↓Gauge ['));
+  assert.ok(gauge.indexOf('↓Arc [') > 0 && gauge.indexOf('↓Percent [') > gauge.indexOf('↓Arc ['), 'the ring, then the percentage, in one gauge');
+  assert.ok(gauge.includes('plain:agent-quota-gauge') && gauge.includes('plain:agent-quota-percent'));
+  assert.ok(gauge.slice(gauge.indexOf('↓Percent [')).includes("MobileSmartSourceType: script:AgentQuotaView?.percentText || ''"), 'the percentage');
+  assert.ok(gauge.includes('[class.is-long]') && gauge.includes("script:(AgentQuotaView?.percentText || '').length > 4"), '100 % smaller');
   const style = footer.slice(footer.indexOf('↓TigoBudgetPercentStyle ['));
-  assert.match(style, /\.agent-quota-trigger \{\n\s+flex: 0 0 auto !important;\n\s+width: auto !important;/);
+  assert.match(style, /\.agent-quota-gauge \{\n\s+display: grid;\n\s+place-items: center;/);
+  assert.match(style, /\.agent-quota-gauge > \* \{\n\s+grid-area: 1 \/ 1;/);
+  assert.match(style, /\.agent-quota-percent\.is-long \{\n\s+font-size: 7\.5px;/);
 });
