@@ -381,6 +381,18 @@ rediscovering the same context.
   (`getAgentQuotaView`, Refresh, extension request) and holds the feedback to
   Convertigo; its state is `getAccountTabStatus()` (budget percent, feedback
   mode). Cover with `node --test tests/assistant_panel_account_language.test.cjs`.
+- Delete asks for a second click: the first one arms the button of that
+  conversation ("Confirm delete", danger color, its words shown in the No Code
+  Studio too), a second one within five seconds deletes; the delete call sits
+  under an IfAction (`confirmConversationDelete`). The feedback invitation is a
+  banner of the home screen (`getFeedbackInviteBanner`, the buttons of the former
+  card through `onFeedbackCta`), never a card in the thread; the reminders of
+  waiting reports stay in the thread. One + menu in the input bar holds the
+  files, the image and the library (prompts, skills, MCP connections:
+  `LibraryOptions` → `toggleResourceTab`); next to it only the open part of the
+  library stays, as the way to close it. The composer library words
+  (`resourceCaption`) exist in the four languages. Cover with
+  `node --test tests/assistant_panel_delete_invite_menu.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.

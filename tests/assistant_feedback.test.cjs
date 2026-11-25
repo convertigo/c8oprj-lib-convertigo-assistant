@@ -253,7 +253,8 @@ test('automatic mode sends after a turn; the outbox and a batch stay bounded', (
 });
 
 const METHODS = ['agentFeedbackText', 'feedbackCommand', 'fillFeedbackCard', 'agentUiLanguage', 'feedbackErrorText', 'feedbackTurnFailures', 'feedbackCard',
-  'dropOpenFeedbackCards', 'offerFeedback', 'offerFeedbackOnOpen', 'onFeedbackCta', 'offerAutoAfterSend', 'canReportTurn', 'prefillFeedbackReport', 'feedbackSettingNote', 'feedbackSettingChoices'];
+  'dropOpenFeedbackCards', 'offerFeedback', 'offerFeedbackOnOpen', 'onFeedbackCta', 'offerAutoAfterSend', 'canReportTurn', 'prefillFeedbackReport', 'feedbackSettingNote', 'feedbackSettingChoices',
+  'getFeedbackInviteBanner', 'dismissFeedbackInviteBanner'];
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
 const members = pageAst.statements[0].members.filter(m => m.name && METHODS.includes(m.name.getText(pageAst)));
 assert.deepEqual(members.map(m => m.name.getText(pageAst)).sort(), [...METHODS].sort());
@@ -273,6 +274,8 @@ function page(language, answers = []) {
   p.scrollChatBottom = () => {};
   p.events = { publish: (topic, data) => p.published.push([topic, data]) };
   p.feedbackStatusCached = () => p.local.FeedbackStatus || null;
+  p.screen = 'home';
+  p.isPanelScreen = name => name === p.screen;
   p.c8o = { callJsonObject: (name, params) => {
     p.calls.push(JSON.parse(JSON.stringify(params)));
     const answer = answers.shift();
@@ -318,23 +321,24 @@ test('the card shows the mode, one row per waiting report and what to do next; i
   assert.match(offline.message, /^Activez Tigo/);
 });
 
-test('after a turn the thread invites until it is answered, cites the failed tools, and reminds of waiting reports when they grow', () => {
+test('after a turn the invitation waits on the home screen, outside the thread, and reminds of waiting reports when they grow', () => {
   const p = page('fr');
   const events = [{ type: 'tool', status: 'failed' }, { type: 'tool', status: 'completed', detail: '{"content":[{"type":"text","text":"{\\"code\\":\\"-1\\",\\"message\\":\\"x\\"}"}]}' },
     { type: 'tool', status: 'completed', detail: '{"status":"ok"}' }, { type: 'narrative', status: 'failed' }];
   assert.equal(p.feedbackTurnFailures(events), 2);
+  p.screen = 'conversation';
   p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }, 2);
-  assert.equal(p.local.Messages.length, 1);
-  const invite = p.local.Messages[0];
+  assert.equal(p.local.Messages.length, 0, 'no card in the thread');
+  assert.equal(p.getFeedbackInviteBanner(), null, 'nothing over a conversation');
+  p.screen = 'home';
+  const invite = p.getFeedbackInviteBanner();
   assert.equal(invite.type, 'feedback');
   assert.equal(invite.variant, 'invite');
-  assert.match(invite.message, /^Ce tour a rencontré 2 erreur\(s\) d'outil\. Partagez avec Convertigo/);
+  assert.match(invite.message, /^Partagez avec Convertigo/);
   assert.deepEqual(Array.from(invite.actions, a => a.id), ['ask', 'auto', 'later']);
-  // The next turn moves the open invitation to the end of the thread: one card, never two.
-  p.local.Messages.push({ type: 'assistant', msg: 'next answer' });
-  p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }, 0);
-  assert.deepEqual(Array.from(p.local.Messages, m => m.type), ['assistant', 'feedback']);
-  assert.match(p.local.Messages[1].message, /^Partagez avec Convertigo/);
+  assert.equal(p.getFeedbackInviteBanner(), invite, 'one banner');
+  p.dismissFeedbackInviteBanner();
+  assert.equal(p.getFeedbackInviteBanner(), null, 'closed, it stays closed for this page');
   // Imposed by the administrator: no card at all.
   const locked = page('fr');
   locked.offerFeedback({ status: 'ok', available: true, mode: 'off', locked: true, invite: false, pending: [] }, 3);
@@ -355,7 +359,7 @@ test('after a turn the thread invites until it is answered, cites the failed too
 test('the card buttons choose a mode, snooze, send or open the review card', async () => {
   const p = page('fr', [{ status: 'ok', mode: 'ask', invite: false, pending: [], result: { status: 'ok', mode: 'ask' } }]);
   p.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }, 0);
-  const card = p.local.Messages[0];
+  const card = p.getFeedbackInviteBanner();
   p.onFeedbackCta(card, card.actions[0]);
   assert.equal(card.busy, true);
   p.onFeedbackCta(card, card.actions[1]);
@@ -364,13 +368,19 @@ test('the card buttons choose a mode, snooze, send or open the review card', asy
   assert.equal(card.actions.length, 0);
   assert.match(card.message, /^Merci ! Les retours sont préparés ici/);
   assert.equal(p.local.FeedbackStatus.mode, 'ask');
+  assert.equal(p.getFeedbackInviteBanner(), card, 'answered, the banner says so on the home screen');
+  p.screen = 'conversation';
+  assert.equal(p.getFeedbackInviteBanner(), null);
+  p.screen = 'home';
+  assert.equal(p.getFeedbackInviteBanner(), null, 'and leaves with it');
 
   const later = page('en', [{ status: 'ok', mode: 'off', invite: false, pending: [], result: { status: 'ok', snoozedUntil: 1 } }]);
   later.offerFeedback({ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }, 0);
-  later.onFeedbackCta(later.local.Messages[0], later.local.Messages[0].actions[2]);
+  const banner = later.getFeedbackInviteBanner();
+  later.onFeedbackCta(banner, banner.actions[2]);
   await settle();
   assert.deepEqual(later.calls, [{ action: 'later', topic: 'invite' }]);
-  assert.match(later.local.Messages[0].message, /^All right, we will ask again in a week/);
+  assert.match(banner.message, /^All right, we will ask again in a week/);
 
   const send = page('fr', [{ status: 'ok', mode: 'ask', pending: [{}], result: { status: 'error', code: 'not_connected', pending: 1 } }]);
   send.offerFeedback({ status: 'ok', available: true, mode: 'ask', pending: [{}] }, 0);
@@ -427,14 +437,14 @@ test('the setting lists the three modes and says what waits or who decided', () 
   }
 });
 
-test('a reopened conversation shows the unanswered invitation, or the waiting reports, again at its end, after a finished turn only', async () => {
+test('a reopened conversation shows the waiting reports again at its end, after a finished turn only; the invitation waits on the home screen', async () => {
   const p = page('fr', [{ status: 'ok', available: true, mode: 'off', invite: true, pending: [] }]);
   p.local.Messages = [{ type: 'user', msg: 'Bonjour' }, { type: 'assistant', msg: 'Bonjour !', runEvents: [] }];
   p.offerFeedbackOnOpen();
   await settle();
   assert.deepEqual(p.calls, [{ action: 'status' }]);
-  assert.deepEqual(Array.from(p.local.Messages, m => m.type), ['user', 'assistant', 'feedback']);
-  assert.equal(p.local.Messages[2].variant, 'invite');
+  assert.deepEqual(Array.from(p.local.Messages, m => m.type), ['user', 'assistant'], 'the invitation stays out of the thread');
+  assert.equal(p.local.FeedbackStatus.invite, true, 'the home screen shows it');
   // Answered or snoozed: the status says no invitation, nothing comes back.
   const answered = page('fr', [{ status: 'ok', available: true, mode: 'ask', invite: false, pending: [] }]);
   answered.local.Messages = [{ type: 'assistant', msg: 'ok' }];

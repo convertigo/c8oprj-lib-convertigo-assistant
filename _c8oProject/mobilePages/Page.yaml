@@ -6581,10 +6581,10 @@ scriptContent:
         		if (this.isEmbeddedInC8Oforms && this.isEmbeddedInC8Oforms() && ["search", "all", "project"].indexOf(key) >= 0) { return this.getFormsHistoryText(key === "all" ? "any" : (key === "project" ? "current" : "search")); }
         		// Texts of the conversation list of the Studio, in the four Assistant languages.
         		var texts: any = {
-        			fr: { search: "Rechercher par titre, projet ou modèle", all: "Toutes", project: "Projet {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} sur {total}", more: "Afficher {n} de plus", none: "Aucune conversation ne correspond à « {query} ».", today: "Aujourd''hui", yesterday: "Hier", running: "en cours", failed: "échec", cancelled: "annulée", rename: "Renommer", remove: "Supprimer" },
-        			en: { search: "Search by title, project or model", all: "All", project: "Project {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} of {total}", more: "Show {n} more", none: "No conversation matches “{query}”.", today: "Today", yesterday: "Yesterday", running: "running", failed: "failed", cancelled: "cancelled", rename: "Rename", remove: "Delete" },
-        			it: { search: "Cerca per titolo, progetto o modello", all: "Tutte", project: "Progetto {name}", one: "1 conversazione", count: "{total} conversazioni", countSome: "{shown} su {total}", more: "Mostra altre {n}", none: "Nessuna conversazione corrisponde a «{query}».", today: "Oggi", yesterday: "Ieri", running: "in corso", failed: "errore", cancelled: "annullata", rename: "Rinomina", remove: "Elimina" },
-        			es: { search: "Buscar por título, proyecto o modelo", all: "Todas", project: "Proyecto {name}", one: "1 conversación", count: "{total} conversaciones", countSome: "{shown} de {total}", more: "Mostrar {n} más", none: "Ninguna conversación coincide con «{query}».", today: "Hoy", yesterday: "Ayer", running: "en curso", failed: "error", cancelled: "cancelada", rename: "Renombrar", remove: "Eliminar" }
+        			fr: { search: "Rechercher par titre, projet ou modèle", all: "Toutes", project: "Projet {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} sur {total}", more: "Afficher {n} de plus", none: "Aucune conversation ne correspond à « {query} ».", today: "Aujourd''hui", yesterday: "Hier", running: "en cours", failed: "échec", cancelled: "annulée", rename: "Renommer", remove: "Supprimer", removeConfirm: "Confirmer la suppression" },
+        			en: { search: "Search by title, project or model", all: "All", project: "Project {name}", one: "1 conversation", count: "{total} conversations", countSome: "{shown} of {total}", more: "Show {n} more", none: "No conversation matches “{query}”.", today: "Today", yesterday: "Yesterday", running: "running", failed: "failed", cancelled: "cancelled", rename: "Rename", remove: "Delete", removeConfirm: "Confirm delete" },
+        			it: { search: "Cerca per titolo, progetto o modello", all: "Tutte", project: "Progetto {name}", one: "1 conversazione", count: "{total} conversazioni", countSome: "{shown} su {total}", more: "Mostra altre {n}", none: "Nessuna conversazione corrisponde a «{query}».", today: "Oggi", yesterday: "Ieri", running: "in corso", failed: "errore", cancelled: "annullata", rename: "Rinomina", remove: "Elimina", removeConfirm: "Conferma eliminazione" },
+        			es: { search: "Buscar por título, proyecto o modelo", all: "Todas", project: "Proyecto {name}", one: "1 conversación", count: "{total} conversaciones", countSome: "{shown} de {total}", more: "Mostrar {n} más", none: "Ninguna conversación coincide con «{query}».", today: "Hoy", yesterday: "Ayer", running: "en curso", failed: "error", cancelled: "cancelada", rename: "Renombrar", remove: "Eliminar", removeConfirm: "Confirmar eliminación" }
         		};
         		var table = texts[this.agentUiLanguage()] || texts.en;
         		return table[key] || texts.en[key] || "";
@@ -7066,6 +7066,54 @@ scriptContent:
         			}
         		}
         	}
+        	public confirmConversationDelete(conversation) {
+        		// Delete asks for a second click: the first one arms the button of that conversation ("Confirm delete"), a second
+        		// one within five seconds deletes it (a click on Delete next to Resume removed a conversation at once).
+        		var id = conversation && conversation.conversationId ? "" + conversation.conversationId : "";
+        		if (!id) { return false; }
+        		if (!this.local) { this.local = {}; }
+        		var armed = this.local.ConversationDeleteArmed;
+        		if (armed && armed.id === id && Date.now() - armed.at < 5000) {
+        			this.local.ConversationDeleteArmed = null;
+        			return true;
+        		}
+        		this.local.ConversationDeleteArmed = { id: id, at: Date.now() };
+        		setTimeout(() => {
+        			var still = this.local && this.local.ConversationDeleteArmed;
+        			if (still && still.id === id) { this.local.ConversationDeleteArmed = null; this.tick(); }
+        		}, 5000);
+        		this.tick();
+        		return false;
+        	}
+        	public isConversationDeleteArmed(conversation) {
+        		var armed = this.local && this.local.ConversationDeleteArmed;
+        		return !!(armed && conversation && armed.id === "" + conversation.conversationId);
+        	}
+        	public getFeedbackInviteBanner() {
+        		// The invitation to share feedback with Convertigo shows on the home screen, outside the thread (it was a card at
+        		// the end of a conversation); answered, it says so until the home screen is left.
+        		var local: any = this.local;
+        		if (!local) { return null; }
+        		var home = !!(this.isPanelScreen && this.isPanelScreen("home"));
+        		var card = local.FeedbackInviteCard;
+        		if (card) {
+        			if (!home && !(card.actions && card.actions.length)) { local.FeedbackInviteCard = null; return null; }
+        			return home ? card : null;
+        		}
+        		if (!home || local.FeedbackInviteDismissed === true) { return null; }
+        		var status: any = this.feedbackStatusCached ? this.feedbackStatusCached() : null;
+        		if (!status || status.invite !== true || status.available === false || status.locked || status.notice === true) { return null; }
+        		var t = (key: any) => this.agentFeedbackText(key);
+        		local.FeedbackInviteCard = this.feedbackCard("invite", t("inviteTitle"), t("inviteText"),
+        			[{ id: "ask", label: t("inviteAsk"), primary: true }, { id: "auto", label: t("inviteAuto") }, { id: "later", topic: "invite", label: t("inviteLater") }]);
+        		return local.FeedbackInviteCard;
+        	}
+        	public dismissFeedbackInviteBanner() {
+        		if (!this.local) { return; }
+        		this.local.FeedbackInviteCard = null;
+        		this.local.FeedbackInviteDismissed = true;
+        		this.tick();
+        	}
         	public offerFeedback(result, failures, reopened = false) {
         		// After a turn, one card at most: the invitation, while nobody chose a mode and nothing is imposed (it stays at the
         		// end of the thread until it is answered);
@@ -7095,8 +7143,8 @@ scriptContent:
         		var pending = (result.pending || []).length;
         		var card: any = null;
         		if (result.invite === true) {
-        			card = this.feedbackCard("invite", t("inviteTitle"), (failures ? t("inviteFailures").replace("{n}", "" + failures) + " " : "") + t("inviteText"),
-        				[{ id: "ask", label: t("inviteAsk"), primary: true }, { id: "auto", label: t("inviteAuto") }, { id: "later", topic: "invite", label: t("inviteLater") }]);
+        			// the invitation shows on the home screen, outside the thread (getFeedbackInviteBanner): the status kept above
+        			// says it is due
         		} else if (result.nudge === true && failures && !reopened) {
         			// "off" chosen: a turn with errors asks again, with review, or to report this turn by hand.
         			card = this.feedbackCard("nudge", t("nudgeTitle"), t("nudgeText").replace("{n}", "" + failures),
@@ -17009,13 +17057,13 @@ title: Tigo
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: 'script:conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-action danger agent-hidden'' : ''agent-conversation-action danger'''
+                            - MobileSmartSourceType: 'script:(conversation && conversation.conversationId === this.local.Conversation ? ''agent-conversation-action danger agent-hidden'' : ''agent-conversation-action danger'') + (this.isConversationDeleteArmed(conversation) ? '' is-armed'' : '''')'
                       ↓Aria [ngx.components.UIAttribute-1781608122147]: 
                         attrName: '[attr.aria-label]'
                         attrValue: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: script:this.t('Agent_Delete_Conversation', 'Supprimer la conversation')
+                            - MobileSmartSourceType: 'script:this.isConversationDeleteArmed(conversation) ? this.historyText(''removeConfirm'') : this.t(''Agent_Delete_Conversation'', ''Supprimer la conversation'')'
                       ↓Icon [ngx.components.UIDynamicElement-1781608122149]: 
                         beanData: |
                           '{
@@ -17030,7 +17078,7 @@ title: Tigo
                         directiveSource: 
                           - xmlizable: 
                             - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                            - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms()
+                            - MobileSmartSourceType: script:!this.isEmbeddedInC8Oforms() || this.isConversationDeleteArmed(conversation)
                         ↓Label [ngx.components.UIDynamicElement-1792416222411]: 
                           beanData: '{"ionBean":"DivTag"}'
                           tagName: span
@@ -17044,52 +17092,55 @@ title: Tigo
                             textValue: 
                               - xmlizable: 
                                 - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:this.historyText('remove')
+                                - MobileSmartSourceType: 'script:this.isConversationDeleteArmed(conversation) ? this.historyText(''removeConfirm'') : this.historyText(''remove'')'
                       ↓Event [ngx.components.UIControlEvent-1781608122151]: 
-                        ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
-                          beanData: |
-                            '{
-                             "ionBean": "CallSequenceAction",
-                             "requestable": "plain:lib_ConvertigoAssistant.AgentDeleteConversation",
-                             "noLoading": "plain:true"
-                            }'
-                          ↓threadid [ngx.components.UIControlVariable-1781608122155]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.conversationId ? scope.conversation.conversationId : '''''
-                          ↓targetProject [ngx.components.UIControlVariable-1781608122157]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(scope.conversation, this)
-                          ↓provider [ngx.components.UIControlVariable-1781700400004]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')'
-                          ↓SetConversations [ngx.components.UIDynamicAction-1781608610654]: 
+                        ↓IfConfirmed [ngx.components.UIDynamicAction-1795591939673]: 
+                          beanData: '{"ionBean":"IfAction","condition":"script:this.confirmConversationDelete(scope.conversation)"}'
+                          comment: The first click arms the button, a second one within five seconds deletes (confirmConversationDelete).
+                          ↓DeleteConversation [ngx.components.UIDynamicAction-1781608122153]: 
                             beanData: |
                               '{
-                               "ionBean": "SetLocalAction",
-                               "Property": "plain:AgentConversations",
-                               "Value": "script:(function(page, conversation, response) {\n    var current = (page.local && Array.isArray(page.local.AgentConversations)) ? page.local.AgentConversations : [];\n    var target = '''';\n    try {\n        target = '''' + ((conversation && (conversation.conversationId || conversation.threadid || conversation.id)) || '''');\n    } catch (e) {}\n    var result = JSON.parse(''{}'');\n    try {\n        result = response && response.result ? response.result : (response || {});\n    } catch (e0) {\n        result = {};\n    }\n    if (result && (result.ok === false || result.status === ''delete_failed'')) {\n        return current;\n    }\n    if (result && Array.isArray(result.conversations)) {\n        return result.conversations;\n    }\n    if (!target.length) {\n        return current;\n    }\n    var next = [];\n    for (var i = 0; i < current.length; i++) {\n        var item = current[i] || {};\n        var id = '''' + (item.conversationId || item.threadid || item.id || '''');\n        if (id !== target) {\n            next.push(item);\n        }\n    }\n    return next;\n})(this, scope && scope.conversation, out)"
+                               "ionBean": "CallSequenceAction",
+                               "requestable": "plain:lib_ConvertigoAssistant.AgentDeleteConversation",
+                               "noLoading": "plain:true"
                               }'
-                          ↓userId [ngx.components.UIControlVariable-1782831326155]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:c8oPage.getAgentContextUserId ? c8oPage.getAgentContextUserId() : ''studio'''
-                          ↓agentProfile [ngx.components.UIControlVariable-1782831327681]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
-                          ↓skillProfile [ngx.components.UIControlVariable-1782831329207]: 
-                            varValue: 
-                              - xmlizable: 
-                                - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                                - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
+                            ↓threadid [ngx.components.UIControlVariable-1781608122155]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:scope.conversation && scope.conversation.conversationId ? scope.conversation.conversationId : '''''
+                            ↓targetProject [ngx.components.UIControlVariable-1781608122157]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: script:(function(c, page) { var p = ''; try { p = '' + ((c && (c.primaryProject || c.projectId)) || ''); } catch (e) {} if (!p && c && c.projectNames && c.projectNames.length) { p = '' + c.projectNames[0]; } if (!p && page && page.getEffectiveProjectName) { p = page.getEffectiveProjectName(); } return p; })(scope.conversation, this)
+                            ↓provider [ngx.components.UIControlVariable-1781700400004]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:(scope.conversation && scope.conversation.provider) ? scope.conversation.provider : (this.getAgentProvider ? this.getAgentProvider() : ''vibe'')'
+                            ↓SetConversations [ngx.components.UIDynamicAction-1781608610654]: 
+                              beanData: |
+                                '{
+                                 "ionBean": "SetLocalAction",
+                                 "Property": "plain:AgentConversations",
+                                 "Value": "script:(function(page, conversation, response) {\n    var current = (page.local && Array.isArray(page.local.AgentConversations)) ? page.local.AgentConversations : [];\n    var target = '''';\n    try {\n        target = '''' + ((conversation && (conversation.conversationId || conversation.threadid || conversation.id)) || '''');\n    } catch (e) {}\n    var result = JSON.parse(''{}'');\n    try {\n        result = response && response.result ? response.result : (response || {});\n    } catch (e0) {\n        result = {};\n    }\n    if (result && (result.ok === false || result.status === ''delete_failed'')) {\n        return current;\n    }\n    if (result && Array.isArray(result.conversations)) {\n        return result.conversations;\n    }\n    if (!target.length) {\n        return current;\n    }\n    var next = [];\n    for (var i = 0; i < current.length; i++) {\n        var item = current[i] || {};\n        var id = '''' + (item.conversationId || item.threadid || item.id || '''');\n        if (id !== target) {\n            next.push(item);\n        }\n    }\n    return next;\n})(this, scope && scope.conversation, out)"
+                                }'
+                            ↓userId [ngx.components.UIControlVariable-1782831326155]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:c8oPage.getAgentContextUserId ? c8oPage.getAgentContextUserId() : ''studio'''
+                            ↓agentProfile [ngx.components.UIControlVariable-1782831327681]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
+                            ↓skillProfile [ngx.components.UIControlVariable-1782831329207]: 
+                              varValue: 
+                                - xmlizable: 
+                                  - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
+                                  - MobileSmartSourceType: 'script:c8oPage.getAgentSkillProfile ? c8oPage.getAgentSkillProfile() : '''''
                     ↓RenameButton [ngx.components.UIDynamicElement-1782745322278]: 
                       beanData: |
                         '{
@@ -17508,6 +17559,9 @@ title: Tigo
                         		page.tick();
                         		page.focusQuestionInput(20);
                         		resolve();'
+      ↓FeedbackInviteBanner [ngx.components.UICustom-1795591940897]: 
+        comment: The invitation to share feedback with Convertigo, on the home screen outside the thread (getFeedbackInviteBanner); its buttons are those of the former card (onFeedbackCta).
+        htmlTemplate: '<div *ngIf="getFeedbackInviteBanner() as invite" class="tigo-feedback-banner" role="region" [attr.aria-label]="invite.title"><div class="tigo-feedback-banner-copy"><p class="tigo-feedback-banner-title">{{invite.title}}</p><p class="tigo-feedback-banner-text">{{invite.message}}</p></div><ion-button *ngIf="!invite.actions?.length" class="tigo-feedback-banner-close" size="small" fill="clear" [attr.aria-label]="quotaLabel(''close'')" (click)="dismissFeedbackInviteBanner()"><ion-icon name="close-outline" slot="icon-only" aria-hidden="true"></ion-icon></ion-button><div *ngIf="invite.actions?.length" class="tigo-feedback-banner-actions"><ion-button *ngFor="let cta of invite.actions" size="small" [fill]="cta.primary ? ''solid'' : ''clear''" [disabled]="invite.busy" (click)="onFeedbackCta(invite, cta)">{{cta.label}}</ion-button></div></div>'
       ↓ChatPreview [ngx.components.UIDynamicElement-1771942200001]: 
         beanData: '{"ionBean":"DivTag"}'
         tagName: div
@@ -29581,5 +29635,59 @@ title: Tigo
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
+          }
+          '
+↓TigoLot3bStyle [ngx.components.UIStyle-1795591941655]: 
+  comment: Delete armed, feedback invitation banner (lot 3b).
+  styleContent: 
+    - xmlizable: 
+      - ↑classname: com.twinsoft.convertigo.beans.common.FormatedContent
+      - com.twinsoft.convertigo.beans.common.FormatedContent: 
+        →: |
+          '/* Delete asks for a second click: the armed button says so in the danger color. */
+          .agent-conversation-action.danger.is-armed,
+          .agent-start-card:has(.agent-history-tools) .agent-conversation-action.danger.is-armed {
+            --background: var(--ion-color-danger, #c5000f) !important;
+            --background-hover: var(--ion-color-danger-shade, #ad000d) !important;
+            --border-color: var(--ion-color-danger, #c5000f) !important;
+            --color: #fff !important;
+            color: #fff !important;
+            font-weight: 600;
+            width: auto !important;
+          }
+          .agent-conversation-action.danger.is-armed .agent-history-action-label {
+            display: inline !important;
+          }
+          
+          /* The invitation to share feedback, on the home screen outside the thread. */
+          .tigo-feedback-banner {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 6px 10px;
+            margin: 12px 16px 0;
+            padding: 10px 12px;
+            border: 1px solid var(--modern-border, rgba(127, 127, 127, 0.3));
+            border-radius: 10px;
+            background: color-mix(in srgb, var(--ion-color-primary, #0891b2) 6%, transparent);
+            font-size: 12.5px;
+            line-height: 1.45;
+          }
+          .tigo-feedback-banner-title {
+            margin: 0;
+            font-weight: 600;
+          }
+          .tigo-feedback-banner-text {
+            margin: 2px 0 0;
+            opacity: 0.8;
+          }
+          .tigo-feedback-banner-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+          }
+          .tigo-feedback-banner-close {
+            align-self: start;
+            margin: -4px -6px 0 0;
           }
           '
