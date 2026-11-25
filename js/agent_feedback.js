@@ -506,9 +506,10 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
 
   // The servers a notice of Vibe says failed to connect: "MCP server 'playwright' failed to connect: mcp_transport_failed."
   // (Vibe 3, several joined by a space) or "The following MCP servers failed to connect:\n- Convertigo: <error>" (Vibe 2).
-  // Only a text that is such a notice and nothing else: an answer of the agent quoting one is not.
+  // Only a text that is such a notice and nothing else: an answer of the agent quoting one is not. The Agent Bridge (0.5.0
+  // and later) turns the notice into a line of the work log prefixed "Vibe: " (progress/message, code mcp_connect_failed).
   F.mcpConnectFailures = function (text) {
-    var source = trim(text);
+    var source = trim(text).replace(/^Vibe:\s+/, "");
     var found = [];
     if (!source.length || source.length > 2000) {
       return found;

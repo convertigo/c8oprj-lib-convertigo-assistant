@@ -1287,6 +1287,9 @@ test('Vibe\'s notice of an MCP server that failed to connect counts once per ser
   assert.deepEqual(Array.from(older, r => r.finding.template), ["MCP server 'Convertigo' failed to connect: mcp_transport_failed",
     "MCP server 'playwright' failed to connect: Connection closed"]);
   assert.equal(older[0].count, 2, 'the same failure counts again');
+  const [logged] = F.collectMcpConnectFailures({ text: "Vibe: MCP server 'playwright' failed to connect: mcp_transport_failed." });
+  assert.equal(logged.finding.template, "MCP server 'playwright' failed to connect: mcp_transport_failed",
+    'the Agent Bridge\'s work-log line of the notice ("Vibe: " first) is the notice');
   assert.deepEqual(Array.from(F.collectMcpConnectFailures({ text: "Je vois : MCP server 'Convertigo' failed to connect: mcp_transport_failed. Je réessaie." })), [],
     'an answer of the agent quoting the notice is not one');
   assert.ok(!JSON.stringify(F.pending()).includes('acme'));
