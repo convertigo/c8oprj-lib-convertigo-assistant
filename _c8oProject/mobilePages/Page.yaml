@@ -1807,13 +1807,17 @@ scriptContent:
         							this.local.AgentModel = model;
         						}
         						this.local.AgentReasoningLevels = this.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                                                        var preferredReasoning = clean(preserveSelection && clean(this.local.AgentReasoningEffort).length ? this.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (this.local.AgentReasoningEffort || storedReasoning)));
+                                                        // An effort taken from a provisional catalog (one effort offered, see isProvisionalAgentCatalog) is no choice: the
+                                                        // agent''s own catalog picks again (the stored or confirmed effort, else the model default).
+                                                        var heldReasoning = this.local.AgentReasoningProvisional === true && !(this.isProvisionalAgentCatalog && this.isProvisionalAgentCatalog(selectedProvider)) ? '''' : clean(this.local.AgentReasoningEffort);
+                                                        var preferredReasoning = clean(preserveSelection && heldReasoning.length ? heldReasoning : (preferencesConfirmed ? preferences.reasoning : (heldReasoning || storedReasoning)));
         						var reasoningOffered = false;
         						for (var rl = 0; rl < this.local.AgentReasoningLevels.length; rl++) {
         							if (preferredReasoning.length && clean(this.local.AgentReasoningLevels[rl] && this.local.AgentReasoningLevels[rl].id) === preferredReasoning) { reasoningOffered = true; break; }
         						}
         						if (!reasoningOffered) { preferredReasoning = clean(selectedModel && selectedModel.defaultReasoning); }
         						this.local.AgentReasoningEffort = this.resolveAgentReasoning([preferredReasoning], true);
+        						this.local.AgentReasoningProvisional = !!(this.isProvisionalAgentCatalog && this.isProvisionalAgentCatalog(selectedProvider));
                                                         this.local.AgentServiceTier = clean(preserveSelection ? this.local.AgentServiceTier : (preferencesConfirmed ? preferences.serviceTier : (this.local.AgentServiceTier || storedServiceTier)));
         						var runtime = selectedProvider && selectedProvider.runtime ? selectedProvider.runtime : {};
         						var authentication = selectedProvider && selectedProvider.authentication ? selectedProvider.authentication : {};
@@ -3877,13 +3881,16 @@ scriptContent:
         // effort) before the agent lists its own models (a "fallback", "config" or "presence" source, no cached catalog):
         // until that list arrives the panel says the agent is still being set up instead of offering that one model. Three
         // minutes at most per agent, so a listing that fails never leaves the choice waiting.
+        public isProvisionalAgentCatalog(descriptor) {
+            var source: any = descriptor && descriptor.source ? descriptor.source : null;
+            var type = source ? ("" + (source.type || "")).toLowerCase() : "";
+            return !!source && source.settingsCached !== true && (type === "fallback" || type === "config" || type === "presence");
+        }
         public isAgentModelCatalogPending(provider = null) {
             if (!(this.isAgentBridgeMode && this.isAgentBridgeMode()) || (this.getNoCodeServerAgent && this.getNoCodeServerAgent())) { return false; }
             var p = this.normalizeAgentProviderValue(provider || this.getAgentProvider());
             var descriptor: any = p.length ? this.getAgentProviderDescriptor(p) : null;
-            var source: any = descriptor && descriptor.source ? descriptor.source : null;
-            var type = source ? ("" + (source.type || "")).toLowerCase() : "";
-            if (!source || source.settingsCached === true || (type !== "fallback" && type !== "config" && type !== "presence")) { return false; }
+            if (!this.isProvisionalAgentCatalog(descriptor)) { return false; }
             if (!this.local) { this.local = {}; }
             var since: any = this.local.AgentModelCatalogWaitSince || (this.local.AgentModelCatalogWaitSince = {});
             if (!since[p]) { since[p] = Date.now(); }
@@ -16425,7 +16432,8 @@ title: Tigo
                                 var clean = function(value) { return ('''' + (value == null ? '''' : value)).replace(/^\s+|\s+$/g, ''''); };
                                 var provider = clean(page.local.AgentProvider).toLowerCase();
                                 var model = clean(page.local.AgentModel);
-                                var reasoningEffort = clean(page.local.AgentReasoningEffort);
+                                // An effort taken from a provisional catalog is no choice: it is not saved.
+                                var reasoningEffort = page.local.AgentReasoningProvisional === true ? '''' : clean(page.local.AgentReasoningEffort);
                                 var serviceTier = clean(page.local.AgentServiceTier);
                                 if (provider.length) {
                                     page.local.AgentProviderChoiceConfirmed = true;
@@ -21524,7 +21532,7 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:ConversationProject",
-             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return state.primaryProject || ''''; })(out)"
+             "Value": "script:(function(response, current) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return state.primaryProject || (result.resumed === true ? '''' : (current || '''')); })(out, c8oPage.local && c8oPage.local.ConversationProject)"
             }'
           ↓RefreshEnableChat [ngx.components.UICustomAction-1781676448770]: 
             actionValue: 
@@ -21637,7 +21645,13 @@ title: Tigo
                   }
                   page.local.AgentModel = model;
                   page.local.AgentReasoningLevels = page.local.AgentProviderSupportsReasoning && selectedModel && selectedModel.reasoningLevels ? selectedModel.reasoningLevels : [];
-                  var reasoning = clean(preserveSelection && clean(page.local.AgentReasoningEffort).length ? page.local.AgentReasoningEffort : (preferencesConfirmed ? preferences.reasoning : (state.reasoningEffort || result.reasoningEffort || page.local.AgentReasoningEffort || storedReasoning)));
+                  // An effort taken from a provisional catalog (one effort offered, see isProvisionalAgentCatalog) is no choice, and this
+                  // answer only echoes it back: the agent''s own catalog picks again (the stored or confirmed effort, else the model default).
+                  var provisionalReasoning = page.local.AgentReasoningProvisional === true && !(page.isProvisionalAgentCatalog && page.isProvisionalAgentCatalog(selectedProvider));
+                  var heldReasoning = provisionalReasoning ? '''' : clean(page.local.AgentReasoningEffort);
+                  var answerReasoning = provisionalReasoning ? '''' : clean(state.reasoningEffort || result.reasoningEffort);
+                  page.local.AgentReasoningEchoIgnored = provisionalReasoning;
+                  var reasoning = clean(preserveSelection && heldReasoning.length ? heldReasoning : (preferencesConfirmed ? preferences.reasoning : (answerReasoning || heldReasoning || storedReasoning)));
                   var reasoningOffered = false;
                   for (var rl = 0; rl < page.local.AgentReasoningLevels.length; rl++) {
                       if (reasoning.length && clean(page.local.AgentReasoningLevels[rl] && page.local.AgentReasoningLevels[rl].id) === reasoning) { reasoningOffered = true; break; }
@@ -21645,7 +21659,8 @@ title: Tigo
                   if (!reasoningOffered && page.local.AgentProviderSupportsReasoning === true) {
                       reasoning = clean(selectedModel && selectedModel.defaultReasoning);
                   }
-                  page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([preserveSelection ? page.local.AgentReasoningEffort : '''', state.reasoningEffort, result.reasoningEffort, reasoning], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoning : '''');
+                  page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([preserveSelection ? heldReasoning : '''', answerReasoning, reasoning], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoning : '''');
+                  page.local.AgentReasoningProvisional = !!(page.isProvisionalAgentCatalog && page.isProvisionalAgentCatalog(selectedProvider));
                   page.local.AgentServiceTier = clean(preserveSelection ? page.local.AgentServiceTier : (preferencesConfirmed ? preferences.serviceTier : (state.serviceTier || result.serviceTier || page.local.AgentServiceTier || storedServiceTier)));
                   var providerReady = false;
                   try {
@@ -21734,7 +21749,7 @@ title: Tigo
             '{
              "ionBean": "SetLocalAction",
              "Property": "plain:AgentReasoningEffort",
-             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return c8oPage.resolveAgentReasoning ? c8oPage.resolveAgentReasoning([state.reasoningEffort, c8oPage.local && c8oPage.local.AgentReasoningEffort], true) : (state.reasoningEffort || ''''); })(out)"
+             "Value": "script:(function(response) { var result = response && response.result ? response.result : {}; var state = result && result.state ? result.state : {}; return c8oPage.resolveAgentReasoning ? c8oPage.resolveAgentReasoning([(c8oPage.local && c8oPage.local.AgentReasoningEchoIgnored === true) ? '''' : state.reasoningEffort, c8oPage.local && c8oPage.local.AgentReasoningEffort], true) : (state.reasoningEffort || ''''); })(out)"
             }'
         ↓SetAgentServiceTier [ngx.components.UIDynamicAction-1782120505136]: 
           beanData: |

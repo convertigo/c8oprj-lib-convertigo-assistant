@@ -47,7 +47,8 @@ const PANEL = ['isEmbeddedNoCodeAgent', 'refreshAgentSettingsAfterHostContext', 
   'toggleAgentSettingsPage', 'resolveAgentReasoning', 'normalizeAgentProviderValue', 'getAgentSettingsRoot', 'isAgentProviderReady',
   'getAgentProviderDescriptor', 'getAgentProviderLabel', 'hasReadyAgentProvider', 'shouldShowAgentSettingsPanel', 'getAgentModelOptions',
   'getDefaultAgentModel', 'isAgentSettingsPageShown', 'getAgentProviderTitle', 'getReadyAgentFallback', 'getAgentNotReadyState',
-  'getAgentNotReadyText', 'getAgentBackLabel', 'canConnectSelectedAgent', 'useReadyAgentProvider', 'startAgentProviderCheck'];
+  'getAgentNotReadyText', 'getAgentBackLabel', 'canConnectSelectedAgent', 'useReadyAgentProvider', 'startAgentProviderCheck',
+  'isProvisionalAgentCatalog'];
 const panelCode = pageMethods(PANEL);
 
 function panel(settings = startSettings()) {

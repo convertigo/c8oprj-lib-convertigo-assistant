@@ -20,11 +20,11 @@ const slice = (source, from, to) => {
   return source.slice(start, end + to.length);
 };
 
-const pageInit = slice(only('var preferredReasoning ='), 'var preferredReasoning =',
-  "this.local.AgentReasoningEffort = this.resolveAgentReasoning([preferredReasoning], true);");
-const settingsAction = slice(only('var reasoning = clean(preserveSelection && clean(page.local.AgentReasoningEffort).length ? page.local.AgentReasoningEffort'),
-  'var reasoning = clean(preserveSelection && clean(page.local.AgentReasoningEffort).length ? page.local.AgentReasoningEffort',
-  "page.local.AgentReasoningEffort = page.resolveAgentReasoning ? page.resolveAgentReasoning([preserveSelection ? page.local.AgentReasoningEffort : '', state.reasoningEffort, result.reasoningEffort, reasoning], true) : (page.local.AgentProviderSupportsReasoning === true ? reasoning : '');");
+const pageInit = slice(only('var preferredReasoning ='), 'var heldReasoning = this.local.AgentReasoningProvisional',
+  "this.local.AgentReasoningProvisional = !!(this.isProvisionalAgentCatalog && this.isProvisionalAgentCatalog(selectedProvider));");
+const settingsAction = slice(only('var provisionalReasoning = page.local.AgentReasoningProvisional'),
+  'var provisionalReasoning = page.local.AgentReasoningProvisional',
+  "page.local.AgentReasoningProvisional = !!(page.isProvisionalAgentCatalog && page.isProvisionalAgentCatalog(selectedProvider));");
 
 // The real resolveAgentReasoning of the page, every reasoning assignment goes through it.
 const pageAst = ts.createSourceFile('page.ts', pageClass(), ts.ScriptTarget.Latest, true);
@@ -33,8 +33,14 @@ assert.ok(resolveMethod, 'resolveAgentReasoning');
 const resolveSandbox = {};
 vm.runInNewContext(ts.transpileModule('class Resolver { ' + resolveMethod.getText(pageAst) + ' }; this.Resolver = Resolver;',
   { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, resolveSandbox);
+const provisionalMethod = pageAst.statements[0].members.find((m) => m.name && m.name.getText(pageAst) === 'isProvisionalAgentCatalog');
+assert.ok(provisionalMethod, 'isProvisionalAgentCatalog');
+vm.runInNewContext(ts.transpileModule('class Provisional { ' + provisionalMethod.getText(pageAst) + ' }; this.Provisional = Provisional;',
+  { compilerOptions: { target: ts.ScriptTarget.ES2020 } }).outputText, resolveSandbox);
+const provisionalCheck = new resolveSandbox.Provisional();
 function withResolver(local, settings) {
   const owner = new resolveSandbox.Resolver();
+  owner.isProvisionalAgentCatalog = (descriptor) => provisionalCheck.isProvisionalAgentCatalog(descriptor);
   owner.local = local;
   owner.getAgentSettingsRoot = () => settings || {};
   return owner;
@@ -50,20 +56,20 @@ function modelLocal(selectedModel, effort) {
     AgentReasoningEffort: effort, AgentReasoningLevels: selectedModel.reasoningLevels };
 }
 
-function runPageInit(storedReasoning, selectedModel, settings) {
-  const self = withResolver(modelLocal(selectedModel, ''), settings);
+function runPageInit(storedReasoning, selectedModel, settings, selectedProvider = { source: { type: 'acp' } }, local = null) {
+  const self = withResolver(local || modelLocal(selectedModel, ''), settings);
   const context = vm.createContext({
-    clean, selectedModel, storedReasoning, preserveSelection: false, preferencesConfirmed: false,
+    clean, selectedModel, selectedProvider, storedReasoning, preserveSelection: false, preferencesConfirmed: false,
     preferences: {}, self
   });
   vm.runInContext('(function () {\n' + pageInit.replace(/this\./g, 'self.') + '\n})();', context);
-  return self.local.AgentReasoningEffort;
+  return local ? self.local : self.local.AgentReasoningEffort;
 }
 
-function runSettingsAction(previousChoice, selectedModel, state, settings) {
-  const page = withResolver(modelLocal(selectedModel, previousChoice), settings);
+function runSettingsAction(previousChoice, selectedModel, state, settings, selectedProvider = { source: { type: 'acp' } }, extra = {}) {
+  const page = withResolver(Object.assign(modelLocal(selectedModel, previousChoice), extra), settings);
   const context = vm.createContext({
-    clean, selectedModel, page, storedReasoning: '', preserveSelection: false, preferencesConfirmed: !!(settings && settings.preferences),
+    clean, selectedModel, selectedProvider, page, storedReasoning: '', preserveSelection: false, preferencesConfirmed: !!(settings && settings.preferences),
     preferences: (settings && settings.preferences) || {}, state: state || {}, result: {}
   });
   vm.runInContext('(function () {\n' + settingsAction + '\n})();', context);
@@ -154,4 +160,29 @@ test('returning from settings restores the gateway effort choices in the prompt 
   page.useReadyAgentProvider('convertigo');
   assert.equal(page.local.AgentReasoningLevels.length, 0);
   assert.equal(page.local.AgentReasoningEffort, '');
+});
+
+// A fresh Studio first reads the agent from its configuration: Mistral Large 4 with its "high" effort alone. The agent
+// lists its models some twenty seconds later, and its answer echoes the effort the panel sent: that effort was no choice.
+const ml4Provisional = { id: 'mistral-large-4', defaultReasoning: 'high', reasoningLevels: levels(['high']) };
+const ml4 = { id: 'mistral-large-4', defaultReasoning: 'medium', reasoningLevels: levels(['low', 'medium', 'high']) };
+
+test('the effort of a provisional catalog gives way to the model default once the agent lists its models', () => {
+  const first = runPageInit('', ml4Provisional, {}, { source: { type: 'fallback' } }, modelLocal(ml4Provisional, ''));
+  assert.equal(first.AgentReasoningEffort, 'high');
+  assert.equal(first.AgentReasoningProvisional, true);
+  const page = withResolver(Object.assign(modelLocal(ml4, 'high'), { AgentReasoningProvisional: true }), {});
+  const context = vm.createContext({ clean, selectedModel: ml4, selectedProvider: { source: { type: 'acp' } }, page, storedReasoning: '',
+    preserveSelection: false, preferencesConfirmed: false, preferences: {}, state: { reasoningEffort: 'high' }, result: { reasoningEffort: 'high' } });
+  vm.runInContext('(function () {\n' + settingsAction + '\n})();', context);
+  assert.equal(page.local.AgentReasoningEffort, 'medium', 'the echo of the provisional effort is ignored');
+  assert.equal(page.local.AgentReasoningEchoIgnored, true);
+  assert.equal(page.local.AgentReasoningProvisional, false);
+  const refreshed = runPageInit('', ml4, {}, { source: { type: 'acp' } }, Object.assign(modelLocal(ml4, 'high'), { AgentReasoningProvisional: true }));
+  assert.equal(refreshed.AgentReasoningEffort, 'medium', 'the settings refresh picks again too');
+  assert.equal(runPageInit('low', ml4, {}, { source: { type: 'acp' } }, Object.assign(modelLocal(ml4, 'high'), { AgentReasoningProvisional: true })).AgentReasoningEffort, 'low', 'a stored choice wins');
+});
+
+test('an effort chosen on the real catalog stays, echoed or not', () => {
+  assert.equal(runSettingsAction('high', ml4, { reasoningEffort: 'high' }, undefined, { source: { type: 'acp' } }, { AgentReasoningProvisional: false }), 'high');
 });

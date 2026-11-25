@@ -417,8 +417,14 @@ rediscovering the same context.
   locked "Configuring…" choice with no effort, and the agent tab and the model
   section of the settings say the agent is still being set up
   (`isAgentModelCatalogPending`, `agentConfiguringText`, at most three minutes
-  per agent). Cover with
-  `node --test tests/assistant_panel_catalog_pending.test.cjs`.
+  per agent). The effort that provisional catalog offered is no choice
+  (`AgentReasoningProvisional`): when the agent lists its models, its answer
+  echoes that effort back (`AgentReasoningEchoIgnored`), and the stored or
+  confirmed effort, else the model default, applies; "Use these settings and
+  continue" never saves it. An answer that resumes no conversation keeps the
+  project the panel shows (`SetConversationProject`). Cover with
+  `node --test tests/assistant_panel_catalog_pending.test.cjs` and
+  `node --test tests/assistant_reasoning_effort.test.cjs`.
 - Do not force scroll-to-bottom while the user is manually scrolling. Sticky
   bottom should resume only when the user returns to the bottom or presses the
   bottom control.

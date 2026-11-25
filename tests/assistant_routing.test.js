@@ -67,8 +67,8 @@ for (const project of stackManifest.projects) {
 }
 assert.equal((appSource.match(/setTimeout\(autoOpenAgentFromStudioView, 0\)/g) || []).length, 2);
 assert.match(appSource, /lib_ConvertigoAssistant\.GetVersion[\s\S]*?"noLoading": "plain:true"/);
-assert.match(pageSource, /return state\.primaryProject \|\| ''''/);
-assert.match(pageSource, /resolveAgentReasoning\(\[state\.reasoningEffort, c8oPage\.local && c8oPage\.local\.AgentReasoningEffort\], true\)/);
+assert.match(pageSource, /return state\.primaryProject \|\| \(result\.resumed === true \? '''' : \(current \|\| ''''\)\); \}\)\(out, c8oPage\.local && c8oPage\.local\.ConversationProject\)/);
+assert.match(pageSource, /resolveAgentReasoning\(\[\(c8oPage\.local && c8oPage\.local\.AgentReasoningEchoIgnored === true\) \? '''' : state\.reasoningEffort, c8oPage\.local && c8oPage\.local\.AgentReasoningEffort\], true\)/);
 assert.match(pageSource, /return state\.serviceTier \|\| ''''/);
 assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''vibe''/);
 assert.match(pageSource, /page\.local\.AgentRuntimeProvider = ''codex''/);

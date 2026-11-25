@@ -1,5 +1,6 @@
 // While the agent lists its models after the first opening, the panel says it is being set up instead of offering the
-// single model of the first, provisional answer (a "fallback", "config" or "presence" source).
+// single model of the first, provisional answer (a "fallback", "config" or "presence" source); the effort that answer
+// offered is no choice, and an answer without a conversation keeps the project.
 // node --test tests/assistant_panel_catalog_pending.test.cjs
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -17,7 +18,7 @@ function methods(names, globals = {}) {
   return new context.P();
 }
 function panel(now, providers) {
-  const p = methods(['isAgentModelCatalogPending', 'agentConfiguringText', 'getAgentFooterModelOptions'], { Date: { now: () => now.value } });
+  const p = methods(['isProvisionalAgentCatalog', 'isAgentModelCatalogPending', 'agentConfiguringText', 'getAgentFooterModelOptions'], { Date: { now: () => now.value } });
   p.local = {};
   p.isAgentBridgeMode = () => true;
   p.getNoCodeServerAgent = () => null;
@@ -112,4 +113,43 @@ test('the input bar, the agent tab and the model section use the wait', () => {
   assert.match(text, /MobileSmartSourceType: script:!this\.isAgentModelCatalogPending\(\) && this\.local && this\.local\.AgentProviderSupportsReasoning === true/);
   const style = text.slice(text.indexOf('↓TigoCatalogPendingStyle ['));
   assert.match(style, /\.agent-model-setting\.is-catalog-pending \.agent-model-option \{\n\s+display: none;/);
+});
+
+test('a provisional catalog is one built from the configuration, never a cached or listed one', () => {
+  const p = panel({ value: 0 }, []);
+  assert.equal(p.isProvisionalAgentCatalog({ source: { type: 'fallback' } }), true);
+  assert.equal(p.isProvisionalAgentCatalog({ source: { type: 'config' } }), true);
+  assert.equal(p.isProvisionalAgentCatalog({ source: { type: 'presence' } }), true);
+  assert.equal(p.isProvisionalAgentCatalog({ source: { type: 'config', settingsCached: true } }), false);
+  assert.equal(p.isProvisionalAgentCatalog({ source: { type: 'acp' } }), false);
+  assert.equal(p.isProvisionalAgentCatalog({ source: { type: 'cli' } }), false);
+  assert.equal(p.isProvisionalAgentCatalog(null), false);
+});
+
+test('the effort of a provisional catalog is no choice: the agent catalog picks again', () => {
+  const text = plain(page);
+  // the settings refresh
+  assert.match(text, /var heldReasoning = this\.local\.AgentReasoningProvisional === true && !\(this\.isProvisionalAgentCatalog && this\.isProvisionalAgentCatalog\(selectedProvider\)\) \? '' : clean\(this\.local\.AgentReasoningEffort\);\n\s+var preferredReasoning = clean\(preserveSelection && heldReasoning\.length \? heldReasoning : \(preferencesConfirmed \? preferences\.reasoning : \(heldReasoning \|\| storedReasoning\)\)\);/);
+  assert.match(text, /this\.local\.AgentReasoningEffort = this\.resolveAgentReasoning\(\[preferredReasoning\], true\);\n\s+this\.local\.AgentReasoningProvisional = !!\(this\.isProvisionalAgentCatalog && this\.isProvisionalAgentCatalog\(selectedProvider\)\);/);
+  // the answer of the agent, which echoes the effort it was sent
+  const prepare = text.slice(text.indexOf('↓PrepareAgentSettingsLocal ['), text.indexOf('↓UseDiscoveredAgentModels ['));
+  assert.match(prepare, /var answerReasoning = provisionalReasoning \? '' : clean\(state\.reasoningEffort \|\| result\.reasoningEffort\);\n\s+page\.local\.AgentReasoningEchoIgnored = provisionalReasoning;/);
+  assert.match(prepare, /page\.resolveAgentReasoning\(\[preserveSelection \? heldReasoning : '', answerReasoning, reasoning\], true\)/);
+  assert.match(prepare, /page\.local\.AgentReasoningProvisional = !!\(page\.isProvisionalAgentCatalog && page\.isProvisionalAgentCatalog\(selectedProvider\)\);/);
+  const setEffort = text.slice(text.indexOf('↓SetAgentReasoningEffort ['), text.indexOf('↓SetAgentServiceTier ['));
+  assert.ok(setEffort.includes("c8oPage.resolveAgentReasoning([(c8oPage.local && c8oPage.local.AgentReasoningEchoIgnored === true) ? '' : state.reasoningEffort, c8oPage.local && c8oPage.local.AgentReasoningEffort], true)"));
+  // "Use these settings and continue" saves no provisional effort
+  assert.ok(text.includes("var reasoningEffort = page.local.AgentReasoningProvisional === true ? '' : clean(page.local.AgentReasoningEffort);"));
+});
+
+test('an answer without a conversation keeps the project the panel shows', () => {
+  const text = plain(page);
+  const block = text.slice(text.indexOf('↓SetConversationProject [ngx.components.UIDynamicAction-1781676293645]'));
+  const expr = block.match(/"Value": "script:(.*)"\n/)[1];
+  const value = (out, local) => new Function('out', 'c8oPage', 'return ' + expr)(out, { local });
+  assert.equal(value({ result: { state: {} } }, { ConversationProject: 'lib_A' }), 'lib_A', 'first opening: no conversation in the answer');
+  assert.equal(value({ result: { resumed: true, state: {} } }, { ConversationProject: 'lib_A' }), '', 'a resumed conversation without a project');
+  assert.equal(value({ result: { resumed: true, state: { primaryProject: 'lib_B' } } }, { ConversationProject: 'lib_A' }), 'lib_B');
+  assert.equal(value({ result: { state: { primaryProject: 'lib_B' } } }, {}), 'lib_B');
+  assert.equal(value(null, null), '');
 });
