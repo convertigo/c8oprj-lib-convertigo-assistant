@@ -47,7 +47,11 @@ Studio), it needs the server's feedback key (see "On a server") and each signed-
 | `agent_friction` | the agent, with the MCP tool `report-create` (listed only with consent) | area, subject, severity, summary, suggestion |
 | `agent_friction` (`missing-capability:*`) | Tigo, after a completed No Code turn whose answer or comments tell the user a capability is missing, when the agent filed no friction itself | the capability (subject), the product's fixed sentences for it, and as template a short masked excerpt of the agent's clause that told it |
 | `tool_error` | a Convertigo MCP tool that fails or answers an error | tool, error template; for a call the agent runtime could not complete, its code, whether it retries it, the duration of the call and what the code means |
+| `tool_error` (`<server>:<tool>`) | a failed call to another MCP server of the agent (`playwright:browser_click`, `convertigo-flow:<tool>`...); a server Tigo does not know (an MCP connection the user added) is `custom-mcp`, its name and tool left out | the masked line of the error that tells it (`Error: async initializeServer: connect ECONNREFUSED 127.0.0.1:<port>`), the runtime code in brackets for a call the runtime could not complete, and the same summary as above |
 | `runtime_error` | a turn that fails (agent process, gateway, protocol) | provider, error template |
+| `runtime_error` (`bridge:<reason>`) | a warning of the Agent Bridge that the agent lost or never had the Convertigo MCP: `convertigo_mcp_suspended`, `core_rejected_input`, `mcp_lost_turn_stopped`, `mcp_lost_process_stopped`, `mcp_lost_resumed`, `convertigo_mcp_unavailable_at_start`, `convertigo_mcp_restarted`, `convertigo_mcp_unreachable` | the masked template of the warning's message (the runtime code and the enum values of a refusal of Vibe's core kept), and those values in the summary |
+| `runtime_error` (`bridge:unverified_changes`) | a turn that ended with changes made through the MCP and not proven after their last change (the warning `turn/proof` of the Bridge) | the template `<count> change(s) not proven after their last change, nudged: yes\|no` and, in the summary, the count by kind (backend, ui, file): never the QNames |
+| `runtime_error` (`vibe:mcp_connect`) | Vibe's notice that an MCP server failed to connect when its session started (the session then has none of its tools) | `MCP server '<server>' failed to connect: <error template>`; Convertigo, Playwright and the other known servers keep their names, another one is `<name>` |
 | `user_report` | `/signaler <comment>` (`/report <comment>`) on the last turn | comment, the turn's tools and their status |
 
 Each report carries the versions (Assistant, Bridge, MCP, Studio), the provider and model, the channel, the surface
@@ -63,13 +67,15 @@ notice of an imposed automatic mode say so.
 ## Masking
 
 Every text is masked before it is stored and again before it is sent: emails, URLs, host names (public services such
-as `llm.convertigo.com` aside), IP addresses, absolute paths, keys and tokens, UUIDs, long hexadecimal or base64 values,
+as `llm.convertigo.com` aside), IP addresses (a loopback address such as `127.0.0.1` stays, its port becomes `<port>`),
+absolute paths, keys and tokens, UUIDs, long hexadecimal or base64 values,
 the names of the projects open in the Studio (libraries aside) and, on the No Code surface, the names the user's turns
 showed: form, page, component and Baserow workspace, database, table and field names, from the context the page sends
 and from the results of the `nocode-*` tools (the contract aside). They become `<name>`, whatever their case (in an error template, a one-word name only as written: "position" in a
 message is not the column "Position"); generic words (component types, common business words such as "Clients" or
 "Test", the vocabulary of the product's messages) stay readable. These names are kept with the user's reports
-(`names.json`, 500 at most) only while feedback can be sent. Error templates also replace quoted values and numbers. Texts are cut (summary 500, template 300, comment
+(`names.json`, 500 at most) only while feedback can be sent. Error templates also replace quoted values and numbers, and identifiers (qualified, snake_case or camelCase names), the
+words of the product aside (runtime codes, Playwright's `initializeServer` or `locator.click`). Texts are cut (summary 500, template 300, comment
 1,000 characters).
 
 The excerpt of a missing capability is the agent's own text, so it is masked further. It is the one clause that told the
@@ -149,7 +155,9 @@ Vibe answers every tool call it could not complete with "The provided tool call 
 (`failure`: code, retryable, details, duration). The template of such a `tool_error` ends with the code in brackets, so
 each cause has its own fingerprint, and its `summary` says the code, whether Vibe retries it, the duration of the call
 and what the code means (`mcp_transport_failed, not retryable, after 0.4 s: the MCP client failed on the call or on its
-answer: ...`). Runtime codes are words of the product: they are never masked.
+answer: ...`). Runtime codes are words of the product: they are never masked. A call the tool itself answered with an
+error (`mcp_tool_error`, `connector_tool_error`) is told by the tool's own text: its code is said in the summary only, so
+that the fingerprint of a Convertigo tool's error does not depend on the runtime that ran it.
 
 ## Sending
 

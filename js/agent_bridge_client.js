@@ -7700,6 +7700,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreFeedbackContextNames) {}
   }
 
+  // A Convertigo MCP tool that fails or answers an error, or a call to another MCP server of the agent that failed
+  // (Playwright on a closed port of the Studio's browser: 14 failed calls of a customer's turn were never counted).
   function collectFeedbackToolError(state, event, data, toolStatus) {
     try {
       var failed = toolStatus === "failed" || toolStatus === "error";
@@ -7709,7 +7711,8 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       if (!/convertigo/i.test(title)) {
         title = String(remembered.toolName || remembered.title || title);
       }
-      if (!/convertigo/i.test(title)) {
+      // The answer of another server is not ours to read for an error: only its failed calls count.
+      if (!failed && !/convertigo/i.test(title)) {
         return;
       }
       var preview = eventToolResultPreview(data);
@@ -7729,11 +7732,48 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
       var feedback = feedbackModule(state);
       var message = feedback ? feedback.errorMessage(preview, failed) : "";
+      // A failure with no readable result: the message the Bridge passes with it.
+      if (feedback && !message.length && failed) {
+        message = trim(data && data.failure && data.failure.message);
+      }
       if (message.length) {
         feedback.collectToolError({ tool: title, message: message, failure: feedback.runtimeFailure(preview, data && data.failure),
-          durationMs: feedbackToolDuration(state, data), provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+          durationMs: feedbackToolDuration(state, data), provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state),
+          failed: failed });
       }
     } catch (_ignoreFeedback) {}
+  }
+
+  // A warning of the Agent Bridge (docs/tigo-feedback.md): the agent lost, or never had, the Convertigo MCP, or the turn
+  // ended with changes it did not prove. Counted in the feedback once per warning, the changes without their names.
+  function collectFeedbackBridgeWarning(state, data) {
+    try {
+      var feedback = trim(data && data.reason).length ? feedbackModule(state) : null;
+      if (feedback && typeof feedback.collectBridgeWarning === "function") {
+        feedback.collectBridgeWarning({ reason: data.reason, message: data.message, detail: data.detail, count: data.count, nudged: data.nudged === true,
+          items: data.items, provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+      }
+    } catch (_ignoreFeedback) {}
+  }
+
+  // Vibe tells in a message of its own that an MCP server failed to connect when its session started ("MCP server
+  // 'Convertigo' failed to connect: mcp_transport_failed."): the session goes on without that server's tools.
+  function collectFeedbackMcpConnect(state, text) {
+    try {
+      if (!/failed to connect/.test(String(text || ""))) {
+        return;
+      }
+      var feedback = feedbackModule(state);
+      if (feedback && typeof feedback.collectMcpConnectFailures === "function") {
+        feedback.collectMcpConnectFailures({ text: text, provider: state.provider, model: feedbackModel(state), surface: feedbackSurface(state) });
+      }
+    } catch (_ignoreFeedback) {}
+  }
+
+  // A "warning" event of the Agent Bridge ({phase, reason, message...}, bridge-contract.md): counted in the feedback when
+  // it tells that the agent lost or never had the Convertigo MCP.
+  function rememberBridgeWarning(state, data) {
+    collectFeedbackBridgeWarning(state, data || {});
   }
 
   // How long a failed call took: the Bridge measures it (failure.durationMs), else from when this client saw it start.
@@ -11692,10 +11732,15 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         } else if (type === "commands/update") {
           rememberAgentCommands(state, data);
         } else if (type === "progress/message" || type === "status/message") {
+          collectFeedbackMcpConnect(state, eventText(data));
           appendProgress(state, eventText(data));
         } else if (type === "progress/chunk") {
           appendProgressChunk(state, eventText(data));
+        } else if (type === "warning") {
+          rememberBridgeWarning(state, data);
         } else if (type === "answer/chunk") {
+          // Vibe's notice of an MCP server that failed to connect comes as a message of its own.
+          collectFeedbackMcpConnect(state, eventText(data));
           if (state.slashCommand === "compact" && isClaudeHarness(state.provider)) {
             // Claude Code ends /compact with the text of the previous result: the answer is the compaction notice.
           } else if (codexAnswerChunkIsProgress(state, data)) {

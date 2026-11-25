@@ -1166,3 +1166,162 @@ test('a finished No Code turn files its missing capabilities, whichever way it e
   assert.match(source, /if \(isNoCodeSurface && options\.feedbackReportListed === true\) \{/);
   assert.match(source, /`nocode-report-create` is listed: the user agreed to send Tigo's frictions to Convertigo\. When this turn needs a capability no allowed tool gives/);
 });
+
+// A low-code customer's agent lost its MCP servers several times (ECONNREFUSED, mcp_unknown_route) and none of these cuts
+// reached TigoAccess: only Convertigo tools were collected, and neither the Bridge's warnings nor Vibe's notice of an MCP
+// server that failed to connect were read.
+test('a failed call of another MCP server is collected by the line of its error, with the runtime code in its summary', () => {
+  const playwright = (port, tool = 'mcp_playwright.browser_click', durationMs = 120) => ({
+    tool, failed: true, durationMs, provider: 'vibe', model: 'mistral-large-4', failure: { code: 'mcp_tool_error', retryable: false },
+    message: '### Ran Playwright code\n```js\nawait page.getByRole(\'button\', { name: \'Valider\' }).click();\n```\n### Error\n'
+      + 'Error: async initializeServer: connect ECONNREFUSED 127.0.0.1:' + port + '\nCall log:\n  - navigating to "http://localhost:18080/"'
+  });
+  assert.equal(feedback().F.collectToolError(playwright(39086)), null, 'nothing without consent');
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const first = F.collectToolError(playwright(39086));
+  assert.equal(first.kind, 'tool_error');
+  assert.equal(first.finding.subject, 'playwright:browser_click');
+  assert.equal(first.finding.template, 'Error: async initializeServer: connect ECONNREFUSED 127.0.0.1:<port>');
+  assert.match(first.finding.summary, /^mcp_tool_error, not retryable, after 0\.1 s: the MCP server ran the call and answered it with an error of the tool/);
+  assert.equal(F.collectToolError(playwright(39087, 'playwright_browser_click', 300)).count, 2, 'another port, Vibe\'s other title: the same cause');
+  assert.equal(F.collectToolError(playwright(39086, 'mcp_playwright.browser_snapshot')).finding.subject, 'playwright:browser_snapshot');
+  assert.equal(F.collectToolError(playwright(39086, 'playwright.browser_tabs')).finding.subject, 'playwright:browser_tabs', 'Codex names it server.tool');
+  assert.equal(F.collectToolError(playwright(39086, 'mcp__playwright__browser_click')).finding.subject, 'playwright:browser_click', 'Claude Code');
+  // A call the runtime could not complete says its code in brackets, as for a Convertigo tool.
+  const lost = F.collectToolError({ tool: 'mcp_playwright.browser_click', failed: true, message: 'The provided tool call failed',
+    failure: { code: 'mcp_transport_failed', retryable: false } });
+  assert.equal(lost.finding.template, 'The provided tool call failed [mcp_transport_failed]');
+  // Only a failed call of an MCP tool: not the agent's own tools, not an answer that only looks like an error.
+  for (const tool of ['bash', 'read_file', 'search_replace', 'git_bash', 'README.md', 'file_system.bash']) {
+    assert.equal(F.collectToolError({ tool, failed: true, message: 'exit 1' }), null, tool);
+  }
+  assert.equal(F.collectToolError({ ...playwright(39086), failed: false }), null);
+  // A server the user added: its name and tool are the user's, never sent.
+  const custom = F.collectToolError({ tool: 'mcp_acme_erp.sync_invoices', failed: true, message: 'Error: acme-erp.example.com refused' });
+  assert.equal(custom.finding.subject, 'custom-mcp');
+  assert.equal(custom.finding.template, 'Error: <host> refused');
+  assert.equal(F.pending().length, 5);
+  assert.equal(F.pending().find(r => r.finding.subject === 'playwright:browser_click' && r.finding.template.startsWith('Error')).count, 3);
+  assert.ok(!/acme|39086|Valider|18080/i.test(JSON.stringify(F.pending())), JSON.stringify(F.pending()));
+  assert.equal(F.mcpTool('mcp_convertigo_flow.flow_run').subject, 'convertigo-flow:flow_run');
+  assert.equal(F.mcpTool('mcp_Convertigo.project_list'), null, 'a Convertigo tool keeps its own reports');
+  // A flattened answer (the work log keeps one line) gives the same line.
+  assert.equal(F.firstErrorLine('### Ran Playwright code ```js await page.click() ``` ### Error Error: async initializeServer: connect '
+    + 'ECONNREFUSED 127.0.0.1:39086 Call log: - navigating'), 'Error: async initializeServer: connect ECONNREFUSED 127.0.0.1:39086');
+  // The Playwright words stay readable, the customer's identifiers and other hosts do not.
+  assert.equal(F.template('Error: locator.click: Timeout 5000ms exceeded calling computeInvoiceTotal on 10.0.0.12:8080'),
+    'Error: locator.click: Timeout 5000ms exceeded calling <name> on <ip>');
+});
+
+test('an error a Convertigo tool answers through Vibe keeps its fingerprint: mcp_tool_error is said in the summary only', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const answered = JSON.stringify({ type: 'failure', content: [{ type: 'text', text: 'Database object not found' }],
+    error: { code: 'mcp_tool_error', message: 'Database object not found', retryable: false } });
+  assert.equal(F.errorMessage(answered, true), 'Database object not found', 'no [mcp_tool_error]');
+  const report = F.collectToolError({ tool: 'mcp_Convertigo.databaseobject_delete', message: F.errorMessage(answered, true),
+    failure: F.runtimeFailure(answered), durationMs: 40, failed: true });
+  assert.equal(report.finding.template, 'Database object not found');
+  assert.match(report.finding.summary, /^mcp_tool_error, not retryable, after 0 s: /);
+  assert.equal(F.collectToolError({ tool: 'mcp_Convertigo.databaseobject_delete', message: 'Database object not found' }).count, 2,
+    'the same fingerprint as without the runtime\'s code');
+  // A turn turned on from the nudge collects the failed Playwright calls of its saved events too.
+  const { F: nudged } = feedback({ settings: { mode: 'off', decidedAt: 1 } });
+  const events = [
+    { type: 'tool', toolName: 'mcp_playwright.browser_click', status: 'failed', detail: '### Error\nError: async initializeServer: connect ECONNREFUSED 127.0.0.1:39086' },
+    { type: 'tool', toolName: 'mcp_playwright.browser_snapshot', status: 'completed', detail: '{"status":"error","text":"a page about errors"}' }
+  ];
+  const result = nudged.run({ action: 'mode', mode: 'ask', events, provider: 'vibe', model: 'mistral-large-4' });
+  assert.deepEqual(result.pending.map(r => r.finding.subject), ['playwright:browser_click']);
+});
+
+test('the Bridge\'s warnings of a lost or missing Convertigo MCP are counted; unproven changes without their names', () => {
+  assert.equal(feedback().F.collectBridgeWarning({ reason: 'convertigo_mcp_suspended', message: 'x' }), null, 'nothing without consent');
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const suspended = F.collectBridgeWarning({ reason: 'convertigo_mcp_suspended', detail: { code: 'mcp_unknown_route' }, provider: 'vibe', model: 'mistral-large-4',
+    message: 'Vibe lost the Convertigo MCP for this session (mcp_unknown_route): the next message restarts Vibe on this conversation.' });
+  assert.equal(suspended.kind, 'runtime_error');
+  assert.equal(suspended.finding.subject, 'bridge:convertigo_mcp_suspended');
+  assert.equal(suspended.finding.template, 'Vibe lost the Convertigo MCP for this session (mcp_unknown_route): the next message restarts Vibe on this conversation.');
+  assert.equal(suspended.stack.provider, 'vibe');
+  const core = F.collectBridgeWarning({ reason: 'core_rejected_input',
+    detail: { rejection: 'invalid_state', code: 'invalid_state', commandType: 'reconfigure', state: 'running', repr: "RustRejectedApplyResult(type='rejected')" },
+    message: 'Vibe lost the Convertigo MCP for this session (core refusal: invalid_state, reconfigure, in state running): the next message restarts Vibe on this conversation.' });
+  assert.equal(core.finding.template, 'Vibe lost the Convertigo MCP for this session (core refusal: invalid_state, reconfigure, in state running): the next message restarts Vibe on this conversation.');
+  assert.equal(core.finding.summary, 'Bridge warning core_rejected_input: rejection invalid_state, code invalid_state, commandType reconfigure, state running.');
+  for (const reason of ['mcp_lost_turn_stopped', 'mcp_lost_process_stopped', 'mcp_lost_resumed', 'convertigo_mcp_unavailable_at_start', 'convertigo_mcp_restarted', 'convertigo_mcp_unreachable']) {
+    const report = F.collectBridgeWarning({ reason, message: 'Vibe failed 3 tool calls in a row on PcaUpdateTracker.sq:getCategories: connect ECONNREFUSED 127.0.0.1:18080.' });
+    assert.equal(report.finding.subject, 'bridge:' + reason);
+    assert.equal(report.finding.template, 'Vibe failed N tool calls in a row on <name>: connect ECONNREFUSED 127.0.0.1:<port>.', reason);
+  }
+  for (const reason of ['gateway_key_changed', 'mcp_changed_while_starting', 'tool_policy_changed', '']) {
+    assert.equal(F.collectBridgeWarning({ reason, message: 'Vibe restarts' }), null, 'a restart the user asked for is no friction: ' + reason);
+  }
+  // The changes of a turn left unproven: counted, by kind, never named.
+  const items = [{ qname: 'PcaUpdateTracker.sq:getCategories', kind: 'backend' }, { qname: 'PcaUpdateTracker.Application.NgxApp.pg:Home', kind: 'ui' },
+    { qname: 'PcaUpdateTracker/js/secret-plan.js', kind: 'file' }, { qname: 'PcaUpdateTracker.sq:setCategory', kind: 'backend' }];
+  const proof = (count, nudged) => F.collectBridgeWarning({ reason: 'unverified_changes', items, count, nudged,
+    message: count + ' change(s) not proven after their last change: getCategories, Home' });
+  const nudged = proof(17, true);
+  assert.equal(nudged.finding.subject, 'bridge:unverified_changes');
+  assert.equal(nudged.finding.template, '<count> change(s) not proven after their last change, nudged: yes');
+  assert.equal(nudged.finding.summary, '17 change(s) of the turn not proven after their last change (2 backend, 1 ui, 1 file, of 4 listed); the agent was nudged to prove them.');
+  assert.equal(proof(3, true).count, 2, 'another count, the same report');
+  assert.notEqual(proof(4, false).fingerprint, nudged.fingerprint, 'nudged or not, two reports');
+  const sent = JSON.stringify(F.pending());
+  for (const leak of ['getCategories', 'setCategory', 'Home', 'secret-plan', 'PcaUpdateTracker', '18080']) {
+    assert.ok(!sent.includes(leak), leak + ' leaked in: ' + sent);
+  }
+});
+
+test('Vibe\'s notice of an MCP server that failed to connect counts once per server; another server\'s name is masked', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const [one] = F.collectMcpConnectFailures({ text: "MCP server 'Convertigo' failed to connect: mcp_transport_failed.", provider: 'vibe' });
+  assert.equal(one.kind, 'runtime_error');
+  assert.equal(one.finding.subject, 'vibe:mcp_connect');
+  assert.equal(one.finding.template, "MCP server 'Convertigo' failed to connect: mcp_transport_failed");
+  const two = F.collectMcpConnectFailures({ text: "MCP server 'Convertigo' failed to connect: connect ECONNREFUSED 127.0.0.1:18080. "
+    + "MCP server 'acme-crm' failed to connect: mcp_timeout." });
+  assert.deepEqual(Array.from(two, r => r.finding.template), ["MCP server 'Convertigo' failed to connect: connect ECONNREFUSED 127.0.0.1:<port>",
+    "MCP server '<name>' failed to connect: mcp_timeout"]);
+  const older = F.collectMcpConnectFailures({ text: 'The following MCP servers failed to connect:\n- Convertigo: mcp_transport_failed\n- playwright: Connection closed' });
+  assert.deepEqual(Array.from(older, r => r.finding.template), ["MCP server 'Convertigo' failed to connect: mcp_transport_failed",
+    "MCP server 'playwright' failed to connect: Connection closed"]);
+  assert.equal(older[0].count, 2, 'the same failure counts again');
+  assert.deepEqual(Array.from(F.collectMcpConnectFailures({ text: "Je vois : MCP server 'Convertigo' failed to connect: mcp_transport_failed. Je réessaie." })), [],
+    'an answer of the agent quoting the notice is not one');
+  assert.ok(!JSON.stringify(F.pending()).includes('acme'));
+  assert.deepEqual(Array.from(feedback().F.collectMcpConnectFailures({ text: "MCP server 'Convertigo' failed to connect: mcp_transport_failed." })), [], 'consent');
+});
+
+test('the event hooks: failed calls of other MCP servers, the Bridge\'s warnings and Vibe\'s notice reach the feedback', () => {
+  const { F } = feedback({ settings: { mode: 'ask' } });
+  const sandbox = {
+    trim: value => String(value ?? '').trim(), now: () => 5000,
+    feedbackModule: () => F, feedbackModel: () => 'mistral-large-4', feedbackSurface: () => ''
+  };
+  vm.runInNewContext(backendParts(['collectFeedbackToolError', 'collectFeedbackBridgeWarning', 'collectFeedbackMcpConnect', 'rememberBridgeWarning',
+    'eventToolTitle', 'toolNameFromData', 'isOpaqueCallId', 'toolCallId', 'eventToolResultPreview', 'feedbackToolDuration']), sandbox);
+  const state = { provider: 'vibe', toolCalls: { 'call-1': { title: 'mcp_playwright.browser_click' } }, progressEvents: [] };
+  const failure = { code: 'mcp_tool_error', message: '### Error\nError: async initializeServer: connect ECONNREFUSED 127.0.0.1:39086', retryable: false, durationMs: 80 };
+  const update = { toolCallId: 'call-1', title: '', status: 'failed', failure,
+    update: { rawOutput: { type: 'failure', content: [{ type: 'text', text: failure.message }], error: failure } } };
+  sandbox.collectFeedbackToolError(state, {}, update, 'failed');
+  sandbox.collectFeedbackToolError(state, {}, update, 'failed');
+  assert.deepEqual(F.pending().map(r => [r.finding.subject, r.finding.template, r.count]),
+    [['playwright:browser_click', 'Error: async initializeServer: connect ECONNREFUSED 127.0.0.1:<port>', 1]], 'one count per call');
+  // A completed call of another server is never read for an error; a bash failure is not an MCP tool.
+  sandbox.collectFeedbackToolError(state, {}, { toolCallId: 'call-2', title: 'mcp_playwright.browser_snapshot', status: 'completed', rawOutput: '{"status":"error"}' }, 'completed');
+  sandbox.collectFeedbackToolError(state, {}, { toolCallId: 'call-3', title: 'bash', status: 'failed', rawOutput: 'exit 1' }, 'failed');
+  assert.equal(F.pending().length, 1);
+  sandbox.rememberBridgeWarning(state, { phase: 'vibe/mcp', reason: 'mcp_lost_turn_stopped', count: 3,
+    message: 'Vibe failed 3 tool calls in a row without the Convertigo MCP: the Bridge stopped the turn. The next message restarts Vibe on this conversation.' });
+  sandbox.rememberBridgeWarning(state, { phase: 'viewer', reason: 'playwright_endpoint_changed', message: 'Vibe must restart' });
+  sandbox.collectFeedbackMcpConnect(state, "MCP server 'Convertigo' failed to connect: mcp_transport_failed.");
+  sandbox.collectFeedbackMcpConnect(state, 'Bonjour');
+  assert.deepEqual(F.pending().map(r => r.finding.subject), ['playwright:browser_click', 'bridge:mcp_lost_turn_stopped', 'vibe:mcp_connect']);
+  // The event loop reads them: a "warning" event, and the notice that comes as a message of its own.
+  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'agent_bridge_client.js'), 'utf8');
+  assert.match(source, /\} else if \(type === "warning"\) \{\n\s+rememberBridgeWarning\(state, data\);/);
+  assert.match(source, /\} else if \(type === "answer\/chunk"\) \{\n(?:\s+\/\/[^\n]*\n)*\s+collectFeedbackMcpConnect\(state, eventText\(data\)\);/);
+  assert.match(source, /type === "status\/message"\) \{\n\s+collectFeedbackMcpConnect\(state, eventText\(data\)\);/);
+});

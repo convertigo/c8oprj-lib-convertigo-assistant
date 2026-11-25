@@ -104,9 +104,55 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     mcp_runtime_closed: "the MCP runtime of the agent was closed",
     mcp_invalid_configuration: "the MCP server of the agent is misconfigured",
     connector_invalid_result: "the answer could not be read as a connector result",
-    jsonSchemaArgumentValidationError: "the arguments did not match the input schema of the tool"
+    jsonSchemaArgumentValidationError: "the arguments did not match the input schema of the tool",
+    mcp_tool_error: "the MCP server ran the call and answered it with an error of the tool, whose own text says why",
+    connector_tool_error: "the connector ran the call and answered it with an error, whose own text says why"
   };
+  // The codes of a call the tool itself answered with an error: its text is the cause, the code only says who answered.
+  // They do not end the template, so that an error of a Convertigo tool keeps its fingerprint whatever runtime ran it.
+  var TOOL_ANSWER_CODES = { mcp_tool_error: true, connector_tool_error: true };
   var RUNTIME_CODE_PATTERN = new RegExp("\\b(?:" + Object.keys(RUNTIME_CODES).join("|") + ")\\b", "g");
+  // The MCP servers a Tigo agent may use besides Convertigo: their names and the names of their tools are words of
+  // products. Another server (an MCP connection the user added) is reported as "custom-mcp", its name and tool left out.
+  var KNOWN_MCP_SERVERS = {};
+  ("playwright convertigo-flow chrome-devtools github gitlab figma context7 filesystem fetch memory sequential-thinking "
+    + "puppeteer sentry atlassian jira linear notion slack").split(" ").forEach(function (name) {
+    KNOWN_MCP_SERVERS[name] = true;
+  });
+  // The agents' own tools (Vibe, Codex, Claude Code): never taken for a tool of an MCP server.
+  var AGENT_BUILTIN_TOOLS = {};
+  ("run_typescript bash git_bash powershell read_file write_file edit grep web_fetch web_search task todo skill "
+    + "search_tool_functions process search_replace list_dir ask_user_question exit_plan_mode wait shell exec_command "
+    + "apply_patch update_plan view_image read write glob webfetch websearch todowrite notebookedit multiedit").split(" ").forEach(function (name) {
+    AGENT_BUILTIN_TOOLS[name] = true;
+  });
+  // The warnings of the Agent Bridge (bridge-contract.md, Vibe) that tell Tigo lost, or never had, the Convertigo MCP in a
+  // turn, and the changes a turn left unproven: each is a runtime_error report "bridge:<reason>".
+  var BRIDGE_WARNINGS = {
+    convertigo_mcp_suspended: true, core_rejected_input: true, mcp_lost_turn_stopped: true, mcp_lost_process_stopped: true,
+    mcp_lost_resumed: true, convertigo_mcp_unavailable_at_start: true, convertigo_mcp_restarted: true,
+    convertigo_mcp_unreachable: true, unverified_changes: true
+  };
+  // Words of the Playwright MCP and of its errors: they stay readable in a template ("Error: async initializeServer:
+  // connect ECONNREFUSED", "locator.click: Timeout"). Any other identifier may be the customer's and is masked.
+  var PRODUCT_IDENTIFIERS = {};
+  ("initializeServer connectOverCDP browserType launchPersistentContext newPage newContext waitForSelector "
+    + "waitForLoadState waitForURL waitForTimeout waitForEvent waitForFunction getByRole getByText getByLabel getByTestId "
+    + "getByPlaceholder getByTitle getAttribute innerText textContent inputValue isVisible setInputFiles selectOption "
+    + "page locator frame browser context goto click dblclick fill press type hover check uncheck evaluate screenshot "
+    + "snapshot tap focus").split(" ").forEach(function (word) {
+    PRODUCT_IDENTIFIERS[word] = true;
+  });
+
+  function productIdentifier(text) {
+    var parts = String(text).split(/[.:]/);
+    for (var i = 0; i < parts.length; i++) {
+      if (!Object.prototype.hasOwnProperty.call(PRODUCT_IDENTIFIERS, parts[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
   // A refusal of Vibe's Rust core is the repr of its result ("Core rejected durable input: RustRejectedApplyResult(
   // type='rejected', rejection=RustInvalidStateRejection(code='invalid_state', command_type='tool_succeeded',
   // state='compacting'))"): the enum fields name the core's commands and states, never the customer's, and are the cause.
@@ -219,7 +265,12 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     out = out.replace(/\b(Bearer|Basic|Token)\s+[A-Za-z0-9._~+\/=-]{8,}/gi, "$1 <secret>");
     out = out.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, "<secret>");
     out = out.replace(/((?:password|passwd|pwd|secret|token|apikey|api_key|authorization)["']?\s*[:=]\s*["']?)[^\s"',;]+/gi, "$1<secret>");
-    out = out.replace(/\b\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/g, "<ip>");
+    // A loopback address names no system of the customer and tells a local server (a closed port of the Studio's
+    // browser): it stays, its port goes.
+    out = out.replace(/\b(\d{1,3}(?:\.\d{1,3}){3})(:\d+)?\b/g, function (all, ip, port) {
+      return /^127\./.test(ip) || ip === "0.0.0.0" ? ip + (port ? ":<port>" : "") : "<ip>";
+    });
+    out = out.replace(/\blocalhost:\d{1,5}\b/gi, "localhost:<port>");
     out = out.replace(/(?:\b[A-Za-z]:\\|~\/|\/(?:Users|home|private|var|tmp|opt|etc|Volumes|mnt|srv|root|Library|Applications)\/)[^\s"'<>`]*/g, "<path>");
     out = out.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "<id>");
     out = out.replace(/\b[0-9a-f]{24,}\b/gi, "<hex>");
@@ -291,8 +342,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   };
 
   // An error template: its first two lines, masked, with quoted values and numbers replaced, so that the same error
-  // with other names or values gets the same fingerprint.
-  F.template = function (message, names, others) {
+  // with other names or values gets the same fingerprint. keep: words of the product the caller knows to be such (the
+  // enum values of a Bridge warning), kept as written.
+  F.template = function (message, names, others, keep) {
     var lines = String(message == null ? "" : message).split(/\r?\n/).map(trim).filter(function (line) {
       return line.length;
     }).slice(0, 2);
@@ -300,21 +352,31 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     // A runtime code (mcp_transport_failed) and the enum fields of a Rust core refusal are words of the product: they
     // stay as written.
     var codes = [];
-    if (RUST_REPR_PATTERN.test(text)) {
-      text = text.replace(RUST_ENUM_FIELD_PATTERN, function (field) {
-        codes.push(field);
-        return String.fromCharCode(0xE000 + codes.length - 1);
-      });
-    }
-    text = text.replace(RUNTIME_CODE_PATTERN, function (code) {
-      codes.push(code);
+    var protect = function (word) {
+      codes.push(word);
       return String.fromCharCode(0xE000 + codes.length - 1);
+    };
+    if (RUST_REPR_PATTERN.test(text)) {
+      text = text.replace(RUST_ENUM_FIELD_PATTERN, protect);
+    }
+    text = text.replace(RUNTIME_CODE_PATTERN, protect);
+    var kept = (keep || []).filter(function (word) {
+      return /^[a-z][a-z0-9_]{0,48}$/.test(trim(word));
     });
+    if (kept.length) {
+      text = text.replace(new RegExp("\\b(?:" + kept.map(escapeRegExp).join("|") + ")\\b", "g"), protect);
+    }
+    // A loopback address the masking kept (127.0.0.1:<port>).
+    text = text.replace(/\b(?:127(?:\.\d{1,3}){3}|0\.0\.0\.0)\b/g, protect);
     text = text.replace(/'[^']*'|"[^"]*"|`[^`]*`|«[^»]*»|“[^”]*”/g, "…");
     // The customer's own names: qualified names (PcaUpdateTracker.pg:Home), snake_case and camelCase identifiers.
-    // Product class names (SimpleStep, SqlTransaction) stay readable.
-    text = text.replace(/(?:<project>|\b[A-Za-z_]\w*)(?:[.:][\w*]+)+\b/g, "<name>");
-    text = text.replace(/\b[a-z][a-z0-9]*(?:_[A-Za-z0-9]+)+\b|\b[a-z]+[A-Z][A-Za-z0-9]*\b/g, "<name>");
+    // Product class names (SimpleStep, SqlTransaction) and the words of the Playwright MCP stay readable.
+    text = text.replace(/(?:<project>|\b[A-Za-z_]\w*)(?:[.:][\w*]+)+\b/g, function (name) {
+      return productIdentifier(name) ? name : "<name>";
+    });
+    text = text.replace(/\b[a-z][a-z0-9]*(?:_[A-Za-z0-9]+)+\b|\b[a-z]+[A-Z][A-Za-z0-9]*\b/g, function (name) {
+      return productIdentifier(name) ? name : "<name>";
+    });
     text = text.replace(/\b\d+(?:[.,]\d+)*\b/g, "N");
     text = text.replace(/\s+/g, " ");
     text = text.replace(/[-]/g, function (mark) {
@@ -367,6 +429,113 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
     var text = trim(title);
     var match = /^(?:mcp_Convertigo\.|mcp__convertigo__|Convertigo_|convertigo\.)([A-Za-z0-9_-]+)/i.exec(text);
     return match ? match[1].replace(/_/g, "-").toLowerCase() : "";
+  };
+
+  // The tool of another MCP server a title names (Playwright's browser_click): { server, tool, subject }, or null for a
+  // Convertigo tool, an agent's own tool (bash, read_file) or a title that names no MCP tool. The agents name such a tool
+  // mcp_<server>.<tool> or <server>_<tool> (Vibe), <server>.<tool> (Codex) or mcp__<server>__<tool> (Claude Code). Without
+  // the mcp prefix only a server of KNOWN_MCP_SERVERS is taken, so that a file name (README.md) never passes for one; with
+  // it, another server is "custom-mcp" and its names are left out.
+  F.mcpTool = function (title) {
+    var text = trim(title).split(/[\s(]/)[0];
+    if (!text.length || F.convertigoTool(text).length || AGENT_BUILTIN_TOOLS[text.toLowerCase()]) {
+      return null;
+    }
+    var server = "";
+    var tool = "";
+    var explicit = /^mcp__([A-Za-z0-9-]+(?:_[A-Za-z0-9-]+)*?)__([A-Za-z0-9_.-]+)$/.exec(text) || /^mcp_([A-Za-z0-9_-]+)\.([A-Za-z0-9_.-]+)$/.exec(text);
+    if (explicit) {
+      server = explicit[1];
+      tool = explicit[2];
+    } else {
+      var lower = text.toLowerCase();
+      for (var name in KNOWN_MCP_SERVERS) {
+        var forms = [name, name.replace(/-/g, "_")];
+        for (var f = 0; f < forms.length && !server.length; f++) {
+          var mark = lower.charAt(forms[f].length);
+          if (lower.indexOf(forms[f]) === 0 && (mark === "." || mark === "_") && text.length > forms[f].length + 1) {
+            server = name;
+            tool = text.substring(forms[f].length + 1);
+          }
+        }
+      }
+    }
+    server = server.toLowerCase().replace(/_/g, "-");
+    if (!server.length || !/^[A-Za-z0-9_.-]{1,80}$/.test(tool) || server === "convertigo") {
+      return null;
+    }
+    if (!KNOWN_MCP_SERVERS[server]) {
+      return explicit ? { server: "custom-mcp", tool: "", subject: "custom-mcp" } : null;
+    }
+    return { server: server, tool: tool, subject: server + ":" + tool };
+  };
+
+  // The line of an error that tells it: after a "### Error" heading when the answer has one (Playwright's answers start with
+  // the code they ran), else the first one that is no heading, no bare "Error", no code fence and no line of a code block;
+  // cut before a call log or the next heading. The work log may have flattened the answer to one line.
+  F.firstErrorLine = function (text) {
+    var source = String(text == null ? "" : text);
+    var marker = /(?:^|\s)#{1,6}[ \t]*(?:error|erreur)s?[ \t]*:?(?=\s|$)/i.exec(source);
+    if (marker) {
+      source = source.substring(marker.index + marker[0].length);
+    }
+    var lines = source.split(/\r?\n/);
+    var fenced = false;
+    var fallback = "";
+    for (var i = 0; i < lines.length; i++) {
+      var line = trim(lines[i]);
+      if (/^(?:```|~~~)/.test(line)) {
+        fenced = !fenced;
+        continue;
+      }
+      if (!fallback.length && line.length) {
+        fallback = trim(line.replace(/^#{1,6}\s*/, ""));
+      }
+      if (fenced || !line.length || /^#{1,6}(?:\s|$)/.test(line) || /^(?:error|erreur|result|r\u00e9sultat)s?\s*:?$/i.test(line) || /^[-=*_]{3,}$/.test(line)) {
+        continue;
+      }
+      return errorLineHead(line);
+    }
+    return errorLineHead(fallback);
+  };
+
+  function errorLineHead(line) {
+    var at = line.search(/\s+(?:Call log:|={3,}|#{1,6}\s)/);
+    return at > 0 ? trim(line.substring(0, at)) : line;
+  }
+
+  // The servers a notice of Vibe says failed to connect: "MCP server 'playwright' failed to connect: mcp_transport_failed."
+  // (Vibe 3, several joined by a space) or "The following MCP servers failed to connect:\n- Convertigo: <error>" (Vibe 2).
+  // Only a text that is such a notice and nothing else: an answer of the agent quoting one is not.
+  F.mcpConnectFailures = function (text) {
+    var source = trim(text);
+    var found = [];
+    if (!source.length || source.length > 2000) {
+      return found;
+    }
+    var vibe3 = /MCP server '([^'\n]{1,80})' failed to connect: ([^\n]*?)\.?(?=\s+MCP server '|\s*$)/g;
+    var rest = source.replace(vibe3, function (all, server, error) {
+      found.push({ server: server, error: trim(error) });
+      return "";
+    });
+    if (found.length && !trim(rest).length) {
+      return found;
+    }
+    found = [];
+    var lines = source.split(/\r?\n/);
+    if (!/^The following MCP servers failed to connect:?$/.test(trim(lines[0])) || lines.length < 2) {
+      return found;
+    }
+    for (var i = 1; i < lines.length; i++) {
+      var line = trim(lines[i]);
+      var match = /^-\s*([^:\n]{1,80}):\s*(.*)$/.exec(line);
+      if (match) {
+        found.push({ server: trim(match[1]), error: trim(match[2]).replace(/\.$/, "") });
+      } else if (line.length) {
+        return [];
+      }
+    }
+    return found;
   };
 
   // The text a tool answered: the text blocks of an MCP result ({"content":[{"type":"text","text":...}]}), or the
@@ -427,9 +596,10 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return "";
     }
     var message = namedErrorMessage(text, failed);
-    // An agent runtime that could not complete the call says so in one generic sentence: its code names the cause.
+    // An agent runtime that could not complete the call says so in one generic sentence: its code names the cause. A call
+    // the tool answered with an error (mcp_tool_error) says it in its own text.
     var runtime = message.length ? F.runtimeFailure(text) : null;
-    return runtime && message.indexOf(runtime.code) < 0 ? message + " [" + runtime.code + "]" : message;
+    return runtime && !TOOL_ANSWER_CODES[runtime.code] && message.indexOf(runtime.code) < 0 ? message + " [" + runtime.code + "]" : message;
   };
 
   function namedErrorMessage(text, failed) {
@@ -565,8 +735,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   F.missingCapabilityFinding = missingCapabilityFinding;
 
   // The pure helpers every bound feedback object shares.
-  var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "resultText", "errorMessage", "runtimeFailure",
-    "failureSummary", "endpoint", "provider", "missingCapabilities", "missingCapabilityClauses", "missingCapabilityFinding", "capabilityExcerpt"];
+  var SHARED = ["SCHEMA", "LIMITS", "redact", "usableName", "namesIn", "template", "convertigoTool", "mcpTool", "firstErrorLine",
+    "mcpConnectFailures", "resultText", "errorMessage", "runtimeFailure", "failureSummary", "endpoint", "provider", "missingCapabilities",
+    "missingCapabilityClauses", "missingCapabilityFinding", "capabilityExcerpt"];
 
   // The feedback API bound to one store: the Studio's (engine-wide), or one server user's.
   function bind(F, store) {
@@ -851,6 +1022,9 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       return report;
     };
 
+    // A failing tool of the agent: a Convertigo MCP tool that fails or answers an error, or a call to another MCP server
+    // that failed (options.failed), such as Playwright's on a closed port of the Studio's browser. The latter is told by
+    // the line of its error that says it, with the runtime code of a call the runtime could not complete.
     F.collectToolError = function (options) {
       options = options || {};
       if (F.mode() === "off") {
@@ -858,7 +1032,19 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       }
       var tool = F.convertigoTool(options.tool);
       var message = trim(options.message);
-      if (!tool.length || !message.length) {
+      if (!tool.length) {
+        var other = options.failed === true ? F.mcpTool(options.tool) : null;
+        if (!other) {
+          return null;
+        }
+        tool = other.subject;
+        message = F.firstErrorLine(message);
+        var code = trim(options.failure && options.failure.code);
+        if (message.length && Object.prototype.hasOwnProperty.call(RUNTIME_CODES, code) && !TOOL_ANSWER_CODES[code] && message.indexOf(code) < 0) {
+          message += " [" + code + "]";
+        }
+      }
+      if (!message.length) {
         return null;
       }
       var finding = { subject: tool, template: F.template(message, store().projectNames(), customerNames()) };
@@ -881,6 +1067,77 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
       }
       var subject = trim(options.provider) || "agent";
       return F.add("runtime_error", { subject: subject, template: F.template(message, store().projectNames(), customerNames()) }, options);
+    };
+
+    // A warning of the Agent Bridge that tells the agent lost, or never had, the Convertigo MCP, or that the turn ended
+    // with changes it did not prove (BRIDGE_WARNINGS): a runtime_error "bridge:<reason>", one count per warning. The
+    // changes are only counted: their QNames are the customer's and never leave.
+    F.collectBridgeWarning = function (options) {
+      options = options || {};
+      var reason = trim(options.reason);
+      if (F.mode() === "off" || !BRIDGE_WARNINGS[reason]) {
+        return null;
+      }
+      var finding = { subject: "bridge:" + reason };
+      if (reason === "unverified_changes") {
+        var items = Array.isArray(options.items) ? options.items : [];
+        var count = Math.max(items.length, Math.floor(Number(options.count) || 0));
+        var kinds = {};
+        var order = [];
+        for (var i = 0; i < items.length && i < 50; i++) {
+          var kind = trim(items[i] && items[i].kind).toLowerCase();
+          kind = kind === "backend" || kind === "ui" || kind === "file" ? kind : "other";
+          if (!kinds[kind]) {
+            kinds[kind] = 0;
+            order.push(kind);
+          }
+          kinds[kind]++;
+        }
+        finding.template = "<count> change(s) not proven after their last change, nudged: " + (options.nudged === true ? "yes" : "no");
+        finding.summary = count + " change(s) of the turn not proven after their last change"
+          + (order.length ? " (" + order.map(function (k) { return kinds[k] + " " + k; }).join(", ") + (count > items.length ? ", of " + items.length + " listed" : "") + ")" : "")
+          + "; the agent was " + (options.nudged === true ? "" : "not ") + "nudged to prove them.";
+        return F.add("runtime_error", finding, options);
+      }
+      // The enum values of a refusal of Vibe's core (invalid_state, reconfigure, running) and the code of a failed call
+      // are words of the product: kept in the template and said again in the summary.
+      var detail = options.detail && typeof options.detail === "object" ? options.detail : {};
+      var keep = [];
+      var fields = ["rejection", "code", "commandType", "state"];
+      var said = [];
+      for (var f = 0; f < fields.length; f++) {
+        var value = trim(detail[fields[f]]);
+        if (/^[a-z][a-z0-9_]{0,48}$/.test(value)) {
+          keep.push(value);
+          said.push(fields[f] + " " + value);
+        }
+      }
+      var message = trim(options.message);
+      finding.template = message.length ? F.template(message, store().projectNames(), customerNames(), keep) : reason;
+      if (said.length) {
+        finding.summary = "Bridge warning " + reason + ": " + said.join(", ") + ".";
+      }
+      return F.add("runtime_error", finding, options);
+    };
+
+    // A notice of Vibe that an MCP server failed to connect when its session started (the session then has no tool of that
+    // server): a runtime_error "vibe:mcp_connect" per server, "MCP server '<server>' failed to connect: <error template>".
+    // Convertigo, Playwright and the other known servers keep their names; another one is "<name>".
+    F.collectMcpConnectFailures = function (options) {
+      options = options || {};
+      if (F.mode() === "off") {
+        return [];
+      }
+      var failures = F.mcpConnectFailures(options.text);
+      var reports = [];
+      for (var i = 0; i < failures.length; i++) {
+        var server = trim(failures[i].server);
+        var known = server.toLowerCase().replace(/_/g, "-");
+        var shown = known === "convertigo" || KNOWN_MCP_SERVERS[known] ? server : "<name>";
+        var error = F.template(failures[i].error, store().projectNames(), customerNames());
+        reports.push(F.add("runtime_error", { subject: "vibe:mcp_connect", template: "MCP server '" + shown + "' failed to connect: " + (error || "unknown") }, options));
+      }
+      return reports;
     };
 
     // A report the user writes with /signaler: always prepared (an explicit act), sent when the user says so, or at once
@@ -923,10 +1180,11 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
         if (event.type !== "tool") {
           continue;
         }
-        var message = F.errorMessage(event.detail, event.status === "failed" || event.status === "error");
+        var failed = event.status === "failed" || event.status === "error";
+        var message = F.errorMessage(event.detail, failed);
         var duration = Number(event.completedAt) > 0 && Number(event.at) > 0 ? Number(event.completedAt) - Number(event.at) : null;
         if (message.length && F.collectToolError({ tool: event.toolName || event.title, message: message, failure: F.runtimeFailure(event.detail),
-          durationMs: duration, provider: provider, model: model, surface: surface })) {
+          durationMs: duration, provider: provider, model: model, surface: surface, failed: failed })) {
           count++;
         }
       }
