@@ -6,7 +6,7 @@ of each companion project.
 | Channel | Assistant | Bridge | MCP |
 | --- | --- | --- | --- |
 | Stable | 1.5.9 | 0.4.31 | 0.2.29 |
-| Preview | 1.6.0-beta.47 | 0.5.0-beta.30 | 0.3.0-beta.58 |
+| Preview | 1.6.0-beta.47 | 0.5.0-beta.30 | 0.3.0-beta.59 |
 
 Tigo 1.5.6 adds the Studio update offer and its channel selector, the No Code
 sandbox, faster No Code starts, preview capture and Baserow row reads (see
