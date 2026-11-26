@@ -7521,7 +7521,7 @@ scriptContent:
         				op_add_flow_element: "ajouter une étape au flow « {flow} »", op_update_flow_element: "modifier une étape du flow « {flow} »", op_remove_flow_element: "supprimer une étape du flow « {flow} »", op_move_flow_element: "déplacer une étape du flow « {flow} »",
         				op_set_root: "modifier les réglages généraux du formulaire", op_finalize_baserow_bindings: "terminer la liaison aux tables Baserow", op_update_form: "remplacer des parties du formulaire",
         				op_publish: "publier « {target} »", op_create_form: "créer le formulaire « {target} » ({pages} page(s), {fields} champ(s))", op_create_app: "créer l’application « {target} »",
-        				op_apply_schema: "modifier la structure de la base « {target} »", op_more: "et d’autres modifications", op_change: "une modification", op_other: "{action} {target}" },
+        				op_apply_schema: "modifier la structure de la base « {target} »", op_delete_rows: "supprimer des lignes de la table « {target} »", rowsDetail: "{count} lignes", rowsOne: "1 ligne", rowsAll: "toutes ses lignes", op_more: "et d’autres modifications", op_change: "une modification", op_other: "{action} {target}" },
         			en: { title: "Confirm the change", introForm: "Tigo wants to change “{form}”:", introCreate: "Tigo wants to create:", introBase: "Tigo wants to change the Baserow base “{form}”:",
         				allow: "Allow", allowTurn: "Allow all for this turn", refuse: "Refuse",
         				allowed: "Allowed: Tigo makes the change.", allowedTurn: "Allowed, and the next changes of this turn too.",
@@ -7545,7 +7545,7 @@ scriptContent:
         				op_add_flow_element: "add a step to the flow “{flow}”", op_update_flow_element: "change a step of the flow “{flow}”", op_remove_flow_element: "delete a step of the flow “{flow}”", op_move_flow_element: "move a step of the flow “{flow}”",
         				op_set_root: "change the general settings of the form", op_finalize_baserow_bindings: "finish the binding to the Baserow tables", op_update_form: "replace parts of the form",
         				op_publish: "publish “{target}”", op_create_form: "create the form “{target}” ({pages} page(s), {fields} field(s))", op_create_app: "create the application “{target}”",
-        				op_apply_schema: "change the structure of the base “{target}”", op_more: "and other changes", op_change: "a change", op_other: "{action} {target}" },
+        				op_apply_schema: "change the structure of the base “{target}”", op_delete_rows: "delete rows of the table “{target}”", rowsDetail: "{count} rows", rowsOne: "1 row", rowsAll: "all its rows", op_more: "and other changes", op_change: "a change", op_other: "{action} {target}" },
         			it: { title: "Conferma la modifica", introForm: "Tigo vuole modificare «{form}»:", introCreate: "Tigo vuole creare:", introBase: "Tigo vuole modificare la base Baserow «{form}»:",
         				allow: "Consenti", allowTurn: "Consenti tutto per questo turno", refuse: "Rifiuta",
         				allowed: "Consentito: Tigo esegue la modifica.", allowedTurn: "Consentito, e anche le prossime modifiche di questo turno.",
@@ -7569,7 +7569,7 @@ scriptContent:
         				op_add_flow_element: "aggiungere un passo al flow «{flow}»", op_update_flow_element: "modificare un passo del flow «{flow}»", op_remove_flow_element: "eliminare un passo del flow «{flow}»", op_move_flow_element: "spostare un passo del flow «{flow}»",
         				op_set_root: "modificare le impostazioni generali del modulo", op_finalize_baserow_bindings: "completare il collegamento alle tabelle Baserow", op_update_form: "sostituire parti del modulo",
         				op_publish: "pubblicare «{target}»", op_create_form: "creare il modulo «{target}» ({pages} pagine, {fields} campi)", op_create_app: "creare l’applicazione «{target}»",
-        				op_apply_schema: "modificare la struttura della base «{target}»", op_more: "e altre modifiche", op_change: "una modifica", op_other: "{action} {target}" },
+        				op_apply_schema: "modificare la struttura della base «{target}»", op_delete_rows: "eliminare righe della tabella «{target}»", rowsDetail: "{count} righe", rowsOne: "1 riga", rowsAll: "tutte le sue righe", op_more: "e altre modifiche", op_change: "una modifica", op_other: "{action} {target}" },
         			es: { title: "Confirmar el cambio", introForm: "Tigo quiere modificar «{form}»:", introCreate: "Tigo quiere crear:", introBase: "Tigo quiere modificar la base Baserow «{form}»:",
         				allow: "Permitir", allowTurn: "Permitir todo en este turno", refuse: "Rechazar",
         				allowed: "Permitido: Tigo hace el cambio.", allowedTurn: "Permitido, y también los próximos cambios de este turno.",
@@ -7593,7 +7593,7 @@ scriptContent:
         				op_add_flow_element: "añadir un paso al flow «{flow}»", op_update_flow_element: "modificar un paso del flow «{flow}»", op_remove_flow_element: "eliminar un paso del flow «{flow}»", op_move_flow_element: "mover un paso del flow «{flow}»",
         				op_set_root: "modificar los ajustes generales del formulario", op_finalize_baserow_bindings: "terminar el enlace con las tablas Baserow", op_update_form: "sustituir partes del formulario",
         				op_publish: "publicar «{target}»", op_create_form: "crear el formulario «{target}» ({pages} páginas, {fields} campos)", op_create_app: "crear la aplicación «{target}»",
-        				op_apply_schema: "modificar la estructura de la base «{target}»", op_more: "y otros cambios", op_change: "un cambio", op_other: "{action} {target}" }
+        				op_apply_schema: "modificar la estructura de la base «{target}»", op_delete_rows: "eliminar filas de la tabla «{target}»", rowsDetail: "{count} filas", rowsOne: "1 fila", rowsAll: "todas sus filas", op_more: "y otros cambios", op_change: "un cambio", op_other: "{action} {target}" }
         		};
         		// The Studio (its Tigo panel, js/studio_write_confirm.js of lib_ConvertigoMCP): the projects instead of the forms, and a
         		// third choice, "Lecture seule". A key missing here is the one of No Code.
@@ -7975,6 +7975,11 @@ scriptContent:
         		}
         		if (action === "delete_project" && value(item.detail) === "car") {
         			text += " " + t("carDetail");
+        		}
+        		// nocode-baserow-rows-delete: how many rows, the ids given or the count of the plan, or every row of the table
+        		if (action === "delete_rows" && value(item.detail).length) {
+        			var rows = value(item.detail);
+        			text += " (" + (rows === "all" ? t("rowsAll") : rows === "1" ? t("rowsOne") : t("rowsDetail").replace("{count}", rows)) + ")";
         		}
         		if (withProject === true && value(item.project).length && text.indexOf(value(item.project)) < 0) {
         			text += " " + t("inProject").replace("{project}", value(item.project));

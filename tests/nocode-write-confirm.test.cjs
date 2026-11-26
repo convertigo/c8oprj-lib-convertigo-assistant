@@ -247,6 +247,14 @@ test('the summary words every kind of change', () => {
   assert.equal(line({ action: 'set_root' }), 'modifier les réglages généraux du formulaire');
   assert.equal(line({ action: 'more' }), 'et d’autres modifications');
   assert.equal(line({ action: 'rename_thing', target: 'x' }), 'rename thing x');
+  // nocode-baserow-rows-delete: the table and how many rows (MCP 0.3.0-beta.56), or the target alone of an older MCP
+  assert.equal(line({ action: 'delete_rows', target: '5715', detail: '2' }), 'supprimer des lignes de la table « 5715 » (2 lignes)');
+  assert.equal(line({ action: 'delete_rows', target: '5715', detail: '1' }), 'supprimer des lignes de la table « 5715 » (1 ligne)');
+  assert.equal(line({ action: 'delete_rows', target: 'Équipe~>Jeu~>Chats', detail: 'all' }), 'supprimer des lignes de la table « Équipe~>Jeu~>Chats » (toutes ses lignes)');
+  assert.equal(line({ action: 'delete_rows', target: '5715 (2)' }), 'supprimer des lignes de la table « 5715 (2) »');
+  for (const [language, text] of [['en', 'delete rows of the table “5715” (3 rows)'], ['it', 'eliminare righe della tabella «5715» (3 righe)'], ['es', 'eliminar filas de la tabla «5715» (3 filas)']]) {
+    assert.equal(panel({ language }).view.writeConfirmItemText({ action: 'delete_rows', target: '5715', detail: '3' }), text, language);
+  }
   assert.equal(view.writeConfirmSummary({ tool: 'nocode-app-create', formName: 'Congés', items: [{ action: 'create_app', target: 'Congés' }] }), 'Tigo veut créer :\n• créer l’application « Congés »');
   assert.equal(view.writeConfirmSummary({ tool: 'nocode-baserow-schema-apply', formName: 'RH', items: [] }), 'Tigo veut modifier la base Baserow « RH » :');
 });
