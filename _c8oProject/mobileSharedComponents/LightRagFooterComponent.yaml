@@ -534,6 +534,11 @@ scriptContent:
         			}
         			var input = this.getAttachInputElement();
         			if (input && input.click) {
+        				// The Eclipse SWT chooser on macOS needs a non-empty first filter.
+        				const nativeBridge = window[''java''];
+        				if (nativeBridge && typeof nativeBridge.receiveFromJS === ''function'' && /Macintosh/.test(navigator.userAgent)) {
+        					input.setAttribute(''accept'', ''.*'');
+        				}
         				input.click();
         			}
         		} catch (e) {}
