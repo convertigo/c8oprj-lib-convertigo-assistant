@@ -157,7 +157,7 @@ function sendWith({ taken, prompt }) {
     takePrewarmedConversation: () => taken,
     prewarmNoCodeConversation: (options, provider) => { events.push('prewarm:' + provider + ':' + (options.threadid || '')); return null; }
   };
-  vm.runInNewContext('var sendMessage = ' + send + ';', sandbox);
+  vm.runInNewContext(backendParts(['lockConversationSend', 'unlockConversationRead', 'latestSavedState'], ['CONVERSATION_SEND_BUSY']) + '\nvar sendMessage = ' + send + ';', sandbox);
   const response = sandbox.sendMessage({ threadid: '', Question: 'OK ?', provider: 'convertigo', userId: 'forms-user' });
   return { response, events };
 }

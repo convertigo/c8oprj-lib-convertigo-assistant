@@ -251,6 +251,17 @@ rediscovering the same context.
   MCP internal execution does not populate the original servlet parameters.
   Run `node --test tests/nocode-agent-startup.test.cjs` after Mobile Builder has
   installed its TypeScript dependency to check this separation and timeout paths.
+- A Vibe process keeps its managed MCP token for its whole life. When the token's lease ended during the work, the
+  Bridge's state says `mcpTokenRenewal: "needed"` (warning `mcp_token_expired`): the event read (`readResponseOf`,
+  the user's session) creates a token with `managedMcpTokenHandle` and gives its handle with an `agent_events` read
+  (`mcpBearerTokenHandle`, a short read that does not move the cursor), and the Bridge restarts Vibe with it within
+  the turn. Cover with `node --test tests/assistant_mcp_token_renewal.test.cjs`.
+- Only the errors of the run's own prompt end the run (`agentErrorEndsRun`): not an `acp/response_error` of another
+  method (a setting Vibe refused), not an event flagged `otherRequest`, not the `acp/response_error` that repeats a
+  `turn/error` already read; a `turn/error` with `busy: true` (Vibe still finishing a turn) shows `turnBusy` and is no
+  feedback error. One send of a conversation at a time (`lockConversationSend`, `send.lock` beside it) from the
+  running-turn check to the first save: two sends at once otherwise both wrote the conversation and the busy one put
+  back the state from before it, over the other's turn. Cover with `node --test tests/assistant_send_lock.test.cjs`.
 
 ## UI Expectations
 

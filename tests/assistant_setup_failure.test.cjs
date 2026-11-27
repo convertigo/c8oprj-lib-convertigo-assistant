@@ -50,7 +50,7 @@ function fixture(provider, setupStatus, install = false, userId = 'forms-user', 
     bridgeRefusalAnswer: () => '',
     withCallerUserId: options => options || {}, sendMark() {}, takePrewarmedConversation: () => ''
   };
-  vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName', 'runningTurnOf', 'turnRunningResponse']) + '\nvar sendMessage = ' + send + ';', sandbox);
+  vm.runInNewContext(backendParts(['setupRequiredAnswer', 'publicSetupReport', 'agentSlashCommandName', 'runningTurnOf', 'turnRunningResponse', 'lockConversationSend', 'unlockConversationRead', 'latestSavedState'], ['CONVERSATION_SEND_BUSY']) + '\nvar sendMessage = ' + send + ';', sandbox);
   return { response: sandbox.sendMessage({ threadid: state.threadid, Question: 'Bonjour' }), calls };
 }
 

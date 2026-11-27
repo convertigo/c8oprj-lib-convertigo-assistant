@@ -210,7 +210,7 @@ function readFixture(stored, events) {
     }
   };
   vm.runInNewContext(backendParts(['readResponseOf', 'bridgeProcessGone', 'keepRunAliveAfterBridgeReadFailure', 'bridgeProcessLostMessage', 'isTerminalStatus',
-    'endTurnOnLostAgent'],
+    'endTurnOnLostAgent', 'handMcpTokenRenewal', 'mcpTokenRenewalHandle', 'agentErrorEndsRun', 'rememberRunErrorRequest'],
     ['MAX_TRANSIENT_READ_ERRORS']), sandbox);
   return { read: () => sandbox.readResponseOf({ threadid: 'agent-crm', runid: 'run-4' }), saved: () => store, max: sandbox.MAX_TRANSIENT_READ_ERRORS };
 }
