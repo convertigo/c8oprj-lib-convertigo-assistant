@@ -77,31 +77,53 @@ responseTimeout: 120
       if(httpCode===200&&remote&&remote.status==="ok"&&remote.account&&remote.account.email===email&&remote.account.subject&&remote.apiKey&&remote.quota){
        var c={apiKey:remote.apiKey,baseUrl:remote.baseUrl};var validKey=/^sk-[A-Za-z0-9_-]{32,128}$/.test(String(c.apiKey||""));
        if(validKey&&String(c.baseUrl).replace(/\/$/,"")==="https://llm.convertigo.com/v1"){
-        var localOperation="prepare_directory";
-        try{
-         safePath(directory);java.nio.file.Files.createDirectories(directory);safePath(keyPath);safePath(metadataPath);
-         include("js/tigo_access_files.js");
-         var localOperation="restrict_directory";
-         var privateFiles=TigoAccessFiles.create(directory,safePath);
-         privateFiles.restrict(directory);
-         var publicAccount={subject:remote.account.subject,email:remote.account.email};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
-         var keyHash=hashLocal(c.apiKey);var metadata={version:1,source:"TigoAccess",subject:remote.account.subject,email:remote.account.email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().toISOString()};
-         var keyChanged=!java.nio.file.Files.isRegularFile(keyPath)||hashLocal(String(new java.lang.String(java.nio.file.Files.readAllBytes(keyPath),"UTF-8")).trim())!==keyHash;
-         localOperation="write_key";if(keyChanged){privateFiles.writePrivate(keyPath,String(c.apiKey)+"\n");}
-         localOperation="write_metadata";privateFiles.writePrivate(metadataPath,JSON.stringify(metadata));
-         localOperation="cache_access";
-         context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().getTime()}));
-         response={status:"ok",state:"ready",account:publicAccount,quota:remote.quota,message:"Accès Tigo configuré.",error:""};
-        }catch(ignored){
-         // A failed metadata replacement must not make a managed key look manually configured on retry.
-         var restoredKey=true;
-         if(localOperation==="write_metadata"&&keyChanged){
-          try{if(existingKey&&existingKey.length){privateFiles.writePrivate(keyPath,String(existingKey)+"\n");}else{safePath(keyPath);java.nio.file.Files.deleteIfExists(keyPath);}}catch(rollbackError){restoredKey=false;}
+        var localOperation="prepare_directory",privateFiles=null,keyChanged=false,previousKey="";
+        var publicAccount={subject:remote.account.subject,email:remote.account.email};for(var field in remote.quota){if(Object.prototype.hasOwnProperty.call(remote.quota,field)){publicAccount[field]=remote.quota[field];}}
+        var keyHash=hashLocal(c.apiKey);var metadata={version:1,source:"TigoAccess",subject:remote.account.subject,email:remote.account.email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().toISOString()};
+        var readInstalledAccess=function(){
+         var key=java.nio.file.Files.isRegularFile(keyPath)?String(new java.lang.String(java.nio.file.Files.readAllBytes(keyPath),"UTF-8")).trim():"",installed=null;
+         if(java.nio.file.Files.isRegularFile(metadataPath)&&java.nio.file.Files.size(metadataPath)<32768){try{installed=JSON.parse(String(new java.lang.String(java.nio.file.Files.readAllBytes(metadataPath),"UTF-8")));}catch(unreadableMetadata){}}
+         return {key:key,metadata:installed};
+        };
+        // Every turn refreshes the access, the turns of two tabs together: one installation at a time, and only what changed is written.
+        var installLocalAccess=function(){
+         try{
+          safePath(directory);java.nio.file.Files.createDirectories(directory);safePath(keyPath);safePath(metadataPath);
+          localOperation="restrict_directory";
+          privateFiles=TigoAccessFiles.create(directory,safePath);
+          privateFiles.restrict(directory);
+          localOperation="read_installed";
+          var installed=readInstalledAccess();previousKey=installed.key;
+          keyChanged=!previousKey.length||hashLocal(previousKey)!==keyHash;
+          // updatedAt, account and quota change on every refresh and no reader takes them from the file: it is rewritten only when what names the key changes.
+          var m=installed.metadata,metadataCurrent=!keyChanged&&!!m&&m.version===metadata.version&&m.source===metadata.source&&m.subject===metadata.subject&&m.email===metadata.email&&m.keyHash===keyHash;
+          localOperation="write_key";if(keyChanged){privateFiles.writePrivate(keyPath,String(c.apiKey)+"\n");}
+          localOperation="write_metadata";if(!metadataCurrent){privateFiles.writePrivate(metadataPath,JSON.stringify(metadata));}
+          return null;
+         }catch(installError){
+          var moveAttempts=privateFiles?privateFiles.attempts():0;
+          // A failed metadata replacement must not make a managed key look manually configured on retry.
+          var restoredKey=true;
+          if(localOperation==="write_metadata"&&keyChanged){
+           try{if(previousKey.length){privateFiles.writePrivate(keyPath,String(previousKey)+"\n");}else{safePath(keyPath);java.nio.file.Files.deleteIfExists(keyPath);}}catch(rollbackError){restoredKey=false;}
+          }
+          var diagnostic=TigoAccessFiles.failure(installError,localOperation,moveAttempts);
+          diagnostic.previousKeyRestored=restoredKey;
+          // The selected key and the metadata naming it are in place (unchanged, or written by another tab): the access works.
+          try{var inPlace=readInstalledAccess();diagnostic.keyInPlace=inPlace.key.length>0&&hashLocal(inPlace.key)===keyHash&&!!inPlace.metadata&&inPlace.metadata.source==="TigoAccess"&&inPlace.metadata.keyHash===keyHash;}catch(unreadableAccess){diagnostic.keyInPlace=false;}
+          return diagnostic;
          }
-         var diagnostic=typeof TigoAccessFiles!=="undefined"?TigoAccessFiles.failure(ignored,localOperation):{operation:localOperation,cause:"filesystem_error"};
-         diagnostic.previousKeyRestored=restoredKey;
-         log.warn("TigoAccess local credential installation failed ("+diagnostic.operation+", "+diagnostic.cause+")");
-         response={status:"error",code:"local_installation_failed",error:"La clé Tigo a été obtenue, mais son enregistrement local a échoué. Vérifiez les droits du dossier convertigo dans le répertoire agents configuré.",diagnostic:diagnostic};
+        };
+        var localFailure=null;
+        try{include("js/tigo_access_files.js");localFailure=TigoAccessFiles.serialized(directory,installLocalAccess);}
+        catch(installLockError){localFailure={operation:localOperation,cause:"filesystem_error",previousKeyRestored:true,keyInPlace:false};}
+        if(localFailure){log.warn(typeof TigoAccessFiles!=="undefined"?TigoAccessFiles.logLine(localFailure,localFailure.keyInPlace):"TigoAccess local credential installation failed ("+localFailure.operation+", "+localFailure.cause+")");}
+        if(!localFailure||localFailure.keyInPlace){
+         try{context.httpSession.setAttribute("assistant.tigo.access",JSON.stringify({email:email,keyHash:keyHash,account:publicAccount,quota:remote.quota,updatedAt:new Date().getTime()}));}catch(cacheIgnored){}
+         response={status:"ok",state:"ready",account:publicAccount,quota:remote.quota,message:"Accès Tigo configuré.",error:""};
+        }else{
+         delete localFailure.keyInPlace;
+         response={status:"error",code:"local_installation_failed",error:"La clé Tigo a été obtenue, mais son enregistrement local a échoué. Vérifiez les droits du dossier convertigo dans le répertoire agents configuré.",diagnostic:localFailure};
         }
        }
       }else if(remote&&remote.status==="error"){response={status:"error",code:String(remote.code||"service_unavailable"),error:remote.code==="user_budget_migration_required"?"Votre accès personnel doit être migré par Convertigo avant d’utiliser le budget de l’équipe.":"L’accès Tigo n’a pas pu être activé. Vérifiez votre compte ou réessayez."};}

@@ -668,8 +668,11 @@ rediscovering the same context.
 - TigoAccess credential installation uses `js/tigo_access_files.js`: POSIX
   permissions on Unix, current-process-user ACLs on Windows. Java File permission
   toggles cannot make a Windows file private. Keep symlink rejection, private
-  temporary files and atomic replacement. Run
-  `node --test tests/tigo_access_files.test.cjs` after changing this path.
+  temporary files and atomic replacement. Every turn refreshes the access: write
+  nothing identical, keep one installation at a time (`serialized`), retry a
+  held file's move, and answer ok when the selected key is already in place.
+  Run `node --test tests/tigo_access_files.test.cjs tests/tigo_access_switch.test.cjs`
+  and the native test (interpreted and compiled Rhino) after changing this path.
 - A `local_installation_failed` response means the remote key was already
   obtained. Keep its sanitized operation/cause diagnostic and propagate the local
   error through AgentSetup; do not replace it with PSC troubleshooting or log
