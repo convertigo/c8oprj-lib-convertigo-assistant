@@ -49,6 +49,14 @@ published stack manifest and can update CAR-managed installations. The manifest
 uses the configured Convertigo proxy and is cached for six hours. Local Git
 checkouts are detected and are never overwritten automatically.
 
+## Engine logs
+
+Tigo panel requests, event polling and managed MCP traffic are quiet by default.
+Sequences and transactions run in an application project keep their normal engine logs.
+For diagnostics, set the Convertigo global symbol `agentbridge.mcp.nolog` to `false`,
+reload the Assistant view and start a new agent session. Set it back to `true`
+and repeat to silence internal traffic again. Credential-specific log guards stay active.
+
 ## Companion projects
 
 - [Convertigo MCP](https://github.com/convertigo/c8oprj-lib-c8o-mcp)

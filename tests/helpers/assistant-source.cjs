@@ -35,6 +35,9 @@ function pageClass() {
 }
 function backendParts(names, constants = []) {
   // The desktop Studio test of the caller checks, extracted with every part (it reads Engine only when called).
+  if (names.includes('bridgeCall') || names.includes('callLocalSequence')) {
+    names = [...new Set([...names, 'tigoNoLogEnabled', 'serverSymbolValue'])];
+  }
   if (!names.includes('isLocalStudio')) names = [...names, 'isLocalStudio'];
   const ast = ts.createSourceFile('bridge.js', read('js/agent_bridge_client.js'), ts.ScriptTarget.Latest, true);
   const parts = [], found = [];

@@ -4,8 +4,30 @@ componentScriptContent:
     - com.twinsoft.convertigo.beans.common.FormatedContent: 
       →: |
         '/*Begin_c8o_AppImport*/
+        import { tap } from "rxjs/operators";
         /*End_c8o_AppImport*/
         /*Begin_c8o_AppDeclaration*/
+            static tigoLogging = {
+                quiet: true,
+                intercept(request, next) {
+                    if (request.method !== "POST" || !/\/\.json(?:\?|$)/.test(request.url)) { return next.handle(request); }
+                    const form = typeof request.body === "string" ? new URLSearchParams(request.body) : request.body;
+                    if (!form || typeof form.get !== "function") { return next.handle(request); }
+                    const endpoint = /\/projects\/([^/]+)\/\.json(?:\?|$)/.exec(request.url);
+                    const project = form.get("__project") || (endpoint && endpoint[1]);
+                    if (project !== "lib_ConvertigoAssistant" && project !== "lib_ConvertigoAgentBridge") { return next.handle(request); }
+                    const response = next.handle(this.quiet ? request.clone({ setParams: { __nolog: "true" } }) : request);
+                    if (project === "lib_ConvertigoAssistant" && form.get("__sequence") === "GetVersion") {
+                        return response.pipe(tap((event: any) => {
+                            if (event.body) {
+                                const version = event.body.document || event.body;
+                                this.quiet = !/^(false|0|off|no)$/i.test(String(version.tigoNoLog).trim());
+                            }
+                        }));
+                    }
+                    return response;
+                }
+            };
         	/*End_c8o_AppDeclaration*/
         /*Begin_c8o_AppSettings*/
                 /*End_c8o_AppSettings*/
@@ -623,6 +645,15 @@ tplProjectName: mobilebuilder_tpl_8_4_0_ngx_legacy
                     });
                     resolve();
             '
+    module_ng_providers: 
+      - xmlizable: 
+        - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+        - com.twinsoft.convertigo.beans.common.XMLVector: 
+          - xmlizable: 
+            - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector
+            - com.twinsoft.convertigo.beans.common.XMLVector: 
+              - java.lang.String: 
+                - ↑value: '{ provide: HTTP_INTERCEPTORS, useValue: AppComponent.tigoLogging, multi: true }'
     build_assets: 
       - xmlizable: 
         - ↑classname: com.twinsoft.convertigo.beans.common.XMLVector

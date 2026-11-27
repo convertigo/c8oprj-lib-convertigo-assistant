@@ -148,9 +148,13 @@ test('bridgeCall checks the caller first, sends the key to its own Bridge only a
 
   const { sandbox, calls } = fixture({ admin: true });
   sandbox.bridgeCall({}, 'agent_events', { handle: 'h' });
-  assert.equal(JSON.stringify(calls[0][3]), JSON.stringify({ 'X-Convertigo-Agent-Bridge-Key': 'engine-key' }));
+  assert.equal(JSON.stringify(calls[0][3]), JSON.stringify({ 'X-Convertigo-No-Log': 'true', 'X-Convertigo-Agent-Bridge-Key': 'engine-key' }));
   sandbox.bridgeCall({ bridgeBaseUrl: 'http://evil.example/convertigo/projects/lib_ConvertigoAgentBridge/.json' }, 'agent_events', {});
-  assert.equal(JSON.stringify(calls[1][3]), '{}', 'a caller-chosen Bridge URL never receives the key');
+  assert.equal(JSON.stringify(calls[1][3]), JSON.stringify({ 'X-Convertigo-No-Log': 'true' }), 'a caller-chosen Bridge URL never receives the key');
+
+  sandbox.Engine.theApp = { databaseObjectsManager: { symbolsGetValue: () => 'false' } };
+  sandbox.bridgeCall({}, 'agent_events', { handle: 'h' });
+  assert.deepEqual(Object.keys(calls[2][3]), ['X-Convertigo-Agent-Bridge-Key'], 'diagnostic calls omit the quiet header');
 
   sandbox.response = { error: { message: 'An exception occured while executing step',
     details: 'EngineException: agent_bridge_caller_refused: a WEB_ADMIN session or the Assistant of this engine is required' } };

@@ -1990,7 +1990,7 @@ title: Title for LightRag
                                             return;
                                         }
                                         page.local.LightRagBufferBusy = true;
-                                        page.c8o.callJsonObject(''lib_ConvertigoAssistant.GetTokenBuffer'', {__nolog: ''true'', __context: ''lightrag_buffer''}).async().then(function(response) {
+                                        page.c8o.callJsonObject(''lib_ConvertigoAssistant.GetTokenBuffer'', {__context: ''lightrag_buffer''}).async().then(function(response) {
                                             var chunk = extractChunk(response);
                                             if (!showStreamChunk(chunk)) {
                                                 showFallbackProgress();
