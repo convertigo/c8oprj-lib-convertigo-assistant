@@ -1248,12 +1248,12 @@ test('the Bridge\'s warnings of a lost or missing Convertigo MCP are counted; un
     message: 'Vibe lost the Convertigo MCP for this session (core refusal: invalid_state, reconfigure, in state running): the next message restarts Vibe on this conversation.' });
   assert.equal(core.finding.template, 'Vibe lost the Convertigo MCP for this session (core refusal: invalid_state, reconfigure, in state running): the next message restarts Vibe on this conversation.');
   assert.equal(core.finding.summary, 'Bridge warning core_rejected_input: rejection invalid_state, code invalid_state, commandType reconfigure, state running.');
-  for (const reason of ['mcp_lost_turn_stopped', 'mcp_lost_process_stopped', 'mcp_lost_resumed', 'convertigo_mcp_unavailable_at_start', 'convertigo_mcp_restarted', 'convertigo_mcp_unreachable']) {
+  for (const reason of ['mcp_lost_turn_stopped', 'mcp_lost_process_stopped', 'mcp_lost_resumed', 'convertigo_mcp_unavailable_at_start', 'convertigo_mcp_restarted', 'convertigo_mcp_unreachable', 'mcp_token_expired']) {
     const report = F.collectBridgeWarning({ reason, message: 'Vibe failed 3 tool calls in a row on PcaUpdateTracker.sq:getCategories: connect ECONNREFUSED 127.0.0.1:18080.' });
     assert.equal(report.finding.subject, 'bridge:' + reason);
     assert.equal(report.finding.template, 'Vibe failed N tool calls in a row on <name>: connect ECONNREFUSED 127.0.0.1:<port>.', reason);
   }
-  for (const reason of ['gateway_key_changed', 'mcp_changed_while_starting', 'tool_policy_changed', '']) {
+  for (const reason of ['gateway_key_changed', 'mcp_changed_while_starting', 'tool_policy_changed', 'turn_busy', 'other_prompt_error', '']) {
     assert.equal(F.collectBridgeWarning({ reason, message: 'Vibe restarts' }), null, 'a restart the user asked for is no friction: ' + reason);
   }
   // The changes of a turn left unproven: counted, by kind, never named.

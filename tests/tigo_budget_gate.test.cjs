@@ -459,7 +459,7 @@ test('the No Code quota arc reads the user\'s C8Oforms quota as the Studio arc r
 });
 
 test('every place keeps its guard: before the turn is written, on the error events, on a refused start, in the arc and the page', () => {
-  assert.match(src, /var convertigoRefusal = convertigoTurnRefusal\(state, options\);\n    if \(convertigoRefusal !== null\) \{\n      return convertigoRefusal;\n    \}\n    state\.status = "starting";/);
+  assert.match(src, /var convertigoRefusal = convertigoTurnRefusal\(state, options\);\n\s+if \(convertigoRefusal !== null\) \{\n\s+return convertigoRefusal;\n\s+\}\n\s+state\.status = "starting";/);
   assert.match(src, /var tigoAccess = options\.tigoAccessResult \|\| C8O\.assistantAgentBridge\.refreshTigoAccess\(\);/);
   assert.match(src, /if \(isBudgetError\(data\) \|\| gatewayRateLimitIsBudget\(state, data\)\) \{\n\s+state\.error = budgetErrorAnswer\(state, data\);/);
   assert.match(src, /\} else if \(userGatewayKeyRejected\(state, data\)\) \{[\s\S]{0,200}forgetUserGatewayKey\(state\);\n\s+state\.error = lang\(state\)\.userKeyExpired;/);

@@ -1146,6 +1146,44 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     return handle;
   }
 
+  // The Agent Bridge cannot create a managed MCP token (McpManagedTokenCreate needs an authenticated administrator); the
+  // event read of a conversation runs in its user's session, which can. A Vibe process keeps its token for its whole
+  // life: when its lease ended during the work (Toulouse 24/11: "MCP token expired", then no Convertigo tool at all),
+  // the Bridge's state says mcpTokenRenewal "needed"; the handle of a live token goes with an agent_events read, and the
+  // Bridge restarts Vibe with it within the turn. "" when this session cannot give one.
+  function mcpTokenRenewalHandle(state) {
+    try {
+      return managedMcpTokenHandle(state);
+    } catch (renewalError) {
+      try {
+        log.warn("(lib_ConvertigoAssistant) The managed MCP token could not be renewed for the Agent Bridge: " + String(renewalError));
+      } catch (_ignoreRenewalLog) {}
+      return "";
+    }
+  }
+
+  // After an event read: a renewal the Bridge asks for goes at once, with a short read that waits for nothing (its events
+  // stay for the next read: the cursor does not move). handed: the handle the read already carried.
+  function handMcpTokenRenewal(state, bridgeState, handed) {
+    var renewal = trim(bridgeState && bridgeState.mcpTokenRenewal);
+    if (renewal === "needed" && !trim(handed).length) {
+      var handle = mcpTokenRenewalHandle(state);
+      if (handle.length) {
+        try {
+          var answer = bridgeCall(state, "agent_events", {
+            handle: state.handle,
+            cursor: String(state.cursor || 0),
+            limit: "1",
+            waitMs: "0",
+            mcpBearerTokenHandle: handle
+          }, 15000);
+          renewal = trim(answer && answer.state && answer.state.mcpTokenRenewal);
+        } catch (_ignoreRenewalRead) {}
+      }
+    }
+    state.mcpTokenRenewal = renewal === "needed" ? "needed" : "";
+  }
+
   function shouldAttachMcpTokenHandle(sequence) {
     return sequence === "agent_codex_setup" || sequence === "agent_codex_start"
       || sequence === "agent_vibe_setup" || sequence === "agent_vibe_start"
@@ -5483,6 +5521,43 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     } catch (_ignoreReadUnlockClose) {}
   }
 
+  // The lock of a send (send.lock beside the conversation, see sendMessage): taken at once or not at all. A lock held by
+  // another request of this engine (OverlappingFileLockException) or another process answers CONVERSATION_SEND_BUSY; a
+  // conversation without its folder yet, or a file that cannot be locked, sends without (null).
+  var CONVERSATION_SEND_BUSY = "busy";
+
+  function lockConversationSend(state) {
+    var channel = null;
+    try {
+      if (!state || !state.conversationFile) {
+        return null;
+      }
+      var dir = new File(String(state.conversationFile)).getParentFile();
+      if (dir === null || !dir.exists()) {
+        return null;
+      }
+      channel = new java.io.RandomAccessFile(new File(dir, "send.lock"), "rw").getChannel();
+      var lock = null;
+      try {
+        lock = channel.tryLock();
+      } catch (_heldInThisEngine) {
+        // another send of this conversation runs in this engine
+      }
+      if (lock !== null) {
+        return { channel: channel, lock: lock };
+      }
+      channel.close();
+      return CONVERSATION_SEND_BUSY;
+    } catch (_ignoreSendLock) {
+      try {
+        if (channel !== null) {
+          channel.close();
+        }
+      } catch (_ignoreSendLockClose) {}
+      return null;
+    }
+  }
+
   // The state another reader saved last: the copy of this HTTP session can be behind it.
   function latestSavedState(state) {
     try {
@@ -5600,6 +5675,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       agentIsolationUnavailable: "Cet agent ne peut pas fonctionner sur ce serveur avec des cl\u00e9s Tigo par utilisateur : il n'y serait pas isol\u00e9 des agents des autres utilisateurs. Un administrateur peut choisir l'agent Convertigo.",
       conversationNotOwned: "Cette conversation appartient \u00e0 un autre compte. Commencez une nouvelle conversation.",
       userKeyExpired: "La cl\u00e9 Tigo de votre compte avait expir\u00e9. Renvoyez votre message : une cl\u00e9 renouvel\u00e9e sera utilis\u00e9e.",
+      turnBusy: "Tigo terminait encore un tour pr\u00e9c\u00e9dent de cette conversation : votre message n'a pas \u00e9t\u00e9 envoy\u00e9. Renvoyez-le dans un instant.",
       startFailed: "Je n'ai pas pu d\u00e9marrer le traitement.",
       setupRequired: "L'environnement local n'est pas encore pr\u00eat.",
       setupCanInstall: "Vous pouvez lancer l'installation locale depuis le diagnostic de l'agent, puis renvoyer votre demande.",
@@ -5658,6 +5734,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       agentIsolationUnavailable: "This agent cannot run on this server with per-user Tigo keys: it would not be isolated from the other users' agents. An administrator can choose the Convertigo agent.",
       conversationNotOwned: "This conversation belongs to another account. Start a new conversation.",
       userKeyExpired: "The Tigo key of your account had expired. Send your message again: a renewed key will be used.",
+      turnBusy: "Tigo was still finishing a previous turn of this conversation, so your message was not sent. Send it again in a moment.",
       startFailed: "I could not start the task.",
       setupRequired: "The local environment is not ready yet.",
       setupCanInstall: "You can start the local installation from the agent diagnostic, then send your request again.",
@@ -7839,6 +7916,41 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       }
     }
     return null;
+  }
+
+  // Which error events end the run. The Agent Bridge streams the answers of every request it makes to the agent: a setting
+  // Vibe refused during its turn (acp/response_error, method session/set_config_option), a second prompt it refused
+  // ("A turn is already running", flagged otherRequest), and the turn/error of a failed prompt followed by its
+  // acp/response_error. Each one failed the run and counted as a feedback error of its own: ACOSS 26/11 sent the same
+  // refusal twice, 38 ms apart.
+  function agentErrorEndsRun(state, type, data) {
+    data = data || {};
+    if (data.otherRequest === true) {
+      return false;
+    }
+    if (type === "acp/response_error") {
+      var method = trim(data.method);
+      if (method.length && method !== "session/prompt") {
+        return false;
+      }
+      var id = trim(data.id);
+      if (id.length && (state.runErrorRequestIds || []).indexOf(id) >= 0) {
+        // the same failed prompt, already read as its turn/error
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function rememberRunErrorRequest(state, type, data) {
+    var id = trim(type === "acp/response_error" ? data && data.id : data && data.requestId);
+    if (!id.length) {
+      return;
+    }
+    state.runErrorRequestIds = state.runErrorRequestIds || [];
+    if (state.runErrorRequestIds.indexOf(id) < 0) {
+      state.runErrorRequestIds.push(id);
+    }
   }
 
   function collectFeedbackRuntimeError(state, message) {
@@ -10954,157 +11066,175 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       };
     }
     sendMark("state/read");
-    var running = state !== null ? runningTurnOf(state) : null;
-    if (running !== null) {
-      return turnRunningResponse(state, running);
+    // One send of a conversation at a time, from its check of a running turn to its first save ("starting", which
+    // runningTurnOf reads as a turn): two sends at once (two tabs, a double send) both found no turn and both wrote the
+    // conversation; the Agent Bridge admitted one, and the other's busy answer put back the state from before it, over the
+    // turn the first had started, whose answer was never recorded (headless bench, 27/11).
+    var sendLock = state !== null ? lockConversationSend(state) : null;
+    if (sendLock === CONVERSATION_SEND_BUSY) {
+      return turnRunningResponse(state, { runid: state.runid, status: state.status });
     }
-    var stateBeforeSend = state !== null ? JSON.stringify(state) : null;
-    var agentChanged = noCodeAgentChanged(options, state);
-    if (agentChanged !== null) {
-      return agentChanged;
+    try {
+      if (sendLock !== null) {
+        // what the send that held the lock saved
+        state = latestSavedState(state);
+      }
+      var running = state !== null ? runningTurnOf(state) : null;
+      if (running !== null) {
+        return turnRunningResponse(state, running);
+      }
+      var stateBeforeSend = state !== null ? JSON.stringify(state) : null;
+      var agentChanged = noCodeAgentChanged(options, state);
+      if (agentChanged !== null) {
+        return agentChanged;
+      }
+      if (state === null) {
+        state = createState(options);
+      }
+      state = ensureState(state);
+      sendMark("state/create", state);
+      var previousMcpEndpoint = trim(state.mcpEndpoint);
+      var requestedMcpEndpoint = trim(options.mcpEndpoint);
+      var mcpEndpointChanged = previousMcpEndpoint.length > 0 &&
+        requestedMcpEndpoint.length > 0 &&
+        previousMcpEndpoint !== requestedMcpEndpoint;
+      options.establishedAgentFollowup = trim(state.externalSessionId).length > 0 && !mcpEndpointChanged;
+      if (requestedMcpEndpoint.length) {
+        state.mcpEndpoint = requestedMcpEndpoint;
+      }
+      clearCancellationRequested(state.threadid);
+      if (trim(options.model || options.agentModel).length) {
+        state.model = normalizeModel(state.provider, options.model || options.agentModel);
+      } else if (!trim(state.model).length) {
+        state.model = normalizeModel(state.provider, "");
+      }
+      if (trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort).length) {
+        state.reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
+      }
+      if (trim(options.serviceTier || options.speedTier).length) {
+        state.serviceTier = trim(options.serviceTier || options.speedTier);
+      }
+      // The edit profile the panel asks for this conversation ("mcp" puts the default back): a Studio Vibe conversation only.
+      var requestedEditProfile = trim(options.editProfile).toLowerCase();
+      if (requestedEditProfile.length && editProfileApplies(state, options)
+          && (requestedEditProfile === "mcp" || effectiveEditProfile(requestedEditProfile).length)) {
+        state.editProfile = normalizeEditProfile(requestedEditProfile);
+      }
+      options.editProfile = editProfileApplies(state, options) ? effectiveEditProfile(state.editProfile) : "";
+      // Before anything of the turn is written: on the Convertigo gateway, the user's key where the server issues one and
+      // a balance above zero (tigo-nocode-contract.md section 6); the gateway still enforces on its own.
+      var convertigoRefusal = convertigoTurnRefusal(state, options);
+      if (convertigoRefusal !== null) {
+        return convertigoRefusal;
+      }
+      state.status = "starting";
+      state.answer = "";
+      state.answerIsFinal = false;
+      state.error = "";
+      state.warnings = [];
+      state.unverifiedChanges = null;
+      state.readErrors = 0;
+      state.runErrorRequestIds = [];
+      state.mcpTokenRenewal = "";
+      state.progressLog = "";
+      state.progressEvents = [];
+      state.lastProgressLine = "";
+      state.reasoningPending = null;
+      state.answerReasoning = null;
+      state.stepReasoning = null;
+      state.hostFormContext = {
+        formId: firstOptionValue(options, ["formId", "currentFormId", "nocodeCurrentFormId", "applicationId", "currentApplicationId"]),
+        formName: firstOptionValue(options, ["formName", "currentFormName"]),
+        formRevision: firstOptionValue(options, ["formRevision", "currentFormRevision"]),
+        pageId: firstOptionValue(options, ["pageId", "currentPage"]),
+        pageName: firstOptionValue(options, ["pageName"]),
+        elementId: firstOptionValue(options, ["elementId"]),
+        elementName: firstOptionValue(options, ["elementName"]),
+        elementType: firstOptionValue(options, ["elementType"]),
+        parentElementId: firstOptionValue(options, ["parentElementId"]),
+        selectionKind: firstOptionValue(options, ["selectionKind"]),
+        contextTargetKind: firstOptionValue(options, ["contextTargetKind", "selectionKind"]),
+        baserowWorkspaceId: firstOptionValue(options, ["baserowWorkspaceId"]),
+        baserowWorkspaceName: firstOptionValue(options, ["baserowWorkspaceName"]),
+        baserowDatabaseId: firstOptionValue(options, ["baserowDatabaseId", "baserowBaseId"]),
+        baserowDatabaseName: firstOptionValue(options, ["baserowDatabaseName", "baserowBaseName"]),
+        baserowTableId: firstOptionValue(options, ["baserowTableId"]),
+        baserowTableName: firstOptionValue(options, ["baserowTableName"])
+      };
+      state.nocodeContext = normalizeSkillProfile(state) === "nocode" ? noCodeConversationContext(state.hostFormContext) : null;
+      state.formMutation = null;
+      state.setupRequired = false;
+      state.setupReport = null;
+      state.userQuestion = rawUserQuestion;
+      if (!trim(state.title).length) {
+        state.title = conversationTitleFromText(state.userQuestion || question);
+      }
+      var explicitLanguage = normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage);
+      var detectedLanguage = detectLanguage(state.userQuestion || question);
+      if (explicitLanguage.length) {
+        state.language = explicitLanguage;
+      } else if (!trim(state.language).length || detectedLanguage === "fr") {
+        state.language = detectedLanguage;
+      }
+      var currentProject = trim(options.targetProject || options.projectName || options.projectId);
+      if (currentProject.length) {
+        state.primaryProject = state.primaryProject || currentProject;
+        state.projectId = currentProject;
+        state.projectNames = addArrayValue(state.projectNames, currentProject);
+      }
+      enrichViewerDebugOptions(options, state);
+      collectFeedbackContextNames(state, options);
+      // A message starts a turn: the user's "Confirmer avant de modifier" (in a Studio, or "Lecture seule") is published
+      // for the MCP, and what the last turn left (its cards, its "allow all for this turn") is dropped. Never a reason not
+      // to send.
+      if (normalizeSkillProfile(state) === "nocode" || trim(options.userId).toLowerCase() === "studio") {
+        try {
+          options.writeConfirmOn = writeConfirmModule().newTurn(state.threadid, options.userId, writeConfirmHost(options));
+          options.writeConfirmMode = writeConfirmModule().lastMode;
+        } catch (_ignoreWriteConfirm) {}
+      }
+      // the tables of the application open in the panel, named in the turn context (No Code, an application open)
+      if (normalizeSkillProfile(state) === "nocode" && trim(options.currentFormId || options.nocodeCurrentFormId || options.formId || options.applicationId || options.currentApplicationId).length) {
+        options.nocodeBoundTables = noCodeBoundTables(state, options);
+      }
+      // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
+      options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
+      if (trim(options.rawUserQuestion).length) {
+        question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
+        options.Question = question;
+      }
+      sendMark("prompt");
+      state.slashCommand = agentSlashCommandName(state, rawUserQuestion);
+      state.compactError = "";
+      if (state.slashCommand === "compact") {
+        // "/compact" summarizes the history: the next message supplies the conversation's skills again.
+        state.resourceSkillVersions = {};
+      }
+      if (state.slashCommand.length) {
+        // The harness runs "/compact <instructions>" only when the prompt starts with it: no Studio preamble.
+        question = rawUserQuestion;
+        options.Question = question;
+      }
+      // The first turn of a conversation the Flash mode started: the agent learns what Flash created (once). The transcript
+      // keeps the user's message as typed.
+      if (!state.slashCommand.length && trim(state.flashNote).length) {
+        question = String(question) + "\n\n" + state.flashNote;
+        options.Question = question;
+        state.flashNote = "";
+      }
+      var runProvider = normalizeProvider(state.provider);
+      var runInstallRequested = shouldInstallForRun(options, runProvider);
+      appendProgress(state, lang(state).starting);
+      if (shouldShowAgentPreparingProgress(state, options, runProvider, runInstallRequested)) {
+        appendProgress(state, lang(state).agentPreparing);
+      }
+      state.updatedAt = now();
+      saveState(state);
+      setStateBuffer(state);
+      sendMark("state/save");
+    } finally {
+      unlockConversationRead(sendLock);
     }
-    if (state === null) {
-      state = createState(options);
-    }
-    state = ensureState(state);
-    sendMark("state/create", state);
-    var previousMcpEndpoint = trim(state.mcpEndpoint);
-    var requestedMcpEndpoint = trim(options.mcpEndpoint);
-    var mcpEndpointChanged = previousMcpEndpoint.length > 0 &&
-      requestedMcpEndpoint.length > 0 &&
-      previousMcpEndpoint !== requestedMcpEndpoint;
-    options.establishedAgentFollowup = trim(state.externalSessionId).length > 0 && !mcpEndpointChanged;
-    if (requestedMcpEndpoint.length) {
-      state.mcpEndpoint = requestedMcpEndpoint;
-    }
-    clearCancellationRequested(state.threadid);
-    if (trim(options.model || options.agentModel).length) {
-      state.model = normalizeModel(state.provider, options.model || options.agentModel);
-    } else if (!trim(state.model).length) {
-      state.model = normalizeModel(state.provider, "");
-    }
-    if (trim(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort).length) {
-      state.reasoningEffort = normalizeReasoningEffort(options.reasoningEffort || options.reasoningLevel || options.modelReasoningEffort);
-    }
-    if (trim(options.serviceTier || options.speedTier).length) {
-      state.serviceTier = trim(options.serviceTier || options.speedTier);
-    }
-    // The edit profile the panel asks for this conversation ("mcp" puts the default back): a Studio Vibe conversation only.
-    var requestedEditProfile = trim(options.editProfile).toLowerCase();
-    if (requestedEditProfile.length && editProfileApplies(state, options)
-        && (requestedEditProfile === "mcp" || effectiveEditProfile(requestedEditProfile).length)) {
-      state.editProfile = normalizeEditProfile(requestedEditProfile);
-    }
-    options.editProfile = editProfileApplies(state, options) ? effectiveEditProfile(state.editProfile) : "";
-    // Before anything of the turn is written: on the Convertigo gateway, the user's key where the server issues one and
-    // a balance above zero (tigo-nocode-contract.md section 6); the gateway still enforces on its own.
-    var convertigoRefusal = convertigoTurnRefusal(state, options);
-    if (convertigoRefusal !== null) {
-      return convertigoRefusal;
-    }
-    state.status = "starting";
-    state.answer = "";
-    state.answerIsFinal = false;
-    state.error = "";
-    state.warnings = [];
-    state.unverifiedChanges = null;
-    state.readErrors = 0;
-    state.progressLog = "";
-    state.progressEvents = [];
-    state.lastProgressLine = "";
-    state.reasoningPending = null;
-    state.answerReasoning = null;
-    state.stepReasoning = null;
-    state.hostFormContext = {
-      formId: firstOptionValue(options, ["formId", "currentFormId", "nocodeCurrentFormId", "applicationId", "currentApplicationId"]),
-      formName: firstOptionValue(options, ["formName", "currentFormName"]),
-      formRevision: firstOptionValue(options, ["formRevision", "currentFormRevision"]),
-      pageId: firstOptionValue(options, ["pageId", "currentPage"]),
-      pageName: firstOptionValue(options, ["pageName"]),
-      elementId: firstOptionValue(options, ["elementId"]),
-      elementName: firstOptionValue(options, ["elementName"]),
-      elementType: firstOptionValue(options, ["elementType"]),
-      parentElementId: firstOptionValue(options, ["parentElementId"]),
-      selectionKind: firstOptionValue(options, ["selectionKind"]),
-      contextTargetKind: firstOptionValue(options, ["contextTargetKind", "selectionKind"]),
-      baserowWorkspaceId: firstOptionValue(options, ["baserowWorkspaceId"]),
-      baserowWorkspaceName: firstOptionValue(options, ["baserowWorkspaceName"]),
-      baserowDatabaseId: firstOptionValue(options, ["baserowDatabaseId", "baserowBaseId"]),
-      baserowDatabaseName: firstOptionValue(options, ["baserowDatabaseName", "baserowBaseName"]),
-      baserowTableId: firstOptionValue(options, ["baserowTableId"]),
-      baserowTableName: firstOptionValue(options, ["baserowTableName"])
-    };
-    state.nocodeContext = normalizeSkillProfile(state) === "nocode" ? noCodeConversationContext(state.hostFormContext) : null;
-    state.formMutation = null;
-    state.setupRequired = false;
-    state.setupReport = null;
-    state.userQuestion = rawUserQuestion;
-    if (!trim(state.title).length) {
-      state.title = conversationTitleFromText(state.userQuestion || question);
-    }
-    var explicitLanguage = normalizeAssistantLanguage(options.language || options.locale || options.assistantLanguage);
-    var detectedLanguage = detectLanguage(state.userQuestion || question);
-    if (explicitLanguage.length) {
-      state.language = explicitLanguage;
-    } else if (!trim(state.language).length || detectedLanguage === "fr") {
-      state.language = detectedLanguage;
-    }
-    var currentProject = trim(options.targetProject || options.projectName || options.projectId);
-    if (currentProject.length) {
-      state.primaryProject = state.primaryProject || currentProject;
-      state.projectId = currentProject;
-      state.projectNames = addArrayValue(state.projectNames, currentProject);
-    }
-    enrichViewerDebugOptions(options, state);
-    collectFeedbackContextNames(state, options);
-    // A message starts a turn: the user's "Confirmer avant de modifier" (in a Studio, or "Lecture seule") is published
-    // for the MCP, and what the last turn left (its cards, its "allow all for this turn") is dropped. Never a reason not
-    // to send.
-    if (normalizeSkillProfile(state) === "nocode" || trim(options.userId).toLowerCase() === "studio") {
-      try {
-        options.writeConfirmOn = writeConfirmModule().newTurn(state.threadid, options.userId, writeConfirmHost(options));
-        options.writeConfirmMode = writeConfirmModule().lastMode;
-      } catch (_ignoreWriteConfirm) {}
-    }
-    // the tables of the application open in the panel, named in the turn context (No Code, an application open)
-    if (normalizeSkillProfile(state) === "nocode" && trim(options.currentFormId || options.nocodeCurrentFormId || options.formId || options.applicationId || options.currentApplicationId).length) {
-      options.nocodeBoundTables = noCodeBoundTables(state, options);
-    }
-    // Known here, never from the page: the Convertigo MCP lists its report tool to the agent only with the user's consent.
-    options.feedbackReportListed = feedbackCatalogKey(state) === "feedback:on";
-    if (trim(options.rawUserQuestion).length) {
-      question = enrichNoCodePrompt(buildSequencePrompt(options.rawUserQuestion, options), options);
-      options.Question = question;
-    }
-    sendMark("prompt");
-    state.slashCommand = agentSlashCommandName(state, rawUserQuestion);
-    state.compactError = "";
-    if (state.slashCommand === "compact") {
-      // "/compact" summarizes the history: the next message supplies the conversation's skills again.
-      state.resourceSkillVersions = {};
-    }
-    if (state.slashCommand.length) {
-      // The harness runs "/compact <instructions>" only when the prompt starts with it: no Studio preamble.
-      question = rawUserQuestion;
-      options.Question = question;
-    }
-    // The first turn of a conversation the Flash mode started: the agent learns what Flash created (once). The transcript
-    // keeps the user's message as typed.
-    if (!state.slashCommand.length && trim(state.flashNote).length) {
-      question = String(question) + "\n\n" + state.flashNote;
-      options.Question = question;
-      state.flashNote = "";
-    }
-    var runProvider = normalizeProvider(state.provider);
-    var runInstallRequested = shouldInstallForRun(options, runProvider);
-    appendProgress(state, lang(state).starting);
-    if (shouldShowAgentPreparingProgress(state, options, runProvider, runInstallRequested)) {
-      appendProgress(state, lang(state).agentPreparing);
-    }
-    state.updatedAt = now();
-    saveState(state);
-    setStateBuffer(state);
-    sendMark("state/save");
 
     try {
       var provider = runProvider;
@@ -11716,12 +11846,18 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
 
     var readLock = null;
     try {
-      var events = bridgeCall(state, "agent_events", {
+      var eventsParams = {
         handle: state.handle,
         cursor: String(state.cursor || 0),
         limit: String(intValue(options.limit, 100, 1, 500)),
         waitMs: String(intValue(options.waitMs, DEFAULT_EVENT_WAIT_MS, 0, 30000))
-      }, 45000);
+      };
+      // a renewal the Bridge asked for in an earlier read and that did not reach it yet
+      var renewalHandle = state.mcpTokenRenewal === "needed" ? mcpTokenRenewalHandle(state) : "";
+      if (renewalHandle.length) {
+        eventsParams.mcpBearerTokenHandle = renewalHandle;
+      }
+      var events = bridgeCall(state, "agent_events", eventsParams, 45000);
       // The wait above is shared; recording is not: from the latest saved state, skip what another reader recorded.
       readLock = lockConversationRead(state);
       state = latestSavedState(state);
@@ -11882,12 +12018,21 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
               state.answerTranscriptRunid = state.runid;
             }
           }
+        } else if ((type === "turn/error" || type === "acp/response_error" || type === "error") && !agentErrorEndsRun(state, type, data)) {
+          // the error of another request than this run's prompt (a setting, a second prompt): the run goes on
         } else if (type === "turn/error" || type === "acp/response_error" || type === "error") {
           finishTurnReasoning(state);
-          collectFeedbackRuntimeError(state, extractAgentErrorText(data, 0) || type);
+          rememberRunErrorRequest(state, type, data);
+          var turnBusy = type === "turn/error" && data.busy === true;
+          if (!turnBusy) {
+            // a busy turn is Vibe still finishing a previous one: no defect to report
+            collectFeedbackRuntimeError(state, extractAgentErrorText(data, 0) || type);
+          }
           state.status = "failed";
           // a used-up budget ends the turn with its level and reset date, read again (contract section 6)
-          if (isBudgetError(data) || gatewayRateLimitIsBudget(state, data)) {
+          if (turnBusy) {
+            state.error = lang(state).turnBusy;
+          } else if (isBudgetError(data) || gatewayRateLimitIsBudget(state, data)) {
             state.error = budgetErrorAnswer(state, data);
           } else if (userGatewayKeyRejected(state, data)) {
             // an expired key (TigoAccess makes them expire) or a revoked one: the next message asks C8Oforms again
@@ -11924,6 +12069,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       state.cursor = typeof events.nextCursor !== "undefined" ? Math.max(Number(events.nextCursor), recordedCursor) : state.cursor;
       readEarlyAgentCommands(state);
       syncSubagentRuns(state);
+      handMcpTokenRenewal(state, events.state, renewalHandle);
       var bridgeState = events.state || {};
       if (state.status !== "completed" && state.status !== "failed" && state.status !== "cancelled" && !list.length && bridgeProcessGone(bridgeState)) {
         // No turn/end was read for this run (it would have ended it): the process died during the turn.

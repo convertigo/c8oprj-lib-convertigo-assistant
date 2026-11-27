@@ -161,7 +161,7 @@ test('the sequence and the client entry point: always the authenticated user, se
   assert.match(entry, /module\.choose\(options\.userId, mode, host\)/);
   assert.match(entry, /if \(mode === "readonly" && !studio\) \{\n        return \{ status: "error", error: \{ code: "invalid_mode"/, 'No Code has no read-only mode');
   assert.match(client, /: new File\(new File\(new File\(new File\(root, "nocode"\), "users"\), safePathPart\(normalizeUserKey\(options\.userId\)\)\), "write-confirm\.json"\);/);
-  assert.match(client, /if \(normalizeSkillProfile\(state\) === "nocode" \|\| trim\(options\.userId\)\.toLowerCase\(\) === "studio"\) \{\n      try \{\n        options\.writeConfirmOn = writeConfirmModule\(\)\.newTurn\(state\.threadid, options\.userId, writeConfirmHost\(options\)\);/);
+  assert.match(client, /if \(normalizeSkillProfile\(state\) === "nocode" \|\| trim\(options\.userId\)\.toLowerCase\(\) === "studio"\) \{\n\s+try \{\n\s+options\.writeConfirmOn = writeConfirmModule\(\)\.newTurn\(state\.threadid, options\.userId, writeConfirmHost\(options\)\);/);
 });
 
 // ---- The page ----------------------------------------------------------------------------------------------------

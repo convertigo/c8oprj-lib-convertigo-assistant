@@ -131,7 +131,7 @@ C8O.assistantFeedback = C8O.assistantFeedback || {};
   var BRIDGE_WARNINGS = {
     convertigo_mcp_suspended: true, core_rejected_input: true, mcp_lost_turn_stopped: true, mcp_lost_process_stopped: true,
     mcp_lost_resumed: true, convertigo_mcp_unavailable_at_start: true, convertigo_mcp_restarted: true,
-    convertigo_mcp_unreachable: true, unverified_changes: true
+    convertigo_mcp_unreachable: true, unverified_changes: true, mcp_token_expired: true
   };
   // Words of the Playwright MCP and of its errors: they stay readable in a template ("Error: async initializeServer:
   // connect ECONNREFUSED", "locator.click: Timeout"). Any other identifier may be the customer's and is masked.

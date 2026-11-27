@@ -43,7 +43,7 @@ function fixture(state, bridge) {
     bridgeCall: (_state, sequence, params) => { calls.push(sequence); return bridge[sequence] ? bridge[sequence](params) : { ok: true }; },
     bridgeCallerRefusal: () => null, noCodeAgentRefusal: () => null, withNoCodeServerSettings: options => options, noCodeAgentChanged: () => null, convertigoTurnRefusal: () => null, editProfileApplies: () => false, normalizeEditProfile: () => '', withCallerUserId: options => options || {}, sendMark() {}, takePrewarmedConversation: () => ''
   };
-  vm.runInNewContext(backendParts(['runningTurnOf', 'turnRunningResponse']) + '\nvar sendMessage = ' + send + ';', sandbox);
+  vm.runInNewContext(backendParts(['runningTurnOf', 'turnRunningResponse', 'lockConversationSend', 'unlockConversationRead', 'latestSavedState'], ['CONVERSATION_SEND_BUSY']) + '\nvar sendMessage = ' + send + ';', sandbox);
   const response = sandbox.sendMessage({ threadid: state.threadid, Question: 'Ajoute aussi le nombre d\'étapes', provider: 'convertigo', model: 'mistral-large-4' });
   return { response, calls, saved };
 }
