@@ -4,6 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const crypto = require("node:crypto");
+const os = require("node:os");
+const { execFileSync } = require("node:child_process");
 const source = fs.readFileSync(
   path.join(__dirname, "../js/tigo_resources.js"),
   "utf8",
@@ -20,7 +22,7 @@ function fixture(admin = true, user = "studio", files = new Map()) {
     projects: () => ({ Demo: "project/Demo" }),
     hash: (v) => crypto.createHash("sha256").update(v).digest("hex"),
     now: () => 1,
-    read: (base, rel) => files.get(base + "/" + rel) || null,
+    read: (base, rel) => files.get(base + "/" + rel) ?? null,
     write: (base, rel, v) => files.set(base + "/" + rel, v),
     remove: (base, rel) => files.delete(base + "/" + rel),
     list: (base, rel) => [
@@ -30,6 +32,12 @@ function fixture(admin = true, user = "studio", files = new Map()) {
           .map((k) => k.slice((base + "/" + rel + "/").length).split("/")[0]),
       ),
     ],
+    files: (base, rel) => {
+      const prefix = base + "/" + rel + "/";
+      return [...files.keys()].filter((key) => key.startsWith(prefix))
+        .map((key) => key.slice(prefix.length))
+        .filter((name) => /^(references|scripts|assets)\//.test(name)).sort();
+    },
     lock: (_base, f) => f(),
     protectProject: (p) => files.set("protected/" + p, "true"),
     secretNames: (base) =>
@@ -613,7 +621,7 @@ test("personal skills made in the panel are on by default in every conversation 
   assert.equal(row.auto, true);
   f.api.execute({ action: "favorites", input: { favorites: [] } });
   f.api.execute({ action: "skillDefault", key: s.key, input: { enabled: false } });
-  assert.deepEqual(plain(JSON.parse(f.files.get("users/studio/preferences.json"))), { schemaVersion: 1, favorites: [], notDefault: [s.key] });
+  assert.deepEqual(plain(JSON.parse(f.files.get("users/studio/preferences.json"))), { schemaVersion: 1, favorites: [], notDefault: [s.key], skillApprovals: {} });
   assert.equal(f.api.prepare({ threadid: "t-after", provider: "convertigo", projectId: "Demo" }).text, "");
   row = f.api.execute({ action: "list", threadid: "t-new", contextProject: "Demo" }).items.find((x) => x.key === s.key);
   assert.deepEqual([row.enabled, row.defaultable, row.auto], [false, true, false]);
@@ -710,8 +718,155 @@ test("a personal skill created by the agent starts not on by default; the user d
   assert.match(copy.notice, /not on by default/);
   assert.equal(f.api.prepare({ threadid: "c1", provider: "codex", projectId: "Demo" }).text, "");
   const project = f.api.execute({ action: "save", kind: "skill", scope: "project", project: "Demo", revision: "", input: data("team-rules", "skill") });
-  assert.equal(project.notice, undefined, "a project skill follows its project");
   f.host.agentInitiated = false;
+  const catalog = f.api.execute({ action: "list", contextProject: "Demo" });
+  assert.deepEqual(plain(catalog.items.filter((it) => it.requiresReview).map((it) => [it.key, it.auto])), [
+    [result.item.key, false], [project.item.key, true],
+  ]);
+  f.api.execute({ action: "approveSkill", key: result.item.key, revision: result.item.revision });
+  assert.equal(f.api.prepare({ threadid: "approved", provider: "codex", projectId: "Other" }).text, "");
   f.api.execute({ action: "skillDefault", key: result.item.key, input: { enabled: true } });
   assert.match(f.api.prepare({ threadid: "c2", provider: "codex", projectId: "Other", language: "en" }).text, /Source: workspace::skill:agent-made/);
+});
+
+test("an agent save pauses a default project skill until its revision is approved per user", () => {
+  const f = fixture(true, "reviewer"), secondUser = fixture(true, "second-user", f.files);
+  const agent = fixture(true, "mcp-project-only", f.files);
+  agent.host.agentInitiated = true;
+  const draft = data("team-rules", "skill"), item = save(f, "skill", draft, "project");
+  const first = { threadid: "first", provider: "codex", projectId: "Demo", externalSessionId: "s1", resourceContextEpoch: "codex:s1" };
+  const second = { ...first, threadid: "second", externalSessionId: "s2", resourceContextEpoch: "codex:s2" };
+  first.resourceSkillVersions = f.api.prepare(first).versions;
+  f.api.execute({ action: "select", threadid: second.threadid, input: { skills: [item.key] } });
+  second.resourceSkillVersions = f.api.prepare(second).versions;
+
+  assert.equal(save(agent, "skill", draft, "project", item.revision).revision, item.revision);
+  assert.equal(f.api.execute({ action: "list", contextProject: "Demo" }).items[0].requiresReview, false);
+  draft.translations.en.body += "\nRevised instructions.";
+  draft.translations.fr.body += "\nConsignes révisées.";
+  const pending = save(agent, "skill", draft, "project", item.revision);
+  assert.equal(f.api.execute({ action: "list", contextProject: "Demo" }).items[0].requiresReview, true);
+  for (const state of [first, second]) {
+    const turn = f.api.prepare(state);
+    assert.equal(turn.text, "");
+    assert.deepEqual(Object.keys(turn.versions), []);
+    assert.equal(turn.skipped[0].reason, "skill_review_required");
+  }
+  assert.equal(secondUser.api.prepare({ ...first, threadid: "another-user" }).text, "");
+  const { review } = f.api.execute({ action: "reviewSkill", key: item.key });
+  assert.equal(review.revision, pending.revision);
+  assert.match(review.files.find((file) => file.path === "SKILL.md").diff, /\+Revised instructions\./);
+  assert.match(review.files.find((file) => file.path === "SKILL.fr.md").diff, /\+Consignes révisées\./);
+  assert.throws(() => agent.api.execute({ action: "approveSkill", key: item.key, revision: pending.revision }), /human_review_required/);
+  f.api.execute({ action: "select", threadid: second.threadid, input: { skills: [item.key], reviewKey: item.key } });
+  assert.equal(f.api.prepare(second).text, "");
+  f.api.execute({ action: "approveSkill", key: item.key, revision: review.revision, threadid: second.threadid });
+  f.api.execute({ action: "favorites", input: { favorites: [] } });
+  for (const state of [first, second, { ...first, threadid: "new", resourceSkillVersions: {} }]) {
+    assert.match(f.api.prepare(state).text, /Revised instructions/);
+  }
+  assert.equal(secondUser.api.prepare({ ...first, threadid: "another-user" }).text, "");
+  const preferences = JSON.parse(f.files.get("users/reviewer/preferences.json"));
+  assert.equal(preferences.skillApprovals[item.key], pending.revision);
+  for (const thread of [first.threadid, second.threadid]) {
+    assert.deepEqual(Object.keys(JSON.parse(f.files.get("users/reviewer/conversations/" + thread + ".json"))).sort(),
+      ["mcp", "mcpRevisions", "off", "skills"]);
+  }
+});
+
+test("writeFile pauses a skill, previews support changes and refuses a stale approval", () => {
+  const f = fixture();
+  const item = save(f, "skill", data("example", "skill"));
+  const guide = { action: "writeFile", key: item.key, revision: "", input: { path: "references/guide.md", content: "Agent reference" } };
+  f.host.agentInitiated = true;
+  const first = f.api.execute(guide);
+  f.host.agentInitiated = false;
+  const { review } = f.api.execute({ action: "reviewSkill", key: item.key });
+  assert.match(review.files.find((file) => file.path === guide.input.path).diff, /\+Agent reference/);
+  f.host.agentInitiated = true;
+  const same = f.api.execute({ ...guide, revision: first.revision });
+  assert.equal(same.item.revision, first.item.revision);
+  const newer = f.api.execute({ ...guide, revision: same.revision, input: { ...guide.input, content: "Updated by the agent" } });
+  f.host.agentInitiated = false;
+  assert.throws(() => f.api.execute({ action: "approveSkill", key: item.key, revision: review.revision }), /revision_conflict/);
+  f.api.execute({ action: "approveSkill", key: item.key, revision: newer.item.revision });
+  f.host.agentInitiated = true;
+  f.api.execute({ ...guide, revision: newer.revision, input: { ...guide.input, content: "A third change" } });
+  f.host.agentInitiated = false;
+  const compare = f.api.execute({ action: "reviewSkill", key: item.key }).review.files.find((file) => file.path === guide.input.path);
+  assert.match(compare.diff, /-Updated by the agent\n\+A third change/);
+  assert.equal(f.api.prepare({ threadid: "paused" }).skipped[0].reason, "skill_review_required");
+  f.files.set("users/studio/skills/example/SKILL.md", item.data.translations.en.body + "\nEdited by hand.");
+  f.files.set("users/studio/skills/example/references/guide.md", "A manual reference edit");
+  assert.equal(f.api.execute({ action: "list" }).items[0].requiresReview, false);
+  const turn = f.api.prepare({ threadid: "manual" });
+  assert.match(turn.text, /Edited by hand\./);
+  assert.deepEqual(plain(turn.skipped), []);
+});
+
+test("a Git pull updates the project skill even while the previous agent revision awaits review", (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tigo-skill-pull-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const upstream = path.join(root, "upstream"), checkout = path.join(root, "checkout");
+  const git = (dir, ...args) => execFileSync("git", ["-C", dir, ...args], { stdio: "pipe" });
+  const commit = () => git(upstream, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgSign=false", "commit", "-am", "Update skill");
+  const md = ".tigo/skills/team-rules/SKILL.md";
+  const body = (text) => "---\nname: team-rules\ndescription: Team rules\n---\n" + text;
+  fs.mkdirSync(path.dirname(path.join(upstream, md)), { recursive: true });
+  git(upstream, "init", "-q");
+  fs.writeFileSync(path.join(upstream, md), body("First Git version"));
+  git(upstream, "add", "--", md);
+  commit();
+  git(root, "clone", "-q", upstream, checkout);
+
+  const f = fixture();
+  const base = path.join(checkout, ".tigo");
+  f.host.projects = () => ({ Demo: base });
+  const { read, write, list } = f.host;
+  f.host.read = (where, relative) => where === base
+    ? fs.existsSync(path.join(where, relative)) ? fs.readFileSync(path.join(where, relative), "utf8") : null
+    : read(where, relative);
+  f.host.write = (where, relative, content) => where === base
+    ? fs.writeFileSync(path.join(where, relative), content)
+    : write(where, relative, content);
+  f.host.list = (where, relative) => where === base && relative === "skills" ? ["team-rules"] : list(where, relative);
+  const state = { threadid: "git", projectId: "Demo" };
+  assert.match(f.api.prepare(state).text, /First Git version/);
+  const { item } = f.api.execute({ action: "get", key: "project:Demo:skill:team-rules" });
+  f.host.agentInitiated = true;
+  item.data.translations.en.body = body("Agent version");
+  save(f, "skill", item.data, "project", item.revision);
+  f.host.agentInitiated = false;
+  assert.equal(f.api.prepare(state).skipped[0].reason, "skill_review_required");
+
+  fs.writeFileSync(path.join(upstream, md), body("Pulled Git version"));
+  commit();
+  // Discard the dirty working tree, as a checkout reset would do before pulling an updated team skill.
+  git(checkout, "restore", "--", md);
+  fs.unlinkSync(path.join(checkout, ".tigo/skills/team-rules/skill.json"));
+  git(checkout, "pull", "--ff-only");
+  assert.match(f.api.prepare(state).text, /Pulled Git version/);
+  assert.equal(f.api.execute({ action: "list", contextProject: "Demo" }).items[0].requiresReview, false);
+});
+
+test("a partially failed agent save still leaves its changed instructions paused", () => {
+  const f = fixture();
+  const draft = data("example", "skill"), item = save(f, "skill", draft);
+  const write = f.host.write;
+  draft.translations.en.body += "\nPartially written instructions";
+  f.host.write = (base, relative, content) => {
+    if (relative.endsWith("/SKILL.fr.md")) throw new Error("write failed");
+    write(base, relative, content);
+  };
+  f.host.agentInitiated = true;
+  assert.throws(() => save(f, "skill", draft, "workspace", item.revision), /write failed/);
+  f.host.agentInitiated = false;
+  f.host.write = write;
+  const state = { threadid: "partial" };
+  assert.equal(f.api.prepare(state).skipped[0].reason, "skill_review_required");
+  const { review } = f.api.execute({ action: "reviewSkill", key: item.key });
+  const approve = { action: "approveSkill", key: item.key, revision: review.revision };
+  f.api.execute(approve);
+  f.api.execute(approve);
+  assert.match(f.api.prepare(state).text, /Partially written instructions/);
 });

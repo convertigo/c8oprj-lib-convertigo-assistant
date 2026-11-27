@@ -93,6 +93,15 @@ project gets it. The agent can create skills through `tigo-resources`; a
 personal skill it creates starts "not on by default" until the user turns it on,
 and only the user can change what is on by default.
 
+When the agent changes a skill through the library tool's `save` or `writeFile`,
+Tigo skips that revision until you approve it. Open **Settings > Library >
+Skills** and choose **Review changed skill**. The dialog shows the instructions,
+translations and support-file changes. Binary files are identified by their
+hashes. Approval applies to all your conversations, including skills on by
+default, and keeps your existing activation choices. A Git pull, a manual edit
+or a save in the panel takes effect on the next turn without a review. A new
+personal skill created by the agent also needs to be switched on.
+
 Tigo supplies a skill's instructions on the next turn, once per content revision
 and provider session. The supplied text identifies the skill directory so the
 agent can read references when needed. Changes to support files also change its

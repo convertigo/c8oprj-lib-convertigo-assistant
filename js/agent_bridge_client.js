@@ -5683,6 +5683,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       defaultSkillsApplied: "Skills appliqu\u00e9s par d\u00e9faut : ",
       skillsSkipped: "Skills non appliqu\u00e9s : ",
       skillUnavailable: "introuvable",
+      skillPendingReview: "modifiée par l’agent, à vérifier dans la bibliothèque",
       skillNeedsMcp: "connexion MCP requise",
       agentPreparing: "Je pr\u00e9pare l'agent local. Si le runtime n'est pas encore install\u00e9, l'installation peut prendre plusieurs minutes."
     },
@@ -5742,6 +5743,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       defaultSkillsApplied: "Skills applied by default: ",
       skillsSkipped: "Skills not applied: ",
       skillUnavailable: "not found",
+      skillPendingReview: "changed by the agent, review in the library",
       skillNeedsMcp: "MCP connection required",
       agentPreparing: "I am preparing the local agent. If the runtime is not installed yet, installation can take several minutes."
     }
@@ -10920,7 +10922,9 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       appendNarrativeEvent(state, t.defaultSkillsApplied + sent.join(", "), "progress");
     }
     var skipped = (resources.skipped || []).map(function (x) {
-      return x.title + " (" + (x.reason === "skill_mcp_dependency_missing" ? t.skillNeedsMcp : t.skillUnavailable) + ")";
+      var reason = x.reason === "skill_review_required" ? t.skillPendingReview
+        : x.reason === "skill_mcp_dependency_missing" ? t.skillNeedsMcp : t.skillUnavailable;
+      return x.title + " (" + reason + ")";
     });
     if (skipped.length) {
       appendNarrativeEvent(state, t.skillsSkipped + skipped.join(", "), "progress");
@@ -10968,6 +10972,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     if (result.ok && args.action && args.action !== "list" && args.action !== "get") {
       var catalog = C8O.tigoResources.manage({action:"list", language:args.language, threadid:args.threadid, contextProject:args.contextProject});
       catalog.saved = result.item || null;
+      if (args.action === "reviewSkill") { catalog.skillReview = result.review; }
       catalog.csrf = csrf;
       return catalog;
     }
