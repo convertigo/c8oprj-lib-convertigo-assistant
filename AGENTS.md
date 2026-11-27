@@ -797,6 +797,12 @@ rediscovering the same context.
   panel lists the library per project in context, refreshes it on a Studio
   project selection, when the composer opens Skills/MCP, and after 30 s. Cover
   with `node --test tests/tigo_resources*.test.cjs tests/tigo_compact_resources.test.cjs`.
+- Agent writes through `tigo-resources` `save` and `writeFile` record the resulting
+  skill revision. Turns skip that revision until the user approves it in the
+  library. Project write records are shared within the engine, and
+  `preferences.json` keeps the approved revision per user. A different revision
+  from Git or a manual edit applies directly. `approveSkill` checks the displayed
+  revision and leaves conversation and default choices intact.
 - MCP activation uses an opaque private-memory handle and conversation homes;
   raw secrets never enter browser state, prompts, records or generated configs.
   Keep the managed Convertigo skill/MCP intact.

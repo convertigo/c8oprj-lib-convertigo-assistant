@@ -1338,12 +1338,12 @@ scriptContent:
         		}
         	}
         	    public resourceCaption(key: string) {
-                const fr = {prompts:''Prompts'',skills:''Compétences'',mcp:''MCP'',manage:''Configurer la bibliothèque'',empty:''Aucune ressource dans cette catégorie.'',enable:''Activer'',disable:''Désactiver'',loading:''Chargement…'',error:''Bibliothèque indisponible. Ouvrez sa configuration pour réessayer.'',library:''Bibliothèque'',addPrompts:''Prompts'',addPromptsHint:''Vos prompts épinglés, sous la saisie'',addSkills:''Compétences'',addSkillsHint:''Activer des compétences pour cette conversation'',addMcp:''Connexions MCP'',addMcpHint:''Activer des outils externes pour cette conversation''};
-                const en = {prompts:''Prompts'',skills:''Skills'',mcp:''MCP'',manage:''Manage library'',empty:''No resources in this category.'',enable:''Enable'',disable:''Disable'',loading:''Loading…'',error:''Library unavailable. Open its settings to retry.'',library:''Library'',addPrompts:''Prompts'',addPromptsHint:''Your pinned prompts, under the input bar'',addSkills:''Skills'',addSkillsHint:''Turn skills on for this conversation'',addMcp:''MCP connections'',addMcpHint:''Turn external tools on for this conversation''};
+                const fr = {prompts:''Prompts'',skills:''Compétences'',mcp:''MCP'',manage:''Configurer la bibliothèque'',empty:''Aucune ressource dans cette catégorie.'',reviewSkill:''Vérifier la skill modifiée'',enable:''Activer'',disable:''Désactiver'',loading:''Chargement…'',error:''Bibliothèque indisponible. Ouvrez sa configuration pour réessayer.'',library:''Bibliothèque'',addPrompts:''Prompts'',addPromptsHint:''Vos prompts épinglés, sous la saisie'',addSkills:''Compétences'',addSkillsHint:''Activer des compétences pour cette conversation'',addMcp:''Connexions MCP'',addMcpHint:''Activer des outils externes pour cette conversation''};
+                const en = {prompts:''Prompts'',skills:''Skills'',mcp:''MCP'',manage:''Manage library'',empty:''No resources in this category.'',reviewSkill:''Review changed skill'',enable:''Enable'',disable:''Disable'',loading:''Loading…'',error:''Library unavailable. Open its settings to retry.'',library:''Library'',addPrompts:''Prompts'',addPromptsHint:''Your pinned prompts, under the input bar'',addSkills:''Skills'',addSkillsHint:''Turn skills on for this conversation'',addMcp:''MCP connections'',addMcpHint:''Turn external tools on for this conversation''};
                 const ownerLanguage = this.owner?.global?.currentLanguage;
                 const language = this.ResourceLanguage || (typeof ownerLanguage === ''function'' ? ownerLanguage() : (ownerLanguage || this.translate?.currentLang || ''en''));
-                const it = {prompts:''Prompt'',skills:''Competenze'',mcp:''MCP'',manage:''Configura la libreria'',empty:''Nessuna risorsa in questa categoria.'',enable:''Attiva'',disable:''Disattiva'',loading:''Caricamento…'',error:''Libreria non disponibile. Apri la sua configurazione per riprovare.'',library:''Libreria'',addPrompts:''Prompt'',addPromptsHint:''I tuoi prompt fissati, sotto il campo di input'',addSkills:''Competenze'',addSkillsHint:''Attiva competenze per questa conversazione'',addMcp:''Connessioni MCP'',addMcpHint:''Attiva strumenti esterni per questa conversazione''};
-                const es = {prompts:''Prompts'',skills:''Habilidades'',mcp:''MCP'',manage:''Configurar la biblioteca'',empty:''Ningún recurso en esta categoría.'',enable:''Activar'',disable:''Desactivar'',loading:''Cargando…'',error:''Biblioteca no disponible. Abre su configuración para reintentarlo.'',library:''Biblioteca'',addPrompts:''Prompts'',addPromptsHint:''Tus prompts fijados, bajo el campo de entrada'',addSkills:''Habilidades'',addSkillsHint:''Activar habilidades para esta conversación'',addMcp:''Conexiones MCP'',addMcpHint:''Activar herramientas externas para esta conversación''};
+                const it = {prompts:''Prompt'',skills:''Competenze'',mcp:''MCP'',manage:''Configura la libreria'',empty:''Nessuna risorsa in questa categoria.'',reviewSkill:''Verifica la competenza modificata'',enable:''Attiva'',disable:''Disattiva'',loading:''Caricamento…'',error:''Libreria non disponibile. Apri la sua configurazione per riprovare.'',library:''Libreria'',addPrompts:''Prompt'',addPromptsHint:''I tuoi prompt fissati, sotto il campo di input'',addSkills:''Competenze'',addSkillsHint:''Attiva competenze per questa conversazione'',addMcp:''Connessioni MCP'',addMcpHint:''Attiva strumenti esterni per questa conversazione''};
+                const es = {prompts:''Prompts'',skills:''Habilidades'',mcp:''MCP'',manage:''Configurar la biblioteca'',empty:''Ningún recurso en esta categoría.'',reviewSkill:''Revisar la habilidad modificada'',enable:''Activar'',disable:''Desactivar'',loading:''Cargando…'',error:''Biblioteca no disponible. Abre su configuración para reintentarlo.'',library:''Biblioteca'',addPrompts:''Prompts'',addPromptsHint:''Tus prompts fijados, bajo el campo de entrada'',addSkills:''Habilidades'',addSkillsHint:''Activar habilidades para esta conversación'',addMcp:''Conexiones MCP'',addMcpHint:''Activar herramientas externas para esta conversación''};
                 // the panel language, Italian and Spanish included (they showed the English texts)
                 const lang = String(language).substring(0, 2).toLowerCase();
                 return ((lang === ''fr'' ? fr : (lang === ''it'' ? it : (lang === ''es'' ? es : en))) as any)[key] || (en as any)[key] || key;
@@ -1527,18 +1527,18 @@ scriptContent:
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(quickResource.enabled ? this.resourceCaption(''disable'') : this.resourceCaption(''enable'')) + '' '' + quickResource.title'
+                  - MobileSmartSourceType: 'script:this.resourceCaption(quickResource.kind === ''skill'' && quickResource.requiresReview ? ''reviewSkill'' : quickResource.enabled ? ''disable'' : ''enable'') + '' '' + quickResource.title'
             ↓Title [ngx.components.UIAttribute-1792162995685]: 
               attrName: '[attr.title]'
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: 'script:(quickResource.enabled ? this.resourceCaption(''disable'') : this.resourceCaption(''enable'')) + '' '' + quickResource.title'
+                  - MobileSmartSourceType: 'script:this.resourceCaption(quickResource.kind === ''skill'' && quickResource.requiresReview ? ''reviewSkill'' : quickResource.enabled ? ''disable'' : ''enable'') + '' '' + quickResource.title'
             ↓Icon [ngx.components.UIDynamicElement-1792162995687]: 
               beanData: |
                 '{
                  "ionBean": "Icon",
-                 "IconName": "script:quickResource.enabled ? ''checkmark-circle'' : ''ellipse-outline''",
+                 "IconName": "script:quickResource.kind === ''skill'' && quickResource.requiresReview ? ''alert-circle-outline'' : quickResource.enabled ? ''checkmark-circle'' : ''ellipse-outline''",
                  "IconSlot": "plain:start"
                 }'
               tagName: ion-icon
@@ -1567,7 +1567,7 @@ scriptContent:
               attrValue: 
                 - xmlizable: 
                   - ↑classname: com.twinsoft.convertigo.beans.ngx.components.MobileSmartSourceType
-                  - MobileSmartSourceType: script:quickResource.enabled
+                  - MobileSmartSourceType: script:quickResource.enabled && !(quickResource.kind === 'skill' && quickResource.requiresReview)
         ↓Empty [ngx.components.UIControlDirective-1792162997323]: 
           directiveName: If
           directiveSource: 

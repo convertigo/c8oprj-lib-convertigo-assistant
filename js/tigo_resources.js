@@ -371,13 +371,13 @@ C8O.tigoResources = (function () {
       }
       return found;
     }
-    // The user's preferences: favorite prompts, and the skills the user does not want on by default ("notDefault").
     function prefs() {
       var v = object(host.read(personal, "preferences.json"));
       return {
         schemaVersion: 1,
         favorites: Array.isArray(v.favorites) ? unique(v.favorites) : null,
-        notDefault: keyList(v.notDefault)
+        notDefault: keyList(v.notDefault),
+        skillApprovals: v.skillApprovals || {}
       };
     }
     // Tolerant read of a stored key list: a damaged or oversized file never stops the library or a message.
@@ -425,12 +425,141 @@ C8O.tigoResources = (function () {
       host.write(
         personal,
         "preferences.json",
-        JSON.stringify(
-          { schemaVersion: 1, favorites: p.favorites, notDefault: p.notDefault },
-          null,
-          2
-        )
+        JSON.stringify(p, null, 2)
       );
+    }
+    function skillWriteBase(scope) {
+      // Project writes are shared by the engine's users, including writes from the project-only MCP identity.
+      return scope === "project" ? host.personal("project-skill-writes") : personal;
+    }
+    function skillWritePath(k) {
+      return "skill-writes/" + host.hash(k) + ".json";
+    }
+    function skillWriteRecord(item) {
+      return object(host.read(skillWriteBase(item.scope), skillWritePath(item.key)));
+    }
+    function matchesSkillWrite(item, record) {
+      return record.revision === item.revision ||
+        (typeof record.writingFrom === "string" && record.writingFrom !== item.revision);
+    }
+    function requiresSkillReview(item, preferences) {
+      return !item.readOnly && preferences.skillApprovals[item.key] !== item.revision &&
+        matchesSkillWrite(item, skillWriteRecord(item));
+    }
+    function writeAgentSkill(s, slug, previous, writeFiles) {
+      var base = skillWriteBase(s.scope),
+        path = skillWritePath(key(s, "skill", slug)),
+        kept = host.read(base, path),
+        before = previous ? previous.revision : "",
+        written;
+      // Record the write before modifying content so a partial write or a failed final update cannot lose the pause.
+      host.write(base, path, JSON.stringify({ revision: object(kept).revision, writingFrom: before }));
+      try {
+        writeFiles();
+      } finally {
+        written = load(s, "skill", slug);
+        if (written && written.revision !== before) {
+          host.write(base, path, JSON.stringify({ revision: written.revision }));
+        } else if (kept) {
+          host.write(base, path, kept);
+        } else {
+          host.remove(base, path);
+        }
+      }
+      return written;
+    }
+    function skillApprovalPath(k, revision) {
+      return "skill-approvals/" + host.hash(k + "\n" + revision) + ".json";
+    }
+    function skillSnapshot(item) {
+      var origin = source(item.scope, item.project),
+        directory = "skills/" + item.id + "/",
+        paths = ["skill.json", "SKILL.md"];
+      Object.keys(item.data.translations).forEach(function (code) {
+        if (code !== item.data.defaultLanguage) {
+          paths.push("SKILL." + code + ".md");
+        }
+      });
+      paths = paths.concat(host.files ? host.files(origin.base, directory.slice(0, -1)) : []).sort();
+      var files = [], size = 0;
+      paths.forEach(function (path) {
+        var content = host.read(origin.base, directory + path);
+        if (content === null) { return; }
+        var textHash = host.hash(content),
+          digest = host.fileHash ? host.fileHash(origin.base, directory + path) : textHash;
+        if (path.indexOf("assets/") === 0) {
+          content = null;
+        } else if (textHash !== digest) {
+          if (path.indexOf("references/") !== 0) { fail("skill_review_text_required"); }
+          content = null;
+        }
+        size += (content || "").length;
+        if (size > 250000) { fail("skill_review_too_large"); }
+        files.push({ path: path, hash: digest, content: content });
+      });
+      if (entry(item.key).revision !== item.revision) { fail("revision_conflict"); }
+      var snapshot = { files: files };
+      // Leave room for UTF-8 encoding under the host's one-MiB read limit.
+      if (JSON.stringify(snapshot).length > 250000) { fail("skill_review_too_large"); }
+      return snapshot;
+    }
+    function skillFileDiff(before, after) {
+      if (before === after) { return ""; }
+      var a = before === null ? [] : before.split("\n"),
+        b = after === null ? [] : after.split("\n"),
+        start = 0, tail = 0;
+      while (start < a.length && start < b.length && a[start] === b[start]) { start++; }
+      while (tail < a.length - start && tail < b.length - start && a[a.length - 1 - tail] === b[b.length - 1 - tail]) { tail++; }
+      return ["--- approved", "+++ current"].concat(
+        a.slice(Math.max(0, start - 3), start).map(function (line) { return " " + line; }),
+        a.slice(start, a.length - tail).map(function (line) { return "-" + line; }),
+        b.slice(start, b.length - tail).map(function (line) { return "+" + line; }),
+        b.slice(b.length - tail, b.length - tail + 3).map(function (line) { return " " + line; })
+      ).join("\n");
+    }
+    function reviewSkill(args, approve) {
+      var item = entry(args.key), p = prefs();
+      if (item.kind !== "skill" || !visible(item)) { fail("not_a_skill"); }
+      var previous = p.skillApprovals[item.key];
+      if (approve && args.revision === item.revision && previous === item.revision) {
+        return { ok: true };
+      }
+      var record = skillWriteRecord(item);
+      if (item.readOnly || previous === item.revision ||
+          (approve && args.revision !== item.revision) || !matchesSkillWrite(item, record)) {
+        fail("revision_conflict");
+      }
+      var snapshot = skillSnapshot(item);
+      if (approve) {
+        if (typeof record.writingFrom === "string") {
+          host.write(skillWriteBase(item.scope), skillWritePath(item.key), JSON.stringify({ revision: item.revision }));
+        }
+        p.skillApprovals[item.key] = item.revision;
+        host.write(personal, skillApprovalPath(item.key, item.revision), JSON.stringify(snapshot));
+        savePrefs(p);
+        if (previous) {
+          try {
+            host.remove(personal, skillApprovalPath(item.key, previous));
+          } catch (oldSnapshotCleanupFailed) {}
+        }
+        return { ok: true };
+      }
+      var approved = previous ? object(host.read(personal, skillApprovalPath(item.key, previous))) : {},
+        before = Object.create(null), after = Object.create(null);
+      (approved.files || []).forEach(function (file) { before[file.path] = file; });
+      snapshot.files.forEach(function (file) { after[file.path] = file; });
+      var paths = Object.keys(before).concat(Object.keys(after).filter(function (path) {
+        return !before[path];
+      })).sort();
+      return { ok: true, review: {
+        key: item.key, revision: item.revision, scope: item.scope, project: item.project,
+        files: paths.map(function (path) {
+          var a = before[path], b = after[path];
+          return { path: path, status: !a ? "added" : !b ? "removed" : a.hash === b.hash ? "unchanged" : "modified",
+            beforeHash: a ? a.hash : "", afterHash: b ? b.hash : "",
+            diff: skillFileDiff(a ? a.content : null, b ? b.content : null) };
+        })
+      } };
     }
     function selection(thread) {
       thread = text(thread || "draft");
@@ -492,8 +621,8 @@ C8O.tigoResources = (function () {
       return out.concat(skillsOf(source("workspace")));
     }
     // Skills that apply to a conversation: the ones turned on, then the ones on by default that were not turned off.
-    function activeSkills(s, project) {
-      var notDefault = prefs().notDefault,
+    function activeSkills(s, project, preferences) {
+      var notDefault = preferences.notDefault,
         candidates = defaultSkills(project).map(function (x) {
           return x.key;
         }),
@@ -625,7 +754,7 @@ C8O.tigoResources = (function () {
         });
       });
       var s = selected(thread),
-        active = activeSkills(s, project),
+        active = activeSkills(s, project, p),
         missing = s.skills.concat(s.mcp).filter(function (k) {
           return !items.some(function (x) {
             return x.key === k;
@@ -636,8 +765,9 @@ C8O.tigoResources = (function () {
         x.defaultable = x.kind === "skill" && active.candidates.indexOf(x.key) >= 0;
         x.auto = x.kind === "skill" && active.auto.indexOf(x.key) >= 0;
         x.enabled = (x.kind === "skill" ? active.keys : s.mcp).indexOf(x.key) >= 0;
-        x.requiresReview =
-          x.kind === "mcp" && x.enabled && s.mcpRevisions[x.key] !== x.revision;
+        x.requiresReview = x.kind === "skill"
+          ? requiresSkillReview(x, p)
+          : x.kind === "mcp" && x.enabled && s.mcpRevisions[x.key] !== x.revision;
       });
       return {
         ok: true,
@@ -661,7 +791,7 @@ C8O.tigoResources = (function () {
         errors: errors
       };
     }
-    function write(s, kind, value, revision) {
+    function write(s, kind, value, revision, copyFrom, reviewAgentWrite) {
       // Every agent write path, including duplication, must go through a proposal.
       if (kind === "mcp" && host.agentInitiated === true) { fail("human_review_required"); }
       if (s.readOnly) {
@@ -676,39 +806,57 @@ C8O.tigoResources = (function () {
         if (s.scope === "project") {
           host.protectProject(s.project);
         }
-        if (kind === "mcp") {
-          var doc = object(host.read(s.base, "mcp.json"));
-          var servers = (doc.servers || []).filter(function (x) {
-            return x.id !== value.id;
-          });
-          servers.push(value);
-          host.write(
-            s.base,
-            "mcp.json",
-            JSON.stringify({ schemaVersion: 1, servers: servers }, null, 2)
-          );
-        } else {
-          var meta = object(JSON.stringify(value));
-          Object.keys(meta.translations).forEach(function (code) {
-            var rel =
-              kind +
-              "s/" +
-              value.id +
-              "/" +
-              (kind === "skill"
-                ? code === value.defaultLanguage
-                  ? "SKILL.md"
-                  : "SKILL." + code + ".md"
-                : "prompt." + code + ".md");
-            host.write(s.base, rel, meta.translations[code].body);
-            delete meta.translations[code].body;
-          });
-          host.write(
-            s.base,
-            paths(kind, value.id),
-            JSON.stringify(meta, null, 2)
-          );
+        function writeFiles() {
+          if (kind === "mcp") {
+            var doc = object(host.read(s.base, "mcp.json"));
+            var servers = (doc.servers || []).filter(function (x) {
+              return x.id !== value.id;
+            });
+            servers.push(value);
+            host.write(
+              s.base,
+              "mcp.json",
+              JSON.stringify({ schemaVersion: 1, servers: servers }, null, 2)
+            );
+          } else {
+            var meta = object(JSON.stringify(value));
+            Object.keys(meta.translations).forEach(function (code) {
+              var rel =
+                kind +
+                "s/" +
+                value.id +
+                "/" +
+                (kind === "skill"
+                  ? code === value.defaultLanguage
+                    ? "SKILL.md"
+                    : "SKILL." + code + ".md"
+                  : "prompt." + code + ".md");
+              host.write(s.base, rel, meta.translations[code].body);
+              delete meta.translations[code].body;
+            });
+            host.write(
+              s.base,
+              paths(kind, value.id),
+              JSON.stringify(meta, null, 2)
+            );
+          }
+          if (copyFrom && kind === "skill" && host.files) {
+            var origin = source(copyFrom.scope, copyFrom.project);
+            host.files(origin.base, "skills/" + copyFrom.id).forEach(function (p) {
+              var from = "skills/" + copyFrom.id + "/" + p,
+                to = "skills/" + value.id + "/" + p;
+              if (host.copy) {
+                host.copy(origin.base, from, s.base, to);
+              } else {
+                host.write(s.base, to, host.read(origin.base, from));
+              }
+            });
+          }
         }
+        if (reviewAgentWrite && kind === "skill") {
+          return writeAgentSkill(s, value.id, previous, writeFiles);
+        }
+        writeFiles();
         return load(s, kind, value.id);
       });
     }
@@ -716,6 +864,13 @@ C8O.tigoResources = (function () {
       args = object(args);
       var action = text(args.action || "list"),
         input = object(args.input);
+      if (host.agentInitiated === true &&
+          ["reviewSkill", "approveSkill", "select", "skillDefault", "favorites", "secret"].indexOf(action) >= 0) {
+        fail("human_review_required");
+      }
+      if (action === "reviewSkill" || action === "approveSkill") {
+        return reviewSkill(args, action === "approveSkill");
+      }
       if (action === "propose") { return propose(args); }
       if (action === "confirmProposal" || action === "rejectProposal") { return answerProposal(args); }
       if (host.agentInitiated === true && args.kind === "mcp" && action === "save") { return propose(args); }
@@ -739,29 +894,7 @@ C8O.tigoResources = (function () {
         ) {
           fail("revision_conflict");
         }
-        var item = write(destination, args.kind, input, args.revision || "");
-        if (origin && host.files) {
-          var originSource = source(origin.scope, origin.project);
-          host
-            .files(originSource.base, "skills/" + origin.id)
-            .forEach(function (p) {
-              if (host.copy) {
-                host.copy(
-                  originSource.base,
-                  "skills/" + origin.id + "/" + p,
-                  destination.base,
-                  "skills/" + item.id + "/" + p
-                );
-              } else {
-                host.write(
-                  destination.base,
-                  "skills/" + item.id + "/" + p,
-                  host.read(originSource.base, "skills/" + origin.id + "/" + p)
-                );
-              }
-            });
-          item = load(destination, args.kind, item.id);
-        }
+        var item = write(destination, args.kind, input, args.revision || "", origin, host.agentInitiated === true);
         var saved = { ok: true, item: item };
         if (!args.revision) {
           saved.notice = agentSkillNotice(item) || undefined;
@@ -773,29 +906,7 @@ C8O.tigoResources = (function () {
           copy = object(JSON.stringify(original.data));
         copy.id = id(input.id);
         var destination = source(args.scope, args.project);
-        var written = write(destination, original.kind, copy, "");
-        if (original.kind === "skill" && host.files) {
-          var origin = source(original.scope, original.project);
-          host
-            .files(origin.base, "skills/" + original.id)
-            .forEach(function (p) {
-              if (host.copy) {
-                host.copy(
-                  origin.base,
-                  "skills/" + original.id + "/" + p,
-                  destination.base,
-                  "skills/" + copy.id + "/" + p
-                );
-              } else {
-                host.write(
-                  destination.base,
-                  "skills/" + copy.id + "/" + p,
-                  host.read(origin.base, "skills/" + original.id + "/" + p)
-                );
-              }
-            });
-          written = load(destination, original.kind, copy.id);
-        }
+        var written = write(destination, original.kind, copy, "", original);
         return { ok: true, item: written, notice: agentSkillNotice(written) || undefined };
       }
       if (action === "readFile" || action === "writeFile") {
@@ -833,7 +944,15 @@ C8O.tigoResources = (function () {
             if (origin.scope === "project") {
               host.protectProject(origin.project);
             }
-            host.write(origin.base, target, bounded(input.content, 65536));
+            var next = bounded(input.content, 65536);
+            function writeSupportFile() {
+              host.write(origin.base, target, next);
+            }
+            if (host.agentInitiated === true) {
+              writeAgentSkill(origin, resource.id, resource, writeSupportFile);
+            } else {
+              writeSupportFile();
+            }
           });
           content = host.read(origin.base, target);
           revision = host.hash(content);
@@ -982,7 +1101,8 @@ C8O.tigoResources = (function () {
         }
       }
       var project = text(state.projectId || state.primaryProject).trim(),
-        active = activeSkills(s, project),
+        preferences = prefs(),
+        active = activeSkills(s, project, preferences),
         budget = AUTO_SKILL_BUDGET,
         applied = [],
         skipped = [],
@@ -1008,8 +1128,12 @@ C8O.tigoResources = (function () {
         var l = lang(state.language),
           t =
             item.data.translations[l] ||
-            item.data.translations[item.data.defaultLanguage],
-          needs = (item.data.requiresMcp || []).filter(function (required) {
+            item.data.translations[item.data.defaultLanguage];
+        if (requiresSkillReview(item, preferences)) {
+          skipped.push({ key: k, title: t.title, reason: "skill_review_required" });
+          return;
+        }
+        var needs = (item.data.requiresMcp || []).filter(function (required) {
             return s.mcp.indexOf(required) < 0;
           });
         if (needs.length) {
@@ -1118,7 +1242,10 @@ C8O.tigoResources = (function () {
           return execute(args);
         });
       },
-      prepare: prepare
+      prepare: function (state) {
+        // Read the skill and its provenance after any in-flight library write finishes.
+        return host.lock(personal, function () { return prepare(state); });
+      }
     };
   }
   // A Studio on the desktop, with one local user: the Eclipse Studio (Studio mode) or the Electron Studio

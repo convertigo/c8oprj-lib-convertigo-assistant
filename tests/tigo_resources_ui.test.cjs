@@ -10,6 +10,7 @@ const ast = ts.createSourceFile(
 );
 const names = [
   "tigoText",
+  "tigoSkillReviewText",
   "tigoMcpProposalPreview",
   "answerTigoMcpProposal",
   "requestTigoResources",
@@ -21,6 +22,10 @@ const names = [
   "moveTigoFavorite",
   "toggleTigoResource",
   "toggleTigoSkillDefault",
+  "tigoSkillToggleText",
+  "isTigoSkillReviewCurrent",
+  "cancelTigoSkillReview",
+  "confirmTigoSkillReview",
   "useTigoPrompt",
   "editTigoResource",
   "revealTigoResourceEditor",
@@ -343,4 +348,54 @@ test("a save keeps its own target project; the project in context travels apart"
   assert.equal(request.action, "save");
   assert.equal(request.project, "Other");
   assert.equal(request.contextProject, "Demo");
+});
+
+test("the review dialog approves a skill revision without changing activation choices", () => {
+  const { page, events } = fixture();
+  const row = { key: "project:Demo:skill:rules", kind: "skill", auto: true, enabled: true, requiresReview: true };
+  const selection = { skills: [], mcp: ["workspace::mcp:api"], off: ["workspace::skill:off"] };
+  const response = { ok: true, csrf: "token", items: [row], selection };
+  page.local.Conversation = "one";
+  page.local.ResourceCatalog = response;
+  assert.equal(page.tigoSkillToggleText(row), "Vérifier la skill modifiée");
+  page.toggleTigoResource(row);
+  assert.equal(events[0].payload.request.action, "reviewSkill");
+  const skillReview = { key: row.key, revision: "shown-revision", files: [{ path: "SKILL.md", diff: "+New instructions" }] };
+  page.applyTigoResources({ response: { ...response, skillReview } }, events[0].payload);
+  assert.equal(page.isTigoSkillReviewCurrent(), true);
+  page.confirmTigoSkillReview();
+  assert.deepEqual(plain(events[1].payload.request), {
+    action: "approveSkill", key: row.key, revision: "shown-revision", language: "fr",
+    threadid: "one", contextProject: "Demo", csrf: "token",
+  });
+  page.applyTigoResources({ response: { ...response, items: [{ ...row, requiresReview: false }] } }, events[1].payload);
+  assert.equal(page.isTigoSkillReviewCurrent(), false);
+  assert.equal(page.local.ResourceNotice, "Révision de la skill approuvée.");
+  assert.deepEqual(plain(page.local.ResourceCatalog.selection), selection);
+});
+
+test("a review from another conversation, project, or identity cannot be approved", () => {
+  const { page, events } = fixture();
+  const row = { key: "project:Demo:skill:rules", kind: "skill", requiresReview: true };
+  page.local.Conversation = "one";
+  page.toggleTigoResource(row);
+  const skillReview = { key: row.key, revision: "shown-revision", files: [] };
+  const response = { ok: true, items: [row], skillReview };
+  page.applyTigoResources({ response }, events[0].payload);
+  const context = [
+    ["getAgentContextUserId", () => "another-user", () => "studio"],
+    ["getEffectiveProjectName", () => "Other", () => "Demo"],
+  ];
+  for (const [method, change, restore] of context) {
+    page[method] = change;
+    assert.equal(page.isTigoSkillReviewCurrent(), false);
+    page.confirmTigoSkillReview();
+    page[method] = restore;
+  }
+  page.local.Conversation = "two";
+  assert.equal(page.isTigoSkillReviewCurrent(), false);
+  page.confirmTigoSkillReview();
+  assert.equal(events.length, 1);
+  page.cancelTigoSkillReview();
+  assert.equal(page.local.ResourceSkillReview, null);
 });
