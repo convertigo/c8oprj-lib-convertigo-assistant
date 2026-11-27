@@ -638,6 +638,10 @@ rediscovering the same context.
 
 ## Prompt attachments
 
+- The generic picker sets `accept=.*` only in the macOS Eclipse view. Its SWT
+  chooser otherwise starts with an empty filter and disables file selection.
+  Chrome treats `.*` as an extension filter, so keep the generic web input
+  unrestricted.
 - The prompt footer sends files through `UploadFilesRouter`. With
   `agentBridgeOperational=true` the uploaded temporary files are copied under
   `<conversationDir>/attachments/` by `storeAttachments` and returned as `file`
