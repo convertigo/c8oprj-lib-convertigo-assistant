@@ -573,6 +573,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     projectArray[0] = project;
     params.put("__project", projectArray);
     params.put("__sequence", sequence);
+    if (tigoNoLogEnabled()) { params.put("__nolog", "true"); }
     // a context of its own for each call: two calls in the same millisecond must not share (and wait on) one context
     params.put("__context", "agentToken_" + String(UUID.randomUUID()));
     variables = variables || {};
@@ -807,8 +808,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
         stateOnly: "true",
         wait: "false",
         timeoutSec: "0",
-        logsLimit: "0",
-        __nolog: "true"
+        logsLimit: "0"
       }));
       if (!applyViewerDebugOptionsFromBuilder(options, builder, true).length && shouldOpenViewerBeforeAgentStart(options, state)) {
         builder = unwrapBuilderStateResponse(callLocalSequence("lib_ConvertigoMCP", "tools_mobile_builder_open", {
@@ -817,8 +817,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
           wait: "false",
           timeoutSec: "0",
           logsLimit: "0",
-          reveal: revealModeOption(options),
-          __nolog: "true"
+          reveal: revealModeOption(options)
         }));
         if (!applyViewerDebugOptionsFromBuilder(options, builder, true).length) {
           try { Thread.sleep(350); } catch (_ignoreViewerDebugSleep) {}
@@ -827,8 +826,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
             stateOnly: "true",
             wait: "false",
             timeoutSec: "0",
-            logsLimit: "0",
-            __nolog: "true"
+            logsLimit: "0"
           }));
           applyViewerDebugOptionsFromBuilder(options, builder, true);
         }
@@ -3028,6 +3026,10 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
     stackChannel: ["stable", "preview"]
   };
 
+  function tigoNoLogEnabled() {
+    return !/^(false|0|off|no)$/i.test(serverSymbolValue("agentbridge.mcp.nolog"));
+  }
+
   function serverSymbolValue(name) {
     try {
       var value = Engine.theApp.databaseObjectsManager.symbolsGetValue(name);
@@ -3685,7 +3687,7 @@ C8O.assistantAgentBridge = C8O.assistantAgentBridge || {};
       payload.__context = "studio_assistant_settings_" + settingsContextKind + java.lang.Integer.toHexString(new java.lang.String(callerSessionId()).hashCode());
     }
     var bridgeUrl = trim(options.bridgeBaseUrl) || defaultBridgeUrl(options);
-    var headers = {};
+    var headers = tigoNoLogEnabled() ? { "X-Convertigo-No-Log": "true" } : {};
     if (isOwnBridgeUrl(bridgeUrl)) {
       headers[BRIDGE_CALLER_KEY_HEADER] = bridgeCallerKey();
     }
